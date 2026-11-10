@@ -6,14 +6,8 @@
     "name": "Die of Fate",
     "dice": "1d6",
     "rows": [
-      {
-        "roll": "1-3",
-        "result": "Bad luck for the PCs"
-      },
-      {
-        "roll": "4-6",
-        "result": "Favors the PCs"
-      }
+      ["1-3", "Bad luck for the PCs"],
+      ["4-6", "Favors the PCs"]
     ]
   },
   {
@@ -23,86 +17,26 @@
     "name": "Appearance: Physique",
     "dice": "1d20",
     "rows": [
-      {
-        "roll": "1",
-        "result": "Albino"
-      },
-      {
-        "roll": "2",
-        "result": "Black"
-      },
-      {
-        "roll": "3",
-        "result": "Crystalline"
-      },
-      {
-        "roll": "4",
-        "result": "Emaciated"
-      },
-      {
-        "roll": "5",
-        "result": "Eyeless"
-      },
-      {
-        "roll": "6",
-        "result": "Feathered"
-      },
-      {
-        "roll": "7",
-        "result": "Gelatinous"
-      },
-      {
-        "roll": "8",
-        "result": "Glowing"
-      },
-      {
-        "roll": "9",
-        "result": "Hardened"
-      },
-      {
-        "roll": "10",
-        "result": "Headless"
-      },
-      {
-        "roll": "11",
-        "result": "Horned"
-      },
-      {
-        "roll": "12",
-        "result": "Hunched"
-      },
-      {
-        "roll": "13",
-        "result": "Iridescent"
-      },
-      {
-        "roll": "14",
-        "result": "Polyocular"
-      },
-      {
-        "roll": "15",
-        "result": "Scaled"
-      },
-      {
-        "roll": "16",
-        "result": "Segmented"
-      },
-      {
-        "roll": "17",
-        "result": "Skeletal"
-      },
-      {
-        "roll": "18",
-        "result": "Slimy"
-      },
-      {
-        "roll": "19",
-        "result": "Translucent"
-      },
-      {
-        "roll": "20",
-        "result": "Twisted"
-      }
+      ["1", "Albino"],
+      ["2", "Black"],
+      ["3", "Crystalline"],
+      ["4", "Emaciated"],
+      ["5", "Eyeless"],
+      ["6", "Feathered"],
+      ["7", "Gelatinous"],
+      ["8", "Glowing"],
+      ["9", "Hardened"],
+      ["10", "Headless"],
+      ["11", "Horned"],
+      ["12", "Hunched"],
+      ["13", "Iridescent"],
+      ["14", "Polyocular"],
+      ["15", "Scaled"],
+      ["16", "Segmented"],
+      ["17", "Skeletal"],
+      ["18", "Slimy"],
+      ["19", "Translucent"],
+      ["20", "Twisted"]
     ]
   },
   {
@@ -112,86 +46,26 @@
     "name": "Appearance: Feature",
     "dice": "1d20",
     "rows": [
-      {
-        "roll": "1",
-        "result": "Antennae"
-      },
-      {
-        "roll": "2",
-        "result": "Beak"
-      },
-      {
-        "roll": "3",
-        "result": "Carapace"
-      },
-      {
-        "roll": "4",
-        "result": "Claws"
-      },
-      {
-        "roll": "5",
-        "result": "Fangs"
-      },
-      {
-        "roll": "6",
-        "result": "Feathers"
-      },
-      {
-        "roll": "7",
-        "result": "Fur"
-      },
-      {
-        "roll": "8",
-        "result": "Gilled"
-      },
-      {
-        "roll": "9",
-        "result": "Horns"
-      },
-      {
-        "roll": "10",
-        "result": "Markings"
-      },
-      {
-        "roll": "11",
-        "result": "Scales"
-      },
-      {
-        "roll": "12",
-        "result": "Shell"
-      },
-      {
-        "roll": "13",
-        "result": "Snout"
-      },
-      {
-        "roll": "14",
-        "result": "Tail"
-      },
-      {
-        "roll": "15",
-        "result": "Talons"
-      },
-      {
-        "roll": "16",
-        "result": "Tentacles"
-      },
-      {
-        "roll": "17",
-        "result": "Trunk"
-      },
-      {
-        "roll": "18",
-        "result": "Tusks"
-      },
-      {
-        "roll": "19",
-        "result": "Voice"
-      },
-      {
-        "roll": "20",
-        "result": "Wings"
-      }
+      ["1", "Antennae"],
+      ["2", "Beak"],
+      ["3", "Carapace"],
+      ["4", "Claws"],
+      ["5", "Fangs"],
+      ["6", "Feathers"],
+      ["7", "Fur"],
+      ["8", "Gilled"],
+      ["9", "Horns"],
+      ["10", "Markings"],
+      ["11", "Scales"],
+      ["12", "Shell"],
+      ["13", "Snout"],
+      ["14", "Tail"],
+      ["15", "Talons"],
+      ["16", "Tentacles"],
+      ["17", "Trunk"],
+      ["18", "Tusks"],
+      ["19", "Voice"],
+      ["20", "Wings"]
     ]
   },
   {
@@ -201,86 +75,26 @@
     "name": "Traits: Quirks",
     "dice": "1d20",
     "rows": [
-      {
-        "roll": "1",
-        "result": "Alters Its Size at Will"
-      },
-      {
-        "roll": "2",
-        "result": "Changes Color at Will"
-      },
-      {
-        "roll": "3",
-        "result": "Collects Rare Flowers"
-      },
-      {
-        "roll": "4",
-        "result": "Collects Trophies"
-      },
-      {
-        "roll": "5",
-        "result": "Does Not Die of Old Age"
-      },
-      {
-        "roll": "6",
-        "result": "Draws Symbols"
-      },
-      {
-        "roll": "7",
-        "result": "Fascinated by Fire"
-      },
-      {
-        "roll": "8",
-        "result": "Hoards Books"
-      },
-      {
-        "roll": "9",
-        "result": "Loves a Specific Color"
-      },
-      {
-        "roll": "10",
-        "result": "Reborn Each Day"
-      },
-      {
-        "roll": "11",
-        "result": "Loves Shiny Objects"
-      },
-      {
-        "roll": "12",
-        "result": "Mimics Voices"
-      },
-      {
-        "roll": "13",
-        "result": "Moves in a Straight Line"
-      },
-      {
-        "roll": "14",
-        "result": "Narrates Everything"
-      },
-      {
-        "roll": "15",
-        "result": "Obsessively Cleans"
-      },
-      {
-        "roll": "16",
-        "result": "Plants Grow in Its Wake"
-      },
-      {
-        "roll": "17",
-        "result": "Sleeps Upside Down"
-      },
-      {
-        "roll": "18",
-        "result": "Speaks in Rhymes"
-      },
-      {
-        "roll": "19",
-        "result": "Sweats Rare Minerals"
-      },
-      {
-        "roll": "20",
-        "result": "Reproduces Asexually"
-      }
+      ["1", "Alters Its Size at Will"],
+      ["2", "Changes Color at Will"],
+      ["3", "Collects Rare Flowers"],
+      ["4", "Collects Trophies"],
+      ["5", "Does Not Die of Old Age"],
+      ["6", "Draws Symbols"],
+      ["7", "Fascinated by Fire"],
+      ["8", "Hoards Books"],
+      ["9", "Loves a Specific Color"],
+      ["10", "Reborn Each Day"],
+      ["11", "Loves Shiny Objects"],
+      ["12", "Mimics Voices"],
+      ["13", "Moves in a Straight Line"],
+      ["14", "Narrates Everything"],
+      ["15", "Obsessively Cleans"],
+      ["16", "Plants Grow in Its Wake"],
+      ["17", "Sleeps Upside Down"],
+      ["18", "Speaks in Rhymes"],
+      ["19", "Sweats Rare Minerals"],
+      ["20", "Reproduces Asexually"]
     ]
   },
   {
@@ -290,86 +104,26 @@
     "name": "Traits: Weakness",
     "dice": "1d20",
     "rows": [
-      {
-        "roll": "1",
-        "result": "Alcohol"
-      },
-      {
-        "roll": "2",
-        "result": "Cold"
-      },
-      {
-        "roll": "3",
-        "result": "Conversation"
-      },
-      {
-        "roll": "4",
-        "result": "Flattery"
-      },
-      {
-        "roll": "5",
-        "result": "Games"
-      },
-      {
-        "roll": "6",
-        "result": "Gifts"
-      },
-      {
-        "roll": "7",
-        "result": "Iron"
-      },
-      {
-        "roll": "8",
-        "result": "Loud Noises"
-      },
-      {
-        "roll": "9",
-        "result": "Mirrors"
-      },
-      {
-        "roll": "10",
-        "result": "Bright Colors"
-      },
-      {
-        "roll": "11",
-        "result": "Moonlight"
-      },
-      {
-        "roll": "12",
-        "result": "Music"
-      },
-      {
-        "roll": "13",
-        "result": "Prepared Meals"
-      },
-      {
-        "roll": "14",
-        "result": "Puzzles"
-      },
-      {
-        "roll": "15",
-        "result": "Religious Icons"
-      },
-      {
-        "roll": "16",
-        "result": "Salt"
-      },
-      {
-        "roll": "17",
-        "result": "Silver"
-      },
-      {
-        "roll": "18",
-        "result": "Sunlight"
-      },
-      {
-        "roll": "19",
-        "result": "True Name"
-      },
-      {
-        "roll": "20",
-        "result": "Weak Spot"
-      }
+      ["1", "Alcohol"],
+      ["2", "Cold"],
+      ["3", "Conversation"],
+      ["4", "Flattery"],
+      ["5", "Games"],
+      ["6", "Gifts"],
+      ["7", "Iron"],
+      ["8", "Loud Noises"],
+      ["9", "Mirrors"],
+      ["10", "Bright Colors"],
+      ["11", "Moonlight"],
+      ["12", "Music"],
+      ["13", "Prepared Meals"],
+      ["14", "Puzzles"],
+      ["15", "Religious Icons"],
+      ["16", "Salt"],
+      ["17", "Silver"],
+      ["18", "Sunlight"],
+      ["19", "True Name"],
+      ["20", "Weak Spot"]
     ]
   },
   {
@@ -379,86 +133,26 @@
     "name": "Attacks: Type",
     "dice": "1d20",
     "rows": [
-      {
-        "roll": "1",
-        "result": "Bites"
-      },
-      {
-        "roll": "2",
-        "result": "Blunts"
-      },
-      {
-        "roll": "3",
-        "result": "Burns"
-      },
-      {
-        "roll": "4",
-        "result": "Freezes"
-      },
-      {
-        "roll": "5",
-        "result": "Gases"
-      },
-      {
-        "roll": "6",
-        "result": "Kicks"
-      },
-      {
-        "roll": "7",
-        "result": "Punches"
-      },
-      {
-        "roll": "8",
-        "result": "Shoots"
-      },
-      {
-        "roll": "9",
-        "result": "Slams"
-      },
-      {
-        "roll": "10",
-        "result": "Slashes"
-      },
-      {
-        "roll": "11",
-        "result": "Slices"
-      },
-      {
-        "roll": "12",
-        "result": "Smashes"
-      },
-      {
-        "roll": "13",
-        "result": "Sprays"
-      },
-      {
-        "roll": "14",
-        "result": "Squeezes"
-      },
-      {
-        "roll": "15",
-        "result": "Stabs"
-      },
-      {
-        "roll": "16",
-        "result": "Stings"
-      },
-      {
-        "roll": "17",
-        "result": "Throws"
-      },
-      {
-        "roll": "18",
-        "result": "Touches"
-      },
-      {
-        "roll": "19",
-        "result": "Whips"
-      },
-      {
-        "roll": "20",
-        "result": "Zaps"
-      }
+      ["1", "Bites"],
+      ["2", "Blunts"],
+      ["3", "Burns"],
+      ["4", "Freezes"],
+      ["5", "Gases"],
+      ["6", "Kicks"],
+      ["7", "Punches"],
+      ["8", "Shoots"],
+      ["9", "Slams"],
+      ["10", "Slashes"],
+      ["11", "Slices"],
+      ["12", "Smashes"],
+      ["13", "Sprays"],
+      ["14", "Squeezes"],
+      ["15", "Stabs"],
+      ["16", "Stings"],
+      ["17", "Throws"],
+      ["18", "Touches"],
+      ["19", "Whips"],
+      ["20", "Zaps"]
     ]
   },
   {
@@ -468,86 +162,26 @@
     "name": "Attacks: Critical Damage",
     "dice": "1d20",
     "rows": [
-      {
-        "roll": "1",
-        "result": "Asphyxiates"
-      },
-      {
-        "roll": "2",
-        "result": "Bleeds"
-      },
-      {
-        "roll": "3",
-        "result": "Blinds"
-      },
-      {
-        "roll": "4",
-        "result": "Breaks"
-      },
-      {
-        "roll": "5",
-        "result": "Crushes"
-      },
-      {
-        "roll": "6",
-        "result": "Decays"
-      },
-      {
-        "roll": "7",
-        "result": "Dissolves"
-      },
-      {
-        "roll": "8",
-        "result": "Ensnares"
-      },
-      {
-        "roll": "9",
-        "result": "Explodes"
-      },
-      {
-        "roll": "10",
-        "result": "Grapples"
-      },
-      {
-        "roll": "11",
-        "result": "Incapacitates"
-      },
-      {
-        "roll": "12",
-        "result": "Lacerates"
-      },
-      {
-        "roll": "13",
-        "result": "Liquefies"
-      },
-      {
-        "roll": "14",
-        "result": "Paralyzes"
-      },
-      {
-        "roll": "15",
-        "result": "Petrifies"
-      },
-      {
-        "roll": "16",
-        "result": "Poisons"
-      },
-      {
-        "roll": "17",
-        "result": "Punctures"
-      },
-      {
-        "roll": "18",
-        "result": "Severs"
-      },
-      {
-        "roll": "19",
-        "result": "Tramples"
-      },
-      {
-        "roll": "20",
-        "result": "Weakens"
-      }
+      ["1", "Asphyxiates"],
+      ["2", "Bleeds"],
+      ["3", "Blinds"],
+      ["4", "Breaks"],
+      ["5", "Crushes"],
+      ["6", "Decays"],
+      ["7", "Dissolves"],
+      ["8", "Ensnares"],
+      ["9", "Explodes"],
+      ["10", "Grapples"],
+      ["11", "Incapacitates"],
+      ["12", "Lacerates"],
+      ["13", "Liquefies"],
+      ["14", "Paralyzes"],
+      ["15", "Petrifies"],
+      ["16", "Poisons"],
+      ["17", "Punctures"],
+      ["18", "Severs"],
+      ["19", "Tramples"],
+      ["20", "Weakens"]
     ]
   },
   {
@@ -557,86 +191,26 @@
     "name": "Abilities: Ability",
     "dice": "1d20",
     "rows": [
-      {
-        "roll": "1",
-        "result": "Absorbs"
-      },
-      {
-        "roll": "2",
-        "result": "Amplifies"
-      },
-      {
-        "roll": "3",
-        "result": "Attracts"
-      },
-      {
-        "roll": "4",
-        "result": "Binds"
-      },
-      {
-        "roll": "5",
-        "result": "Camouflages"
-      },
-      {
-        "roll": "6",
-        "result": "Conjures"
-      },
-      {
-        "roll": "7",
-        "result": "Controls"
-      },
-      {
-        "roll": "8",
-        "result": "Disables"
-      },
-      {
-        "roll": "9",
-        "result": "Duplicates"
-      },
-      {
-        "roll": "10",
-        "result": "Grows"
-      },
-      {
-        "roll": "11",
-        "result": "Manipulates"
-      },
-      {
-        "roll": "12",
-        "result": "Reflects"
-      },
-      {
-        "roll": "13",
-        "result": "Regenerates"
-      },
-      {
-        "roll": "14",
-        "result": "Resists"
-      },
-      {
-        "roll": "15",
-        "result": "Reverses"
-      },
-      {
-        "roll": "16",
-        "result": "Shapes"
-      },
-      {
-        "roll": "17",
-        "result": "Shrinks"
-      },
-      {
-        "roll": "18",
-        "result": "Transforms"
-      },
-      {
-        "roll": "19",
-        "result": "Traps"
-      },
-      {
-        "roll": "20",
-        "result": "Zaps"
-      }
+      ["1", "Absorbs"],
+      ["2", "Amplifies"],
+      ["3", "Attracts"],
+      ["4", "Binds"],
+      ["5", "Camouflages"],
+      ["6", "Conjures"],
+      ["7", "Controls"],
+      ["8", "Disables"],
+      ["9", "Duplicates"],
+      ["10", "Grows"],
+      ["11", "Manipulates"],
+      ["12", "Reflects"],
+      ["13", "Regenerates"],
+      ["14", "Resists"],
+      ["15", "Reverses"],
+      ["16", "Shapes"],
+      ["17", "Shrinks"],
+      ["18", "Transforms"],
+      ["19", "Traps"],
+      ["20", "Zaps"]
     ]
   },
   {
@@ -646,86 +220,26 @@
     "name": "Abilities: Target",
     "dice": "1d20",
     "rows": [
-      {
-        "roll": "1",
-        "result": "Body"
-      },
-      {
-        "roll": "2",
-        "result": "Dreams"
-      },
-      {
-        "roll": "3",
-        "result": "Element"
-      },
-      {
-        "roll": "4",
-        "result": "Emotions"
-      },
-      {
-        "roll": "5",
-        "result": "Energy"
-      },
-      {
-        "roll": "6",
-        "result": "Health"
-      },
-      {
-        "roll": "7",
-        "result": "Hearing"
-      },
-      {
-        "roll": "8",
-        "result": "Illusions"
-      },
-      {
-        "roll": "9",
-        "result": "Light"
-      },
-      {
-        "roll": "10",
-        "result": "Memory"
-      },
-      {
-        "roll": "11",
-        "result": "Metal"
-      },
-      {
-        "roll": "12",
-        "result": "Plants"
-      },
-      {
-        "roll": "13",
-        "result": "Spirit"
-      },
-      {
-        "roll": "14",
-        "result": "Stone"
-      },
-      {
-        "roll": "15",
-        "result": "Surroundings"
-      },
-      {
-        "roll": "16",
-        "result": "Time"
-      },
-      {
-        "roll": "17",
-        "result": "Vision"
-      },
-      {
-        "roll": "18",
-        "result": "Water"
-      },
-      {
-        "roll": "19",
-        "result": "Weather"
-      },
-      {
-        "roll": "20",
-        "result": "Weakens"
-      }
+      ["1", "Body"],
+      ["2", "Dreams"],
+      ["3", "Element"],
+      ["4", "Emotions"],
+      ["5", "Energy"],
+      ["6", "Health"],
+      ["7", "Hearing"],
+      ["8", "Illusions"],
+      ["9", "Light"],
+      ["10", "Memory"],
+      ["11", "Metal"],
+      ["12", "Plants"],
+      ["13", "Spirit"],
+      ["14", "Stone"],
+      ["15", "Surroundings"],
+      ["16", "Time"],
+      ["17", "Vision"],
+      ["18", "Water"],
+      ["19", "Weather"],
+      ["20", "Weakens"]
     ]
   }
 ]

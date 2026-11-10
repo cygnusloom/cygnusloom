@@ -23,36 +23,12 @@
     "name": "Dungeon Events",
     "dice": "1d6",
     "rows": [
-      {
-        "roll": "1",
-        "result": "Encounter",
-        "text": "Roll on an encounter table. Possibly hostile. (See Reactions.)"
-      },
-      {
-        "roll": "2",
-        "result": "Sign",
-        "text": "A clue, spoor, track, abandoned lair, scent, victim, etc is discovered."
-      },
-      {
-        "roll": "3",
-        "result": "Environment",
-        "text": "Surroundings shift or escalate. Water rises, ceilings collapse, a ritual nears completion, etc."
-      },
-      {
-        "roll": "4",
-        "result": "Loss",
-        "text": "Torches are blown out, an ongoing spell fizzles, etc. The party must resolve the effect before moving on."
-      },
-      {
-        "roll": "5",
-        "result": "Exhaustion",
-        "text": "The party must rest (triggering another roll on this table), add a Fatigue, or consume a ration."
-      },
-      {
-        "roll": "6",
-        "result": "Quiet",
-        "text": "The party is left alone (and safe) for the time being."
-      }
+      ["1", "Encounter", "Roll on an encounter table. Possibly hostile. (See Reactions.)"],
+      ["2", "Sign", "A clue, spoor, track, abandoned lair, scent, victim, etc is discovered."],
+      ["3", "Environment", "Surroundings shift or escalate. Water rises, ceilings collapse, a ritual nears completion, etc."],
+      ["4", "Loss", "Torches are blown out, an ongoing spell fizzles, etc. The party must resolve the effect before moving on."],
+      ["5", "Exhaustion", "The party must rest (triggering another roll on this table), add a Fatigue, or consume a ration."],
+      ["6", "Quiet", "The party is left alone (and safe) for the time being."]
     ]
   },
   {
@@ -62,26 +38,11 @@
     "name": "Reaction",
     "dice": "2d6",
     "rows": [
-      {
-        "roll": "2",
-        "result": "Hostile"
-      },
-      {
-        "roll": "3-5",
-        "result": "Wary"
-      },
-      {
-        "roll": "6-8",
-        "result": "Curious"
-      },
-      {
-        "roll": "9-11",
-        "result": "Kind"
-      },
-      {
-        "roll": "12",
-        "result": "Helpful"
-      }
+      ["2", "Hostile"],
+      ["3-5", "Wary"],
+      ["6-8", "Curious"],
+      ["9-11", "Kind"],
+      ["12", "Helpful"]
     ]
   }
 ]
