@@ -1,0 +1,191 @@
+[
+  {
+    "type": "route",
+    "id": "bone-sump--temple-of-the-fungal-lizards",
+    "from": "bone-sump",
+    "to": "temple-of-the-fungal-lizards",
+    "path": "wilderness",
+    "distance": "short",
+    "terrain": "perilous"
+  },
+  {
+    "type": "route",
+    "id": "dunston--east-lake-pass",
+    "from": "dunston",
+    "to": "east-lake-pass",
+    "path": "trails",
+    "distance": "short",
+    "terrain": "easy"
+  },
+  {
+    "type": "route",
+    "id": "dunston--the-downs",
+    "from": "dunston",
+    "to": "the-downs",
+    "path": "trails",
+    "distance": "short",
+    "terrain": "perilous"
+  },
+  {
+    "type": "route",
+    "id": "dunston--white-tower-fens",
+    "from": "dunston",
+    "to": "white-tower-fens",
+    "path": "trails",
+    "distance": "medium",
+    "terrain": "perilous"
+  },
+  {
+    "type": "route",
+    "id": "east-lake-pass--the-downs",
+    "from": "east-lake-pass",
+    "to": "the-downs",
+    "path": "trails",
+    "distance": "short",
+    "terrain": "perilous"
+  },
+  {
+    "type": "route",
+    "id": "east-lake-pass--white-tower-fens",
+    "from": "east-lake-pass",
+    "to": "white-tower-fens",
+    "path": "trails",
+    "distance": "short",
+    "terrain": "tough"
+  },
+  {
+    "type": "route",
+    "id": "farming-path--dunston",
+    "from": "farming-path",
+    "to": "dunston",
+    "path": "trails",
+    "distance": "short",
+    "terrain": "easy"
+  },
+  {
+    "type": "route",
+    "id": "farming-path--east-lake-pass",
+    "from": "farming-path",
+    "to": "east-lake-pass",
+    "path": "trails",
+    "distance": "short",
+    "terrain": "easy"
+  },
+  {
+    "type": "route",
+    "id": "isthmus-town--dunston",
+    "from": "isthmus-town",
+    "to": "dunston",
+    "path": "trails",
+    "distance": "short",
+    "terrain": "easy"
+  },
+  {
+    "type": "route",
+    "id": "isthmus-town--farming-path",
+    "from": "isthmus-town",
+    "to": "farming-path",
+    "path": "roads",
+    "distance": "short",
+    "terrain": "easy"
+  },
+  {
+    "type": "route",
+    "id": "isthmus-town--old-mill-road",
+    "from": "isthmus-town",
+    "to": "old-mill-road",
+    "path": "roads",
+    "distance": "short",
+    "terrain": "easy"
+  },
+  {
+    "type": "route",
+    "id": "isthmus-town--white-tower-fens",
+    "from": "isthmus-town",
+    "to": "white-tower-fens",
+    "path": "trails",
+    "distance": "medium",
+    "terrain": "tough"
+  },
+  {
+    "type": "route",
+    "id": "old-mill-road--deadmill",
+    "from": "old-mill-road",
+    "to": "deadmill",
+    "path": "roads",
+    "distance": "short",
+    "terrain": "tough"
+  },
+  {
+    "type": "route",
+    "id": "old-mill-road--east-lake-pass",
+    "from": "old-mill-road",
+    "to": "east-lake-pass",
+    "path": "trails",
+    "distance": "short",
+    "terrain": "easy"
+  },
+  {
+    "type": "route",
+    "id": "old-mill-road--the-stone-forest",
+    "from": "old-mill-road",
+    "to": "the-stone-forest",
+    "path": "roads",
+    "distance": "short",
+    "terrain": "tough"
+  },
+  {
+    "type": "route",
+    "id": "old-mill-road--white-tower-fens",
+    "from": "old-mill-road",
+    "to": "white-tower-fens",
+    "path": "trails",
+    "distance": "medium",
+    "terrain": "tough"
+  },
+  {
+    "type": "route",
+    "id": "the-downs--white-tower-fens",
+    "from": "the-downs",
+    "to": "white-tower-fens",
+    "path": "trails",
+    "distance": "short",
+    "terrain": "tough"
+  },
+  {
+    "type": "route",
+    "id": "the-stone-forest--bone-sump",
+    "from": "the-stone-forest",
+    "to": "bone-sump",
+    "path": "wilderness",
+    "distance": "short",
+    "terrain": "perilous"
+  },
+  {
+    "type": "route",
+    "id": "the-stone-forest--deadmill",
+    "from": "the-stone-forest",
+    "to": "deadmill",
+    "path": "wilderness",
+    "distance": "short",
+    "terrain": "tough"
+  },
+  {
+    "type": "route",
+    "id": "white-tower-fens--bone-sump",
+    "from": "white-tower-fens",
+    "to": "bone-sump",
+    "path": "wilderness",
+    "distance": "short",
+    "terrain": "perilous"
+  },
+  {
+    "type": "route",
+    "id": "white-tower-fens--the-white-tower",
+    "from": "white-tower-fens",
+    "to": "the-white-tower",
+    "path": "trails",
+    "distance": "short",
+    "terrain": "tough"
+  }
+]

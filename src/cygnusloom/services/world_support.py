@@ -108,7 +108,7 @@ from cygnusloom.services.events import (
     record,
 )
 from cygnusloom.services.geometry import clearance, overlaps, polygon_problem, uncovered
-from cygnusloom.services.state import WORLD_MAP_PALETTES, normalize_journal
+from cygnusloom.services.state import WORLD_MAP_PALETTES, alias_key, normalize_journal
 from cygnusloom.services.tools import check_arguments
 from cygnusloom.services.views import (
     _character_named,
@@ -199,6 +199,7 @@ def seed_campaign(
                 summary=spot.summary,
                 rules=list(spot.rules),
                 routes={key: dict(route) for key, route in spot.routes.items()},
+                location_id=spot.id,
             ),
         )
     for region in world.regions:
@@ -1752,21 +1753,30 @@ def _slug(name: str) -> str:
 def _authored_route(
     state: CampaignState, origin: Place | None, dest: Place
 ) -> Mapping[str, Any] | None:
-    """The route the world authors from origin to dest, or None. A place inside another place
-    uses its parent's routes, and a route to a place inside another leads to that parent."""
+    """The route the world authors from origin to dest, or None. Authoring keys routes by the
+    destination's location id. A place inside another place uses its parent's routes, and a route
+    to a place inside another leads to that parent."""
     origins = [origin]
     if origin is not None and origin.parent is not None:
         origins.append(state.places.get(name_key(origin.parent)))
-    destinations = {_slug(dest.name), name_key(dest.name)}
+    destinations = [dest]
     if dest.parent is not None:
         dest_parent = state.places.get(name_key(dest.parent))
         if dest_parent is not None:
-            destinations |= {_slug(dest_parent.name), name_key(dest_parent.name)}
+            destinations.append(dest_parent)
+    ids = {place.location_id for place in destinations if place.location_id is not None}
+    names = {key for place in destinations for key in (_slug(place.name), name_key(place.name))}
+    aliases = {alias_key(place.name) for place in destinations}
     for place in origins:
         if place is None:
             continue
         for key, route in place.routes.items():
-            if key in destinations:
+            if key in ids:
+                return route
+        # BACKWARDS-COMPATIBILITY: 4 -- older campaigns keyed routes by destination name or
+        # slug, and older world data still does.
+        for key, route in place.routes.items():
+            if key in names or alias_key(key) in aliases:
                 return route
     return None
 

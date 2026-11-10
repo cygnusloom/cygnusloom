@@ -77,9 +77,12 @@ class Place:
     summary: str | None = None
     # The ids of rules attached to the place, whose text reaches the GM while the player is here.
     rules: tuple[str, ...] = ()
-    # Authored overland routes from this place, by destination place name key. A route gives the
+    # Authored overland routes from this place, by destination location id. A route gives the
     # path, distance, terrain, and vast of an overland move that leads there.
     routes: dict[str, dict[str, Any]] = field(default_factory=dict)
+    # The world's id for this place, such as "isthmus-town", or None for one the GM invented.
+    # Authored routes are keyed by it.
+    location_id: str | None = None
 
 
 # The looks the player's world map may choose. The CSS colours each palette, so a campaign's

@@ -23,7 +23,9 @@ from cygnusloom.services.events import (
     last_event_id,
     load_state,
 )
+from cygnusloom.services.state import CampaignState, Place, name_key
 from cygnusloom.services.wilderness import plan_overland
+from cygnusloom.services.world_support import _authored_route
 from tests.test_combat import CAIRN, PC
 from tests.test_travel import HPP, PARTS, _place
 from tests.test_wilderness_service import StubRng, _fix_roll, _pc_items, _pc_tools
@@ -258,6 +260,24 @@ def test_a_dungeon_move_takes_no_clock_time(client_factory: Callable[[], TestCli
 def _twin_lakes_pc_at(tools, place: str) -> None:
     """Put the PC in a Twin Lakes place by an ordinary in-settlement move."""
     tools.move_actor(PC, place)
+
+
+def test_an_authored_route_matches_the_destination_location_id():
+    origin = replace(
+        Place("Start", "The start.", location_id="start-village"),
+        routes={"odd-id": _route()},
+    )
+    dest = Place("Odd Name", "A name unlike its id.", location_id="odd-id")
+    state = CampaignState(places={name_key(origin.name): origin, name_key(dest.name): dest})
+    assert _authored_route(state, origin, dest) == _route()
+
+
+@pytest.mark.parametrize("key", ["old-mill", "Old Mill"])
+def test_an_authored_route_falls_back_to_a_name_or_slug_key(key: str):
+    origin = replace(Place("Start", "The start."), routes={key: _route()})
+    dest = Place("Old Mill", "An older campaign's place.")
+    state = CampaignState(places={name_key(origin.name): origin, name_key(dest.name): dest})
+    assert _authored_route(state, origin, dest) == _route()
 
 
 def test_an_authored_route_is_used_when_the_gm_gives_no_route(

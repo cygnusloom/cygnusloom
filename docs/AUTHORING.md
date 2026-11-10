@@ -175,8 +175,9 @@ Optional fields include `rule_set`, `blurb`, `third_party`, and `start`.
 
 A world may define:
 
-- `location`, including `parent`, `routes`, `map`, `icon`, `looks_like`, and
-  `discovered`;
+- `route`, with `from` and `to` location ids, `path`, `distance`, `terrain`,
+  optional `vast`, and optional `one_way`;
+- `location`, including `parent`, `map`, `icon`, `looks_like`, and `discovered`;
 - `npc`, including an inline statblock or a `monster` reference;
 - `region`, with polygon points and a rule-set `world_terrain` id;
 - `monster`, `feature`, `rule`, `table`, `dice_table`, and `creative_table`.
@@ -194,9 +195,12 @@ data explicit until that layer exists.
 - `patch` can only change paths that already exist.
 - A `world.rule_set` is optional, but a world with rule-set-specific monsters,
   features, or terrain may fail when paired with another rule set.
-- World route keys are authored by destination location id, but runtime route
-  lookup uses the destination name/slug. Keep the destination id and display
-  name consistent with the route key.
+- Author world routes once, as top-level `route` definitions. A two-way route
+  is the default; set `one_way: true` to add only the `from` -> `to` direction.
+  Do not also put a per-location `routes` entry on either endpoint for the same
+  pair, or loading fails.
+- A `location.routes` map remains supported for older world data. It is keyed
+  by destination location id.
 - Capability gates apply only to prompts and tools. Other definition types
   ignore `requires`/`enabled_by`.
 - Empty `enum_from` sources produce no enum; check the source data exists.
