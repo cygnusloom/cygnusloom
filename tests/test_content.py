@@ -699,6 +699,81 @@ def test_stat_presets_cannot_set_identity(tree: Path):
         ContentLibrary.load(tree)
 
 
+def _write_training(tree: Path, training: Any, marker: bool = True) -> None:
+    head = {**_rule_set()[0], "training": training}
+    stats = [{"type": "stat", "id": "theory", "name": "Theory", "formula": "3d6"}]
+    features = [
+        {"type": "feature", "id": "before", "name": "Before", "feature_type": "trait"},
+    ]
+    if marker:
+        features.append({"type": "feature", "id": "training", "generate": "training"})
+    features.append({"type": "feature", "id": "after", "name": "After", "feature_type": "trait"})
+    _write(
+        tree,
+        {
+            "rulesets/testset/rule_set.json": [head],
+            "rulesets/testset/stats.json": stats,
+            "rulesets/testset/features.json": features,
+        },
+    )
+
+
+def _training_block(**overrides: Any) -> dict[str, Any]:
+    block: dict[str, Any] = {
+        "stats": {"theory": "study sharpens your grasp"},
+        "tiers": [{"tag": "training-1", "name": "Early", "prefix": "Early", "cap": 2}],
+    }
+    block.update(overrides)
+    return block
+
+
+def test_training_block_generates_features_in_place(tree: Path):
+    _write_training(tree, _training_block())
+    spec = ContentLibrary.load(tree).rule_sets["testset"].character
+    assert list(spec.features) == ["before", "training-theory-1", "after"]
+    feature = spec.features["training-theory-1"]
+    assert feature.name == "Theory Training (Early)"
+    assert feature.description == "Early study sharpens your grasp. Raise Theory by 1, up to +2."
+    assert feature.tag == "training-1"
+    assert feature.effects == ({"op": "stat", "id": "theory", "delta": 1, "cap": 2},)
+
+
+def test_training_block_without_a_marker_appends(tree: Path):
+    _write_training(tree, _training_block(), marker=False)
+    spec = ContentLibrary.load(tree).rule_sets["testset"].character
+    assert list(spec.features) == ["before", "after", "training-theory-1"]
+
+
+def test_a_training_marker_needs_the_head_block(tree: Path):
+    head = _rule_set()[0]
+    features = [{"type": "feature", "id": "training", "generate": "training"}]
+    _write(
+        tree,
+        {"rulesets/testset/rule_set.json": [head], "rulesets/testset/features.json": features},
+    )
+    with pytest.raises(ContentError, match="needs a 'training' block"):
+        ContentLibrary.load(tree)
+
+
+def test_training_block_rejects_an_unknown_stat(tree: Path):
+    _write_training(tree, _training_block(stats={"missing": "studies"}))
+    with pytest.raises(ContentError, match="names no stat"):
+        ContentLibrary.load(tree)
+
+
+def test_academia_training_features_match_the_compact_table():
+    spec = bundled_library().rule_sets["academia-arcana"].character
+    ids = [feature_id for feature_id in spec.features if feature_id.startswith("training-")]
+    assert ids[:2] == ["training-theory-1", "training-practice-1"]
+    assert ids[-1] == "training-cunning-3"
+    assert spec.features["training-theory-1"].description == (
+        "Early-years study sharpens your grasp of theory. Raise Theory by 1, up to +2."
+    )
+    assert spec.features["training-cunning-3"].description == (
+        "Final-years trouble teaches you the back ways. Raise Cunning by 1, up to +4."
+    )
+
+
 def test_rule_set_item_sizes_build_definitions(tree: Path):
     head = {**_rule_set()[0], "item_sizes": {"petty": 0, "normal": 1}}
     _write(tree, {"rulesets/testset/rule_set.json": [head]})

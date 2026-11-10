@@ -1959,6 +1959,95 @@ def apply_stat_presets(
     return expanded
 
 
+def load_training_features(
+    value: object, definitions: list[Definition], label: str
+) -> list[Definition]:
+    """Expand a `training` head block into the tiered training features it describes. A
+    feature definition with `generate: "training"` marks where the generated features go;
+    without a marker they are appended."""
+    markers = [
+        d for d in definitions if d.type == "feature" and d.data.get("generate") == "training"
+    ]
+    if value is None:
+        if markers:
+            raise ContentError(f"{label}: a generate 'training' feature needs a 'training' block")
+        return definitions
+    training_label = f"{label}: training"
+    if not isinstance(value, Mapping):
+        raise ContentError(f"{training_label}: must be an object")
+    unknown = set(value) - {"stats", "tiers"}
+    if unknown:
+        raise ContentError(f"{training_label} has unknown keys: {', '.join(sorted(unknown))}")
+    stats = value.get("stats")
+    if not isinstance(stats, Mapping) or not stats:
+        raise ContentError(f"{training_label}: 'stats' must map stat ids to text")
+    tiers = value.get("tiers")
+    if not isinstance(tiers, list) or not tiers:
+        raise ContentError(f"{training_label}: 'tiers' must be a non-empty list")
+    stat_names = {
+        d.id: d.data.get("name")
+        for d in definitions
+        if d.type == "stat" and isinstance(d.data.get("name"), str)
+    }
+    generated: list[Definition] = []
+    used = {d.id for d in definitions if d.type == "feature"}
+    for index, tier in enumerate(tiers, 1):
+        tier_label = f"{training_label}: tier {index}"
+        if not isinstance(tier, Mapping):
+            raise ContentError(f"{tier_label}: must be an object")
+        unknown = set(tier) - {"tag", "name", "prefix", "cap"}
+        if unknown:
+            raise ContentError(f"{tier_label} has unknown keys: {', '.join(sorted(unknown))}")
+        tag = required_text(tier, "tag", tier_label)
+        name = required_text(tier, "name", tier_label)
+        prefix = required_text(tier, "prefix", tier_label)
+        cap = tier.get("cap")
+        if not isinstance(cap, int) or isinstance(cap, bool) or cap < 0:
+            raise ContentError(f"{tier_label}: 'cap' must be a whole number, zero or more")
+        for stat, phrase in stats.items():
+            stat_label = f"{training_label}: stat {stat!r}"
+            if not isinstance(stat, str) or not stat.strip():
+                raise ContentError(f"{training_label}: 'stats' ids must be non-empty text")
+            if not isinstance(phrase, str) or not phrase.strip():
+                raise ContentError(f"{stat_label}: the phrase must be non-empty text")
+            stat_name = stat_names.get(stat)
+            if stat_name is None:
+                raise ContentError(f"{stat_label}: names no stat")
+            feature_id = f"training-{stat}-{index}"
+            if feature_id in used and not markers:
+                continue
+            generated.append(
+                Definition(
+                    "feature",
+                    feature_id,
+                    {
+                        "type": "feature",
+                        "id": feature_id,
+                        "name": f"{stat_name} Training ({name})",
+                        "feature_type": "trait",
+                        "tag": tag,
+                        "description": (
+                            f"{prefix} {phrase}. Raise {stat_name} by 1, up to +{cap}."
+                        ),
+                        "effects": [{"op": "stat", "id": stat, "delta": 1, "cap": cap}],
+                    },
+                )
+            )
+    if not markers:
+        return [*definitions, *generated]
+    expanded: list[Definition] = []
+    placed = False
+    for definition in definitions:
+        if definition.type == "feature" and definition.data.get("generate") == "training":
+            if placed:
+                continue
+            expanded.extend(generated)
+            placed = True
+        else:
+            expanded.append(definition)
+    return expanded
+
+
 def _template_features(
     value: object, features: Mapping[str, Feature], label: str
 ) -> dict[str, tuple[Granted, ...]]:

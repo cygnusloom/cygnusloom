@@ -33,6 +33,7 @@ from cygnusloom.content.character import (
     load_feature,
     load_starting_silver,
     load_starting_years,
+    load_training_features,
     rule_ids,
 )
 from cygnusloom.content.definitions import (
@@ -3818,6 +3819,7 @@ def _build_rule_set(
             "starting_years",
             "stat_presets",
             "item_sizes",
+            "training",
             "template_features",
             "condition_ends",
             "npc_hp",
@@ -3841,6 +3843,7 @@ def _build_rule_set(
     ]
     definitions = apply_stat_presets(definitions, head.data.get("stat_presets"), label)
     definitions = _apply_item_sizes(definitions, head.data.get("item_sizes"), label)
+    definitions = load_training_features(head.data.get("training"), definitions, label)
     _check_character_definitions(definitions, template)
     definitions = _derive_background_tables(definitions, template)
     for definition in definitions:

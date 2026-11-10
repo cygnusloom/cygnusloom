@@ -264,6 +264,29 @@ name a preset from the rule-set head; the stat's own fields win:
 
 A preset cannot set `type`, `id`, `name`, or `preset`.
 
+## Training features
+
+A year-based game may describe its tiered training features once on the head
+and mark where they go with a generated feature:
+
+```json
+"training": {
+  "stats": {"theory": "study sharpens your grasp of theory"},
+  "tiers": [
+    {"tag": "training-1-3", "name": "Early Years", "prefix": "Early-years", "cap": 2}
+  ]
+}
+```
+
+```json
+{"type": "feature", "id": "training", "generate": "training"}
+```
+
+The marker becomes one feature per stat and tier, named `<Stat> Training
+(<tier name>)` and tagged with the tier's `tag`. Without a marker the generated
+features are appended. An explicit feature with the same id wins when there is
+no marker.
+
 ## Item sizes
 
 A rule set that uses an inventory lists its item sizes once on the head, as a

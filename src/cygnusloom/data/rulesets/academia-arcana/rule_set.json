@@ -34,6 +34,20 @@
         "swap_group": "traits"
       }
     },
+    "training": {
+      "stats": {
+        "theory": "study sharpens your grasp of theory",
+        "practice": "drills sharpen your casting",
+        "alchemy": "lab work steadies your hands",
+        "charm": "social practice makes you harder to rattle",
+        "cunning": "trouble teaches you the back ways"
+      },
+      "tiers": [
+        {"tag": "training-1-3", "name": "Early Years", "prefix": "Early-years", "cap": 2},
+        {"tag": "training-4-6", "name": "Middle Years", "prefix": "Middle-years", "cap": 3},
+        {"tag": "training-7", "name": "Final Years", "prefix": "Final-years", "cap": 4}
+      ]
+    },
     "table_genres": ["generic", "fantasy", "magicschool"],
     "condition_ends": ["rest", "downtime", "scene"],
     "starting_years": {
