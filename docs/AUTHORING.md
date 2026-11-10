@@ -377,6 +377,21 @@ data explicit until that layer exists.
   ignore `requires`/`enabled_by`.
 - Empty `enum_from` sources produce no enum; check the source data exists.
 
+## Monsters
+
+A monster needs a `name`, `description`, and every required stat for the rule
+set. These fields may be omitted when they match the defaults:
+
+| Field | Default |
+|---|---|
+| `armor` | `0` |
+| `attacks_per_action` | `1` |
+| `large_group` | `false` |
+| `abilities` | `[]` |
+
+A monster with no structured `attacks_per_action` may not say an attack count in
+its description; give the field instead.
+
 ## Validation
 
 There is currently no standalone content validator command. The test suite
