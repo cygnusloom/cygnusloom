@@ -731,17 +731,20 @@ def _stat(definition: Definition, template: str) -> Stat:
 
 
 def _modifier_bands(value: object, label: str) -> tuple[tuple[int, int], ...]:
-    """A stat's modifier bands: a non-empty list of objects with a whole `min` and `modifier`,
-    each `min` above the one before it."""
+    """A stat's modifier bands: a non-empty list of `[min, modifier]` pairs or objects with a
+    whole `min` and `modifier`, each `min` above the one before it."""
     if value is None:
         return ()
     if not isinstance(value, list) or not value:
         raise ContentError(f"{label}: 'modifier' must be a non-empty list of bands")
     bands: list[tuple[int, int]] = []
     for band in value:
-        if not isinstance(band, Mapping) or set(band) != {"min", "modifier"}:
+        if isinstance(band, list) and len(band) == 2:
+            minimum, modifier = band
+        elif isinstance(band, Mapping) and set(band) == {"min", "modifier"}:
+            minimum, modifier = band["min"], band["modifier"]
+        else:
             raise ContentError(f"{label}: each 'modifier' band needs a 'min' and a 'modifier'")
-        minimum, modifier = band["min"], band["modifier"]
         for amount in (minimum, modifier):
             if not isinstance(amount, int) or isinstance(amount, bool):
                 raise ContentError(f"{label}: 'modifier' bands must be whole numbers")

@@ -14,6 +14,7 @@ from cygnusloom.content.character import (
     NO_CAMPAIGN,
     Granted,
     TableOption,
+    _modifier_bands,
     campaign_schema,
 )
 from cygnusloom.content.definitions import ContentError, Definition, read_definitions
@@ -633,6 +634,19 @@ def test_rule_set_blurb_is_read(tree: Path):
     rule_set = [{**_rule_set()[0], "blurb": "A short line."}]
     _write(tree, {"rulesets/testset/rule_set.json": rule_set})
     assert ContentLibrary.load(tree).rule_sets["testset"].blurb == "A short line."
+
+
+def test_modifier_bands_accept_compact_pairs_and_objects():
+    assert _modifier_bands([[3, -2], [8, 0]], "stat") == ((3, -2), (8, 0))
+    assert _modifier_bands([{"min": 3, "modifier": -2}], "stat") == ((3, -2),)
+    with pytest.raises(ContentError, match="modifier"):
+        _modifier_bands([[3]], "stat")
+
+
+def test_wwn_attribute_modifier_bands_are_compact_pairs():
+    spec = bundled_library().rule_sets["worldswithoutnumber"].character
+    assert spec.stats["str"].modifier_bands == ((3, -2), (4, -1), (8, 0), (14, 1), (18, 2))
+    assert spec.stats["cha"].modifier_bands == spec.stats["str"].modifier_bands
 
 
 def _write_template_features(tree: Path, defaults: Any) -> None:

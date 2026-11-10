@@ -6,26 +6,11 @@
     "formula": "3d6",
     "swap_group": "attributes",
     "modifier": [
-      {
-        "min": 3,
-        "modifier": -2
-      },
-      {
-        "min": 4,
-        "modifier": -1
-      },
-      {
-        "min": 8,
-        "modifier": 0
-      },
-      {
-        "min": 14,
-        "modifier": 1
-      },
-      {
-        "min": 18,
-        "modifier": 2
-      }
+      [3, -2],
+      [4, -1],
+      [8, 0],
+      [14, 1],
+      [18, 2]
     ]
   },
   {
@@ -35,26 +20,11 @@
     "formula": "3d6",
     "swap_group": "attributes",
     "modifier": [
-      {
-        "min": 3,
-        "modifier": -2
-      },
-      {
-        "min": 4,
-        "modifier": -1
-      },
-      {
-        "min": 8,
-        "modifier": 0
-      },
-      {
-        "min": 14,
-        "modifier": 1
-      },
-      {
-        "min": 18,
-        "modifier": 2
-      }
+      [3, -2],
+      [4, -1],
+      [8, 0],
+      [14, 1],
+      [18, 2]
     ]
   },
   {
@@ -64,26 +34,11 @@
     "formula": "3d6",
     "swap_group": "attributes",
     "modifier": [
-      {
-        "min": 3,
-        "modifier": -2
-      },
-      {
-        "min": 4,
-        "modifier": -1
-      },
-      {
-        "min": 8,
-        "modifier": 0
-      },
-      {
-        "min": 14,
-        "modifier": 1
-      },
-      {
-        "min": 18,
-        "modifier": 2
-      }
+      [3, -2],
+      [4, -1],
+      [8, 0],
+      [14, 1],
+      [18, 2]
     ]
   },
   {
@@ -93,26 +48,11 @@
     "formula": "3d6",
     "swap_group": "attributes",
     "modifier": [
-      {
-        "min": 3,
-        "modifier": -2
-      },
-      {
-        "min": 4,
-        "modifier": -1
-      },
-      {
-        "min": 8,
-        "modifier": 0
-      },
-      {
-        "min": 14,
-        "modifier": 1
-      },
-      {
-        "min": 18,
-        "modifier": 2
-      }
+      [3, -2],
+      [4, -1],
+      [8, 0],
+      [14, 1],
+      [18, 2]
     ]
   },
   {
@@ -122,26 +62,11 @@
     "formula": "3d6",
     "swap_group": "attributes",
     "modifier": [
-      {
-        "min": 3,
-        "modifier": -2
-      },
-      {
-        "min": 4,
-        "modifier": -1
-      },
-      {
-        "min": 8,
-        "modifier": 0
-      },
-      {
-        "min": 14,
-        "modifier": 1
-      },
-      {
-        "min": 18,
-        "modifier": 2
-      }
+      [3, -2],
+      [4, -1],
+      [8, 0],
+      [14, 1],
+      [18, 2]
     ]
   },
   {
@@ -151,26 +76,11 @@
     "formula": "3d6",
     "swap_group": "attributes",
     "modifier": [
-      {
-        "min": 3,
-        "modifier": -2
-      },
-      {
-        "min": 4,
-        "modifier": -1
-      },
-      {
-        "min": 8,
-        "modifier": 0
-      },
-      {
-        "min": 14,
-        "modifier": 1
-      },
-      {
-        "min": 18,
-        "modifier": 2
-      }
+      [3, -2],
+      [4, -1],
+      [8, 0],
+      [14, 1],
+      [18, 2]
     ]
   },
   {

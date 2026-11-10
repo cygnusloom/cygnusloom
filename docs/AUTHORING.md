@@ -226,6 +226,25 @@ the rule set's own data.
 Python-backed tools are trusted code. The loader checks the signature against
 the schema, but content can import a Python module.
 
+## Stats
+
+A stat's `modifier` is a list of bands with rising minimums, written as compact
+`[min, modifier]` pairs or as objects with `min` and `modifier`. A score takes
+the modifier of the highest minimum it reaches:
+
+```json
+{
+  "type": "stat",
+  "id": "str",
+  "name": "Strength",
+  "formula": "3d6",
+  "swap_group": "attributes",
+  "modifier": [[3, -2], [4, -1], [8, 0], [14, 1], [18, 2]]
+}
+```
+
+The compact pair form is the bundled convention.
+
 ## Dice tables
 
 A `dice_table` has one formula and rows that cover every roll it can show, in
