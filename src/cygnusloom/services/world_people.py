@@ -225,6 +225,7 @@ class PeopleMixin:
                 self.hooks,
                 self.counters,
                 track_inventory=tracks_inventory(db, self.campaign_id),
+                currency=self.marketplace.currency if self.marketplace else "",
             )
 
     def character_options(self, field: str | None = None) -> dict[str, Any]:

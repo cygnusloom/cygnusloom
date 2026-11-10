@@ -768,6 +768,30 @@ def test_statblocks_stay_out_of_the_gm_orientation(client_factory: Callable[[], 
     assert "Brin Gallowcap" in text
 
 
+def test_the_gm_state_and_statblock_include_the_currency_count(
+    client_factory: Callable[[], TestClient], app
+):
+    _, campaign_id = _described_campaign(client_factory)
+    state = _state(app, campaign_id)
+    currency = next(iter(SPEC.features))
+    state.pc().features[currency] = 22
+    text = world.world_state_text(
+        state,
+        NO_CAMPAIGN,
+        inventory=INVENTORY,
+        currency=currency,
+    )
+    assert f"Currency: 22 {currency}" in text
+    statblock = world.get_statblock(
+        state,
+        state.pc().name,
+        SPEC,
+        inventory=INVENTORY,
+        currency=currency,
+    )
+    assert f"Currency: 22 {currency}" in statblock["statblock"]
+
+
 def test_note_subject_must_exist_and_text_must_not_be_blank(
     client_factory: Callable[[], TestClient], app
 ):

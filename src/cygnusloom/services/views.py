@@ -247,6 +247,7 @@ def get_statblock(
     hooks: Hooks | None = None,
     counters: Mapping[str, CounterRules] | None = None,
     track_inventory: bool = True,
+    currency: str = "",
 ) -> dict[str, Any]:
     """A character's stats, template, features, and fields, one line each. Works for the player
     character and for NPCs. With a rule set's `combat`, the armor, attacks, harm, and status follow.
@@ -259,7 +260,9 @@ def get_statblock(
         lines.insert(0, f"Description: {character.description}")
     if combat is not None:
         lines += _combat_lines(character, spec, combat)
-    lines += _status_lines(character, conditions, inventory, hooks, counters, track_inventory)
+    lines += _status_lines(
+        character, conditions, inventory, hooks, counters, track_inventory, currency
+    )
     for key, choices in character.feature_choices.items():
         lines.append(f"Feature choice {key}: {', '.join(choices)}")
     result = {
@@ -328,6 +331,7 @@ def _status_lines(
     hooks: Hooks | None,
     counters: Mapping[str, CounterRules] | None = None,
     track_inventory: bool = True,
+    currency: str = "",
 ) -> list[str]:
     """The character's conditions, counters, injuries, the rule set's status lines, and what they carry. Each part
     shows only when the rule set has it, or when the character has something to report."""
@@ -359,6 +363,8 @@ def _status_lines(
             lines.append(f"Inventory: {used} of {capacity} slots{flag}")
         carried = ", ".join(item.name for item in character.items)
         lines.append(f"Carrying: {carried or 'nothing'}")
+        if currency and currency in character.features:
+            lines.append(f"Currency: {character.features[currency]} {currency}")
     return lines
 
 
@@ -774,6 +780,7 @@ def world_state_text(
     tallies: Mapping[str, TallyRules] | None = None,
     unwritten_world: bool = False,
     track_inventory: bool = True,
+    currency: str = "",
 ) -> str:
     """The GM's orientation at the start of a turn: the campaign options, the day, the player
     character and where they are, the NPCs there, the factions and their cup, and any encounter in
@@ -892,11 +899,13 @@ def world_state_text(
             if player.retired:
                 continue
             for line in _status_lines(
-                player, conditions, inventory, hooks, counters, track_inventory
+                player, conditions, inventory, hooks, counters, track_inventory, currency
             ):
                 lines.append(f"{player.name}: {line}")
     elif not pc.retired:
-        lines.extend(_status_lines(pc, conditions, inventory, hooks, counters, track_inventory))
+        lines.extend(
+            _status_lines(pc, conditions, inventory, hooks, counters, track_inventory, currency)
+        )
     if inventory is not None and not track_inventory:
         lines.append(
             "Inventory space is not tracked in this campaign; characters may carry anything "

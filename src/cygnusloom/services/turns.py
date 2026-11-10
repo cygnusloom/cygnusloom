@@ -634,6 +634,7 @@ def _world_text(run: _Run, state: CampaignState) -> str:
         tallies=rule_set.tallies,
         unwritten_world=run.world is not None and not run.world.has_setting,
         track_inventory=run.tracks_inventory,
+        currency=rule_set.marketplace.currency if rule_set.marketplace else "",
     )
 
 
