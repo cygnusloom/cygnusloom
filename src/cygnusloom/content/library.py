@@ -26,6 +26,7 @@ from cygnusloom.content.character import (
     Feature,
     FeatureTypeRules,
     TableOption,
+    apply_stat_presets,
     build_campaign,
     build_character,
     character_schema,
@@ -3815,6 +3816,7 @@ def _build_rule_set(
             "optional_templates",
             "starting_silver",
             "starting_years",
+            "stat_presets",
             "template_features",
             "condition_ends",
             "npc_hp",
@@ -3836,6 +3838,7 @@ def _build_rule_set(
             {definition.id for definition in definitions if definition.type == "template"},
         ),
     ]
+    definitions = apply_stat_presets(definitions, head.data.get("stat_presets"), label)
     _check_character_definitions(definitions, template)
     definitions = _derive_background_tables(definitions, template)
     for definition in definitions:

@@ -22,6 +22,12 @@
       ]
     },
     "plus": "sum",
+    "stat_presets": {
+      "trait": {
+        "values": [-1, 0, 1, 1, 2],
+        "swap_group": "traits"
+      }
+    },
     "table_genres": ["generic", "fantasy", "magicschool"],
     "condition_ends": ["rest", "downtime", "scene"],
     "starting_years": {

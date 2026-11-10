@@ -649,6 +649,56 @@ def test_wwn_attribute_modifier_bands_are_compact_pairs():
     assert spec.stats["cha"].modifier_bands == spec.stats["str"].modifier_bands
 
 
+def test_stat_presets_fill_shared_fields(tree: Path):
+    head = {
+        **_rule_set()[0],
+        "stat_presets": {
+            "attributes": {
+                "formula": "3d6",
+                "swap_group": "attributes",
+                "modifier": [[3, -2], [8, 0]],
+            }
+        },
+    }
+    stats = [
+        {"type": "stat", "id": "str", "name": "Strength", "preset": "attributes"},
+        {
+            "type": "stat",
+            "id": "dex",
+            "name": "Dexterity",
+            "preset": "attributes",
+            "formula": "2d6",
+        },
+    ]
+    _write(
+        tree,
+        {"rulesets/testset/rule_set.json": [head], "rulesets/testset/stats.json": stats},
+    )
+    spec = ContentLibrary.load(tree).rule_sets["testset"].character
+    assert spec.stats["str"].formula == "3d6"
+    assert spec.stats["str"].modifier_bands == ((3, -2), (8, 0))
+    assert spec.stats["str"].swap_group == "attributes"
+    assert spec.stats["dex"].formula == "2d6"
+
+
+def test_stat_presets_must_exist(tree: Path):
+    head = {**_rule_set()[0], "stat_presets": {"attributes": {"formula": "3d6"}}}
+    stats = [{"type": "stat", "id": "str", "name": "Strength", "preset": "missing"}]
+    _write(
+        tree,
+        {"rulesets/testset/rule_set.json": [head], "rulesets/testset/stats.json": stats},
+    )
+    with pytest.raises(ContentError, match="names no preset"):
+        ContentLibrary.load(tree)
+
+
+def test_stat_presets_cannot_set_identity(tree: Path):
+    head = {**_rule_set()[0], "stat_presets": {"attributes": {"name": "Attributes"}}}
+    _write(tree, {"rulesets/testset/rule_set.json": [head]})
+    with pytest.raises(ContentError, match="cannot set 'name'"):
+        ContentLibrary.load(tree)
+
+
 def _write_template_features(tree: Path, defaults: Any) -> None:
     """A rule set whose backgrounds get `defaults` before their own grants."""
     features = [

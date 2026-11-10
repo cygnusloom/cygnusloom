@@ -14,6 +14,12 @@
       "social": ["conditions"]
     },
     "plus": "highest",
+    "stat_presets": {
+      "attribute": {
+        "formula": "3d6",
+        "swap_group": "attributes"
+      }
+    },
     "table_genres": ["generic", "fantasy"],
     "condition_ends": ["rest", "extended_rest", "aid", "time"],
     "npc_hp_stat": "hp",

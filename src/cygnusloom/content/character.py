@@ -1924,6 +1924,41 @@ def _with_default_grants(
     return (*(grant for grant in defaults if grant.feature not in own_features), *own)
 
 
+def apply_stat_presets(
+    definitions: list[Definition], value: object, label: str
+) -> list[Definition]:
+    """Expand stat `preset` references from the rule-set head before the character spec is
+    built. A preset supplies shared stat fields; the stat's own fields win."""
+    if value is None:
+        return definitions
+    if not isinstance(value, Mapping) or not value:
+        raise ContentError(f"{label}: 'stat_presets' must map names to stat fields")
+    presets: dict[str, dict[str, object]] = {}
+    for name, fields in value.items():
+        preset_label = f"{label}: stat preset {name!r}"
+        if not isinstance(name, str) or not name.strip():
+            raise ContentError(f"{label}: 'stat_presets' names must be non-empty text")
+        if not isinstance(fields, Mapping) or not fields:
+            raise ContentError(f"{preset_label}: a preset must be a non-empty object")
+        for key in ("type", "id", "name", "preset"):
+            if key in fields:
+                raise ContentError(f"{preset_label}: a preset cannot set {key!r}")
+        presets[name] = dict(fields)
+    expanded: list[Definition] = []
+    for definition in definitions:
+        if definition.type != "stat" or "preset" not in definition.data:
+            expanded.append(definition)
+            continue
+        name = definition.data["preset"]
+        if not isinstance(name, str) or not name.strip():
+            raise ContentError(f"{label}: stat {definition.id!r} 'preset' must be text")
+        if name not in presets:
+            raise ContentError(f"{label}: stat {definition.id!r} names no preset ({name!r})")
+        data = {**presets[name], **{k: v for k, v in definition.data.items() if k != "preset"}}
+        expanded.append(Definition(definition.type, definition.id, data))
+    return expanded
+
+
 def _template_features(
     value: object, features: Mapping[str, Feature], label: str
 ) -> dict[str, tuple[Granted, ...]]:

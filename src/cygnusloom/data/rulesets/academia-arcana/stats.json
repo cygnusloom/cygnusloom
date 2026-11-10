@@ -1,37 +1,7 @@
 [
-  {
-    "type": "stat",
-    "id": "theory",
-    "name": "Theory",
-    "values": [-1, 0, 1, 1, 2],
-    "swap_group": "traits"
-  },
-  {
-    "type": "stat",
-    "id": "practice",
-    "name": "Practice",
-    "values": [-1, 0, 1, 1, 2],
-    "swap_group": "traits"
-  },
-  {
-    "type": "stat",
-    "id": "alchemy",
-    "name": "Alchemy",
-    "values": [-1, 0, 1, 1, 2],
-    "swap_group": "traits"
-  },
-  {
-    "type": "stat",
-    "id": "charm",
-    "name": "Charm",
-    "values": [-1, 0, 1, 1, 2],
-    "swap_group": "traits"
-  },
-  {
-    "type": "stat",
-    "id": "cunning",
-    "name": "Cunning",
-    "values": [-1, 0, 1, 1, 2],
-    "swap_group": "traits"
-  }
+  {"type": "stat", "id": "theory", "name": "Theory", "preset": "trait"},
+  {"type": "stat", "id": "practice", "name": "Practice", "preset": "trait"},
+  {"type": "stat", "id": "alchemy", "name": "Alchemy", "preset": "trait"},
+  {"type": "stat", "id": "charm", "name": "Charm", "preset": "trait"},
+  {"type": "stat", "id": "cunning", "name": "Cunning", "preset": "trait"}
 ]

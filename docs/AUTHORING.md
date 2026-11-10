@@ -243,7 +243,26 @@ the modifier of the highest minimum it reaches:
 }
 ```
 
-The compact pair form is the bundled convention.
+The compact pair form is the bundled convention. Stats that share fields may
+name a preset from the rule-set head; the stat's own fields win:
+
+```json
+{
+  "stat_presets": {
+    "attributes": {
+      "formula": "3d6",
+      "swap_group": "attributes",
+      "modifier": [[3, -2], [4, -1], [8, 0], [14, 1], [18, 2]]
+    }
+  }
+}
+```
+
+```json
+{"type": "stat", "id": "str", "name": "Strength", "preset": "attributes"}
+```
+
+A preset cannot set `type`, `id`, `name`, or `preset`.
 
 ## Dice tables
 

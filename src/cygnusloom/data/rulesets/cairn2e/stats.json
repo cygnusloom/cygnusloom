@@ -1,6 +1,11 @@
 [
-  {"type": "stat", "id": "str", "name": "Strength", "formula": "3d6", "swap_group": "attributes"},
-  {"type": "stat", "id": "dex", "name": "Dexterity", "formula": "3d6", "swap_group": "attributes"},
-  {"type": "stat", "id": "wil", "name": "Willpower", "formula": "3d6", "swap_group": "attributes"},
-  {"type": "stat", "id": "hp", "name": "Hit Protection", "formula": "1d6"}
+  {"type": "stat", "id": "str", "name": "Strength", "preset": "attribute"},
+  {"type": "stat", "id": "dex", "name": "Dexterity", "preset": "attribute"},
+  {"type": "stat", "id": "wil", "name": "Willpower", "preset": "attribute"},
+  {
+    "type": "stat",
+    "id": "hp",
+    "name": "Hit Protection",
+    "formula": "1d6"
+  }
 ]

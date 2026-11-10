@@ -1,88 +1,10 @@
 [
-  {
-    "type": "stat",
-    "id": "str",
-    "name": "Strength",
-    "formula": "3d6",
-    "swap_group": "attributes",
-    "modifier": [
-      [3, -2],
-      [4, -1],
-      [8, 0],
-      [14, 1],
-      [18, 2]
-    ]
-  },
-  {
-    "type": "stat",
-    "id": "dex",
-    "name": "Dexterity",
-    "formula": "3d6",
-    "swap_group": "attributes",
-    "modifier": [
-      [3, -2],
-      [4, -1],
-      [8, 0],
-      [14, 1],
-      [18, 2]
-    ]
-  },
-  {
-    "type": "stat",
-    "id": "con",
-    "name": "Constitution",
-    "formula": "3d6",
-    "swap_group": "attributes",
-    "modifier": [
-      [3, -2],
-      [4, -1],
-      [8, 0],
-      [14, 1],
-      [18, 2]
-    ]
-  },
-  {
-    "type": "stat",
-    "id": "int",
-    "name": "Intelligence",
-    "formula": "3d6",
-    "swap_group": "attributes",
-    "modifier": [
-      [3, -2],
-      [4, -1],
-      [8, 0],
-      [14, 1],
-      [18, 2]
-    ]
-  },
-  {
-    "type": "stat",
-    "id": "wis",
-    "name": "Wisdom",
-    "formula": "3d6",
-    "swap_group": "attributes",
-    "modifier": [
-      [3, -2],
-      [4, -1],
-      [8, 0],
-      [14, 1],
-      [18, 2]
-    ]
-  },
-  {
-    "type": "stat",
-    "id": "cha",
-    "name": "Charisma",
-    "formula": "3d6",
-    "swap_group": "attributes",
-    "modifier": [
-      [3, -2],
-      [4, -1],
-      [8, 0],
-      [14, 1],
-      [18, 2]
-    ]
-  },
+  {"type": "stat", "id": "str", "name": "Strength", "preset": "attributes"},
+  {"type": "stat", "id": "dex", "name": "Dexterity", "preset": "attributes"},
+  {"type": "stat", "id": "con", "name": "Constitution", "preset": "attributes"},
+  {"type": "stat", "id": "int", "name": "Intelligence", "preset": "attributes"},
+  {"type": "stat", "id": "wis", "name": "Wisdom", "preset": "attributes"},
+  {"type": "stat", "id": "cha", "name": "Charisma", "preset": "attributes"},
   {
     "type": "stat",
     "id": "hp",
@@ -265,9 +187,17 @@
     "name": "Healer Effort",
     "derived": {
       "base": 0,
-      "best_modifier": ["int", "cha"],
-      "plus_skills": ["heal"],
-      "requires_templates": ["healer", "healer_partial_2"],
+      "best_modifier": [
+        "int",
+        "cha"
+      ],
+      "plus_skills": [
+        "heal"
+      ],
+      "requires_templates": [
+        "healer",
+        "healer_partial_2"
+      ],
       "minimum": 1
     }
   },
@@ -277,9 +207,22 @@
     "name": "Vowed Effort",
     "derived": {
       "base": 0,
-      "best_modifier": ["str", "dex", "con", "int", "wis", "cha"],
-      "plus_skill_picks": ["order_skill", "second_order_skill"],
-      "requires_templates": ["vowed", "vowed_partial_2"],
+      "best_modifier": [
+        "str",
+        "dex",
+        "con",
+        "int",
+        "wis",
+        "cha"
+      ],
+      "plus_skill_picks": [
+        "order_skill",
+        "second_order_skill"
+      ],
+      "requires_templates": [
+        "vowed",
+        "vowed_partial_2"
+      ],
       "minimum": 1
     }
   }
