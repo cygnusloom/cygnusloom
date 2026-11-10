@@ -104,7 +104,7 @@
     "compatible_with": { "class": ["healer", "vowed"], "tradition": ["no_tradition"] },
     "stats": { "hp": -1, "attack_bonus": 0 },
     "skills": { "heal": 1 },
-    "features": [{ "feature": "art_healing_touch" }],
+    "features": ["art_healing_touch"],
     "feat_picks": [
       {
         "id": "second_class_art_healer",
@@ -136,9 +136,9 @@
       }
     ],
     "features": [
-      { "feature": "art_martial_style" },
-      { "feature": "art_unarmed_might" },
-      { "feature": "art_unarmored_defense" }
+      "art_martial_style",
+      "art_unarmed_might",
+      "art_unarmored_defense"
     ],
     "feat_picks": [
       {

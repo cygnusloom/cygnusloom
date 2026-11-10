@@ -108,18 +108,15 @@ A rule set head may declare default feature grants per template kind:
   "name": "Cairn 2e",
   "description": "...",
   "template_features": {
-    "background": [
-      {"feature": "backpack", "quantity": "1"},
-      {"feature": "gold", "quantity": "3d6"},
-      {"feature": "rations", "quantity": "1"}
-    ]
+    "background": ["backpack", {"feature": "gold", "quantity": "3d6"}, "rations"]
   }
 }
 ```
 
-A template of that kind receives the defaults first, then its own grants. If the
-template grants the same feature id, the template's grant wins and the default is
-not duplicated.
+A feature grant is either a feature id, which grants one, or an object naming a
+feature and a different `quantity`. A template of that kind receives the
+defaults first, then its own grants. If the template grants the same feature id,
+the template's grant wins and the default is not duplicated.
 
 This is the current pattern for the Cairn background kit. It removes repeated
 backpack/gold/rations grants from every background.

@@ -685,9 +685,9 @@ def test_rule_set_template_features_prefix_a_templates_kind(tree: Path):
         tree,
         {
             "background": [
-                {"feature": "pack", "quantity": "1"},
+                "pack",
                 {"feature": "coin", "quantity": "3d6"},
-                {"feature": "ration", "quantity": "1"},
+                "ration",
             ]
         },
     )
@@ -713,10 +713,11 @@ def test_rule_set_template_features_prefix_a_templates_kind(tree: Path):
 @pytest.mark.parametrize(
     "grants",
     [
-        [{"feature": "missing", "quantity": "1"}],
+        ["missing"],
         [{"feature": "pack", "quantity": "often"}],
+        [5],
     ],
-    ids=["unknown-feature", "bad-quantity"],
+    ids=["unknown-feature", "bad-quantity", "not-an-id"],
 )
 def test_rule_set_template_features_validate_their_grants(tree: Path, grants: Any):
     _write_template_features(tree, {"background": grants})

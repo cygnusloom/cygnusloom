@@ -1945,8 +1945,11 @@ def _template_features(
 
 
 def _granted(item: object, features: Mapping[str, Feature], label: str) -> Granted:
+    """A grant is a feature id, or an object naming a feature and a quantity other than one."""
+    if isinstance(item, str):
+        item = {"feature": item}
     if not isinstance(item, dict):
-        raise ContentError(f"{label}: each feature must be an object")
+        raise ContentError(f"{label}: each feature must be an id or an object")
     feature = required_text(item, "feature", label)
     if feature not in features:
         raise ContentError(f"{label}: unknown feature {feature!r}")

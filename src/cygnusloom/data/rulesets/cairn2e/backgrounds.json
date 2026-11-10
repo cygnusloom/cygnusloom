@@ -6,22 +6,10 @@
     "name": "Aurifex",
     "description": "You are an artisan of the arcane, a smith of subtle forces. In the crucible of your workshop, the laws that govern this world are warped to suit your needs.",
     "features": [
-      {
-        "feature": "lantern",
-        "quantity": "1"
-      },
-      {
-        "feature": "oil-can",
-        "quantity": "1"
-      },
-      {
-        "feature": "needle-knife",
-        "quantity": "1"
-      },
-      {
-        "feature": "protective-gloves",
-        "quantity": "1"
-      }
+      "lantern",
+      "oil-can",
+      "needle-knife",
+      "protective-gloves"
     ],
     "tables": [
       "aurifex-what-went-horribly-wrong",
@@ -36,26 +24,11 @@
     "name": "Barber-Surgeon",
     "description": "You walk the line between healer and harrower, knowing the frailty of the flesh but also the secrets that lie within. With the right tools, life and death are merely words.",
     "features": [
-      {
-        "feature": "torch",
-        "quantity": "1"
-      },
-      {
-        "feature": "bonesaw",
-        "quantity": "1"
-      },
-      {
-        "feature": "bandages",
-        "quantity": "1"
-      },
-      {
-        "feature": "leech",
-        "quantity": "1"
-      },
-      {
-        "feature": "stained-medical-finery",
-        "quantity": "1"
-      }
+      "torch",
+      "bonesaw",
+      "bandages",
+      "leech",
+      "stained-medical-finery"
     ],
     "tables": [
       "barber-surgeon-how-have-you-improved-yourself",
@@ -70,26 +43,11 @@
     "name": "Beast Handler",
     "description": "You alone can walk among the creatures of the wild, fearless and in control. You share a connection with animals that others can only dream of… so long as you don’t become their snack.",
     "features": [
-      {
-        "feature": "torch",
-        "quantity": "1"
-      },
-      {
-        "feature": "leather-whip",
-        "quantity": "1"
-      },
-      {
-        "feature": "soporific-darts",
-        "quantity": "1"
-      },
-      {
-        "feature": "lure",
-        "quantity": "1"
-      },
-      {
-        "feature": "rope",
-        "quantity": "1"
-      }
+      "torch",
+      "leather-whip",
+      "soporific-darts",
+      "lure",
+      "rope"
     ],
     "tables": [
       "beast-handler-what-creature-is-your-specialty",
@@ -104,22 +62,10 @@
     "name": "Bonekeeper",
     "description": "You are a shepherd to the departed. You listen to the final whispers of the dead as they descend into the cold, unyielding earth. You know that to fully celebrate the gift of life, we must honor its finale as well.",
     "features": [
-      {
-        "feature": "lantern",
-        "quantity": "1"
-      },
-      {
-        "feature": "oil-can",
-        "quantity": "1"
-      },
-      {
-        "feature": "stake",
-        "quantity": "1"
-      },
-      {
-        "feature": "chains",
-        "quantity": "1"
-      }
+      "lantern",
+      "oil-can",
+      "stake",
+      "chains"
     ],
     "tables": [
       "bonekeeper-what-did-you-take-from-the-dead",
@@ -134,26 +80,11 @@
     "name": "Cutpurse",
     "description": "You live in the grey space between those who have power and those who don’t. You find opportunity where others see only chaos. With nimble fingers, you unburden both the richest merchant and the lowliest guard.",
     "features": [
-      {
-        "feature": "torch",
-        "quantity": "1"
-      },
-      {
-        "feature": "twin-daggers",
-        "quantity": "1"
-      },
-      {
-        "feature": "padded-leather",
-        "quantity": "1"
-      },
-      {
-        "feature": "lockpicks",
-        "quantity": "1"
-      },
-      {
-        "feature": "black-outfit",
-        "quantity": "1"
-      }
+      "torch",
+      "twin-daggers",
+      "padded-leather",
+      "lockpicks",
+      "black-outfit"
     ],
     "tables": [
       "cutpurse-what-was-your-last-big-job",
@@ -168,26 +99,11 @@
     "name": "Fieldwarden",
     "description": "Protectors of the harvest, defense against pests, thieves, and beasts. A position of great honor, while it lasts: many guardians do not live out their natural lives. Roll a second time on the Bonds table.",
     "features": [
-      {
-        "feature": "torch",
-        "quantity": "1"
-      },
-      {
-        "feature": "brigandine",
-        "quantity": "1"
-      },
-      {
-        "feature": "sling",
-        "quantity": "1"
-      },
-      {
-        "feature": "hand-axe",
-        "quantity": "1"
-      },
-      {
-        "feature": "repellent",
-        "quantity": "1"
-      }
+      "torch",
+      "brigandine",
+      "sling",
+      "hand-axe",
+      "repellent"
     ],
     "tables": [
       "fieldwarden-what-got-the-better-of-you",
@@ -202,26 +118,11 @@
     "name": "Fletchwind",
     "description": "You strike from afar, but that does not make you a coward. You are a musician, the song of your bowstring naught but a warning, singing the silent promise of a quick death.",
     "features": [
-      {
-        "feature": "torch",
-        "quantity": "1"
-      },
-      {
-        "feature": "bow",
-        "quantity": "1"
-      },
-      {
-        "feature": "serrated-knife",
-        "quantity": "1"
-      },
-      {
-        "feature": "boiled-leather",
-        "quantity": "1"
-      },
-      {
-        "feature": "heartroot-salve",
-        "quantity": "1"
-      }
+      "torch",
+      "bow",
+      "serrated-knife",
+      "boiled-leather",
+      "heartroot-salve"
     ],
     "tables": [
       "fletchwind-how-did-you-earn-your-bow",
@@ -236,26 +137,11 @@
     "name": "Foundling",
     "description": "An odd birthmark, a strange smell: somehow, the touch of elsewhere still lingers. Wherever you are, you have trouble fitting in. Roll on the Omens table (even if you’re not the youngest player), but keep the results private for now.",
     "features": [
-      {
-        "feature": "torch",
-        "quantity": "1"
-      },
-      {
-        "feature": "salt-pouch",
-        "quantity": "1"
-      },
-      {
-        "feature": "heirloom-amulet",
-        "quantity": "1"
-      },
-      {
-        "feature": "sling",
-        "quantity": "1"
-      },
-      {
-        "feature": "dagger",
-        "quantity": "1"
-      }
+      "torch",
+      "salt-pouch",
+      "heirloom-amulet",
+      "sling",
+      "dagger"
     ],
     "tables": [
       "foundling-who-took-you-in",
@@ -270,22 +156,10 @@
     "name": "Fungal Forager",
     "description": "You follow the whisperings of the deep earth, the rhythmic pulse of the mycelium forest that grows beneath the surface. The dark holds no terror for you. Also, you really love mushrooms.",
     "features": [
-      {
-        "feature": "sharpened-trowel",
-        "quantity": "1"
-      },
-      {
-        "feature": "candle-helmet",
-        "quantity": "1"
-      },
-      {
-        "feature": "rope",
-        "quantity": "1"
-      },
-      {
-        "feature": "metal-pail",
-        "quantity": "1"
-      }
+      "sharpened-trowel",
+      "candle-helmet",
+      "rope",
+      "metal-pail"
     ],
     "tables": [
       "fungal-forager-what-strange-fungus-did-you-discover",
@@ -300,26 +174,11 @@
     "name": "Greenwise",
     "description": "You delve deep into the Wood , prying its secrets from between rough boughs and whispering leaves. To this verdant kingdom, you are no mere scholar but its confidant as well.",
     "features": [
-      {
-        "feature": "torch",
-        "quantity": "1"
-      },
-      {
-        "feature": "iron-pot",
-        "quantity": "1"
-      },
-      {
-        "feature": "root-knife",
-        "quantity": "1"
-      },
-      {
-        "feature": "healing-salve",
-        "quantity": "1"
-      },
-      {
-        "feature": "twine-bauble",
-        "quantity": "1"
-      }
+      "torch",
+      "iron-pot",
+      "root-knife",
+      "healing-salve",
+      "twine-bauble"
     ],
     "tables": [
       "greenwise-how-has-the-wood-failed-you",
@@ -334,26 +193,11 @@
     "name": "Half Witch",
     "description": "Born of both the mortal world and the unseen, you are an enigma to some and feared by many. Yours is the tale of what happens when two worlds collide.",
     "features": [
-      {
-        "feature": "torch",
-        "quantity": "1"
-      },
-      {
-        "feature": "spellbook-thicket",
-        "quantity": "1"
-      },
-      {
-        "feature": "iron-dagger",
-        "quantity": "1"
-      },
-      {
-        "feature": "herbs-pouch",
-        "quantity": "1"
-      },
-      {
-        "feature": "ghillie-suit",
-        "quantity": "1"
-      }
+      "torch",
+      "spellbook-thicket",
+      "iron-dagger",
+      "herbs-pouch",
+      "ghillie-suit"
     ],
     "tables": [
       "half-witch-what-did-you-bring-back-from-the-unseelie-court",
@@ -368,26 +212,11 @@
     "name": "Hexenbane",
     "description": "You are a mere digit on the unerring hand of justice. You go where others fear to tread, unyielding and unbroken.",
     "features": [
-      {
-        "feature": "torch",
-        "quantity": "1"
-      },
-      {
-        "feature": "vestments-of-the-order",
-        "quantity": "1"
-      },
-      {
-        "feature": "blessed-tinctures",
-        "quantity": "1"
-      },
-      {
-        "feature": "silver-knife",
-        "quantity": "1"
-      },
-      {
-        "feature": "crossbow",
-        "quantity": "1"
-      }
+      "torch",
+      "vestments-of-the-order",
+      "blessed-tinctures",
+      "silver-knife",
+      "crossbow"
     ],
     "tables": [
       "hexenbane-to-which-order-do-you-belong",
@@ -402,26 +231,11 @@
     "name": "Jongleur",
     "description": "What inspires the soul more than song, words, and spectacle? Why practice for years to master the arcane when you’ve already got real magic inside?",
     "features": [
-      {
-        "feature": "torch",
-        "quantity": "1"
-      },
-      {
-        "feature": "costume",
-        "quantity": "1"
-      },
-      {
-        "feature": "simple-instrument",
-        "quantity": "1"
-      },
-      {
-        "feature": "lucky-jerkin",
-        "quantity": "1"
-      },
-      {
-        "feature": "sling",
-        "quantity": "1"
-      }
+      "torch",
+      "costume",
+      "simple-instrument",
+      "lucky-jerkin",
+      "sling"
     ],
     "tables": [
       "jongleur-what-happened-at-your-final-performance",
@@ -436,26 +250,11 @@
     "name": "Kettlewright",
     "description": "You are known by the smell of molten metal and the jingle of tin. You are no mere merchant but an artisan of fire and metal.",
     "features": [
-      {
-        "feature": "torch",
-        "quantity": "1"
-      },
-      {
-        "feature": "pincers",
-        "quantity": "1"
-      },
-      {
-        "feature": "roll-of-tin",
-        "quantity": "1"
-      },
-      {
-        "feature": "gloves",
-        "quantity": "1"
-      },
-      {
-        "feature": "hammer",
-        "quantity": "1"
-      }
+      "torch",
+      "pincers",
+      "roll-of-tin",
+      "gloves",
+      "hammer"
     ],
     "tables": [
       "kettlewright-what-is-your-trade",
@@ -470,22 +269,10 @@
     "name": "Marchguard",
     "description": "Bound by blood Oath to patrol the border and protect the realm. Once sworn, the Oath cannot be broken. The Guard always finds their own.",
     "features": [
-      {
-        "feature": "lantern",
-        "quantity": "1"
-      },
-      {
-        "feature": "oil-can",
-        "quantity": "1"
-      },
-      {
-        "feature": "long-sword",
-        "quantity": "1"
-      },
-      {
-        "feature": "boiled-leather",
-        "quantity": "1"
-      }
+      "lantern",
+      "oil-can",
+      "long-sword",
+      "boiled-leather"
     ],
     "tables": [
       "marchguard-why-did-you-take-the-oath",
@@ -500,26 +287,11 @@
     "name": "Mountebank",
     "description": "Wits are your sharpest weapon, a facade your strongest shield. But when you do lose, you lose badly.",
     "features": [
-      {
-        "feature": "torch",
-        "quantity": "1"
-      },
-      {
-        "feature": "cart",
-        "quantity": "1"
-      },
-      {
-        "feature": "trick-playing-cards",
-        "quantity": "1"
-      },
-      {
-        "feature": "fancy-hat",
-        "quantity": "1"
-      },
-      {
-        "feature": "cane-sword",
-        "quantity": "1"
-      }
+      "torch",
+      "cart",
+      "trick-playing-cards",
+      "fancy-hat",
+      "cane-sword"
     ],
     "tables": [
       "mountebank-how-was-your-fraud-exposed",
@@ -534,26 +306,11 @@
     "name": "Outrider",
     "description": "Your coin comes from escorting caravans, tracking fugitives, or lending your blade to a cause. You’ve been a savior, an executioner, a hero, and even a villain. Yours is not a solitary path, however: you’ll always have your horse.",
     "features": [
-      {
-        "feature": "torch",
-        "quantity": "1"
-      },
-      {
-        "feature": "long-sword",
-        "quantity": "1"
-      },
-      {
-        "feature": "leather-jerkin",
-        "quantity": "1"
-      },
-      {
-        "feature": "crossbow",
-        "quantity": "1"
-      },
-      {
-        "feature": "spyglass",
-        "quantity": "1"
-      }
+      "torch",
+      "long-sword",
+      "leather-jerkin",
+      "crossbow",
+      "spyglass"
     ],
     "tables": [
       "outrider-what-personal-code-or-principle-do-you-uphold",
@@ -568,26 +325,11 @@
     "name": "Prowler",
     "description": "You are a specter in the night, a fleeting shadow that slips by its prey, unseen. Each kill is a test of cunning and animal determination, a contest between life and death. You know that one day you will lose. You look forward to it.",
     "features": [
-      {
-        "feature": "torch",
-        "quantity": "1"
-      },
-      {
-        "feature": "tarp",
-        "quantity": "1"
-      },
-      {
-        "feature": "boiled-leather",
-        "quantity": "1"
-      },
-      {
-        "feature": "short-sword",
-        "quantity": "1"
-      },
-      {
-        "feature": "spring-loaded-trap",
-        "quantity": "1"
-      }
+      "torch",
+      "tarp",
+      "boiled-leather",
+      "short-sword",
+      "spring-loaded-trap"
     ],
     "tables": [
       "prowler-what-did-you-last-hunt",
@@ -602,26 +344,11 @@
     "name": "Rill Runner",
     "description": "You sing the stories of rivers and lakes, your talents soothing friends and the elements alike. You’ve seen more than most, but somehow it never seems to be enough.",
     "features": [
-      {
-        "feature": "torch",
-        "quantity": "1"
-      },
-      {
-        "feature": "water-shoes",
-        "quantity": "1"
-      },
-      {
-        "feature": "brigandine",
-        "quantity": "1"
-      },
-      {
-        "feature": "compass",
-        "quantity": "1"
-      },
-      {
-        "feature": "dagger",
-        "quantity": "1"
-      }
+      "torch",
+      "water-shoes",
+      "brigandine",
+      "compass",
+      "dagger"
     ],
     "tables": [
       "rill-runner-what-songs-are-you-best-known-for",
@@ -636,26 +363,11 @@
     "name": "Scrivener",
     "description": "You copy ancient texts and illuminate manuscripts, recording the voices of the clever, the great, and the powerful. You will prove that the pen truly is mightier than the sword.",
     "features": [
-      {
-        "feature": "torch",
-        "quantity": "1"
-      },
-      {
-        "feature": "quill-ink",
-        "quantity": "1"
-      },
-      {
-        "feature": "blank-book",
-        "quantity": "1"
-      },
-      {
-        "feature": "awl",
-        "quantity": "1"
-      },
-      {
-        "feature": "badge",
-        "quantity": "1"
-      }
+      "torch",
+      "quill-ink",
+      "blank-book",
+      "awl",
+      "badge"
     ],
     "tables": [
       "scrivener-what-work-did-you-keep-for-yourself",
