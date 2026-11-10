@@ -35,7 +35,7 @@ from cygnusloom.services.events import (
     EffectNoted,
     FeatureLearned,
     MaxChanged,
-    StatRestored,
+    Recovered,
     record,
 )
 from cygnusloom.services.hooks import HookContext
@@ -1235,7 +1235,7 @@ def _recover_with_hook(
         record(
             db,
             campaign_id,
-            StatRestored(name=found.name, stat=stat, amount=amount, cause=why),
+            Recovered(name=found.name, stat=stat, amount=amount, cause=why),
         )
         restored[stat] = restored.get(stat, 0) + amount
 

@@ -315,8 +315,10 @@ def _take_starting_items(
     if inventory is not None and item_sizes is not None:
         for feature_id in list(starting):
             feature = spec.features[feature_id]
+            kind = spec.feature_types.get(feature.feature_type)
+            carries = kind.inventory if kind is not None else feature.feature_type == "item"
             if feature_id != currency and (
-                feature.feature_type == "item"
+                carries
                 or (
                     feature.feature_type == "spell" and magic is not None and magic.item is not None
                 )

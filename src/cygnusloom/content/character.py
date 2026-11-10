@@ -19,8 +19,6 @@ from cygnusloom.content.definitions import ContentError, Definition, required_te
 from cygnusloom.content.icons import FALLBACK_ITEM, FALLBACK_WEAPON, resolve_icon
 from cygnusloom.rules.dice import FORMULA, is_formula, roll_total
 
-FEATURE_TYPES = ("item", "trait", "spell", "potion", "enchantment", "subject", "feat")
-
 
 @dataclass(frozen=True)
 class FeatureTypeRules:
@@ -33,6 +31,8 @@ class FeatureTypeRules:
     group: str = ""
     rank_label: str = ""
     tag_label: str = ""
+    # Subheadings for particular tags, such as Foci and Arts sharing the feat type.
+    tag_groups: Mapping[str, str] = field(default_factory=dict)
     unique: bool = False
     inventory: bool = False
 
@@ -506,6 +506,7 @@ def build_character(
     """Build the character spec from a rule set's definitions. `tables` are already loaded.
     `icon_entries` maps a feature id to its raw (icon, looks_like) so one feature may borrow
     another's looks."""
+    feature_types = dict(feature_types or DEFAULT_FEATURE_TYPES)
     stats = _each(definitions, "stat", lambda d: _stat(d, template))
     _check_groups(stats, template)
     skills = _each(definitions, "skill", lambda d: _skill(d, template))
@@ -523,6 +524,7 @@ def build_character(
             skills=skills,
             counters=counter_ids,
             icon_entries=icon_entries,
+            feature_types=feature_types,
         ),
     )
     if ordered_feature_tags == ():
@@ -546,7 +548,14 @@ def build_character(
         definitions,
         "template",
         lambda d: _template(
-            d, features, tables, skills, levels, template, defaults=default_features
+            d,
+            features,
+            tables,
+            skills,
+            levels,
+            template,
+            defaults=default_features,
+            feature_types=feature_types,
         ),
     )
     _check_stat_links(stats, skills, counter_ids, template)
@@ -608,7 +617,7 @@ def build_character(
         skill_progression=levels,
         ordered_feature_tags=ordered_tags,
         starting_silver=starting_silver,
-        feature_types=dict(feature_types or DEFAULT_FEATURE_TYPES),
+        feature_types=feature_types,
     )
 
 
@@ -978,16 +987,19 @@ def load_feature(
     skills: Collection[str] = (),
     counters: Collection[str] = (),
     icon_entries: Mapping[str, tuple[str | None, str | None]] | None = None,
+    feature_types: Mapping[str, FeatureTypeRules] | None = None,
 ) -> Feature:
     """Read a feature. `stats`, `skills`, and `counters` are the ids the rule set defines; when one
     is empty the ids of that kind are not checked, as for a world whose rule set is not known.
     `icon_entries` maps feature ids to their raw (icon, looks_like) so `looks_like` may borrow
-    another feature's looks."""
+    another feature's looks. `feature_types` is the rule set's feature-type registry; without
+    one, the engine's seven defaults apply."""
     label = f"{template}: feature {definition.id}"
     data = definition.data
     kind = required_text(data, "feature_type", label)
-    if kind not in FEATURE_TYPES:
-        raise ContentError(f"{label}: 'feature_type' must be one of {', '.join(FEATURE_TYPES)}")
+    allowed_types = feature_types or DEFAULT_FEATURE_TYPES
+    if kind not in allowed_types:
+        raise ContentError(f"{label}: 'feature_type' must be one of {', '.join(allowed_types)}")
     description = data.get("description", "")
     if not isinstance(description, str):
         raise ContentError(f"{label}: 'description' must be text")
@@ -1434,6 +1446,7 @@ def _template(
     skill_progression: SkillProgression | None,
     template: str,
     defaults: Mapping[str, tuple[Granted, ...]] | None = None,
+    feature_types: Mapping[str, FeatureTypeRules] | None = None,
 ) -> Template:
     label = f"{template}: template {definition.id}"
     data = definition.data
@@ -1467,12 +1480,12 @@ def _template(
         names=names,
         stats=_amounts(data.get("stats", {}), "stats", label),
         counters=_amounts(data.get("counters", {}), "counters", label, minimum=0),
-        choose=_choose(data.get("choose"), label),
+        choose=_choose(data.get("choose"), label, feature_types),
         skills=_skill_grants(data.get("skills", {}), skills, label),
         skill_picks=_skill_picks(
             data.get("skill_picks", []), tables, skills, skill_progression, label
         ),
-        feat_picks=_feat_picks(data.get("feat_picks", []), label),
+        feat_picks=_feat_picks(data.get("feat_picks", []), label, feature_types),
         compatible_with=_template_compatibility(data.get("compatible_with", {}), label),
         template_requirements=_template_requirements(data.get("template_requirements", []), label),
         choice_key=choice_key,
@@ -1796,8 +1809,13 @@ def _skill_picks(
     return tuple(picks)
 
 
-def _feat_picks(value: object, label: str) -> tuple[FeatPick, ...]:
+def _feat_picks(
+    value: object,
+    label: str,
+    feature_types: Mapping[str, FeatureTypeRules] | None = None,
+) -> tuple[FeatPick, ...]:
     """The features a template lets the character pick by tag and rank."""
+    allowed_types = feature_types or DEFAULT_FEATURE_TYPES
     if not isinstance(value, list):
         raise ContentError(f"{label}: 'feat_picks' must be a list")
     picks: list[FeatPick] = []
@@ -1826,13 +1844,20 @@ def _feat_picks(value: object, label: str) -> tuple[FeatPick, ...]:
         feature_type = item.get("feature_type", "")
         if not isinstance(feature_type, str):
             raise ContentError(f"{pick_label} {ident!r}: 'feature_type' must be text")
+        if feature_type and feature_type not in allowed_types:
+            raise ContentError(
+                f"{pick_label} {ident!r}: 'feature_type' must be one of {', '.join(allowed_types)}"
+            )
         tags_from = item.get("tags_from", "")
         if not isinstance(tags_from, str):
             raise ContentError(f"{pick_label} {ident!r}: 'tags_from' must be text")
         if tags_from and tags_from not in order[:-1]:
             raise ContentError(f"{pick_label} {ident!r}: 'tags_from' must name an earlier pick")
-        # A spell is learned once, so spell picks are distinct across the character by default.
-        unique = item.get("unique", feature_type == "spell")
+        # A unique feature, such as a spell, is learned once unless the pick says otherwise.
+        unique_default = (
+            allowed_types[feature_type].unique if feature_type in allowed_types else False
+        )
+        unique = item.get("unique", unique_default)
         if not isinstance(unique, bool):
             raise ContentError(f"{pick_label} {ident!r}: 'unique' must be boolean")
         max_rank = item.get("max_rank")
@@ -1871,7 +1896,11 @@ def _text_ids(value: object, key: str, label: str) -> tuple[str, ...]:
     return tuple(value)
 
 
-def _choose(data: object, label: str) -> Choose | None:
+def _choose(
+    data: object,
+    label: str,
+    feature_types: Mapping[str, FeatureTypeRules] | None = None,
+) -> Choose | None:
     if data is None:
         return None
     if not isinstance(data, dict):
@@ -1880,9 +1909,10 @@ def _choose(data: object, label: str) -> Choose | None:
     if isinstance(count, bool) or not isinstance(count, int) or count < 1:
         raise ContentError(f"{label}: 'choose' count must be a whole number, 1 or more")
     kind = required_text(data, "feature_type", f"{label}: 'choose'")
-    if kind not in FEATURE_TYPES:
+    allowed_types = feature_types or DEFAULT_FEATURE_TYPES
+    if kind not in allowed_types:
         raise ContentError(
-            f"{label}: 'choose' feature_type must be one of {', '.join(FEATURE_TYPES)}"
+            f"{label}: 'choose' feature_type must be one of {', '.join(allowed_types)}"
         )
     tag_field = required_text(data, "tag_field", f"{label}: 'choose'")
     skip_tags = _text_ids(data.get("skip_tags", []), "skip_tags", f"{label}: 'choose'")

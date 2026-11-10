@@ -1,5 +1,19 @@
 [
   {
+    "type": "defaults",
+    "id": "standalone-shop-items",
+    "when": {
+      "type": "shop_item",
+      "feature": null
+    },
+    "set": {
+      "size": "normal",
+      "armor": 0,
+      "uses": 0,
+      "damage": ""
+    }
+  },
+  {
     "type": "marketplace",
     "id": "marketplace",
     "currency": "gold"
@@ -11,10 +25,7 @@
     "looks_like": "shield",
     "category": "armor",
     "price": 10,
-    "size": "normal",
     "armor": 1,
-    "damage": "",
-    "uses": 0,
     "description": "+1 Armor"
   },
   {
@@ -24,10 +35,7 @@
     "looks_like": "helm",
     "category": "armor",
     "price": 10,
-    "size": "normal",
     "armor": 1,
-    "damage": "",
-    "uses": 0,
     "description": "+1 Armor"
   },
   {
@@ -37,10 +45,7 @@
     "looks_like": "armor",
     "category": "armor",
     "price": 15,
-    "size": "normal",
     "armor": 1,
-    "damage": "",
-    "uses": 0,
     "description": "+1 Armor"
   },
   {
@@ -60,8 +65,6 @@
     "price": 40,
     "size": "bulky",
     "armor": 2,
-    "damage": "",
-    "uses": 0,
     "description": "2 Armor, bulky"
   },
   {
@@ -73,8 +76,6 @@
     "price": 60,
     "size": "bulky",
     "armor": 3,
-    "damage": "",
-    "uses": 0,
     "description": "3 Armor, bulky"
   },
   {
@@ -92,10 +93,7 @@
     "looks_like": "spear",
     "category": "weapons",
     "price": 10,
-    "size": "normal",
-    "armor": 0,
     "damage": "1d8",
-    "uses": 0,
     "description": "Spear, Sword, Mace, Axe, Flail, etc. (d8 damage)"
   },
   {
@@ -106,9 +104,7 @@
     "category": "weapons",
     "price": 20,
     "size": "bulky",
-    "armor": 0,
     "damage": "1d10",
-    "uses": 0,
     "description": "Halberd, War Hammer, Long Sword, etc. (d10 damage, bulky)"
   },
   {
@@ -150,10 +146,6 @@
     "looks_like": "cart",
     "category": "transport",
     "price": 200,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "+8 slots, slow"
   },
   {
@@ -163,10 +155,6 @@
     "looks_like": "beast",
     "category": "transport",
     "price": 75,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "+4 slots"
   },
   {
@@ -176,10 +164,6 @@
     "looks_like": "beast",
     "category": "transport",
     "price": 30,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "+6 slots, slow"
   },
   {
@@ -189,10 +173,6 @@
     "looks_like": "cart",
     "category": "transport",
     "price": 5,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "A seat in a hired carriage, with room for a trunk."
   },
   {
@@ -202,10 +182,6 @@
     "looks_like": "boat",
     "category": "transport",
     "price": 10,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "A berth on a ship, paid in advance."
   },
   {
@@ -224,8 +200,6 @@
     "category": "upkeep",
     "price": 5,
     "size": "bulky",
-    "armor": 0,
-    "damage": "",
     "uses": 3,
     "description": "3 uses, bulky"
   },
@@ -236,10 +210,6 @@
     "looks_like": "tool",
     "category": "gear",
     "price": 5,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "A sealed bladder of air for breathing underwater."
   },
   {
@@ -248,10 +218,6 @@
     "name": "Antitoxin",
     "category": "gear",
     "price": 20,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "A bitter draft that fights poison."
   },
   {
@@ -269,10 +235,6 @@
     "looks_like": "tool",
     "category": "gear",
     "price": 5,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "Soap, Perfume, etc."
   },
   {
@@ -282,10 +244,6 @@
     "looks_like": "book",
     "category": "gear",
     "price": 50,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "A bound book of useful lore."
   },
   {
@@ -295,10 +253,6 @@
     "looks_like": "tool",
     "category": "gear",
     "price": 10,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "Spiked iron pieces scattered to lame pursuers."
   },
   {
@@ -308,10 +262,6 @@
     "looks_like": "tool",
     "category": "gear",
     "price": 5,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "A worn deck for games of chance."
   },
   {
@@ -321,10 +271,6 @@
     "looks_like": "rope",
     "category": "gear",
     "price": 10,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "10ft"
   },
   {
@@ -335,9 +281,6 @@
     "category": "gear",
     "price": 1,
     "size": "petty",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "A stick of chalk for marking walls and paths."
   },
   {
@@ -347,10 +290,6 @@
     "looks_like": "chest",
     "category": "gear",
     "price": 25,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "A sturdy chest with a hasp for a lock."
   },
   {
@@ -360,10 +299,6 @@
     "looks_like": "tool",
     "category": "gear",
     "price": 5,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "A chisel for cutting stone or wood."
   },
   {
@@ -373,10 +308,6 @@
     "looks_like": "tool",
     "category": "gear",
     "price": 10,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "Glue, Grease, etc."
   },
   {
@@ -386,10 +317,6 @@
     "looks_like": "tool",
     "category": "gear",
     "price": 10,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "Hammer, Shovel, etc."
   },
   {
@@ -406,10 +333,6 @@
     "looks_like": "tool",
     "category": "gear",
     "price": 50,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "Bagpipes, Fiddle, etc."
   },
   {
@@ -419,10 +342,6 @@
     "looks_like": "tool",
     "category": "gear",
     "price": 10,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "Sack, Waterskin, etc."
   },
   {
@@ -432,10 +351,6 @@
     "looks_like": "tool",
     "category": "gear",
     "price": 10,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "Pots, Utensils, etc."
   },
   {
@@ -445,10 +360,6 @@
     "looks_like": "cloak",
     "category": "gear",
     "price": 15,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "Face Paint, Disguise"
   },
   {
@@ -458,10 +369,6 @@
     "looks_like": "tool",
     "category": "gear",
     "price": 15,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "A forked rod that twitches toward water."
   },
   {
@@ -471,10 +378,6 @@
     "looks_like": "tool",
     "category": "gear",
     "price": 10,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "Climbing Spikes, Pulley, etc."
   },
   {
@@ -484,10 +387,6 @@
     "looks_like": "potion",
     "category": "gear",
     "price": 10,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "A flask of oil that catches fire easily."
   },
   {
@@ -497,10 +396,6 @@
     "looks_like": "tool",
     "category": "gear",
     "price": 10,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "A rod, line, and hook for catching fish."
   },
   {
@@ -510,10 +405,6 @@
     "looks_like": "tool",
     "category": "gear",
     "price": 10,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "Cards, Dice, etc."
   },
   {
@@ -530,10 +421,6 @@
     "looks_like": "tool",
     "category": "gear",
     "price": 25,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "A hooked iron grapnel for climbing."
   },
   {
@@ -550,10 +437,6 @@
     "looks_like": "tool",
     "category": "gear",
     "price": 5,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "A small hand mirror of polished silver."
   },
   {
@@ -563,10 +446,6 @@
     "looks_like": "tool",
     "category": "gear",
     "price": 10,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "A weighted net for catching or tripping."
   },
   {
@@ -584,10 +463,6 @@
     "looks_like": "tool",
     "category": "gear",
     "price": 10,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "Blanket, Hammock, etc."
   },
   {
@@ -597,9 +472,6 @@
     "looks_like": "scroll",
     "category": "gear",
     "price": 10,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
     "uses": 3,
     "description": "3 uses"
   },
@@ -610,10 +482,6 @@
     "looks_like": "staff",
     "category": "gear",
     "price": 5,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "10ft"
   },
   {
@@ -639,10 +507,6 @@
     "looks_like": "potion",
     "category": "gear",
     "price": 30,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "A draft that dulls pain and brings sleep."
   },
   {
@@ -652,10 +516,6 @@
     "looks_like": "tool",
     "category": "gear",
     "price": 20,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "Needles, thread, and a small pair of shears."
   },
   {
@@ -665,10 +525,6 @@
     "looks_like": "tool",
     "category": "gear",
     "price": 10,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "Pipes, Lute, etc."
   },
   {
@@ -679,9 +535,6 @@
     "category": "gear",
     "price": 15,
     "size": "petty",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "A clay pipe for a quiet smoke."
   },
   {
@@ -691,10 +544,6 @@
     "looks_like": "tool",
     "category": "gear",
     "price": 20,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "Ink, etc."
   },
   {
@@ -704,10 +553,6 @@
     "looks_like": "boots",
     "category": "gear",
     "price": 15,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "Boots with spikes for ice and steep ground."
   },
   {
@@ -725,9 +570,6 @@
     "category": "gear",
     "price": 20,
     "size": "bulky",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "fits 2, bulky"
   },
   {
@@ -737,10 +579,6 @@
     "looks_like": "tool",
     "category": "gear",
     "price": 25,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "Lockpick, Metal File, etc."
   },
   {
@@ -758,10 +596,7 @@
     "looks_like": "generic-item",
     "category": "gear",
     "price": 35,
-    "size": "normal",
-    "armor": 0,
     "damage": "1d6",
-    "uses": 0,
     "description": "d6 STR damage"
   },
   {
@@ -772,9 +607,6 @@
     "category": "gear",
     "price": 15,
     "size": "petty",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "A shrill whistle to signal or summon."
   },
   {
@@ -785,9 +617,6 @@
     "category": "gear",
     "price": 15,
     "size": "petty",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "Warm, weatherproof clothes for the wild."
   },
   {

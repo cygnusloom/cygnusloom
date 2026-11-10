@@ -3723,11 +3723,6 @@ class SkillChanged(GameEvent):
         return f"{text} ({self.cause})." if self.cause else f"{text}."
 
 
-# The WWN ruleset modules still build this event directly. They are outside this cleanup's file
-# ownership, so keep the old name as an alias for `Recovered` until they call the recovery service.
-StatRestored = Recovered
-
-
 @dataclass(frozen=True)
 class ClockAdvanced(GameEvent):
     """The campaign clock moved to a new day and part. A player character in a place is there

@@ -1,10 +1,24 @@
 [
   {
+    "type": "defaults",
+    "id": "npcs",
+    "when": {
+      "type": "npc",
+      "monster": null,
+      "story_only": null,
+      "stats": null,
+      "armor": null,
+      "attacks": null
+    },
+    "set": {
+      "hp_tier": "average"
+    }
+  },
+  {
     "type": "npc",
     "id": "reeve-trellis",
     "name": "Reeve Trellis",
     "location": "isthmus-town",
-    "hp_tier": "average",
     "description": "The Reeve of Isthmus Town, who collects the tithe and owns the Stuffed Inn. He is hiding the true tithing record in the inn's basement."
   },
   {
@@ -20,7 +34,6 @@
     "id": "aldra",
     "name": "Aldra",
     "location": "bone-sump",
-    "hp_tier": "average",
     "description": "A burly, well-liked Tideborn butcher, murdered and fed to Vuk after he saw the Reeve moving bags from the cellar trapdoor."
   },
   {
@@ -28,7 +41,6 @@
     "id": "flavia",
     "name": "Flavia",
     "location": "butcher-shop",
-    "hp_tier": "average",
     "description": "Aldra's wife and co-owner of the Butcher Shop. She is distraught and holds the key to the desk drawer holding Aldra's half-finished ledger."
   },
   {
@@ -36,7 +48,6 @@
     "id": "jandy",
     "name": "Jandy",
     "location": "deadmill",
-    "hp_tier": "average",
     "description": "A middle-aged Scrivener and tithingman for the Cities, trapped in a loop inside the Deadmill mill after falling into quicksand.",
     "rules": ["deadmill-time-loop"]
   },
@@ -45,7 +56,6 @@
     "id": "giva",
     "name": "Giva",
     "location": "giva-s-home",
-    "hp_tier": "average",
     "description": "The oldest person in Isthmus Town, grumpy and superstitious, and great-aunt of Drum. She dislikes Fasha and likes Jandy."
   },
   {
@@ -53,7 +63,6 @@
     "id": "drum",
     "name": "Drum",
     "location": "the-stuffed-inn",
-    "hp_tier": "average",
     "description": "A sarcastic, lanky teenager who works afternoons and evenings at the Stuffed Inn. He saw a man vanish into the ground outside Deadmill."
   },
   {
@@ -77,7 +86,6 @@
     "type": "npc",
     "id": "corsetta",
     "name": "Corsetta",
-    "hp_tier": "average",
     "location": "isthmus-town",
     "description": "A weaver living in Isthmus Town."
   },
@@ -85,7 +93,6 @@
     "type": "npc",
     "id": "franz",
     "name": "Franz",
-    "hp_tier": "average",
     "location": "isthmus-town",
     "description": "A chandler living in Isthmus Town."
   },
@@ -93,7 +100,6 @@
     "type": "npc",
     "id": "beju",
     "name": "Beju",
-    "hp_tier": "average",
     "location": "isthmus-town",
     "description": "A widower living in Isthmus Town."
   },
@@ -101,7 +107,6 @@
     "type": "npc",
     "id": "nicolas",
     "name": "Nicolas",
-    "hp_tier": "average",
     "location": "isthmus-town",
     "description": "A traveler passing through Isthmus Town."
   },
@@ -109,7 +114,6 @@
     "type": "npc",
     "id": "berk",
     "name": "Berk",
-    "hp_tier": "average",
     "location": "dunston",
     "description": "A road worker hired with his brother to repair the old Crawko place in Dunston, paid by an unnamed philanthropist."
   }

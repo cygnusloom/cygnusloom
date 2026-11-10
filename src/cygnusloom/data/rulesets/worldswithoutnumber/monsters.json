@@ -1,5 +1,21 @@
 [
   {
+    "type": "defaults",
+    "id": "monsters",
+    "when": {
+      "type": "monster"
+    },
+    "set": {
+      "rules": [],
+      "stats": {
+        "castings": 0,
+        "effort_high": 0,
+        "effort_necromancer": 0,
+        "effort_elemental": 0
+      }
+    }
+  },
+  {
     "type": "monster",
     "id": "ember_hound",
     "name": "Ember Hound",
@@ -14,12 +30,8 @@
       "cha": 3,
       "hp": 27,
       "attack_bonus": 8,
-      "castings": 0,
       "morale": 10,
       "strain": 14,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 12,
       "save_evasion": 12,
       "save_mental": 12,
@@ -32,7 +44,6 @@
       }
     },
     "attacks_per_action": 2,
-    "rules": [],
     "abilities": [
       {
         "kind": "save_or_condition",
@@ -59,12 +70,8 @@
       "cha": 6,
       "hp": 14,
       "attack_bonus": 5,
-      "castings": 0,
       "morale": 8,
       "strain": 12,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 14,
       "save_evasion": 14,
       "save_mental": 14,
@@ -77,7 +84,6 @@
       }
     },
     "attacks_per_action": 1,
-    "rules": [],
     "abilities": [
       {
         "kind": "immunity",
@@ -101,12 +107,8 @@
       "cha": 4,
       "hp": 36,
       "attack_bonus": 10,
-      "castings": 0,
       "morale": 9,
       "strain": 16,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 11,
       "save_evasion": 11,
       "save_mental": 11,
@@ -119,7 +121,6 @@
       }
     },
     "attacks_per_action": 4,
-    "rules": [],
     "abilities": [
       {
         "kind": "passive",
@@ -143,12 +144,8 @@
       "cha": 7,
       "hp": 5,
       "attack_bonus": 2,
-      "castings": 0,
       "morale": 12,
       "strain": 11,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 15,
       "save_evasion": 15,
       "save_mental": 15,
@@ -161,7 +158,6 @@
       }
     },
     "attacks_per_action": 1,
-    "rules": [],
     "abilities": []
   },
   {
@@ -179,12 +175,8 @@
       "cha": 5,
       "hp": 18,
       "attack_bonus": 5,
-      "castings": 0,
       "morale": 9,
       "strain": 14,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 13,
       "save_evasion": 13,
       "save_mental": 13,
@@ -197,7 +189,6 @@
       }
     },
     "attacks_per_action": 1,
-    "rules": [],
     "abilities": [
       {
         "kind": "action",
@@ -227,12 +218,8 @@
       "cha": 4,
       "hp": 9,
       "attack_bonus": 3,
-      "castings": 0,
       "morale": 9,
       "strain": 14,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 14,
       "save_evasion": 14,
       "save_mental": 14,
@@ -246,7 +233,6 @@
     },
     "attacks_per_action": 1,
     "large_group": true,
-    "rules": [],
     "abilities": [
       {
         "kind": "save_or_condition",
@@ -273,12 +259,8 @@
       "cha": 7,
       "hp": 5,
       "attack_bonus": 2,
-      "castings": 0,
       "morale": 12,
       "strain": 11,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 15,
       "save_evasion": 15,
       "save_mental": 15,
@@ -292,7 +274,6 @@
     },
     "attacks_per_action": 1,
     "large_group": true,
-    "rules": [],
     "abilities": [
       {
         "kind": "save_or_condition",
@@ -319,12 +300,8 @@
       "cha": 7,
       "hp": 5,
       "attack_bonus": 2,
-      "castings": 0,
       "morale": 12,
       "strain": 11,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 15,
       "save_evasion": 15,
       "save_mental": 15,
@@ -337,7 +314,6 @@
       }
     },
     "attacks_per_action": 1,
-    "rules": [],
     "abilities": [
       {
         "kind": "save_or_condition",
@@ -364,12 +340,8 @@
       "cha": 4,
       "hp": 9,
       "attack_bonus": 3,
-      "castings": 0,
       "morale": 9,
       "strain": 14,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 14,
       "save_evasion": 14,
       "save_mental": 14,
@@ -382,7 +354,6 @@
       }
     },
     "attacks_per_action": 1,
-    "rules": [],
     "abilities": [
       {
         "kind": "passive",
@@ -406,12 +377,8 @@
       "cha": 6,
       "hp": 14,
       "attack_bonus": 5,
-      "castings": 0,
       "morale": 8,
       "strain": 12,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 14,
       "save_evasion": 14,
       "save_mental": 14,
@@ -426,7 +393,6 @@
       }
     },
     "attacks_per_action": 1,
-    "rules": [],
     "abilities": [
       {
         "kind": "save_or_condition",
@@ -453,12 +419,8 @@
       "cha": 4,
       "hp": 9,
       "attack_bonus": 3,
-      "castings": 0,
       "morale": 9,
       "strain": 14,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 14,
       "save_evasion": 14,
       "save_mental": 14,
@@ -472,7 +434,6 @@
     },
     "attacks_per_action": 1,
     "large_group": true,
-    "rules": [],
     "abilities": [
       {
         "kind": "passive",
@@ -496,12 +457,8 @@
       "cha": 5,
       "hp": 23,
       "attack_bonus": 6,
-      "castings": 0,
       "morale": 8,
       "strain": 17,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 13,
       "save_evasion": 13,
       "save_mental": 13,
@@ -517,7 +474,6 @@
       }
     },
     "attacks_per_action": 2,
-    "rules": [],
     "abilities": [
       {
         "kind": "passive",
@@ -541,12 +497,8 @@
       "cha": 5,
       "hp": 18,
       "attack_bonus": 5,
-      "castings": 0,
       "morale": 9,
       "strain": 14,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 13,
       "save_evasion": 13,
       "save_mental": 13,
@@ -562,7 +514,6 @@
       }
     },
     "attacks_per_action": 2,
-    "rules": [],
     "abilities": [
       {
         "kind": "save_or_condition",
@@ -589,12 +540,8 @@
       "cha": 6,
       "hp": 14,
       "attack_bonus": 5,
-      "castings": 0,
       "morale": 8,
       "strain": 12,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 14,
       "save_evasion": 14,
       "save_mental": 14,
@@ -607,7 +554,6 @@
       }
     },
     "attacks_per_action": 1,
-    "rules": [],
     "abilities": [
       {
         "kind": "passive",
@@ -631,12 +577,8 @@
       "cha": 3,
       "hp": 27,
       "attack_bonus": 8,
-      "castings": 0,
       "morale": 10,
       "strain": 14,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 12,
       "save_evasion": 12,
       "save_mental": 12,
@@ -652,7 +594,6 @@
       }
     },
     "attacks_per_action": 2,
-    "rules": [],
     "abilities": [
       {
         "kind": "save_or_condition",
@@ -679,12 +620,8 @@
       "cha": 4,
       "hp": 9,
       "attack_bonus": 3,
-      "castings": 0,
       "morale": 9,
       "strain": 14,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 14,
       "save_evasion": 14,
       "save_mental": 14,
@@ -697,7 +634,6 @@
       }
     },
     "attacks_per_action": 1,
-    "rules": [],
     "abilities": [
       {
         "kind": "passive",
@@ -721,12 +657,8 @@
       "cha": 4,
       "hp": 9,
       "attack_bonus": 3,
-      "castings": 0,
       "morale": 9,
       "strain": 14,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 14,
       "save_evasion": 14,
       "save_mental": 14,
@@ -739,7 +671,6 @@
       }
     },
     "attacks_per_action": 1,
-    "rules": [],
     "abilities": [
       {
         "kind": "action",
@@ -764,12 +695,8 @@
       "cha": 6,
       "hp": 14,
       "attack_bonus": 5,
-      "castings": 0,
       "morale": 8,
       "strain": 12,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 14,
       "save_evasion": 14,
       "save_mental": 14,
@@ -784,7 +711,6 @@
       }
     },
     "attacks_per_action": 1,
-    "rules": [],
     "abilities": [
       {
         "kind": "passive",
@@ -808,12 +734,8 @@
       "cha": 5,
       "hp": 18,
       "attack_bonus": 5,
-      "castings": 0,
       "morale": 9,
       "strain": 14,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 13,
       "save_evasion": 13,
       "save_mental": 13,
@@ -826,7 +748,6 @@
       }
     },
     "attacks_per_action": 1,
-    "rules": [],
     "abilities": [
       {
         "kind": "action",
@@ -851,12 +772,8 @@
       "cha": 7,
       "hp": 5,
       "attack_bonus": 2,
-      "castings": 0,
       "morale": 12,
       "strain": 11,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 15,
       "save_evasion": 15,
       "save_mental": 15,
@@ -870,7 +787,6 @@
     },
     "attacks_per_action": 1,
     "large_group": true,
-    "rules": [],
     "abilities": [
       {
         "kind": "passive",
@@ -894,12 +810,8 @@
       "cha": 4,
       "hp": 9,
       "attack_bonus": 3,
-      "castings": 0,
       "morale": 9,
       "strain": 14,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 14,
       "save_evasion": 14,
       "save_mental": 14,
@@ -912,7 +824,6 @@
       }
     },
     "attacks_per_action": 1,
-    "rules": [],
     "abilities": [
       {
         "kind": "passive",
@@ -936,12 +847,8 @@
       "cha": 5,
       "hp": 18,
       "attack_bonus": 5,
-      "castings": 0,
       "morale": 9,
       "strain": 14,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 13,
       "save_evasion": 13,
       "save_mental": 13,
@@ -954,7 +861,6 @@
       }
     },
     "attacks_per_action": 1,
-    "rules": [],
     "abilities": [
       {
         "kind": "save_or_condition",
@@ -981,12 +887,8 @@
       "cha": 5,
       "hp": 18,
       "attack_bonus": 5,
-      "castings": 0,
       "morale": 9,
       "strain": 14,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 13,
       "save_evasion": 13,
       "save_mental": 13,
@@ -999,7 +901,6 @@
       }
     },
     "attacks_per_action": 1,
-    "rules": [],
     "abilities": [
       {
         "kind": "passive",
@@ -1023,12 +924,8 @@
       "cha": 5,
       "hp": 23,
       "attack_bonus": 6,
-      "castings": 0,
       "morale": 8,
       "strain": 17,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 13,
       "save_evasion": 13,
       "save_mental": 13,
@@ -1043,7 +940,6 @@
       }
     },
     "attacks_per_action": 1,
-    "rules": [],
     "abilities": [
       {
         "kind": "passive",
@@ -1067,12 +963,8 @@
       "cha": 7,
       "hp": 5,
       "attack_bonus": 2,
-      "castings": 0,
       "morale": 12,
       "strain": 11,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 15,
       "save_evasion": 15,
       "save_mental": 15,
@@ -1085,7 +977,6 @@
       }
     },
     "attacks_per_action": 1,
-    "rules": [],
     "abilities": [
       {
         "kind": "passive",
@@ -1109,12 +1000,8 @@
       "cha": 4,
       "hp": 9,
       "attack_bonus": 3,
-      "castings": 0,
       "morale": 9,
       "strain": 14,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 14,
       "save_evasion": 14,
       "save_mental": 14,
@@ -1127,7 +1014,6 @@
       }
     },
     "attacks_per_action": 1,
-    "rules": [],
     "abilities": [
       {
         "kind": "save_or_condition",
@@ -1154,12 +1040,8 @@
       "cha": 5,
       "hp": 23,
       "attack_bonus": 6,
-      "castings": 0,
       "morale": 8,
       "strain": 17,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 13,
       "save_evasion": 13,
       "save_mental": 13,
@@ -1174,7 +1056,6 @@
       }
     },
     "attacks_per_action": 1,
-    "rules": [],
     "abilities": [
       {
         "kind": "passive",
@@ -1198,12 +1079,8 @@
       "cha": 6,
       "hp": 14,
       "attack_bonus": 5,
-      "castings": 0,
       "morale": 8,
       "strain": 12,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 14,
       "save_evasion": 14,
       "save_mental": 14,
@@ -1216,7 +1093,6 @@
       }
     },
     "attacks_per_action": 1,
-    "rules": [],
     "abilities": [
       {
         "kind": "passive",
@@ -1240,12 +1116,8 @@
       "cha": 14,
       "hp": 54,
       "attack_bonus": 12,
-      "castings": 0,
       "morale": 12,
       "strain": 17,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 9,
       "save_evasion": 9,
       "save_mental": 9,
@@ -1263,7 +1135,6 @@
       }
     },
     "attacks_per_action": 2,
-    "rules": [],
     "abilities": [
       {
         "kind": "action",
@@ -1293,12 +1164,8 @@
       "cha": 14,
       "hp": 54,
       "attack_bonus": 12,
-      "castings": 0,
       "morale": 12,
       "strain": 17,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 9,
       "save_evasion": 9,
       "save_mental": 9,
@@ -1313,7 +1180,6 @@
       }
     },
     "attacks_per_action": 2,
-    "rules": [],
     "abilities": [
       {
         "kind": "immunity",
@@ -1342,12 +1208,8 @@
       "cha": 14,
       "hp": 54,
       "attack_bonus": 12,
-      "castings": 0,
       "morale": 12,
       "strain": 17,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 9,
       "save_evasion": 9,
       "save_mental": 9,
@@ -1363,7 +1225,6 @@
       }
     },
     "attacks_per_action": 2,
-    "rules": [],
     "abilities": [
       {
         "kind": "save_or_condition",
@@ -1395,12 +1256,8 @@
       "cha": 14,
       "hp": 54,
       "attack_bonus": 12,
-      "castings": 0,
       "morale": 12,
       "strain": 17,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 9,
       "save_evasion": 9,
       "save_mental": 9,
@@ -1413,7 +1270,6 @@
       }
     },
     "attacks_per_action": 1,
-    "rules": [],
     "abilities": [
       {
         "kind": "action",
@@ -1443,12 +1299,8 @@
       "cha": 3,
       "hp": 45,
       "attack_bonus": 10,
-      "castings": 0,
       "morale": 12,
       "strain": 20,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 10,
       "save_evasion": 10,
       "save_mental": 10,
@@ -1464,7 +1316,6 @@
       }
     },
     "attacks_per_action": 2,
-    "rules": [],
     "abilities": [
       {
         "kind": "action",
@@ -1497,12 +1348,8 @@
       "cha": 3,
       "hp": 45,
       "attack_bonus": 10,
-      "castings": 0,
       "morale": 12,
       "strain": 20,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 10,
       "save_evasion": 10,
       "save_mental": 10,
@@ -1520,7 +1367,6 @@
       }
     },
     "attacks_per_action": 2,
-    "rules": [],
     "abilities": [
       {
         "kind": "action",
@@ -1550,12 +1396,8 @@
       "cha": 3,
       "hp": 45,
       "attack_bonus": 10,
-      "castings": 0,
       "morale": 12,
       "strain": 20,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 10,
       "save_evasion": 10,
       "save_mental": 10,
@@ -1573,7 +1415,6 @@
       }
     },
     "attacks_per_action": 2,
-    "rules": [],
     "abilities": [
       {
         "kind": "save_or_condition",
@@ -1605,12 +1446,8 @@
       "cha": 3,
       "hp": 45,
       "attack_bonus": 10,
-      "castings": 0,
       "morale": 12,
       "strain": 20,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 10,
       "save_evasion": 10,
       "save_mental": 10,
@@ -1623,7 +1460,6 @@
       }
     },
     "attacks_per_action": 1,
-    "rules": [],
     "abilities": [
       {
         "kind": "action",
@@ -1653,12 +1489,8 @@
       "cha": 3,
       "hp": 45,
       "attack_bonus": 10,
-      "castings": 0,
       "morale": 12,
       "strain": 20,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 10,
       "save_evasion": 10,
       "save_mental": 10,
@@ -1671,7 +1503,6 @@
       }
     },
     "attacks_per_action": 1,
-    "rules": [],
     "abilities": [
       {
         "kind": "action",
@@ -1704,12 +1535,8 @@
       "cha": 4,
       "hp": 36,
       "attack_bonus": 10,
-      "castings": 0,
       "morale": 9,
       "strain": 16,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 11,
       "save_evasion": 11,
       "save_mental": 11,
@@ -1724,7 +1551,6 @@
       }
     },
     "attacks_per_action": 1,
-    "rules": [],
     "abilities": [
       {
         "kind": "save_or_condition",
@@ -1756,12 +1582,8 @@
       "cha": 4,
       "hp": 36,
       "attack_bonus": 10,
-      "castings": 0,
       "morale": 9,
       "strain": 16,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 11,
       "save_evasion": 11,
       "save_mental": 11,
@@ -1774,7 +1596,6 @@
       }
     },
     "attacks_per_action": 1,
-    "rules": [],
     "abilities": [
       {
         "kind": "save_or_condition",
@@ -1806,12 +1627,8 @@
       "cha": 4,
       "hp": 36,
       "attack_bonus": 10,
-      "castings": 0,
       "morale": 9,
       "strain": 16,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 11,
       "save_evasion": 11,
       "save_mental": 11,
@@ -1829,7 +1646,6 @@
       }
     },
     "attacks_per_action": 2,
-    "rules": [],
     "abilities": [
       {
         "kind": "passive",
@@ -1861,12 +1677,8 @@
       "cha": 4,
       "hp": 36,
       "attack_bonus": 10,
-      "castings": 0,
       "morale": 9,
       "strain": 16,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 11,
       "save_evasion": 11,
       "save_mental": 11,
@@ -1879,7 +1691,6 @@
       }
     },
     "attacks_per_action": 3,
-    "rules": [],
     "abilities": [
       {
         "kind": "save_or_condition",
@@ -1911,12 +1722,8 @@
       "cha": 4,
       "hp": 36,
       "attack_bonus": 10,
-      "castings": 0,
       "morale": 9,
       "strain": 16,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 11,
       "save_evasion": 11,
       "save_mental": 11,
@@ -1929,7 +1736,6 @@
       }
     },
     "attacks_per_action": 1,
-    "rules": [],
     "abilities": [
       {
         "kind": "action",
@@ -1959,12 +1765,8 @@
       "cha": 4,
       "hp": 36,
       "attack_bonus": 10,
-      "castings": 0,
       "morale": 9,
       "strain": 16,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 11,
       "save_evasion": 11,
       "save_mental": 11,
@@ -1979,7 +1781,6 @@
       }
     },
     "attacks_per_action": 2,
-    "rules": [],
     "abilities": [
       {
         "kind": "immunity",
@@ -2008,12 +1809,8 @@
       "cha": 9,
       "hp": 32,
       "attack_bonus": 6,
-      "castings": 0,
       "morale": 9,
       "strain": 14,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 12,
       "save_evasion": 12,
       "save_mental": 12,
@@ -2029,7 +1826,6 @@
       }
     },
     "attacks_per_action": 2,
-    "rules": [],
     "abilities": [
       {
         "kind": "save_or_condition",
@@ -2061,12 +1857,8 @@
       "cha": 9,
       "hp": 32,
       "attack_bonus": 6,
-      "castings": 0,
       "morale": 9,
       "strain": 14,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 12,
       "save_evasion": 12,
       "save_mental": 12,
@@ -2079,7 +1871,6 @@
       }
     },
     "attacks_per_action": 3,
-    "rules": [],
     "abilities": [
       {
         "kind": "passive",
@@ -2111,12 +1902,8 @@
       "cha": 9,
       "hp": 32,
       "attack_bonus": 6,
-      "castings": 0,
       "morale": 9,
       "strain": 14,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 12,
       "save_evasion": 12,
       "save_mental": 12,
@@ -2132,7 +1919,6 @@
       }
     },
     "attacks_per_action": 2,
-    "rules": [],
     "abilities": [
       {
         "kind": "passive",
@@ -2161,12 +1947,8 @@
       "cha": 9,
       "hp": 32,
       "attack_bonus": 6,
-      "castings": 0,
       "morale": 9,
       "strain": 14,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 12,
       "save_evasion": 12,
       "save_mental": 12,
@@ -2179,7 +1961,6 @@
       }
     },
     "attacks_per_action": 1,
-    "rules": [],
     "abilities": [
       {
         "kind": "save_or_condition",
@@ -2211,12 +1992,8 @@
       "cha": 9,
       "hp": 32,
       "attack_bonus": 6,
-      "castings": 0,
       "morale": 9,
       "strain": 14,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 12,
       "save_evasion": 12,
       "save_mental": 12,
@@ -2229,7 +2006,6 @@
       }
     },
     "attacks_per_action": 1,
-    "rules": [],
     "abilities": [
       {
         "kind": "save_or_condition",
@@ -2261,12 +2037,8 @@
       "cha": 9,
       "hp": 32,
       "attack_bonus": 6,
-      "castings": 0,
       "morale": 9,
       "strain": 14,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 12,
       "save_evasion": 12,
       "save_mental": 12,
@@ -2282,7 +2054,6 @@
       }
     },
     "attacks_per_action": 2,
-    "rules": [],
     "abilities": [
       {
         "kind": "passive",
@@ -2314,12 +2085,8 @@
       "cha": 9,
       "hp": 32,
       "attack_bonus": 6,
-      "castings": 0,
       "morale": 9,
       "strain": 14,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 12,
       "save_evasion": 12,
       "save_mental": 12,
@@ -2332,7 +2099,6 @@
       }
     },
     "attacks_per_action": 1,
-    "rules": [],
     "abilities": [
       {
         "kind": "immunity",
@@ -2362,12 +2128,8 @@
       "cha": 3,
       "hp": 27,
       "attack_bonus": 8,
-      "castings": 0,
       "morale": 10,
       "strain": 14,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 12,
       "save_evasion": 12,
       "save_mental": 12,
@@ -2383,7 +2145,6 @@
       }
     },
     "attacks_per_action": 2,
-    "rules": [],
     "abilities": [
       {
         "kind": "save_or_condition",
@@ -2410,12 +2171,8 @@
       "cha": 3,
       "hp": 27,
       "attack_bonus": 8,
-      "castings": 0,
       "morale": 10,
       "strain": 14,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 12,
       "save_evasion": 12,
       "save_mental": 12,
@@ -2428,7 +2185,6 @@
       }
     },
     "attacks_per_action": 2,
-    "rules": [],
     "abilities": [
       {
         "kind": "passive",
@@ -2460,12 +2216,8 @@
       "cha": 3,
       "hp": 27,
       "attack_bonus": 8,
-      "castings": 0,
       "morale": 10,
       "strain": 14,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 12,
       "save_evasion": 12,
       "save_mental": 12,
@@ -2481,7 +2233,6 @@
       }
     },
     "attacks_per_action": 2,
-    "rules": [],
     "abilities": [
       {
         "kind": "passive",
@@ -2513,12 +2264,8 @@
       "cha": 5,
       "hp": 23,
       "attack_bonus": 6,
-      "castings": 0,
       "morale": 8,
       "strain": 17,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 13,
       "save_evasion": 13,
       "save_mental": 13,
@@ -2532,7 +2279,6 @@
     },
     "attacks_per_action": 1,
     "large_group": true,
-    "rules": [],
     "abilities": [
       {
         "kind": "save_or_condition",
@@ -2564,12 +2310,8 @@
       "cha": 5,
       "hp": 23,
       "attack_bonus": 6,
-      "castings": 0,
       "morale": 8,
       "strain": 17,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 13,
       "save_evasion": 13,
       "save_mental": 13,
@@ -2582,7 +2324,6 @@
       }
     },
     "attacks_per_action": 2,
-    "rules": [],
     "abilities": [
       {
         "kind": "save_or_condition",
@@ -2614,12 +2355,8 @@
       "cha": 5,
       "hp": 23,
       "attack_bonus": 6,
-      "castings": 0,
       "morale": 8,
       "strain": 17,
-      "effort_high": 0,
-      "effort_necromancer": 0,
-      "effort_elemental": 0,
       "save_physical": 13,
       "save_evasion": 13,
       "save_mental": 13,
@@ -2632,7 +2369,6 @@
       }
     },
     "attacks_per_action": 1,
-    "rules": [],
     "abilities": [
       {
         "kind": "save_or_condition",

@@ -1,0 +1,14 @@
+[
+  {
+    "type": "feature_type",
+    "id": "feat",
+    "tag_groups": {
+      "focus": "Foci",
+      "high": "Arts",
+      "necromancer": "Arts",
+      "elementalist": "Arts",
+      "vowed": "Arts",
+      "healer": "Arts"
+    }
+  }
+]

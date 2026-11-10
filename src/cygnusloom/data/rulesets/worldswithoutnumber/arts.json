@@ -1,9 +1,18 @@
 [
   {
+    "type": "defaults",
+    "id": "arts",
+    "when": {
+      "type": "feature"
+    },
+    "set": {
+      "feature_type": "feat"
+    }
+  },
+  {
     "type": "feature",
     "id": "art_arcane_lexicon",
     "name": "Arcane Lexicon",
-    "feature_type": "feat",
     "tag": "high",
     "description": "Commit Effort for the scene to read any writing in any script that is not deliberately encoded. The plain meaning comes through, though it may be strange or alien. The Effort returns when the scene ends."
   },
@@ -11,7 +20,6 @@
     "type": "feature",
     "id": "art_counter_magic",
     "name": "Counter Magic",
-    "feature_type": "feat",
     "tag": "high",
     "description": "Commit Effort for the day as an Instant action when a visible enemy mage casts a spell. Make an opposed Int/Magic or Cha/Magic check; if the caster wins, the spell fizzles and is wasted. It works only against actual spellcasters and at most once per round. The Effort returns the next morning."
   },
@@ -19,7 +27,6 @@
     "type": "feature",
     "id": "art_empowered_sorcery",
     "name": "Empowered Sorcery",
-    "feature_type": "feat",
     "tag": "high",
     "description": "Commit Effort for the day as an Instant action to reroll any variable die in a spell's effect, such as its damage dice, and take either result. The Effort returns the next morning."
   },
@@ -27,7 +34,6 @@
     "type": "feature",
     "id": "art_hang_sorcery",
     "name": "Hang Sorcery",
-    "feature_type": "feat",
     "tag": "high",
     "description": "Commit Effort for the scene as an Instant action when casting a spell. The spell does not go off; it hangs dormant. The caster releases it later as an On Turn action and chooses targets at release. Damage does not disrupt a hung spell, but the caster cannot cast another spell until it is released or dissipates. The Effort returns when the scene ends."
   },
@@ -35,7 +41,6 @@
     "type": "feature",
     "id": "art_inexorable_effect",
     "name": "Inexorable Effect",
-    "feature_type": "feat",
     "tag": "high",
     "description": "Commit Effort for the day as an Instant action to force an enemy who just succeeded on a save to reroll it and take the worse result. Usable once per scene. The Effort returns the next morning."
   },
@@ -43,7 +48,6 @@
     "type": "feature",
     "id": "art_iron_resolution",
     "name": "Iron Resolution",
-    "feature_type": "feat",
     "tag": "high",
     "description": "Commit Effort for the day when injured or disturbed in combat to make a Physical save to resist spell disruption; on a success the damage is ignored for the purpose of casting that round. The Effort returns the next morning."
   },
@@ -51,7 +55,6 @@
     "type": "feature",
     "id": "art_preparatory_countermagic",
     "name": "Preparatory Countermagic",
-    "feature_type": "feat",
     "tag": "high",
     "description": "Commit Effort for the scene when affected by one of the caster's own prepared spells, including their own damaging area spell, to remain unaffected by that spell's direct effects. The Effort returns when the scene ends."
   },
@@ -59,7 +62,6 @@
     "type": "feature",
     "id": "art_psychic_conversion",
     "name": "Psychic Conversion",
-    "feature_type": "feat",
     "tag": "high",
     "description": "Once per day as an On Turn action, expend one casting slot to remove 1 System Strain and heal 2 HP per character level. No Effort is committed."
   },
@@ -67,7 +69,6 @@
     "type": "feature",
     "id": "art_restrained_casting",
     "name": "Restrained Casting",
-    "feature_type": "feat",
     "tag": "high",
     "description": "Commit Effort for the day as an Instant action when casting a High Magic spell to cast it with no words or gestures. Damage still disrupts the casting. The Effort returns the next morning."
   },
@@ -75,7 +76,6 @@
     "type": "feature",
     "id": "art_retain_sorcery",
     "name": "Retain Sorcery",
-    "feature_type": "feat",
     "tag": "high",
     "description": "Commit Effort for the day as an On Turn action after casting a spell; that casting does not count against the daily limit. Usable once per day. The caster cannot cast another spell before the end of the next turn. The Effort returns the next morning."
   },
@@ -83,7 +83,6 @@
     "type": "feature",
     "id": "art_sense_magic",
     "name": "Sense Magic",
-    "feature_type": "feat",
     "tag": "high",
     "description": "Commit Effort while the art is used (the book states no duration; treat it as committed until reclaimed): the caster sees magical energy, gets a one-sentence description of standing magic or an inspected magic item, and sees clearly in perfect darkness. Reclaiming the Effort is an Instant action."
   },
@@ -91,7 +90,6 @@
     "type": "feature",
     "id": "art_suppress_magic",
     "name": "Suppress Magic",
-    "feature_type": "feat",
     "tag": "high",
     "description": "Commit Effort for the day as an On Turn action against a visible or known effect within 100 ft. It is suppressed as if by Extirpate Arcana for 1d6 rounds + character level. A stronger caster may resist as that spell allows. One attempt per effect; the Effort returns the next morning."
   },
@@ -99,7 +97,6 @@
     "type": "feature",
     "id": "art_swift_casting",
     "name": "Swift Casting",
-    "feature_type": "feat",
     "tag": "high",
     "description": "Commit Effort for the day, once per scene, to turn a spell that takes a Main Action into an On Turn action. The caster cannot cast another spell that round. It cannot be used if a spell was already cast that round or if the mage was injured or disqualified from casting. The Effort returns the next morning."
   },
@@ -107,7 +104,6 @@
     "type": "feature",
     "id": "art_ward_allies",
     "name": "Ward Allies",
-    "feature_type": "feat",
     "tag": "high",
     "description": "Commit Effort for the day as an Instant action when casting an area spell to leave up to six allies out of the spell's direct effects. Indirect consequences still apply. The Effort returns the next morning."
   },
@@ -115,7 +111,6 @@
     "type": "feature",
     "id": "art_wizards_grandeur",
     "name": "Wizard's Grandeur",
-    "feature_type": "feat",
     "tag": "high",
     "description": "Commit Effort indefinitely: while committed, the mage is never dirty, stained, or rumpled, noxious substances slide off, the normal climate is comfortable, and the mage can sleep without shelter under the privation rules. The Effort returns when reclaimed as an Instant action."
   },
@@ -123,7 +118,6 @@
     "type": "feature",
     "id": "art_bonetalker",
     "name": "Bonetalker",
-    "feature_type": "feat",
     "tag": "necromancer",
     "description": "No Effort is needed to understand and speak with any undead. Commit Effort for the scene to sense the surface thoughts and orders of visible undead. Unintelligent undead ignore the necromancer unless compelled, and intelligent ones pause to parley at first."
   },
@@ -131,7 +125,6 @@
     "type": "feature",
     "id": "art_cold_flesh",
     "name": "Cold Flesh",
-    "feature_type": "feat",
     "tag": "necromancer",
     "description": "Passive, with no Effort. The necromancer needs no sleep, takes at most 2 damage from any single Shock instance, and has a natural AC of 12 + half character level, rounded down."
   },
@@ -139,7 +132,6 @@
     "type": "feature",
     "id": "art_consume_life_energy",
     "name": "Consume Life Energy",
-    "feature_type": "feat",
     "tag": "necromancer",
     "description": "Passive, with no Effort. A punch attack or a melee weapon consecrated for 1 hour heals 1d6 HP on each hit, capped at the damage dealt and never more than the target's remaining HP."
   },
@@ -147,7 +139,6 @@
     "type": "feature",
     "id": "art_false_death",
     "name": "False Death",
-    "feature_type": "feat",
     "tag": "necromancer",
     "description": "Commit Effort indefinitely as an Instant action to appear dead to ordinary examination. The necromancer loses Main Actions but can move and perceive, and poisons and diseases stop progressing. It lasts at most 1 day per level before an hour's recovery is needed."
   },
@@ -155,7 +146,6 @@
     "type": "feature",
     "id": "art_gravesight",
     "name": "Gravesight",
-    "feature_type": "feat",
     "tag": "necromancer",
     "description": "Commit Effort indefinitely as an On Turn action to see life energies as glowing patterns in any light, perceive sickness and poisons, and see normally in perfect darkness."
   },
@@ -163,7 +153,6 @@
     "type": "feature",
     "id": "art_keeper_of_the_gate",
     "name": "Keeper of the Gate",
-    "feature_type": "feat",
     "tag": "necromancer",
     "description": "Passive: creatures within 20 ft per level that are Mortally Wounded die instantly and cannot be revived. Commit Effort for the day to stabilize any or all such creatures within range; each gains +1 System Strain. Dismembered or unsurvivable injuries cannot be helped. The Effort returns the next morning."
   },
@@ -171,7 +160,6 @@
     "type": "feature",
     "id": "art_life_bridge",
     "name": "Life Bridge",
-    "feature_type": "feat",
     "tag": "necromancer",
     "description": "Commit Effort for the day to move HP between a willing or helpless donor no smaller than a dog and another creature, touching both as a Main Action. The donor can be Mortally Wounded, but the transfer cannot exceed the recipient's maximum HP. The Effort returns the next morning."
   },
@@ -179,7 +167,6 @@
     "type": "feature",
     "id": "art_master_of_bones",
     "name": "Master of Bones",
-    "feature_type": "feat",
     "tag": "necromancer",
     "description": "Passive: undead roll saves against the necromancer's abilities and spells twice and take the worse. Commit Effort for the scene as an Instant action to negate one undead attack, power, or spell targeting the necromancer. Undead with more than twice the necromancer's levels in HD cannot be foiled."
   },
@@ -187,7 +174,6 @@
     "type": "feature",
     "id": "art_red_harvest",
     "name": "Red Harvest",
-    "feature_type": "feat",
     "tag": "necromancer",
     "description": "Commit Effort for the day as an Instant action when an intelligent living creature of at least 1 HD dies within 50 ft. Heal 1d6 + character level HP or gain +4 on the next hit roll this scene. It does not stack and works at most once per round. The Effort returns the next morning."
   },
@@ -195,7 +181,6 @@
     "type": "feature",
     "id": "art_unaging",
     "name": "Unaging",
-    "feature_type": "feat",
     "tag": "necromancer",
     "description": "Passive, with no Effort. The necromancer does not age naturally up to the species maximum plus 20% per level, then collapses to dust. They are immune to poisons and diseases."
   },
@@ -203,7 +188,6 @@
     "type": "feature",
     "id": "art_uncanny_ichor",
     "name": "Uncanny Ichor",
-    "feature_type": "feat",
     "tag": "necromancer",
     "description": "Passive, with no Effort. Predators find the necromancer's blood nauseating, and unintelligent ones will not consider them edible. Puncture wounds can leave the necromancer Mortally Wounded but cannot kill unless they are riddled with wounds or catastrophically damaged."
   },
@@ -211,7 +195,6 @@
     "type": "feature",
     "id": "art_unliving_persistence",
     "name": "Unliving Persistence",
-    "feature_type": "feat",
     "tag": "necromancer",
     "description": "Commit Effort for the day as an On Turn action to stabilize automatically when Mortally Wounded, or to stabilize another creature by touch. Dismembered or extremely final deaths cannot be prevented. The Effort returns the next morning."
   },
@@ -219,7 +202,6 @@
     "type": "feature",
     "id": "art_elemental_resilience",
     "name": "Elemental Resilience",
-    "feature_type": "feat",
     "tag": "elementalist",
     "description": "Passive, with no Effort. The Elementalist is unharmed by mundane extreme cold and heat below furnace intensity, and takes half damage from magical or extremely intense flame and frost."
   },
@@ -227,7 +209,6 @@
     "type": "feature",
     "id": "art_elemental_sparks",
     "name": "Elemental Sparks",
-    "feature_type": "feat",
     "tag": "elementalist",
     "description": "Passive, with no Effort. The Elementalist conjures petty flame, water, ice, stone, or wind for minor tricks lasting up to a scene. Conjured water cannot quench thirst. The art can solve a real challenge only once per game session."
   },
@@ -235,7 +216,6 @@
     "type": "feature",
     "id": "art_beckoned_deluge",
     "name": "Beckoned Deluge",
-    "feature_type": "feat",
     "tag": "elementalist",
     "description": "Commit Effort for the scene and take a Main Action to call water at a visible point within 50 ft per level. It drenches a 10-ft cube per character level, ruins non-magical bowstrings, extinguishes flames, and deals 1d6 per level to fiery supernatural creatures. The water persists and can hydrate 10 people per level."
   },
@@ -243,7 +223,6 @@
     "type": "feature",
     "id": "art_earthsight",
     "name": "Earthsight",
-    "feature_type": "feat",
     "tag": "elementalist",
     "description": "Commit Effort for the scene as an On Turn action to see the outlines of solid objects in perfect darkness and to see through earth or stone to a depth equal to the character's level."
   },
@@ -251,7 +230,6 @@
     "type": "feature",
     "id": "art_elemental_blast",
     "name": "Elemental Blast",
-    "feature_type": "feat",
     "tag": "elementalist",
     "description": "Commit Effort for the scene and take a Main Action to attack a target within 50 ft per level. Use Magic as the combat skill, Int, Cha, or Dex as the attribute, and character level as the hit bonus; melee does not hinder it. On a hit, deal 1d6 + character level + attribute modifier. The conjured matter vanishes at the end of the round."
   },
@@ -259,7 +237,6 @@
     "type": "feature",
     "id": "art_flamesight",
     "name": "Flamesight",
-    "feature_type": "feat",
     "tag": "elementalist",
     "description": "Commit Effort indefinitely as an On Turn action to see thermal gradients in perfect darkness. Optionally, the Elementalist's own eyes shed light to 30 ft."
   },
@@ -267,7 +244,6 @@
     "type": "feature",
     "id": "art_pavis_of_elements",
     "name": "Pavis of Elements",
-    "feature_type": "feat",
     "tag": "elementalist",
     "description": "Commit Effort indefinitely as an On Turn action for +4 AC. The total cannot exceed 18 from this combination, and it stacks with other effects."
   },
@@ -275,7 +251,6 @@
     "type": "feature",
     "id": "art_petrifying_stare",
     "name": "Petrifying Stare",
-    "feature_type": "feat",
     "tag": "elementalist",
     "description": "Commit Effort for the day and take a Main Action against a visible creature. It must make a Physical save or be partly petrified, losing its Move action for half the Elementalist's level in rounds, rounded up. Flyers are forced to land and swimmers sink. The Effort returns the next morning."
   },
@@ -283,7 +258,6 @@
     "type": "feature",
     "id": "art_rune_of_destruction",
     "name": "Rune of Destruction",
-    "feature_type": "feat",
     "tag": "elementalist",
     "description": "Commit Effort for the day and take a Main Action to draw a hand-sized rune on an adjacent solid surface. It lasts 1 hour per level. A creature within 2 ft triggers a 5-ft radius explosion for 2d6 + level damage of an element the caster chooses. Creatures already within 5 ft do not trigger it until they re-enter. The caster never triggers their own runes, and runes cannot overlap."
   },
@@ -291,7 +265,6 @@
     "type": "feature",
     "id": "art_steps_of_air",
     "name": "Steps of Air",
-    "feature_type": "feat",
     "tag": "elementalist",
     "description": "Commit Effort for the scene as an On Turn action to let a visible ally fly at its movement rate for 1 round per level; it descends harmlessly if the art ends aloft. As an Instant action, the art can negate falling damage for one target."
   },
@@ -299,7 +272,6 @@
     "type": "feature",
     "id": "art_stunning_shock",
     "name": "Stunning Shock",
-    "feature_type": "feat",
     "tag": "elementalist",
     "description": "Commit Effort for the day and take a Main Action against a visible creature within 50 ft per level. It must wear or hold at least 1 lb of conductive metal or be wet. It loses its next Main Action; a Physical save reduces this to losing its Move action. Once per scene per creature. The Effort returns the next morning."
   },
@@ -307,7 +279,6 @@
     "type": "feature",
     "id": "art_thermal_shield",
     "name": "Thermal Shield",
-    "feature_type": "feat",
     "tag": "elementalist",
     "description": "Commit Effort for the scene as an Instant action to negate one instance of fire or frost damage dealt to a single visible ally or object."
   },
@@ -315,7 +286,6 @@
     "type": "feature",
     "id": "art_healing_touch",
     "name": "Healing Touch",
-    "feature_type": "feat",
     "tag": "healer",
     "description": "Commit Effort for the scene as an Instant action; for the rest of the scene, you may heal 2d6 damage plus your Heal skill to a touched ally as a Main Action. This healing adds 1 System Strain to the target each time it is applied."
   },
@@ -323,7 +293,6 @@
     "type": "feature",
     "id": "art_empowered_healer",
     "name": "Empowered Healer",
-    "feature_type": "feat",
     "tag": "healer",
     "description": "Your Healing Touch becomes more powerful, adding your level to any healing."
   },
@@ -331,7 +300,6 @@
     "type": "feature",
     "id": "art_facile_healer",
     "name": "Facile Healer",
-    "feature_type": "feat",
     "tag": "healer",
     "description": "Your Healing Touch ability is improved, and you no longer need to Commit Effort to activate it."
   },
@@ -339,7 +307,6 @@
     "type": "feature",
     "id": "art_far_healer",
     "name": "Far Healer",
-    "feature_type": "feat",
     "tag": "healer",
     "description": "Your Healing Touch ability is improved, and may be used on a visible target within ten feet per character level."
   },
@@ -347,7 +314,6 @@
     "type": "feature",
     "id": "art_final_repose",
     "name": "Final Repose",
-    "feature_type": "feat",
     "tag": "healer",
     "description": "Target a visible living creature and Commit Effort for the day as an Instant action. For the rest of the scene, they take a Physical saving throw penalty equal to your Heal skill. If they are reduced to zero hit points before the end of the scene, they die with no chance for stabilization or revival."
   },
@@ -355,7 +321,6 @@
     "type": "feature",
     "id": "art_healers_eye",
     "name": "Healer's Eye",
-    "feature_type": "feat",
     "tag": "healer",
     "description": "Commit Effort as an On Turn action; while the Effort remains committed, you can use a Main Action to visually detect diseases and poisons, diagnose creatures flawlessly, perceive their physiology, and learn their current hit point totals. You can also detect living creatures by sight regardless of available light or obscuring mists."
   },
@@ -363,7 +328,6 @@
     "type": "feature",
     "id": "art_limb_restoration",
     "name": "Limb Restoration",
-    "feature_type": "feat",
     "tag": "healer",
     "description": "Only expert healers can master this art, which cannot be learned earlier than 8th level. Commit all remaining Effort for the day, a minimum of one point, to regenerate a missing limb or organ for a target you are touching, or efface some dramatic scar or other physical debility. The target's System Strain is automatically maximized."
   },
@@ -371,7 +335,6 @@
     "type": "feature",
     "id": "art_purge_ailment",
     "name": "Purge Ailment",
-    "feature_type": "feat",
     "tag": "healer",
     "description": "Commit Effort for the day as a Main Action. An ally you are touching is cured of one poison or disease. Creatures killed by poison can be revived by this art if it is used within six minutes of death. At seventh level, you need only Commit Effort for the scene to use this ability."
   },
@@ -379,7 +342,6 @@
     "type": "feature",
     "id": "art_refined_restoration",
     "name": "Refined Restoration",
-    "feature_type": "feat",
     "tag": "healer",
     "description": "You and up to a dozen allies you tend before they sleep will all lose 2 System Strain from a good night's rest instead of 1."
   },
@@ -387,7 +349,6 @@
     "type": "feature",
     "id": "art_revive_the_fallen",
     "name": "Revive the Fallen",
-    "feature_type": "feat",
     "tag": "healer",
     "description": "Only expert healers are capable of mastering this art, which cannot be learned earlier than 8th level. Commit Effort for the day as a Main Action to revive a recently-slain living creature you are touching, within one minute per caster level of death. The target's System Strain is automatically maximized and they are unconscious for twenty-four hours before awakening with 1 hit point."
   },
@@ -395,7 +356,6 @@
     "type": "feature",
     "id": "art_swift_healer",
     "name": "Swift Healer",
-    "feature_type": "feat",
     "tag": "healer",
     "description": "Your Healing Touch ability is improved, and may be used as an On Turn action once per day per character level, though not more than once per scene on any given target."
   },
@@ -403,7 +363,6 @@
     "type": "feature",
     "id": "art_healers_knife",
     "name": "The Healer's Knife",
-    "feature_type": "feat",
     "tag": "healer",
     "description": "Your Healing Touch ability is altered, and may be used to inflict damage to a living target instead of healing it. The damage equals the healing that would normally be done, though you receive 1 System Strain instead of the target. Using this power in melee requires a successful Punch attack with a hit bonus equal to your Heal skill, with the damage added to any done by the blow, or simply touching an unwary target."
   },
@@ -411,7 +370,6 @@
     "type": "feature",
     "id": "art_tireless_vigor",
     "name": "Tireless Vigor",
-    "feature_type": "feat",
     "tag": "healer",
     "description": "Commit Effort; while it remains Committed your need to eat, drink, breathe, or sleep does not grow further. You may exert yourself tirelessly and regenerate 1 lost hit point per hour."
   },
@@ -419,7 +377,6 @@
     "type": "feature",
     "id": "art_vital_furnace",
     "name": "Vital Furnace",
-    "feature_type": "feat",
     "tag": "healer",
     "description": "Your tremendous life energy can instantly regenerate any non-mortal wound you have received. Commit Effort for the day as an Instant action to negate the damage from an injury you just received that did not reduce you to zero hit points. You also automatically stabilize if reduced to zero hit points and awaken ten minutes later with 1 hit point."
   },
@@ -427,7 +384,6 @@
     "type": "feature",
     "id": "art_martial_style",
     "name": "Martial Style",
-    "feature_type": "feat",
     "tag": "vowed",
     "description": "Regardless of class, your hit die can't be worse than 1d6 per level. When attacking with the Punch skill, your class hit bonus can be no worse than that of an Expert of your same character level. At third level, any attack using the Punch skill counts as a magic weapon."
   },
@@ -435,7 +391,6 @@
     "type": "feature",
     "id": "art_unarmed_might",
     "name": "Unarmed Might",
-    "feature_type": "feat",
     "tag": "vowed",
     "description": "Your unarmed attack damage increases as you gain levels, as noted on the Vowed chart. You may add your Punch skill to the damage done by these attacks as usual, but Foci such as Unarmed Combatant that replace or improve your usual Punch damage do not apply to you."
   },
@@ -443,7 +398,6 @@
     "type": "feature",
     "id": "art_unarmored_defense",
     "name": "Unarmored Defense",
-    "feature_type": "feat",
     "tag": "vowed",
     "description": "When not wearing armor or using a shield, your base Armor Class is equal to 13 plus half your character level, rounded down.",
     "defense_floor": { "base": 13, "counter": "level", "divisor": 2, "round_up": false, "requires_no_armor": true, "requires_no_shield": true }
@@ -452,7 +406,6 @@
     "type": "feature",
     "id": "art_brutal_counter",
     "name": "Brutal Counter",
-    "feature_type": "feat",
     "tag": "vowed",
     "description": "Commit Effort for the scene as an Instant action after resolving an enemy melee attack against you, whether it hits or misses. You may make a free physical attack against your assailant. You cannot use this art more than once per round against a single foe, but you may use it while performing a Total Defense."
   },
@@ -460,7 +413,6 @@
     "type": "feature",
     "id": "art_faultless_awareness",
     "name": "Faultless Awareness",
-    "feature_type": "feat",
     "tag": "vowed",
     "description": "Your awareness is such that you cannot be surprised, and will even wake from a sound sleep in time to respond normally to some imminent peril."
   },
@@ -468,7 +420,6 @@
     "type": "feature",
     "id": "art_hurling_throw",
     "name": "Hurling Throw",
-    "feature_type": "feat",
     "tag": "vowed",
     "description": "After you make a successful attack, you may Commit Effort for the scene as an Instant action. The target must make a Physical saving throw or be thrown up to ten feet in any direction, falling prone on landing and suffering the damage rolled for your attack."
   },
@@ -476,7 +427,6 @@
     "type": "feature",
     "id": "art_inward_eye",
     "name": "The Inward Eye",
-    "feature_type": "feat",
     "tag": "vowed",
     "description": "Commit Effort as an On Turn action. For as long as it remains Committed, you are mystically aware of your surroundings with a sense equivalent to normal eyesight regardless of darkness, obscuring mists, or your actual eyes being closed or blinded."
   },
@@ -484,7 +434,6 @@
     "type": "feature",
     "id": "art_leap_of_the_heavens",
     "name": "Leap of the Heavens",
-    "feature_type": "feat",
     "tag": "vowed",
     "description": "Commit Effort for the scene as a Move action to leap up to your full Move action horizontally or half that vertically. You may also Commit Effort for the scene as an Instant action to negate falling damage, no matter the distance."
   },
@@ -492,7 +441,6 @@
     "type": "feature",
     "id": "art_masters_vigor",
     "name": "Master's Vigor",
-    "feature_type": "feat",
     "tag": "vowed",
     "description": "Your body retains its vigor and youthful vitality to the full normal span of your life. You regain two lost hit points per hour due to your natural restorative powers."
   },
@@ -500,7 +448,6 @@
     "type": "feature",
     "id": "art_mob_justice",
     "name": "Mob Justice",
-    "feature_type": "feat",
     "tag": "vowed",
     "description": "As an Instant action, Commit Effort for the day to become impervious to the Make a Swarm Attack maneuver for the rest of the scene, and immune to Shock while in melee with at least two foes."
   },
@@ -508,7 +455,6 @@
     "type": "feature",
     "id": "art_nimble_ascent",
     "name": "Nimble Ascent",
-    "feature_type": "feat",
     "tag": "vowed",
     "description": "Commit Effort for the scene as an On Turn action. For the remainder of the scene you may move up vertical and overhanging surfaces and across difficult terrain at your full movement rate with no chance of slipping or falling, provided the surface is not glass-smooth or enchanted."
   },
@@ -516,7 +462,6 @@
     "type": "feature",
     "id": "art_purified_body",
     "name": "Purified Body",
-    "feature_type": "feat",
     "tag": "vowed",
     "description": "You may Commit Effort for the day as an Instant action to cure any disease or poison currently affecting you, or instead to negate any need for sleep, food, water, or air for the next 24 hours."
   },
@@ -524,7 +469,6 @@
     "type": "feature",
     "id": "art_revivifying_breath",
     "name": "Revivifying Breath",
-    "feature_type": "feat",
     "tag": "vowed",
     "description": "Commit Effort for the day as an On Turn action to heal yourself for 1d6 hit points plus your level. This healing does not increase System Strain. This ability may be used on your turn even when you are at zero hit points, but then Commits all your remaining Effort for the day. Once per scene."
   },
@@ -532,7 +476,6 @@
     "type": "feature",
     "id": "art_shattering_strike",
     "name": "Shattering Strike",
-    "feature_type": "feat",
     "tag": "vowed",
     "description": "Commit Effort for the day and take a full round of motionlessness to prepare. On the next round, as a Main Action, your unarmed attack can shatter a wooden door, wall, or similar object. At fourth level it affects stone, and at seventh metal. Against an immobilized creature the attack does 1d12 damage per character level."
   },
@@ -540,7 +483,6 @@
     "type": "feature",
     "id": "art_style_weaponry",
     "name": "Style Weaponry",
-    "feature_type": "feat",
     "tag": "vowed",
     "description": "Pick three general classes of weapons, such as swords, bows, axes, or daggers. When using weapons of those classes, you may use Punch for hit rolls instead of Stab or Shoot. Your Punch skill does not add to the damage done by these weapons, though Martial Style applies to their hit rolls."
   },
@@ -548,7 +490,6 @@
     "type": "feature",
     "id": "art_unobtrusive_step",
     "name": "Unobtrusive Step",
-    "feature_type": "feat",
     "tag": "vowed",
     "description": "Once per scene, you may Commit Effort for the day as an Instant action to reroll a failed Sneak skill check or a skill check related to impersonating someone else."
   }

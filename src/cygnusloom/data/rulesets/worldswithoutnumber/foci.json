@@ -1,10 +1,19 @@
 [
   {
+    "type": "defaults",
+    "id": "foci",
+    "when": {
+      "type": "feature"
+    },
+    "set": {
+      "feature_type": "feat",
+      "tag": "focus"
+    }
+  },
+  {
     "type": "feature",
     "id": "focus_alert",
     "name": "Alert",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 1,
     "description": "Your senses are hard to fool. You gain Notice, cannot be surprised, and enemies cannot use Execution Attacks against you. You also gain an edge on initiative.",
     "effects": [
@@ -23,8 +32,6 @@
     "type": "feature",
     "id": "focus_alert_2",
     "name": "Alert",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 2,
     "description": "You move before anyone else. You act first in each combat round unless another Alert combatant is present.",
     "effects": [
@@ -38,8 +45,6 @@
     "type": "feature",
     "id": "focus_armored_magic",
     "name": "Armored Magic",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 1,
     "description": "You can cast spells and use arts while wearing light or medium armor of Encumbrance 2 or less, and may use a shield if your other hand is free.",
     "effects": [
@@ -53,8 +58,6 @@
     "type": "feature",
     "id": "focus_armored_magic_2",
     "name": "Armored Magic",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 2,
     "description": "You can cast in armor of any weight, and even with both hands full, as long as you are not bound.",
     "effects": [
@@ -68,8 +71,6 @@
     "type": "feature",
     "id": "focus_armsmaster",
     "name": "Armsmaster",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 1,
     "description": "You gain Stab. You can ready a stowed melee or thrown weapon instantly, and add your Stab level to melee or thrown damage or Shock.",
     "effects": [
@@ -88,8 +89,6 @@
     "type": "feature",
     "id": "focus_armsmaster_2",
     "name": "Armsmaster",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 2,
     "description": "Your melee Shock ignores armor up to AC 10, and you gain +1 to hit with melee and thrown attacks.",
     "effects": [
@@ -103,8 +102,6 @@
     "type": "feature",
     "id": "focus_artisan",
     "name": "Artisan",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 1,
     "description": "You gain Craft. Your Craft counts one level higher for building and maintaining mods, and mods you build need one less unit of arcane salvage.",
     "effects": [
@@ -123,8 +120,6 @@
     "type": "feature",
     "id": "focus_artisan_2",
     "name": "Artisan",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 2,
     "description": "The first mod on an item needs no upkeep and costs half the silver, masterwork gear is automatic, and once a month you can further reduce a mod's salvage cost.",
     "effects": [
@@ -138,8 +133,6 @@
     "type": "feature",
     "id": "focus_assassin",
     "name": "Assassin",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 1,
     "description": "You gain Sneak. You can conceal a knife-sized object from anything short of a strip search and produce it instantly, and a surprise-round attack with it cannot miss.",
     "effects": [
@@ -158,8 +151,6 @@
     "type": "feature",
     "id": "focus_assassin_2",
     "name": "Assassin",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 2,
     "description": "You can move in the same round as an Execution Attack, splitting the movement before and after the strike.",
     "effects": [
@@ -173,8 +164,6 @@
     "type": "feature",
     "id": "focus_authority",
     "name": "Authority",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 1,
     "description": "You gain Lead. Once a day, a Charisma/Lead check against a non-hostile NPC's Morale can make them comply with a request that is not deeply harmful or wildly out of character.",
     "effects": [
@@ -193,8 +182,6 @@
     "type": "feature",
     "id": "focus_authority_2",
     "name": "Authority",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 2,
     "description": "NPCs you directly lead gain Morale and hit bonuses equal to your Lead, plus +1 on skill checks, and will not act against your interests except under extreme pressure.",
     "effects": [
@@ -208,8 +195,6 @@
     "type": "feature",
     "id": "focus_close_combatant",
     "name": "Close Combatant",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 1,
     "description": "You gain any combat skill. You can throw knife-sized weapons in melee without penalty, ignore melee Shock while unarmored, and disrupt spellcasting by fighting close.",
     "effects": [
@@ -223,8 +208,6 @@
     "type": "feature",
     "id": "focus_close_combatant_2",
     "name": "Close Combatant",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 2,
     "description": "Your melee Shock treats all targets as AC 10, and Fighting Withdrawal becomes a free On Turn action.",
     "effects": [
@@ -238,8 +221,6 @@
     "type": "feature",
     "id": "focus_connected",
     "name": "Connected",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 1,
     "description": "You gain Connect. After a week in a not-hostile place you have contacts who will do mildly illegal favors, one per game day.",
     "effects": [
@@ -258,8 +239,6 @@
     "type": "feature",
     "id": "focus_connected_2",
     "name": "Connected",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 2,
     "description": "Once per session, if it is not entirely implausible, you can meet someone you know who will do modest favors. You choose when and where.",
     "effects": [
@@ -273,8 +252,6 @@
     "type": "feature",
     "id": "focus_cultured",
     "name": "Cultured",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 1,
     "description": "You gain Connect. You speak common regional languages fluently, learn new ones quickly, and can call in a minor favor once a day.",
     "effects": [
@@ -293,8 +270,6 @@
     "type": "feature",
     "id": "focus_cultured_2",
     "name": "Cultured",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 2,
     "description": "Once per session, you can reroll a failed social skill check.",
     "effects": [
@@ -308,8 +283,6 @@
     "type": "feature",
     "id": "focus_die_hard",
     "name": "Die Hard",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 1,
     "level_hp_bonus": 2,
     "description": "You gain +2 maximum HP per level and automatically stabilize when Mortally Wounded, unless the injury leaves nothing to save.",
@@ -329,8 +302,6 @@
     "type": "feature",
     "id": "focus_die_hard_2",
     "name": "Die Hard",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 2,
     "description": "The first time each day an injury would drop you to 0 HP, you remain at 1 HP instead.",
     "effects": [
@@ -344,8 +315,6 @@
     "type": "feature",
     "id": "focus_deadeye",
     "name": "Deadeye",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 1,
     "description": "You gain Shoot. You can ready a stowed ranged weapon instantly, use bows in melee at -4, and add your Shoot level to ranged damage.",
     "effects": [
@@ -364,8 +333,6 @@
     "type": "feature",
     "id": "focus_deadeye_2",
     "name": "Deadeye",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 2,
     "description": "You reload crossbows and slow weapons quickly, use any ranged weapon in melee without penalty, and once per scene automatically hit an inanimate target.",
     "effects": [
@@ -379,8 +346,6 @@
     "type": "feature",
     "id": "focus_dealmaker",
     "name": "Dealmaker",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 1,
     "description": "You gain Trade. With half an hour you can find a buyer or seller for almost any good or service in a community, legal or otherwise.",
     "effects": [
@@ -399,8 +364,6 @@
     "type": "feature",
     "id": "focus_dealmaker_2",
     "name": "Dealmaker",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 2,
     "description": "Once per session, a sentient being not currently trying to kill you agrees to a plausible request for a price or favor.",
     "effects": [
@@ -414,8 +377,6 @@
     "type": "feature",
     "id": "focus_developed_attribute",
     "name": "Developed Attribute",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 1,
     "repeatable": true,
     "description": "Choose an attribute; its modifier rises by +1, to a maximum of +3. The score itself does not change. May be taken again for another attribute, but not by mages.",
@@ -438,8 +399,6 @@
     "type": "feature",
     "id": "focus_diplomatic_grace",
     "name": "Diplomatic Grace",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 1,
     "description": "You gain Convince. You speak regional languages, learn new ones quickly, and reroll 1s on negotiation or diplomacy checks.",
     "effects": [
@@ -458,8 +417,6 @@
     "type": "feature",
     "id": "focus_diplomatic_grace_2",
     "name": "Diplomatic Grace",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 2,
     "description": "Once a day you can silently consecrate a specific, time-limited bargain; breaking it requires a Mental save unless the target's life or something they love is imperiled.",
     "effects": [
@@ -473,8 +430,6 @@
     "type": "feature",
     "id": "focus_gifted_chirurgeon",
     "name": "Gifted Chirurgeon",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 1,
     "description": "You gain Heal. You can stabilize an adjacent dying person each round as an On Turn action, roll 3d6 and drop the lowest on Heal checks, and first aid heals double.",
     "effects": [
@@ -493,8 +448,6 @@
     "type": "feature",
     "id": "focus_gifted_chirurgeon_2",
     "name": "Gifted Chirurgeon",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 2,
     "description": "Your healing is magical. As a Main Action you heal an adjacent wounded ally 1d6 + Heal, which can revive them without Frailty, at the cost of 1 System Strain.",
     "effects": [
@@ -508,8 +461,6 @@
     "type": "feature",
     "id": "focus_henchkeeper",
     "name": "Henchkeeper",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 1,
     "description": "You gain Lead. Within a day of reaching a community you can recruit henchmen, up to one per three levels, who will escort and guard you.",
     "effects": [
@@ -528,8 +479,6 @@
     "type": "feature",
     "id": "focus_henchkeeper_2",
     "name": "Henchkeeper",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 2,
     "description": "Your henchmen fight unless hopelessly outmatched and count as veteran soldiers; skilled NPCs become loyal after a significant favor.",
     "effects": [
@@ -543,8 +492,6 @@
     "type": "feature",
     "id": "focus_impervious_defense",
     "name": "Impervious Defense",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 1,
     "description": "You have an innate Armor Class of 15 plus half your level, rounded up. It does not stack with worn armor, but Dexterity and shields still apply.",
     "defense_floor": {
@@ -563,8 +510,6 @@
     "type": "feature",
     "id": "focus_impervious_defense_2",
     "name": "Impervious Defense",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 2,
     "description": "Once a day, as an Instant action, you can shrug off one weapon attack or physical trauma that armor could plausibly stop.",
     "effects": [
@@ -578,8 +523,6 @@
     "type": "feature",
     "id": "focus_impostor",
     "name": "Impostor",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 1,
     "description": "You gain Perform or Sneak. Once per scene you can reroll a check or save to maintain a disguise, and you hold one false identity of minor importance.",
     "effects": [
@@ -593,8 +536,6 @@
     "type": "feature",
     "id": "focus_impostor_2",
     "name": "Impostor",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 2,
     "description": "As a Main Action you can switch among three chosen appearances, and you can establish a new false identity in each significant community after a day.",
     "effects": [
@@ -608,8 +549,6 @@
     "type": "feature",
     "id": "focus_lucky",
     "name": "Lucky",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 1,
     "description": "Once a week, a blow or effect that would kill, mortally wound, or helplessly disable you fails instead. Roll all chance-based rolls twice and keep the better.",
     "effects": [
@@ -623,8 +562,6 @@
     "type": "feature",
     "id": "focus_lucky_2",
     "name": "Lucky",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 2,
     "description": "Once per session, in peril, roll 1d6: on 2 or more something fortunate happens; on a 1 the situation worsens as the GM decides.",
     "effects": [
@@ -638,8 +575,6 @@
     "type": "feature",
     "id": "focus_nullifier",
     "name": "Nullifier",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 1,
     "description": "You and allies within 20 feet gain +2 on saves against magic. You can sense magic nearby as an On Turn action, and your first failed magical save each day becomes a success.",
     "effects": [
@@ -653,8 +588,6 @@
     "type": "feature",
     "id": "focus_nullifier_2",
     "name": "Nullifier",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 2,
     "description": "Once a day, as an Instant action, you ignore an unwanted magical effect or supernatural ability, even one that normally allows no save; a persistent effect is suppressed for the scene.",
     "effects": [
@@ -668,7 +601,6 @@
     "type": "feature",
     "id": "focus_origin_forged",
     "name": "Forge-Born",
-    "feature_type": "feat",
     "tag": "origin",
     "rank": 1,
     "description": "You were shaped from clay, stone, or brass and kindled into a will of your own. You need no food, drink, or breath, are immune to disease, poison, and natural temperature extremes, and stand idle through the night instead of sleeping, but the making left one part of you lesser.",
@@ -687,7 +619,6 @@
     "type": "feature",
     "id": "focus_origin_thrallborn",
     "name": "Thrall-Born",
-    "feature_type": "feat",
     "tag": "origin",
     "rank": 1,
     "description": "You were bred and worked for another's profit, and you proved too stubborn and too dangerous to keep in the yard. You gain Exert, gain +1 Strength and Constitution modifiers, take -1 Intelligence and Charisma modifiers, and take -2 on all Mental saving throws.",
@@ -707,7 +638,6 @@
     "type": "feature",
     "id": "focus_origin_dwarf",
     "name": "Dwarf",
-    "feature_type": "feat",
     "tag": "origin",
     "rank": 1,
     "description": "You are a dwarf, one of the deep folk, raised in halls cut from living rock and taught that a wall is a thing you can hear. You gain Craft, sense solid objects within 20 feet as if by sight, add +2 to saves against hostile magic, need only half the usual food, water, and air, and gain +1 to your hit point die each level.",
@@ -727,7 +657,6 @@
     "type": "feature",
     "id": "focus_origin_elf",
     "name": "Elf",
-    "feature_type": "feat",
     "tag": "origin",
     "rank": 1,
     "description": "You are an elf, long-lived kin of the old fair folk, carrying memories that are not entirely your own. You gain Notice, a bonus skill of your choice with a daily reroll, and clear sight in anything short of complete darkness; no attribute score stays below 9.",
@@ -751,7 +680,6 @@
     "type": "feature",
     "id": "focus_origin_giantblooded",
     "name": "Giant-Blooded",
-    "feature_type": "feat",
     "tag": "origin",
     "rank": 1,
     "description": "A giant walked in your grandmother's line, and the blood comes back true in you: broad, tall, and slow to be afraid. You gain Stab and Punch, gain +1 Strength and Constitution modifiers, and take -1 Dexterity and Charisma modifiers.",
@@ -776,7 +704,6 @@
     "type": "feature",
     "id": "focus_origin_beastkin",
     "name": "Beastkin",
-    "feature_type": "feat",
     "tag": "origin",
     "rank": 1,
     "description": "You were born to a horned herd-folk and grew past the herd's wits into a person's. You gain Survive, gain +1 Constitution modifier, are immune to natural extremes of heat and cold, can eat any plant matter a grazing beast could, and take -2 on all Mental saves.",
@@ -796,7 +723,6 @@
     "type": "feature",
     "id": "focus_origin_glamoured",
     "name": "Glamoured",
-    "feature_type": "feat",
     "tag": "origin",
     "rank": 1,
     "description": "A spirit of desire touched your line, and its glamour sits on you still: people turn to look, and believe what you tell them. You gain Convince and Perform, gain +1 Charisma modifier, but take -2 on all Mental saving throws.",
@@ -821,7 +747,6 @@
     "type": "feature",
     "id": "focus_origin_gutterkin",
     "name": "Gutterkin",
-    "feature_type": "feat",
     "tag": "origin",
     "rank": 1,
     "description": "Your people live in the gaps of a city: under the floorboards, behind the shutters, in the walls of houses built after they were forgotten. You gain Stab and Sneak, gain +1 Dexterity modifier, and take -1 Constitution modifier.",
@@ -846,7 +771,6 @@
     "type": "feature",
     "id": "focus_origin_revenant",
     "name": "Revenant",
-    "feature_type": "feat",
     "tag": "origin",
     "rank": 1,
     "description": "You died, and something kept the body walking. You need not eat, drink, or breathe; you are immune to poison, disease, sleep, and unconsciousness and indifferent to natural heat and cold; healing needs your own or a Necromancer's aid; and one attribute modifier is reduced by 1.",
@@ -865,8 +789,6 @@
     "type": "feature",
     "id": "focus_poisoner",
     "name": "Poisoner",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 1,
     "description": "You gain Heal. You can reroll a failed save against poison, brew toxins that deal 2d6 + level with a Physical save for half, and keep doses equal to your level.",
     "effects": [
@@ -885,8 +807,6 @@
     "type": "feature",
     "id": "focus_poisoner_2",
     "name": "Poisoner",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 2,
     "description": "You are immune to poison and can apply a universal antidote as a Main Action. Your poisons are harder to detect and resist, and ingested doses can be made non-lethal.",
     "effects": [
@@ -900,8 +820,6 @@
     "type": "feature",
     "id": "focus_polymath",
     "name": "Polymath",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 1,
     "description": "You gain any one bonus skill. You treat every non-combat skill as at least level-0, even untrained ones.",
     "effects": [
@@ -915,8 +833,6 @@
     "type": "feature",
     "id": "focus_polymath_2",
     "name": "Polymath",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 2,
     "description": "You treat every non-combat skill as at least level-1; these phantom levels do not stack with real levels or reduce training costs.",
     "effects": [
@@ -930,8 +846,6 @@
     "type": "feature",
     "id": "focus_rider",
     "name": "Rider",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 1,
     "description": "You gain Ride. Your mount has Morale 12, uses your AC if better, travels half again as far in a day, and you can communicate with riding beasts.",
     "effects": [
@@ -950,8 +864,6 @@
     "type": "feature",
     "id": "focus_rider_2",
     "name": "Rider",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 2,
     "description": "Once per scene you can negate a hit on your steed, once per scene reroll a failed Ride check, and you can send simple thoughts to a bonded mount within 200 feet.",
     "effects": [
@@ -965,8 +877,6 @@
     "type": "feature",
     "id": "focus_shocking_assault",
     "name": "Shocking Assault",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 1,
     "description": "You gain Punch or Stab. Your weapon's Shock treats targets as AC 10 when it can hurt them and they are not Shock-immune.",
     "effects": [
@@ -980,8 +890,6 @@
     "type": "feature",
     "id": "focus_shocking_assault_2",
     "name": "Shocking Assault",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 2,
     "description": "Melee and unarmed Shock rises by +2, and a normal hit never deals less than its Shock would on a miss.",
     "effects": [
@@ -995,8 +903,6 @@
     "type": "feature",
     "id": "focus_snipers_eye",
     "name": "Sniper's Eye",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 1,
     "description": "You gain Shoot. Ranged Execution Attacks and target shooting roll 3d6 and drop the lowest, with bows, hurlants, or thrown weapons.",
     "effects": [
@@ -1015,8 +921,6 @@
     "type": "feature",
     "id": "focus_snipers_eye_2",
     "name": "Sniper's Eye",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 2,
     "description": "Your ranged Execution Attacks do not miss; the target takes -4 on the Physical save against mortal injury and still takes double damage on a success.",
     "effects": [
@@ -1030,8 +934,6 @@
     "type": "feature",
     "id": "focus_special_origin",
     "name": "Special Origin",
-    "feature_type": "feat",
-    "tag": "focus",
     "description": "With the GM's permission, this Focus represents a nonhuman origin. Its specific benefits are defined by the species in the bestiary.",
     "effects": [
       {
@@ -1044,8 +946,6 @@
     "type": "feature",
     "id": "focus_specialist",
     "name": "Specialist",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 1,
     "repeatable": true,
     "description": "Choose a skill other than Magic, Stab, Shoot, or Punch. Roll 3d6 and drop the lowest on checks with it. May be taken again for another skill.",
@@ -1068,8 +968,6 @@
     "type": "feature",
     "id": "focus_specialist_2",
     "name": "Specialist",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 2,
     "description": "Roll 4d6 and drop the two lowest on checks with the chosen skill.",
     "effects": [
@@ -1091,8 +989,6 @@
     "type": "feature",
     "id": "focus_spirit_familiar",
     "name": "Spirit Familiar",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 1,
     "description": "You gain a familiar between cat and human size with the traits of an evoked servitor. You can summon or dismiss it as a Main Action, it needs no food or sleep, and once a day it refreshes one point of committed Effort.",
     "effects": [
@@ -1113,8 +1009,6 @@
     "type": "feature",
     "id": "focus_spirit_familiar_2",
     "name": "Spirit Familiar",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 2,
     "repeatable": true,
     "description": "Choose two familiar benefits: extra HP, a scaling attack, a skill bonus, another shape, flight, or speech. May be taken again for two more.",
@@ -1137,8 +1031,6 @@
     "type": "feature",
     "id": "focus_trapmaster",
     "name": "Trapmaster",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 1,
     "description": "You gain Notice. Once per scene you can reroll a failed check or save involving traps, and in five minutes you can rig a portal or passage with a snare, caltrops, or needles.",
     "effects": [
@@ -1157,8 +1049,6 @@
     "type": "feature",
     "id": "focus_trapmaster_2",
     "name": "Trapmaster",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 2,
     "description": "Once per scene your work counts as an Extirpate Arcana spell against a trap or hazard, cast at twice your level, using Int/Notice or Dex/Notice.",
     "effects": [
@@ -1172,8 +1062,6 @@
     "type": "feature",
     "id": "focus_unarmed_combatant",
     "name": "Unarmed Combatant",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 1,
     "description": "You gain Punch. Your unarmed strikes count as melee weapons for binding foes, deal more damage as Punch rises, and at Punch-1 gain Shock against AC 15 or less.",
     "effects": [
@@ -1192,8 +1080,6 @@
     "type": "feature",
     "id": "focus_unarmed_combatant_2",
     "name": "Unarmed Combatant",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 2,
     "description": "Even when your punch misses, you deal 1d6 plus the Shock the blow would have inflicted.",
     "effects": [
@@ -1207,8 +1093,6 @@
     "type": "feature",
     "id": "focus_unique_gift",
     "name": "Unique Gift",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 1,
     "description": "A special ability outside the other Foci, defined by you and the GM. It may be revised if it proves too strong or too weak.",
     "effects": [
@@ -1222,8 +1106,6 @@
     "type": "feature",
     "id": "focus_valiant_defender",
     "name": "Valiant Defender",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 1,
     "description": "You gain Stab or Punch. You gain +2 on Screen Ally checks, can screen one extra attacker each round, and can once per round screen against spells or area effects.",
     "effects": [
@@ -1237,8 +1119,6 @@
     "type": "feature",
     "id": "focus_valiant_defender_2",
     "name": "Valiant Defender",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 2,
     "description": "Your first Screen Ally check each round succeeds, you gain +2 AC while screening, and you can screen against foes as large as ogres.",
     "effects": [
@@ -1252,8 +1132,6 @@
     "type": "feature",
     "id": "focus_well_met",
     "name": "Well Met",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 1,
     "description": "Your presence improves reaction rolls by +1, and hostile encounters usually allow a round of parley unless violence is clearly intended.",
     "effects": [
@@ -1275,8 +1153,6 @@
     "type": "feature",
     "id": "focus_well_met_2",
     "name": "Well Met",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 2,
     "description": "Once per week, a reaction roll turns the subject as friendly and helpful as is plausible; this works only once per target.",
     "effects": [
@@ -1301,8 +1177,6 @@
     "type": "feature",
     "id": "focus_whirlwind_assault",
     "name": "Whirlwind Assault",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 1,
     "description": "You gain Stab. Once per scene, as an On Turn action, you apply your Shock to every susceptible foe in melee reach.",
     "effects": [
@@ -1321,8 +1195,6 @@
     "type": "feature",
     "id": "focus_whirlwind_assault_2",
     "name": "Whirlwind Assault",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 2,
     "description": "The first time you kill someone in a round with an attack, you immediately gain another attack with a ready weapon against a target in range.",
     "effects": [
@@ -1336,8 +1208,6 @@
     "type": "feature",
     "id": "focus_xenoblooded",
     "name": "Xenoblooded",
-    "feature_type": "feat",
-    "tag": "focus",
     "rank": 1,
     "description": "Choose a strange adaptation: heat immunity and smoke-sight; water breathing and swimming; altered gravity; or living without food, sleep, or air. Other gifts need GM approval.",
     "effects": [

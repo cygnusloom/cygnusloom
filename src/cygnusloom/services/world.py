@@ -2203,6 +2203,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 mods=mods,
                 stress=stress,
                 cause=cause,
+                feature_types=self.character.feature_types,
             )
 
     def update_custom_feature(

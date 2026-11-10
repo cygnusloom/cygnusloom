@@ -117,6 +117,49 @@ def tree(tmp_path: Path) -> Path:
     return tmp_path
 
 
+def _declared_world(feature_type: str = "ritual") -> list[dict[str, str]]:
+    return [
+        {
+            "type": "world",
+            "id": "testland",
+            "name": "Testland",
+            "description": "A test world.",
+            "rule_set": "testset",
+        },
+        {
+            "type": "feature",
+            "id": "rite",
+            "name": "Rite",
+            "feature_type": feature_type,
+            "description": "A small rite.",
+        },
+        {"type": "location", "id": "town", "name": "Town", "description": "A small town."},
+    ]
+
+
+def test_a_world_naming_a_rule_set_is_checked_when_content_loads(tree: Path):
+    _write(tree, {"worlds/testland/world.json": _declared_world()})
+
+    with pytest.raises(ContentError, match="feature_type"):
+        ContentLibrary.load(tree)
+
+
+def test_content_validation_collects_world_errors(tree: Path):
+    _write(tree, {"worlds/testland/world.json": _declared_world()})
+    library = ContentLibrary.load(tree, validate_worlds=False)
+
+    issues = library.validate()
+
+    assert any(severity == "error" and "feature_type" in message for severity, message in issues)
+
+
+def test_content_validate_cli_accepts_the_bundled_data(capsys: pytest.CaptureFixture[str]):
+    from cygnusloom.cli import main
+
+    assert main(["content", "validate"]) == 0
+    assert "validation passed" in capsys.readouterr().out
+
+
 def test_bundled_content_loads():
     library = bundled_library()
     assert set(library.world_templates) == {"twin-lakes", "unwritten-world", "unwritten-academy"}
@@ -127,6 +170,9 @@ def test_bundled_content_loads():
     assert library.world_content("twin-lakes", "cairn2e").monsters
     assert library.rule_sets["worldswithoutnumber"].character.skills
     assert library.rule_sets["worldswithoutnumber"].monsters
+    assert (
+        library.rule_sets["worldswithoutnumber"].feature_types["feat"].tag_groups["high"] == "Arts"
+    )
     academy = library.rule_sets["academia-arcana"]
     assert academy.character.stats
     assert academy.moves
@@ -455,6 +501,40 @@ def test_library_loads_from_a_custom_directory(tree: Path):
     assert library.rule_sets["testset"].tool_calls == {}
 
 
+def test_a_rule_set_can_define_and_use_a_custom_feature_type(tree: Path):
+    _write(
+        tree,
+        {
+            "rulesets/testset/feature_types.json": [
+                {
+                    "type": "feature_type",
+                    "id": "ritual",
+                    "name": "Ritual",
+                    "plural": "Rituals",
+                    "group": "Rituals",
+                    "tag_groups": {"focus": "Foci"},
+                    "unique": True,
+                }
+            ],
+            "rulesets/testset/features.json": [
+                {
+                    "type": "feature",
+                    "id": "ritual-one",
+                    "name": "Ritual One",
+                    "feature_type": "ritual",
+                    "description": "A small rite.",
+                }
+            ],
+        },
+    )
+
+    rule_set = ContentLibrary.load(tree).rule_sets["testset"]
+
+    assert rule_set.character.features["ritual-one"].feature_type == "ritual"
+    assert rule_set.feature_types["ritual"].plural == "Rituals"
+    assert rule_set.feature_types["ritual"].tag_groups == {"focus": "Foci"}
+
+
 def test_rules_and_tool_calls_are_read_from_their_definitions(tree: Path):
     _write(
         tree,
@@ -591,6 +671,95 @@ def test_duplicate_type_and_id_across_files_is_rejected(tmp_path: Path):
 def test_same_id_under_different_types_is_allowed(tmp_path: Path):
     _write(tmp_path, {"a.json": [{"type": "npc", "id": "bo"}, {"type": "item", "id": "bo"}]})
     assert len(read_definitions(tmp_path)) == 2
+
+
+def test_file_defaults_fill_fields_and_the_definition_wins(tmp_path: Path):
+    _write(
+        tmp_path,
+        {
+            "a.json": [
+                {
+                    "type": "defaults",
+                    "id": "features",
+                    "when": {"type": "feature"},
+                    "set": {"feature_type": "item", "armor": 0},
+                },
+                {"type": "feature", "id": "rope", "name": "Rope"},
+                {"type": "feature", "id": "plate", "name": "Plate", "armor": 3},
+            ]
+        },
+    )
+
+    found = {definition.id: definition.data for definition in read_definitions(tmp_path)}
+
+    assert found["rope"]["feature_type"] == "item"
+    assert found["rope"]["armor"] == 0
+    assert found["plate"]["armor"] == 3
+
+
+def test_file_defaults_can_match_an_absent_field(tmp_path: Path):
+    _write(
+        tmp_path,
+        {
+            "a.json": [
+                {
+                    "type": "defaults",
+                    "id": "standalone",
+                    "when": {"type": "shop_item", "feature": None},
+                    "set": {"size": "normal"},
+                },
+                {"type": "shop_item", "id": "torch"},
+                {"type": "shop_item", "id": "sword", "feature": "sword"},
+            ]
+        },
+    )
+
+    found = {definition.id: definition.data for definition in read_definitions(tmp_path)}
+
+    assert found["torch"]["size"] == "normal"
+    assert "size" not in found["sword"]
+
+
+def test_file_defaults_fill_missing_fields_inside_a_nested_object(tmp_path: Path):
+    _write(
+        tmp_path,
+        {
+            "a.json": [
+                {
+                    "type": "defaults",
+                    "id": "monsters",
+                    "when": {"type": "monster"},
+                    "set": {"stats": {"castings": 0, "effort": 0}},
+                },
+                {"type": "monster", "id": "hound", "stats": {"hp": 3}},
+            ]
+        },
+    )
+
+    found = {definition.id: definition.data for definition in read_definitions(tmp_path)}
+
+    assert found["hound"]["stats"] == {"hp": 3, "castings": 0, "effort": 0}
+
+
+@pytest.mark.parametrize(
+    "entry, message",
+    [
+        ({"type": "defaults", "id": "d", "set": []}, "'set' must be an object"),
+        ({"type": "defaults", "id": "d", "when": []}, "'when' must be an object"),
+        (
+            {"type": "defaults", "id": "d", "set": {"type": "feature"}},
+            "may not change type or id",
+        ),
+        (
+            {"type": "defaults", "id": "d", "set": {}, "extra": True},
+            "may not carry 'extra'",
+        ),
+    ],
+)
+def test_malformed_file_defaults_are_rejected(tmp_path: Path, entry: dict[str, Any], message: str):
+    _write(tmp_path, {"a.json": [entry]})
+    with pytest.raises(ContentError, match=message):
+        read_definitions(tmp_path)
 
 
 def test_directory_without_json_is_rejected(tmp_path: Path):

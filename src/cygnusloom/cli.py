@@ -16,7 +16,7 @@ from cygnusloom.db.session import make_engine
 from cygnusloom.services.common import session_scope
 
 MIGRATIONS = Path(__file__).resolve().parent / "migrations"
-COMMANDS = ("play", "migrate", "list-users", "where")
+COMMANDS = ("play", "migrate", "list-users", "where", "content")
 
 
 def migration_config(database_url: str) -> AlembicConfig:
@@ -68,6 +68,31 @@ def _play(args: argparse.Namespace) -> int:
     )
 
 
+def _content_validate(args: argparse.Namespace) -> int:
+    from cygnusloom.content.definitions import ContentError
+    from cygnusloom.content.library import DATA_DIR, ContentLibrary
+
+    data_dir = Path(args.data_dir) if args.data_dir else DATA_DIR
+    try:
+        library = ContentLibrary.load(data_dir, validate_worlds=False)
+    except ContentError as exc:
+        print(f"error: {exc}")
+        return 1
+    issues = library.validate(all_pairs=args.all_pairs)
+    print(
+        f"loaded {len(library.world_templates)} world(s) and {len(library.rule_sets)} rule set(s)"
+    )
+    for severity, message in issues:
+        print(f"{severity}: {message}")
+    errors = sum(severity == "error" for severity, _ in issues)
+    warnings = len(issues) - errors
+    if errors or (args.strict and warnings):
+        print(f"validation failed: {errors} error(s), {warnings} warning(s)")
+        return 1
+    print(f"validation passed: {warnings} warning(s)")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     if not argv:
@@ -100,6 +125,24 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("migrate", help="apply database migrations")
     sub.add_parser("list-users", help="print accounts without changing them")
     sub.add_parser("where", help="print the single-player data folder")
+    content_parser = sub.add_parser("content", help="inspect and validate content")
+    content_sub = content_parser.add_subparsers(dest="content_command", required=True)
+    validate_parser = content_sub.add_parser("validate", help="check worlds against rule sets")
+    validate_parser.add_argument(
+        "--data-dir",
+        default=None,
+        help="content directory to load (default: the bundled data)",
+    )
+    validate_parser.add_argument(
+        "--all-pairs",
+        action="store_true",
+        help="also try every world with every rule set, reporting mismatches as warnings",
+    )
+    validate_parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="treat warnings as a failed validation",
+    )
     args = parser.parse_args(argv)
     if args.command == "play":
         return _play(args)
@@ -107,6 +150,8 @@ def main(argv: list[str] | None = None) -> int:
         return _migrate()
     if args.command == "where":
         return _where()
+    if args.command == "content" and args.content_command == "validate":
+        return _content_validate(args)
     return _list_users()
 
 

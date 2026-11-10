@@ -31,8 +31,8 @@ from cygnusloom.services.events import (
     CheckMade,
     EffectNoted,
     Harmed,
+    Recovered,
     SpellCast,
-    StatRestored,
     current,
     record,
 )
@@ -246,7 +246,7 @@ def recover_effort(
         record(
             db,
             campaign_id,
-            StatRestored(
+            Recovered(
                 name=found.name,
                 stat=stat,
                 amount=amount,
@@ -335,7 +335,7 @@ def first_aid(healer: str, target: str, ctx: ToolContext) -> dict[str, Any]:
             record(
                 db,
                 campaign_id,
-                StatRestored(
+                Recovered(
                     name=patient.name,
                     stat="hp",
                     amount=healed,

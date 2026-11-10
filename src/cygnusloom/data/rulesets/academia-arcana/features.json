@@ -1,5 +1,16 @@
 [
   {
+    "type": "defaults",
+    "id": "features",
+    "when": {
+      "type": "feature",
+      "generate": null
+    },
+    "set": {
+      "feature_type": "trait"
+    }
+  },
+  {
     "type": "feature",
     "id": "silver",
     "name": "Silver Pieces",
@@ -75,7 +86,6 @@
     "type": "feature",
     "id": "talent-prodigy",
     "name": "Natural Gift",
-    "feature_type": "trait",
     "tag": "talent",
     "description": "Once per week, when a spell you cast rolls a 6-, treat it as a 7-9 instead. The magic arrives late, sideways, or larger than you meant.",
     "effects": [{"op": "note", "text": "Once per week, turn a spell's 6- into a 7-9."}],
@@ -95,7 +105,6 @@
     "type": "feature",
     "id": "talent-scholar",
     "name": "Well Read",
-    "feature_type": "trait",
     "tag": "talent",
     "description": "When you research from a text, add +1. You always know where a text you have seen is kept, even if it is not where it belongs.",
     "effects": [{"op": "note", "text": "+1 to research from a text; you know where texts are kept."}]
@@ -104,7 +113,6 @@
     "type": "feature",
     "id": "talent-alchemist",
     "name": "Portable Lab",
-    "feature_type": "trait",
     "tag": "talent",
     "description": "You carry a compact kit of reagents and tools. Add +1 when you improvise a potion or transmutation without a proper laboratory.",
     "effects": [{"op": "note", "text": "+1 to improvised lab work."}]
@@ -113,7 +121,6 @@
     "type": "feature",
     "id": "talent-rebel",
     "name": "Slippery",
-    "feature_type": "trait",
     "tag": "talent",
     "description": "Add +1 when you break curfew, slip past a prefect, or leave a place you should not be. You know one hidden route through the school.",
     "effects": [{"op": "note", "text": "+1 to breaking curfew and slipping away; know one hidden route."}]
@@ -122,7 +129,6 @@
     "type": "feature",
     "id": "talent-socialite",
     "name": "Connections",
-    "feature_type": "trait",
     "tag": "talent",
     "description": "Add +1 when you ask a favor through a friend, a rival, or a family name. You know someone who owes you a small favor.",
     "effects": [{"op": "note", "text": "+1 to favors; know someone who owes you."}]
@@ -131,7 +137,6 @@
     "type": "feature",
     "id": "signature-spell",
     "name": "Signature Spell",
-    "feature_type": "trait",
     "tag": "talent",
     "description": "You have a personal spell, written in your Signature Spell field. When you cast it, describe its unmistakable flourish. Once per week, treat a 6- on it as a 7-9.",
     "effects": [{"op": "note", "text": "Once per week, turn your signature spell's 6- into a 7-9."}],

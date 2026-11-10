@@ -1,9 +1,32 @@
 [
   {
+    "type": "defaults",
+    "id": "standalone-shop-items",
+    "when": {
+      "type": "shop_item",
+      "feature": null
+    },
+    "set": {
+      "size": "normal",
+      "armor": 0,
+      "uses": 0,
+      "damage": ""
+    }
+  },
+  {
+    "type": "defaults",
+    "id": "equipment",
+    "when": {
+      "type": "feature"
+    },
+    "set": {
+      "feature_type": "item"
+    }
+  },
+  {
     "type": "feature",
     "id": "daily-ration",
     "name": "Daily Ration",
-    "feature_type": "item",
     "size": "normal",
     "description": "A day's food and water for one person."
   },
@@ -43,7 +66,6 @@
     "id": "silver",
     "name": "Silver Pieces",
     "looks_like": "coin",
-    "feature_type": "item",
     "size": "tiny",
     "description": "Silver coins, the standard money of the settled lands: ten silver to a gold piece and ten copper to a silver piece. A full hundred coins counts as one item of Encumbrance."
   },
@@ -52,7 +74,6 @@
     "id": "no_armor",
     "name": "No Armor",
     "looks_like": "armor",
-    "feature_type": "item",
     "size": "tiny",
     "armor": 0,
     "description": "Ordinary clothing. Base Armor Class 10 before Dexterity, with no Encumbrance."
@@ -62,7 +83,6 @@
     "id": "war_shirt",
     "name": "War Shirt",
     "looks_like": "armor",
-    "feature_type": "item",
     "size": "tiny",
     "armor": 1,
     "description": "Light armor: AC 11. Encumbrance 0, and discreet enough for ordinary company."
@@ -72,7 +92,6 @@
     "id": "buff_coat",
     "name": "Buff Coat",
     "looks_like": "armor",
-    "feature_type": "item",
     "size": "tiny",
     "armor": 2,
     "description": "Light armor: AC 12. Encumbrance 0, and not obviously military."
@@ -82,7 +101,6 @@
     "id": "linothorax",
     "name": "Linothorax",
     "looks_like": "armor",
-    "feature_type": "item",
     "size": "normal",
     "armor": 3,
     "description": "Light armor: AC 13. Encumbrance 1."
@@ -92,7 +110,6 @@
     "id": "war_robe",
     "name": "War Robe",
     "looks_like": "cloak",
-    "feature_type": "item",
     "size": "huge",
     "armor": 4,
     "description": "Light armor: AC 14. Encumbrance 3; layered cloth that can be worn in polite society."
@@ -102,7 +119,6 @@
     "id": "pieced_armor",
     "name": "Pieced Armor",
     "looks_like": "armor",
-    "feature_type": "item",
     "size": "large",
     "armor": 4,
     "description": "Light armor: AC 14. Encumbrance 2; a patchwork of leather, horn, and metal."
@@ -112,7 +128,6 @@
     "id": "mail_shirt",
     "name": "Mail Shirt",
     "looks_like": "armor",
-    "feature_type": "item",
     "size": "normal",
     "armor": 4,
     "encumbrance_checks": ["sneak"],
@@ -123,7 +138,6 @@
     "id": "cuirass_and_greaves",
     "name": "Cuirass and Greaves",
     "looks_like": "armor",
-    "feature_type": "item",
     "size": "large",
     "armor": 5,
     "encumbrance_checks": ["sneak"],
@@ -134,7 +148,6 @@
     "id": "scaled_armor",
     "name": "Scaled Armor",
     "looks_like": "armor",
-    "feature_type": "item",
     "size": "huge",
     "armor": 6,
     "encumbrance_checks": ["sneak"],
@@ -145,7 +158,6 @@
     "id": "mail_hauberk",
     "name": "Mail Hauberk",
     "looks_like": "armor",
-    "feature_type": "item",
     "size": "large",
     "armor": 6,
     "encumbrance_checks": ["sneak", "exert"],
@@ -156,7 +168,6 @@
     "id": "plate_armor",
     "name": "Plate Armor",
     "looks_like": "armor",
-    "feature_type": "item",
     "size": "large",
     "armor": 7,
     "encumbrance_checks": ["sneak", "exert"],
@@ -167,7 +178,6 @@
     "id": "great_armor",
     "name": "Great Armor",
     "looks_like": "armor",
-    "feature_type": "item",
     "size": "huge",
     "armor": 9,
     "encumbrance_checks": ["sneak", "exert"],
@@ -178,7 +188,6 @@
     "id": "grand_plate",
     "name": "Grand Plate",
     "looks_like": "armor",
-    "feature_type": "item",
     "size": "huge",
     "armor": 6,
     "encumbrance_checks": ["sneak", "exert"],
@@ -189,7 +198,6 @@
     "id": "small_shield",
     "name": "Small Shield",
     "looks_like": "shield",
-    "feature_type": "item",
     "size": "normal",
     "armor": 3,
     "flags": ["shield"],
@@ -200,7 +208,6 @@
     "id": "large_shield",
     "name": "Large Shield",
     "looks_like": "shield",
-    "feature_type": "item",
     "size": "normal",
     "armor": 4,
     "flags": ["shield"],
@@ -211,7 +218,6 @@
     "id": "axe_hand",
     "name": "Hand Axe",
     "looks_like": "axe",
-    "feature_type": "item",
     "size": "normal",
     "damage": "1d6",
     "skill": "stab",
@@ -225,7 +231,6 @@
     "id": "axe_war",
     "name": "Axe, War",
     "looks_like": "axe",
-    "feature_type": "item",
     "size": "large",
     "damage": "1d10",
     "skill": "stab",
@@ -239,7 +244,6 @@
     "id": "blackjack",
     "name": "Blackjack",
     "looks_like": "mace",
-    "feature_type": "item",
     "size": "normal",
     "damage": "1d4",
     "skill": "stab",
@@ -253,7 +257,6 @@
     "id": "bow_large",
     "name": "Bow, Large",
     "looks_like": "bow",
-    "feature_type": "item",
     "size": "large",
     "damage": "1d8",
     "skill": "shoot",
@@ -267,7 +270,6 @@
     "id": "bow_small",
     "name": "Bow, Small",
     "looks_like": "bow",
-    "feature_type": "item",
     "size": "normal",
     "damage": "1d6",
     "skill": "shoot",
@@ -281,7 +283,6 @@
     "id": "claw_blades",
     "name": "Claw Blades",
     "looks_like": "dagger",
-    "feature_type": "item",
     "size": "normal",
     "damage": "1d6",
     "skill": "stab",
@@ -295,7 +296,6 @@
     "id": "club",
     "name": "Club",
     "looks_like": "mace",
-    "feature_type": "item",
     "size": "normal",
     "damage": "1d4",
     "skill": "stab",
@@ -309,7 +309,6 @@
     "id": "club_great",
     "name": "Club, Great",
     "looks_like": "mace",
-    "feature_type": "item",
     "size": "large",
     "damage": "1d10",
     "skill": "stab",
@@ -323,7 +322,6 @@
     "id": "crossbow",
     "name": "Crossbow",
     "looks_like": "bow",
-    "feature_type": "item",
     "size": "normal",
     "damage": "1d10",
     "skill": "shoot",
@@ -338,7 +336,6 @@
     "id": "dagger",
     "name": "Dagger",
     "looks_like": "dagger",
-    "feature_type": "item",
     "size": "normal",
     "damage": "1d4",
     "skill": "stab",
@@ -352,7 +349,6 @@
     "id": "halberd",
     "name": "Halberd",
     "looks_like": "spear",
-    "feature_type": "item",
     "size": "large",
     "damage": "1d10",
     "skill": "stab",
@@ -366,7 +362,6 @@
     "id": "hammer_great",
     "name": "Hammer, Great",
     "looks_like": "mace",
-    "feature_type": "item",
     "size": "large",
     "damage": "1d10",
     "skill": "stab",
@@ -380,7 +375,6 @@
     "id": "hammer_war",
     "name": "Hammer, War",
     "looks_like": "mace",
-    "feature_type": "item",
     "size": "normal",
     "damage": "1d8",
     "skill": "stab",
@@ -394,7 +388,6 @@
     "id": "hurlant_great",
     "name": "Hurlant, Great",
     "looks_like": "wand",
-    "feature_type": "item",
     "size": "massive",
     "damage": "3d10",
     "skill": "shoot",
@@ -408,7 +401,6 @@
     "id": "hurlant_hand",
     "name": "Hurlant, Hand",
     "looks_like": "wand",
-    "feature_type": "item",
     "size": "normal",
     "damage": "1d12",
     "skill": "shoot",
@@ -422,7 +414,6 @@
     "id": "hurlant_long",
     "name": "Hurlant, Long",
     "looks_like": "wand",
-    "feature_type": "item",
     "size": "large",
     "damage": "2d8",
     "skill": "shoot",
@@ -436,7 +427,6 @@
     "id": "mace",
     "name": "Mace",
     "looks_like": "mace",
-    "feature_type": "item",
     "size": "normal",
     "damage": "1d6",
     "skill": "stab",
@@ -450,7 +440,6 @@
     "id": "pike",
     "name": "Pike",
     "looks_like": "spear",
-    "feature_type": "item",
     "size": "large",
     "damage": "1d8",
     "skill": "stab",
@@ -464,7 +453,6 @@
     "id": "shield_bash_large",
     "name": "Shield Bash, Large",
     "looks_like": "shield",
-    "feature_type": "item",
     "size": "tiny",
     "damage": "1d6",
     "skill": "stab",
@@ -478,7 +466,6 @@
     "id": "shield_bash_small",
     "name": "Shield Bash, Small",
     "looks_like": "shield",
-    "feature_type": "item",
     "size": "tiny",
     "damage": "1d4",
     "skill": "stab",
@@ -492,7 +479,6 @@
     "id": "spear_heavy",
     "name": "Spear, Heavy",
     "looks_like": "spear",
-    "feature_type": "item",
     "size": "large",
     "damage": "1d10",
     "skill": "stab",
@@ -506,7 +492,6 @@
     "id": "spear_light",
     "name": "Light Spear",
     "looks_like": "spear",
-    "feature_type": "item",
     "size": "normal",
     "damage": "1d6",
     "skill": "stab",
@@ -520,7 +505,6 @@
     "id": "throwing_blade",
     "name": "Throwing Blade",
     "looks_like": "dagger",
-    "feature_type": "item",
     "size": "normal",
     "damage": "1d4",
     "skill": "shoot",
@@ -534,7 +518,6 @@
     "id": "staff",
     "name": "Staff",
     "looks_like": "staff",
-    "feature_type": "item",
     "size": "normal",
     "damage": "1d6",
     "skill": "stab",
@@ -548,7 +531,6 @@
     "id": "stiletto",
     "name": "Stiletto",
     "looks_like": "dagger",
-    "feature_type": "item",
     "size": "normal",
     "damage": "1d4",
     "skill": "stab",
@@ -562,7 +544,6 @@
     "id": "sword_great",
     "name": "Sword, Great",
     "looks_like": "sword",
-    "feature_type": "item",
     "size": "large",
     "damage": "1d12",
     "skill": "stab",
@@ -576,7 +557,6 @@
     "id": "sword_long",
     "name": "Sword, Long",
     "looks_like": "sword",
-    "feature_type": "item",
     "size": "normal",
     "damage": "1d8",
     "skill": "stab",
@@ -590,7 +570,6 @@
     "id": "sword_short",
     "name": "Short Sword",
     "looks_like": "sword",
-    "feature_type": "item",
     "size": "normal",
     "damage": "1d6",
     "skill": "stab",
@@ -604,7 +583,6 @@
     "id": "unarmed_attack",
     "name": "Unarmed Attack",
     "looks_like": "generic-item",
-    "feature_type": "item",
     "size": "tiny",
     "damage": "1d2",
     "skill": "punch",
@@ -625,10 +603,6 @@
     "looks_like": "bow",
     "category": "gear",
     "price": 2,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "Twenty arrows. Encumbrance 1."
   },
   {
@@ -639,9 +613,6 @@
     "category": "gear",
     "price": 2,
     "size": "tiny",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "A pack for stowing gear. Encumbrance 1, but none while worn."
   },
   {
@@ -652,9 +623,6 @@
     "category": "gear",
     "price": 2,
     "size": "tiny",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "Sturdy boots. Encumbrance 1, but none while worn."
   },
   {
@@ -665,9 +633,6 @@
     "category": "gear",
     "price": 1,
     "size": "tiny",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "A candle, 2 cp in the book. Effectively weightless in modest numbers."
   },
   {
@@ -678,9 +643,6 @@
     "category": "gear",
     "price": 50,
     "size": "massive",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "A cart and its harness. Not carried as an item."
   },
   {
@@ -691,9 +653,6 @@
     "category": "gear",
     "price": 25,
     "size": "tiny",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "Ordinary clothing. Encumbrance 1, but none while worn."
   },
   {
@@ -704,9 +663,6 @@
     "category": "gear",
     "price": 100,
     "size": "tiny",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "Well-made clothing. Encumbrance 1, but none while worn."
   },
   {
@@ -717,9 +673,6 @@
     "category": "gear",
     "price": 500,
     "size": "tiny",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "Noble dress. Encumbrance 2, but none while worn."
   },
   {
@@ -729,10 +682,6 @@
     "looks_like": "tool",
     "category": "gear",
     "price": 4,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "Pots, pans, and a cooking knife. Encumbrance 1."
   },
   {
@@ -742,10 +691,6 @@
     "looks_like": "tool",
     "category": "gear",
     "price": 4,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "An iron pry bar. Encumbrance 1."
   },
   {
@@ -756,9 +701,6 @@
     "category": "gear",
     "price": 1,
     "size": "bulky",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "One night's fire, 2 cp in the book. Encumbrance 4."
   },
   {
@@ -768,10 +710,6 @@
     "looks_like": "backpack",
     "category": "gear",
     "price": 3,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "A one-pint metal flask. Encumbrance 1."
   },
   {
@@ -781,10 +719,6 @@
     "looks_like": "tool",
     "category": "gear",
     "price": 5,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "A three-pronged hook for ropes. Encumbrance 1."
   },
   {
@@ -794,10 +728,6 @@
     "looks_like": "mace",
     "category": "gear",
     "price": 2,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "A hammer or similar small tool. Encumbrance 1."
   },
   {
@@ -807,10 +737,6 @@
     "looks_like": "potion",
     "category": "gear",
     "price": 5,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "Bandages, salves, and simple instruments for first aid. Encumbrance 1."
   },
   {
@@ -820,10 +746,6 @@
     "looks_like": "bow",
     "category": "gear",
     "price": 20,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "Twenty hurlant bolts. Encumbrance 1."
   },
   {
@@ -833,10 +755,6 @@
     "looks_like": "spear",
     "category": "gear",
     "price": 1,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "Ten iron spikes for doors and pitons. Encumbrance 1."
   },
   {
@@ -846,10 +764,6 @@
     "looks_like": "lantern-item",
     "category": "gear",
     "price": 10,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "A hooded oil lantern. Encumbrance 1."
   },
   {
@@ -860,9 +774,6 @@
     "category": "gear",
     "price": 10,
     "size": "tiny",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "A small polished steel mirror. Weightless in modest numbers."
   },
   {
@@ -872,10 +783,6 @@
     "looks_like": "potion",
     "category": "gear",
     "price": 1,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "Lamp oil. Encumbrance 1; three flasks bundle as one item."
   },
   {
@@ -886,9 +793,6 @@
     "category": "gear",
     "price": 1,
     "size": "tiny",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "Ten sheets of writing paper. Weightless in modest numbers."
   },
   {
@@ -899,9 +803,6 @@
     "category": "gear",
     "price": 5,
     "size": "bulky",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "A week of preserved food. Encumbrance 4."
   },
   {
@@ -921,9 +822,6 @@
     "category": "gear",
     "price": 2,
     "size": "large",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "Fifty feet of hemp rope. Encumbrance 2."
   },
   {
@@ -933,10 +831,6 @@
     "looks_like": "backpack",
     "category": "gear",
     "price": 1,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "A canvas sack. Encumbrance 1."
   },
   {
@@ -947,9 +841,6 @@
     "category": "gear",
     "price": 4,
     "size": "large",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "A digging tool. Encumbrance 2."
   },
   {
@@ -960,9 +851,6 @@
     "category": "gear",
     "price": 1,
     "size": "tiny",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "Flint, steel, and dry tinder. Weightless in modest numbers."
   },
   {
@@ -972,10 +860,6 @@
     "looks_like": "torch-item",
     "category": "gear",
     "price": 1,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "A burning torch, 2 cp in the book. Encumbrance 1; three bundle as one."
   },
   {
@@ -985,10 +869,6 @@
     "looks_like": "backpack",
     "category": "gear",
     "price": 1,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "A one-gallon waterskin. Encumbrance 1."
   },
   {
@@ -998,10 +878,6 @@
     "looks_like": "scroll",
     "category": "gear",
     "price": 3,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "Ink, pens, and a writing board. Encumbrance 1."
   },
   {
@@ -1012,9 +888,6 @@
     "category": "gear",
     "price": 30,
     "size": "massive",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "A pack mule. Not carried as an item."
   },
   {
@@ -1025,9 +898,6 @@
     "category": "gear",
     "price": 200,
     "size": "massive",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "A riding horse. Not carried as an item."
   },
   {
@@ -1038,9 +908,6 @@
     "category": "gear",
     "price": 150,
     "size": "massive",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "A draft horse. Not carried as an item."
   },
   {
@@ -1051,9 +918,6 @@
     "category": "gear",
     "price": 2000,
     "size": "massive",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "A warhorse trained for battle. Not carried as an item."
   },
   {
@@ -1063,10 +927,6 @@
     "looks_like": "tool",
     "category": "gear",
     "price": 20,
-    "size": "normal",
-    "armor": 0,
-    "damage": "",
-    "uses": 0,
     "description": "A working dog. Not carried as an item."
   },
   {

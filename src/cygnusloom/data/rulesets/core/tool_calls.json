@@ -1456,7 +1456,7 @@
         },
         "feature_type": {
           "type": "string",
-          "enum": ["spell", "potion", "enchantment", "item", "trait", "feat"],
+          "enum_from": "feature_types",
           "description": "The kind of feature it is."
         },
         "description": {

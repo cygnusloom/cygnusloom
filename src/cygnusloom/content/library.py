@@ -19,7 +19,6 @@ from typing import Any
 
 from cygnusloom.content.character import (
     DEFAULT_FEATURE_TYPES,
-    FEATURE_TYPES,
     CampaignSpec,
     CharacterSpec,
     CounterRef,
@@ -2089,7 +2088,7 @@ class RuleSet:
         return self.time.journey
 
     @property
-    def feature_types(self) -> Mapping[str, Any]:
+    def feature_types(self) -> Mapping[str, FeatureTypeRules]:
         return self.character.feature_types
 
     @property
@@ -2147,11 +2146,12 @@ class ContentLibrary:
         return tuple(genre for genre in TABLE_GENRES if genre in used)
 
     @classmethod
-    def load(cls, data_dir: Path = DATA_DIR) -> ContentLibrary:
+    def load(cls, data_dir: Path = DATA_DIR, *, validate_worlds: bool = True) -> ContentLibrary:
         """Load every world template and rule set. Each subdirectory is one of either.
 
         The `core` rule set is loaded on its own first, then merged under every other rule
-        set. A definition in a rule set replaces the core definition with the same type and id."""
+        set. A definition in a rule set replaces the core definition with the same type and id.
+        A world that names a rule set is checked against that rule set before it is returned."""
         worlds = {d.name: _load_world(d) for d in _subdirectories(data_dir / "worlds")}
         rule_set_dirs = _subdirectories(data_dir / "rulesets")
         core_dir = next((d for d in rule_set_dirs if d.name == CORE_RULE_SET), None)
@@ -2177,7 +2177,35 @@ class ContentLibrary:
         for world in worlds.values():
             if world.rule_set is not None and world.rule_set not in rule_sets:
                 raise ContentError(f"{world.id}: world names unknown rule set {world.rule_set!r}")
-        return cls(world_templates=worlds, rule_sets=rule_sets, core=core)
+        library = cls(world_templates=worlds, rule_sets=rule_sets, core=core)
+        if validate_worlds:
+            for world in worlds.values():
+                if world.rule_set is not None:
+                    library.world_content(world.id, world.rule_set)
+        return library
+
+    def validate(self, *, all_pairs: bool = False) -> list[tuple[str, str]]:
+        """Check every world against its declared rule set. With `all_pairs`, also try every
+        other rule set and report those failures as warnings, so a portable world can still
+        be loaded with a rule set it does not fully support. Returns (severity, message)."""
+        issues: list[tuple[str, str]] = []
+        for world in self.world_templates.values():
+            declared = world.rule_set
+            if declared is not None:
+                try:
+                    self.world_content(world.id, declared)
+                except ContentError as exc:
+                    issues.append(("error", f"{world.id} + {declared}: {exc}"))
+            if not all_pairs:
+                continue
+            for rule_set in self.rule_sets:
+                if rule_set == declared:
+                    continue
+                try:
+                    self.world_content(world.id, rule_set)
+                except ContentError as exc:
+                    issues.append(("warning", f"{world.id} + {rule_set}: {exc}"))
+        return issues
 
 
 def _load_defaults(data_dir: Path) -> list[Definition]:
@@ -2684,7 +2712,17 @@ def _build_world_content(template: WorldTemplate, rule_set: RuleSet) -> WorldCon
             )
     feature_icons = _icon_entries(own, "feature", name)
     features = {
-        d.id: load_feature(d, name, icon_entries=feature_icons) for d in own if d.type == "feature"
+        d.id: load_feature(
+            d,
+            name,
+            stats=rule_set.character.stats,
+            skills=rule_set.character.skills,
+            counters=rule_set.counters,
+            icon_entries=feature_icons,
+            feature_types=rule_set.character.feature_types,
+        )
+        for d in own
+        if d.type == "feature"
     }
     raw_rules = {
         d.id: required_text(d.data, "text", f"{name}: rule {d.id}") for d in own if d.type == "rule"
@@ -4016,6 +4054,7 @@ def _build_rule_set(
         "relations": sorted(relations),
         "advancement_options": sorted({o for a in advancements.values() for o in a.options}),
         "features": sorted(character.features),
+        "feature_types": sorted(character.feature_types),
         "xp_tracks": sorted({name for rules in level_ups.values() for name in rules.tracks}),
     }
     tool_calls: dict[str, ToolCall] = {}
@@ -7090,9 +7129,10 @@ def _load_level_picks(
         apply = _level_up_function(module, required_text(value, "apply", pick_label), pick_label)
         if kind == "feature":
             feature_type = required_text(value, "feature_type", pick_label)
-            if feature_type not in FEATURE_TYPES:
+            if feature_type not in character.feature_types:
                 raise ContentError(
-                    f"{pick_label}: 'feature_type' must be one of {', '.join(FEATURE_TYPES)}"
+                    f"{pick_label}: 'feature_type' must be one of "
+                    f"{', '.join(character.feature_types)}"
                 )
             options_name = required_text(value, "options", pick_label)
             options = _level_up_function(module, options_name, pick_label)
@@ -7288,11 +7328,26 @@ def _load_periods(
     return loaded
 
 
+def _type_text(data: Mapping[str, Any], key: str, label: str, fallback: str) -> str:
+    """A feature-type text field, or the default it overlays when the field is absent."""
+    if key not in data:
+        return fallback
+    return _optional_text(data, key, label) or ""
+
+
+def _type_flag(data: Mapping[str, Any], key: str, label: str, fallback: bool) -> bool:
+    """A feature-type boolean, or the default it overlays when the field is absent."""
+    if key not in data:
+        return fallback
+    return _flag_default(data, key, label, False)
+
+
 def _load_feature_types(
     definitions: list[Definition], template: str
 ) -> dict[str, FeatureTypeRules]:
-    """Every feature type the rule set offers. The seven engine defaults remain available unless
-    the rule set relabels or replaces them by id."""
+    """Every feature type the rule set offers. A definition overlays the engine default with the
+    same id, so a rule set may relabel one field or add a tag group without restating the rest.
+    A new id must give its name and is then independent of the defaults."""
     loaded: dict[str, FeatureTypeRules] = dict(DEFAULT_FEATURE_TYPES)
     for d in definitions:
         if d.type != "feature_type":
@@ -7308,20 +7363,42 @@ def _load_feature_types(
                 "group",
                 "rank_label",
                 "tag_label",
+                "tag_groups",
                 "unique",
                 "inventory",
             },
             label,
         )
+        base = loaded.get(d.id)
+        if "name" in d.data:
+            name = required_text(d.data, "name", label)
+        elif base is not None:
+            name = base.name
+        else:
+            raise ContentError(f"{label}: a new feature type needs a 'name'")
+
+        tag_groups = base.tag_groups if base is not None else {}
+        if "tag_groups" in d.data:
+            raw_groups = d.data["tag_groups"]
+            if not isinstance(raw_groups, Mapping):
+                raise ContentError(f"{label}: 'tag_groups' must map tags to group names")
+            tag_groups = {}
+            for tag, group in raw_groups.items():
+                if not isinstance(tag, str) or not tag.strip():
+                    raise ContentError(f"{label}: 'tag_groups' tags must be non-empty text")
+                if not isinstance(group, str) or not group.strip():
+                    raise ContentError(f"{label}: 'tag_groups' values must be non-empty text")
+                tag_groups[tag] = group
         loaded[d.id] = FeatureTypeRules(
             id=d.id,
-            name=required_text(d.data, "name", label),
-            plural=_optional_text(d.data, "plural", label) or "",
-            group=_optional_text(d.data, "group", label) or "",
-            rank_label=_optional_text(d.data, "rank_label", label) or "",
-            tag_label=_optional_text(d.data, "tag_label", label) or "",
-            unique=_flag_default(d.data, "unique", label, False),
-            inventory=_flag_default(d.data, "inventory", label, False),
+            name=name,
+            plural=_type_text(d.data, "plural", label, base.plural if base else ""),
+            group=_type_text(d.data, "group", label, base.group if base else ""),
+            rank_label=_type_text(d.data, "rank_label", label, base.rank_label if base else ""),
+            tag_label=_type_text(d.data, "tag_label", label, base.tag_label if base else ""),
+            tag_groups=dict(tag_groups),
+            unique=_type_flag(d.data, "unique", label, base.unique if base else False),
+            inventory=_type_flag(d.data, "inventory", label, base.inventory if base else False),
         )
     return loaded
 
@@ -8405,9 +8482,9 @@ def _enum_options(
     if source_name != "features":
         raise ContentError(f"{where}: only a 'features' enum_from may be filtered")
     feature_type = _optional_nonempty_text(source, "feature_type", f"{where}: enum_from")
-    if feature_type is not None and feature_type not in FEATURE_TYPES:
+    if feature_type is not None and feature_type not in character.feature_types:
         raise ContentError(
-            f"{where}: enum_from 'feature_type' must be one of {', '.join(FEATURE_TYPES)}"
+            f"{where}: enum_from 'feature_type' must be one of {', '.join(character.feature_types)}"
         )
     tag = _optional_nonempty_text(source, "tag", f"{where}: enum_from")
     max_rank = source.get("max_rank")

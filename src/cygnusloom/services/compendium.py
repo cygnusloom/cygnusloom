@@ -18,6 +18,7 @@ from dataclasses import field as dataclass_field
 from cygnusloom.content.character import (
     CharacterSpec,
     Feature,
+    FeatureTypeRules,
     Field,
     Stat,
     TableOption,
@@ -855,19 +856,23 @@ def _attacks_text(
     return f"Attacks: {', '.join(parts)}"
 
 
-def _feature_group(feature: Feature) -> str:
+def _feature_group(feature: Feature, feature_types: Mapping[str, FeatureTypeRules]) -> str:
     """The subheading a feature belongs under, such as Spells or Foci."""
     tag = feature.tag.casefold().strip().replace("_", " ")
+    kind = feature_types.get(feature.feature_type)
+    if kind is not None and tag in kind.tag_groups:
+        return kind.tag_groups[tag]
     if feature.feature_type == "spell":
-        return f"Spells - {feature.tag.title()}" if feature.tag else "Spells"
+        group = kind.group if kind is not None and kind.group else "Spells"
+        return f"{group} - {feature.tag.title()}" if feature.tag else group
     if tag in ("art", "arts"):
         return "Arts"
     if tag in ("focus", "foci"):
         return "Foci"
-    if feature.feature_type == "trait":
-        return "Traits"
-    if feature.feature_type == "feat":
-        return "Feats"
+    if kind is not None and kind.group:
+        return kind.group
+    if kind is not None and kind.plural:
+        return kind.plural
     return feature.feature_type.replace("_", " ").title() or "Abilities"
 
 
@@ -946,7 +951,7 @@ def _feature_draft(
         text=_feature_text(feature, rule_text, item=False),
         source=source,
         tags=tags,
-        group=_feature_group(feature),
+        group=_feature_group(feature, rule_set.feature_types),
     )
 
 

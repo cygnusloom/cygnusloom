@@ -1,5 +1,19 @@
 [
   {
+    "type": "defaults",
+    "id": "standalone-shop-items",
+    "when": {
+      "type": "shop_item",
+      "feature": null
+    },
+    "set": {
+      "size": "normal",
+      "armor": 0,
+      "uses": 0,
+      "damage": ""
+    }
+  },
+  {
     "type": "marketplace",
     "id": "academy-market",
     "currency": "silver"
@@ -12,8 +26,6 @@
     "category": "supply",
     "price": 1,
     "size": "tiny",
-    "armor": 0,
-    "uses": 0,
     "description": "A candle for late study."
   },
   {
@@ -23,8 +35,6 @@
     "category": "supply",
     "price": 2,
     "size": "tiny",
-    "armor": 0,
-    "uses": 0,
     "description": "Ink, a pen, and a blotter for copying notes."
   },
   {
@@ -33,9 +43,6 @@
     "name": "Parchment, Ten Sheets",
     "category": "supply",
     "price": 3,
-    "size": "normal",
-    "armor": 0,
-    "uses": 0,
     "description": "Ten sheets of good parchment."
   },
   {
@@ -45,9 +52,6 @@
     "looks_like": "backpack",
     "category": "clothing",
     "price": 4,
-    "size": "normal",
-    "armor": 0,
-    "uses": 0,
     "description": "A satchel for books, reagents, and lunch."
   },
   {
@@ -56,9 +60,6 @@
     "name": "School Robe",
     "category": "clothing",
     "price": 5,
-    "size": "normal",
-    "armor": 0,
-    "uses": 0,
     "description": "A plain robe in the school's colors."
   },
   {
@@ -67,9 +68,6 @@
     "name": "Potion Reagents",
     "category": "supply",
     "price": 4,
-    "size": "normal",
-    "armor": 0,
-    "uses": 0,
     "description": "A packet of common alchemical reagents."
   },
   {
@@ -80,7 +78,6 @@
     "category": "potion",
     "price": 8,
     "size": "tiny",
-    "armor": 0,
     "uses": 1,
     "description": "A bitter draught that closes small hurts."
   },
@@ -91,9 +88,6 @@
     "looks_like": "lantern-item",
     "category": "tool",
     "price": 6,
-    "size": "normal",
-    "armor": 0,
-    "uses": 0,
     "description": "A hooded lantern for the dark stairs."
   },
   {
@@ -103,9 +97,6 @@
     "looks_like": "torch",
     "category": "supply",
     "price": 1,
-    "size": "normal",
-    "armor": 0,
-    "uses": 0,
     "description": "A bundle of dry firewood."
   },
   {
@@ -114,9 +105,6 @@
     "name": "Daily Ration",
     "category": "supply",
     "price": 1,
-    "size": "normal",
-    "armor": 0,
-    "uses": 0,
     "description": "A day's food and water for one person."
   }
 ]

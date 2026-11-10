@@ -308,9 +308,13 @@ def option_views(
 
 def _new_level(pc: Character, rule_set: RuleSet, summary: Mapping[str, Any] | None) -> int:
     """The character's level after the pending level-up, or their current level."""
+    rules = next(iter(rule_set.level_ups.values()), None)
+    counter = rules.level_counter if rules is not None else "level"
+    initial = rule_set.counters[counter].initial if counter in rule_set.counters else 1
+    current = int(pc.counters.get(counter, initial))
     if summary is not None:
-        return int(summary.get("new_level", pc.counters.get("level", 1)))
-    return int(pc.counters.get("level", 1))
+        return int(summary.get("new_level", current))
+    return current
 
 
 def apply_page(

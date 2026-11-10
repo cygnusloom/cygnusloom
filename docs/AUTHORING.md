@@ -75,6 +75,82 @@ also shape an inherited definition:
 A rule set can extend its own definitions as well as core definitions. Cycles
 are rejected.
 
+## File defaults
+
+A JSON file can start with one or more `defaults` entries. Each one supplies
+fields for the definitions in that file that match its `when` object. The
+definition's own fields always win. This is shorthand for constant fields, not a
+new content type:
+
+```json
+[
+  {
+    "type": "defaults",
+    "id": "foci",
+    "when": {"type": "feature"},
+    "set": {"feature_type": "feat", "tag": "focus"}
+  },
+  {"type": "feature", "id": "focus_alert", "name": "Alert", "rank": 1}
+]
+```
+
+- `when` matches top-level field values. `null` means the field must be absent.
+  A `when` value can match `type`, which is the safe choice in a mixed file.
+- `set` may not change `type` or `id`.
+- A nested object in `set` fills missing keys inside the definition's own
+  object. Lists and scalars are supplied only when the definition has no value.
+- An earlier matching defaults entry wins over a later one. The definition wins
+  over both.
+- A file can have no defaults entry, in which case it reads exactly as before.
+
+Use `when` when a file mixes definition types, or when only some definitions
+should receive the fields. For example, a shop file can default only items with
+no `feature` reference:
+
+```json
+{"type": "defaults", "id": "standalone-shop-items",
+ "when": {"type": "shop_item", "feature": null},
+ "set": {"size": "normal", "armor": 0, "uses": 0, "damage": ""}}
+```
+
+## Feature types
+
+`feature_type` definitions are a registry, not only display labels. A rule set
+may add a new type or relabel an existing one:
+
+```json
+{
+  "type": "feature_type",
+  "id": "ritual",
+  "name": "Ritual",
+  "plural": "Rituals",
+  "group": "Rituals",
+  "rank_label": "Circle",
+  "tag_label": "Tradition",
+  "tag_groups": {"blood": "Blood Rites"},
+  "unique": true,
+  "inventory": false
+}
+```
+
+A definition with an id the engine already knows overlays that default, so a
+rule set may relabel one field without restating the rest:
+
+```json
+{
+  "type": "feature_type",
+  "id": "feat",
+  "tag_groups": {"focus": "Foci", "high": "Arts"}
+}
+```
+
+Features, template `choose`/`feat_picks`, `enum_from` filters, level-up picks,
+world features, the compendium, and custom-feature creation all validate against
+the same registry. A type's `unique` flag is the default for feature picks; a
+pick may override it with its own `unique` field. A type's `inventory` flag says
+whether its features occupy inventory slots at creation. `tag_groups` gives a
+subheading to particular tags without inventing a second feature type.
+
 ## Defaults layer
 
 `data/defaults` holds shared data that every rule set may use. It is optional;
@@ -356,7 +432,9 @@ from `from` to `to`. The loader adds both directions to the locations' route
 maps, so do not also author a `routes` entry for the same pair.
 World files are discovered recursively. There is no world manifest and worlds
 do not currently support `extends`, `patch`, or `disabled`; keep repeated world
-data explicit until that layer exists.
+data explicit until that layer exists. File defaults work in worlds too, so a
+constant shared by every NPC or location in one file belongs in a `defaults`
+entry instead of on every definition.
 
 ## Common pitfalls
 
@@ -394,8 +472,24 @@ its description; give the field instead.
 
 ## Validation
 
-There is currently no standalone content validator command. The test suite
-loads and validates the bundled content, including every bundled world/rule-set
-pair used by tests. For a new tree, run the loader through a small Python
-script or the application test helpers until a `content validate` command is
-added.
+A world that names a rule set is checked against it when the content library
+loads. That validates its monsters, NPC statblocks, world features, regions,
+routes, location maps, and attached rules. A bad declared pair is a load error;
+the application does not start with it.
+
+Use the standalone validator for a new tree or before shipping content changes:
+
+```bash
+cygnusloom content validate
+cygnusloom content validate --data-dir path/to/data
+cygnusloom content validate --all-pairs
+cygnusloom content validate --strict
+```
+
+`--all-pairs` also tries every world with every rule set and reports mismatches
+as warnings, because a portable world may be intentionally incomplete for a
+ruleset it does not declare. `--strict` treats those warnings as a failure. The
+command loads and validates the whole rule-set tree first: tool schemas and
+bindings, prompt gates, inheritance/patch targets, tables, monsters, and the
+character build. The test suite also loads the bundled content and runs each
+declared world/rule-set pair.

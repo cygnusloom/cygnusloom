@@ -5,6 +5,8 @@
 **Scope:** `core`, `cairn2e`, `worldswithoutnumber`, `academia-arcana`, the content loader, the rules/engine services, and the test contracts that constrain them.  
 **Status:** Initial audit was read-only. The refactor is being implemented on the 4.0 branch.
 
+**Follow-up (2026-11-10):** file-scoped definition defaults, end-to-end feature-type registry, and `content validate` are implemented. See [SIMPLIFICATION_AUDIT.md](SIMPLIFICATION_AUDIT.md) for the current remaining list.
+
 **4.0 compatibility policy (decided):**
 - Databases continue to migrate; existing database files must still open.
 - Campaigns are not backward compatible. Each campaign declares its major version.

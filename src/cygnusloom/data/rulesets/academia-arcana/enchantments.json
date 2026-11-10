@@ -1,9 +1,18 @@
 [
   {
+    "type": "defaults",
+    "id": "enchantments",
+    "when": {
+      "type": "feature"
+    },
+    "set": {
+      "feature_type": "enchantment"
+    }
+  },
+  {
     "type": "feature",
     "id": "everlight",
     "name": "Everlight",
-    "feature_type": "enchantment",
     "tag": "Enchantments",
     "rank": 1,
     "description": "Enchantment. Place on any object that can hold a light: a lantern, a cup, a staff, a stone, or a window pane. The enchanted object glows steadily without fuel and cannot be blown out. It can be shuttered or covered, and it dims near strong ward magic. The object is the vessel; the enchantment is the light."
@@ -12,7 +21,6 @@
     "type": "feature",
     "id": "whispering",
     "name": "Whispering",
-    "feature_type": "enchantment",
     "tag": "Enchantments",
     "rank": 2,
     "description": "Enchantment. Place on a map, a page, a tablet, or another flat surface that can carry writing. The enchanted surface whispers the name of a place or room when a finger touches it. It knows only what its maker knew, and it answers in the maker's voice."
@@ -21,7 +29,6 @@
     "type": "feature",
     "id": "self-mending",
     "name": "Self-Mending",
-    "feature_type": "enchantment",
     "tag": "Enchantments",
     "rank": 1,
     "description": "Enchantment. Place on cloth, leather, rope, or another flexible material. The enchanted material repairs its own tears and fraying overnight. It cannot mend anything else, and it refuses to mend while it is dirty."
@@ -30,7 +37,6 @@
     "type": "feature",
     "id": "deep-storage",
     "name": "Deep Storage",
-    "feature_type": "enchantment",
     "tag": "Enchantments",
     "rank": 2,
     "description": "Enchantment. Place on a container: a pocket, a bag, a chest, or a satchel. The enchanted container holds one object far larger than it should. The object is always the last thing put in, and the container is heavy while it holds something."
@@ -39,7 +45,6 @@
     "type": "feature",
     "id": "warning",
     "name": "Warning",
-    "feature_type": "enchantment",
     "tag": "Enchantments",
     "rank": 1,
     "description": "Enchantment. Place on a bell, a chime, a horn, or another sounding object. The enchanted object sounds when a named person comes within a hundred paces. It sounds once per approach and cannot tell friend from foe."
@@ -48,7 +53,6 @@
     "type": "feature",
     "id": "recall",
     "name": "Recall",
-    "feature_type": "enchantment",
     "tag": "Enchantments",
     "rank": 2,
     "description": "Enchantment. Place on a quill, pen, stylus, or other writing tool. The enchanted tool writes down what its owner heard in the last hour. It writes exactly what was said, including lies and mistakes."
@@ -57,7 +61,6 @@
     "type": "feature",
     "id": "silence",
     "name": "Silence",
-    "feature_type": "enchantment",
     "tag": "Enchantments",
     "rank": 1,
     "description": "Enchantment. Place on footwear, a hem, or a harness. The enchanted item muffles the wearer's steps. It does not silence a creaking floor or a kicked chair, and it is useless in deep snow."
@@ -66,7 +69,6 @@
     "type": "feature",
     "id": "small-favor",
     "name": "Small Favor",
-    "feature_type": "enchantment",
     "tag": "Enchantments",
     "rank": 3,
     "description": "Enchantment. Place on a ring, a bracelet, a brooch, or another worn token. Once a day, the enchanted token makes a small, plausible request from its wearer seem reasonable to one person. It cannot make someone act against their deep interest or their oath."
@@ -75,7 +77,6 @@
     "type": "feature",
     "id": "delayed-reflection",
     "name": "Delayed Reflection",
-    "feature_type": "enchantment",
     "tag": "Enchantments",
     "rank": 3,
     "description": "Enchantment. Place on a mirror, a polished shield, a still pool, or another reflective surface. The enchanted surface shows the room a breath behind the present. It is enough to see a blow coming, not enough to stop it."
@@ -84,7 +85,6 @@
     "type": "feature",
     "id": "clean-water",
     "name": "Clean Water",
-    "feature_type": "enchantment",
     "tag": "Enchantments",
     "rank": 1,
     "description": "Enchantment. Place on a cup, a bowl, a flask, or another vessel. The enchanted vessel fills with clean water once a day. It will not fill with wine, poison, or anything the drinker wants more than water."
@@ -93,7 +93,6 @@
     "type": "feature",
     "id": "warmth",
     "name": "Warmth",
-    "feature_type": "enchantment",
     "tag": "Enchantments",
     "rank": 1,
     "description": "Enchantment. Place on a locket, a clasp, a blanket, or another worn or carried object. The enchanted object keeps its wearer warm in any weather. It does not protect against fire, and it grows cold when the wearer is frightened."
@@ -102,7 +101,6 @@
     "type": "feature",
     "id": "homeward",
     "name": "Homeward",
-    "feature_type": "enchantment",
     "tag": "Enchantments",
     "rank": 2,
     "description": "Enchantment. Place on a compass, a stone, a key, or another small token. The enchanted token points to the place its owner calls home. It points to the place, not the safe road, and it spins when the owner has no home."
@@ -111,7 +109,6 @@
     "type": "feature",
     "id": "camouflage",
     "name": "Camouflage",
-    "feature_type": "enchantment",
     "tag": "Enchantments",
     "rank": 2,
     "description": "Enchantment. Place on a cloak, a coat, a tent, or another piece of cloth. The enchanted cloth shifts to match the colours of a wood or garden. It hides the wearer from a casual glance, but not from a careful search or a hound."
@@ -120,7 +117,6 @@
     "type": "feature",
     "id": "close-detail",
     "name": "Close Detail",
-    "feature_type": "enchantment",
     "tag": "Enchantments",
     "rank": 1,
     "description": "Enchantment. Place on spectacles, a lens, a spyglass, or another seeing tool. The enchanted tool shows tiny details as if they were close: a hairline crack, a faded mark, a single altered letter. It shows what is there, not what it means."
@@ -129,7 +125,6 @@
     "type": "feature",
     "id": "calming",
     "name": "Calming",
-    "feature_type": "enchantment",
     "tag": "Enchantments",
     "rank": 2,
     "description": "Enchantment. Place on a music box, a chime, a flute, or another instrument. The enchanted instrument calms anyone who listens for a scene. It works once a day, and anyone who knows what it does can resist it."

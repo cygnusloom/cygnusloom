@@ -1,9 +1,18 @@
 [
   {
+    "type": "defaults",
+    "id": "potions",
+    "when": {
+      "type": "feature"
+    },
+    "set": {
+      "feature_type": "potion"
+    }
+  },
+  {
     "type": "feature",
     "id": "alertness-draught",
     "name": "Alertness Draught",
-    "feature_type": "potion",
     "tag": "Potions",
     "rank": 1,
     "description": "For a scene, the drinker cannot be surprised and notices small details. Afterward they are irritable and cannot sleep for a night."
@@ -12,7 +21,6 @@
     "type": "feature",
     "id": "calm-tonic",
     "name": "Calm Tonic",
-    "feature_type": "potion",
     "tag": "Potions",
     "rank": 1,
     "description": "The drinker's fear or anger fades for a scene. The cause remains, and the feeling returns sharper when the tonic wears off."
@@ -21,7 +29,6 @@
     "type": "feature",
     "id": "fire-breath",
     "name": "Fire-Breath",
-    "feature_type": "potion",
     "tag": "Potions",
     "rank": 2,
     "description": "The drinker can breathe a short cone of flame once within the next minute. The potion tastes of sulphur and leaves the mouth raw."
@@ -30,7 +37,6 @@
     "type": "feature",
     "id": "inkblood",
     "name": "Inkblood",
-    "feature_type": "potion",
     "tag": "Potions",
     "rank": 1,
     "description": "For an hour, the drinker can read any writing they touch, including faded, coded, or hidden text. The reading is literal and gives no context."
@@ -39,7 +45,6 @@
     "type": "feature",
     "id": "memory-tea",
     "name": "Memory Tea",
-    "feature_type": "potion",
     "tag": "Potions",
     "rank": 2,
     "description": "The drinker recalls one memory with perfect clarity, as if living it again. The memory is true as they saw it, not as it happened."
@@ -48,7 +53,6 @@
     "type": "feature",
     "id": "growth-serum",
     "name": "Growth Serum",
-    "feature_type": "potion",
     "tag": "Potions",
     "rank": 2,
     "description": "A plant, small animal, or cut of wood grows to twice its size for a day. It needs food and water to match, and it may not shrink back evenly."
@@ -57,7 +61,6 @@
     "type": "feature",
     "id": "truth-serum",
     "name": "Truth Serum",
-    "feature_type": "potion",
     "tag": "Potions",
     "rank": 3,
     "description": "For a scene, the drinker cannot knowingly lie. They can still refuse to answer, answer a different question, or say what they believe is true."
@@ -66,7 +69,6 @@
     "type": "feature",
     "id": "sleep-dust",
     "name": "Sleep Dust",
-    "feature_type": "potion",
     "tag": "Potions",
     "rank": 1,
     "description": "A pinch sends one person into a deep sleep for a scene. A loud noise or a hard shake wakes them. It does not work on the unwilling twice."
@@ -75,7 +77,6 @@
     "type": "feature",
     "id": "shield-salve",
     "name": "Shield Salve",
-    "feature_type": "potion",
     "tag": "Potions",
     "rank": 2,
     "description": "Rubbed on the skin, it turns the next cut or burn aside for a scene. It smells of tar and leaves a grey stain for a day."
@@ -84,7 +85,6 @@
     "type": "feature",
     "id": "featherweight",
     "name": "Featherweight",
-    "feature_type": "potion",
     "tag": "Potions",
     "rank": 1,
     "description": "For a scene, the drinker weighs a tenth of their weight and can drift down from a height. They are easy to push and hard to anchor."
@@ -93,7 +93,6 @@
     "type": "feature",
     "id": "loudmouth",
     "name": "Loudmouth",
-    "feature_type": "potion",
     "tag": "Potions",
     "rank": 1,
     "description": "The drinker's voice becomes impossibly loud for a minute. It can call across a valley or shatter glass, and it cannot whisper."
@@ -102,7 +101,6 @@
     "type": "feature",
     "id": "night-eye",
     "name": "Night-Eye",
-    "feature_type": "potion",
     "tag": "Potions",
     "rank": 1,
     "description": "For a night, the drinker sees clearly in near-darkness. Bright light hurts, and colours are washed out."
@@ -111,7 +109,6 @@
     "type": "feature",
     "id": "luckdrop",
     "name": "Luckdrop",
-    "feature_type": "potion",
     "tag": "Potions",
     "rank": 3,
     "description": "The next roll the drinker makes in the next hour treats a 6- as a 7-9. The drop is rare, and the ingredient list is closely watched."
@@ -120,7 +117,6 @@
     "type": "feature",
     "id": "smoke-flask",
     "name": "Smoke Flask",
-    "feature_type": "potion",
     "tag": "Potions",
     "rank": 1,
     "description": "Thrown or uncorked, it fills a room with thick smoke for a scene. Everyone inside is blinded and coughing, including the thrower unless they hold their breath."
@@ -129,7 +125,6 @@
     "type": "feature",
     "id": "mending-paste",
     "name": "Mending Paste",
-    "feature_type": "potion",
     "tag": "Potions",
     "rank": 1,
     "description": "Spread on a broken object, it holds the pieces together for a day. It is not a repair, and the object fails again when the paste dries."

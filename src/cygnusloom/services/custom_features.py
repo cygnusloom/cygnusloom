@@ -13,7 +13,7 @@ from typing import Any
 
 from sqlmodel import Session
 
-from cygnusloom.content.character import Feature
+from cygnusloom.content.character import Feature, FeatureTypeRules
 from cygnusloom.services.common import InvalidInput, bounded_text, whole_number
 from cygnusloom.services.events import (
     CustomFeatureCreated,
@@ -85,6 +85,7 @@ def create_custom_feature(
     mods: object = None,
     stress: int = 0,
     cause: str = "",
+    feature_types: Mapping[str, FeatureTypeRules] | None = None,
 ) -> dict[str, Any]:
     """Create and learn a feature invented during play."""
     state = load_state(db, campaign_id)
@@ -95,9 +96,10 @@ def create_custom_feature(
         for existing in character.custom_features.values()
     ):
         raise InvalidInput(f"this character already has a custom feature named {feature_name!r}")
+    allowed_types = tuple(feature_types) if feature_types else CUSTOM_TYPES
     kind = bounded_text(feature_type, "feature type", MAX_NAME).casefold()
-    if kind not in CUSTOM_TYPES:
-        raise InvalidInput(f"feature type must be one of {', '.join(CUSTOM_TYPES)}")
+    if kind not in allowed_types:
+        raise InvalidInput(f"feature type must be one of {', '.join(allowed_types)}")
     text = bounded_text(description, "description", MAX_TEXT)
     feature_id = _unique_id(character, feature_name)
     record(
