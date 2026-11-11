@@ -841,6 +841,8 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 .advancement-form { display: flex; flex-direction: column; gap: 1rem; }
 .advancement-form > button { align-self: flex-start; }
 .advancement-option { display: flex; flex-direction: column; gap: 0.25rem; margin: 0.5rem 0; padding: 0.6rem 0.75rem; border: 1px solid var(--border); border-radius: 8px; }
+.advancement-option > label { display: flex; flex-direction: column; gap: 0.25rem; }
+.advancement-option.is-unavailable { opacity: 0.7; }
 .advancement-option input[type="radio"] { align-self: flex-start; }
 .advancement-option:has(input:checked) { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
 .advancement-skills { width: 100%; border-collapse: collapse; }

@@ -25,6 +25,7 @@ from cygnusloom.services.events import (
     ReactionsReset,
     ReactionUsed,
     load_state,
+    name_key,
     record,
 )
 
@@ -200,11 +201,14 @@ def use(db: Session, campaign_id: int, character: Character, triggered: Triggere
     )
 
 
-def reset(db: Session, campaign_id: int, reset: str, label: str = "") -> None:
-    """Clear every character's uses carrying `reset`. Characters with nothing to clear leave no
-    event."""
+def reset(db: Session, campaign_id: int, reset: str, label: str = "", name: str = "") -> None:
+    """Clear the uses carrying `reset`, for every character or, when `name` is given, for that
+    character alone. Characters with nothing to clear leave no event."""
     prefix = f"{reset}:"
+    wanted = name_key(name) if name else ""
     for character in load_state(db, campaign_id).characters.values():
+        if wanted and name_key(character.name) != wanted:
+            continue
         if any(key.startswith(prefix) for key in character.reaction_uses):
             record(
                 db,

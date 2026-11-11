@@ -71,6 +71,7 @@
 
   const pickSelect = (control) => control.querySelector("select[data-pick-source]");
   const pickDetail = (option) => option?.dataset.detail || option?.dataset.description || "";
+  const pickEmptyLabel = (control) => control.dataset.pickEmpty || "Roll one";
 
   const buildPickDialog = (control) => {
     const select = pickSelect(control);
@@ -162,7 +163,7 @@
     if (summary) {
       summary.textContent = option?.value
         ? option.dataset.title || option.textContent
-        : "Roll one";
+        : pickEmptyLabel(control);
       summary.classList.toggle("is-chosen", Boolean(option?.value));
     }
     const detail = control.querySelector("[data-pick-detail-for]");
@@ -579,12 +580,12 @@
       for (const row of fieldset.querySelectorAll("[data-feature-pick-row]")) {
         const select = row.querySelector("[data-feature-choice]");
         const modeLabel = row.querySelector("[data-feature-repeat-mode]");
-        const mode = modeLabel.querySelector("select");
+        const mode = modeLabel?.querySelector("select") ?? null;
         if (hidden) {
           select.value = "";
-          mode.value = "";
-          modeLabel.hidden = true;
-          mode.disabled = true;
+          if (mode) mode.value = "";
+          if (modeLabel) modeLabel.hidden = true;
+          if (mode) mode.disabled = true;
           continue;
         }
         for (const option of select.options) {
@@ -604,17 +605,19 @@
         const previouslyTaken = taken.get(value) ?? 0;
         const mayChooseRepeat = Boolean(value) && advance && previouslyTaken > 0 &&
           option.dataset.repeatable === "true" && option.dataset.hasNextRank === "true";
-        modeLabel.hidden = !mayChooseRepeat;
-        mode.disabled = !mayChooseRepeat;
-        if (!mayChooseRepeat) {
-          mode.value = "";
-        } else {
-          mode.options[0].disabled = advanced.has(value);
-          if (mode.options[0].disabled) mode.value = "repeat";
+        if (modeLabel) modeLabel.hidden = !mayChooseRepeat;
+        if (mode) {
+          mode.disabled = !mayChooseRepeat;
+          if (!mayChooseRepeat) {
+            mode.value = "";
+          } else {
+            mode.options[0].disabled = advanced.has(value);
+            if (mode.options[0].disabled) mode.value = "repeat";
+          }
         }
         if (value) {
           if (advance && previouslyTaken > 0 && option.dataset.hasNextRank === "true" &&
-              mode.value !== "repeat") advanced.add(value);
+              mode?.value !== "repeat") advanced.add(value);
           taken.set(value, previouslyTaken + 1);
           withinPick.add(value);
         }

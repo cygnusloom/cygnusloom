@@ -268,15 +268,15 @@
 
 {# A skill or feature pick: a readable summary, a dice button, and a searchable dialog of rich
    options. The native select stays in the form for submission and for the constraint script. #}
-{% macro pick_control(name, label, hint=None, select_attributes="") -%}
-  <div class="pick-control" data-pick-control="{{ name }}">
+{% macro pick_control(name, label, hint=None, select_attributes="", empty="Roll one", roll=true, clear_label="Leave to roll") -%}
+  <div class="pick-control" data-pick-control="{{ name }}" data-pick-empty="{{ empty }}">
     <div class="pick-heading">
       <span class="pick-label">{{ label }}</span>
-      {{ dice_button(name, label|lower, attribute="data-roll-pick") }}
+      {% if roll %}{{ dice_button(name, label|lower, attribute="data-roll-pick") }}{% endif %}
       <button type="button" class="secondary" data-open-pick="pick-dialog-{{ name }}" aria-haspopup="dialog">Choose</button>
     </div>
     <div class="pick-summary">
-      <output class="pick-summary-value" data-pick-summary-for="{{ name }}">Roll one</output>
+      <output class="pick-summary-value" data-pick-summary-for="{{ name }}">{{ empty }}</output>
       <span class="muted pick-summary-detail" data-pick-detail-for="{{ name }}"></span>
     </div>
     <select name="{{ name }}" class="pick-native" data-pick-source {{ select_attributes }}>
@@ -289,7 +289,7 @@
     <input type="search" class="choice-search" data-pick-search placeholder="Search {{ label|lower }}" aria-label="Search {{ label|lower }}">
     <div class="pick-options" data-pick-options></div>
     <div class="dialog-actions">
-      <button type="button" class="secondary" data-clear-pick>Leave to roll</button>
+      <button type="button" class="secondary" data-clear-pick>{{ clear_label }}</button>
       <button type="button" class="secondary" data-close-choice>Done</button>
     </div>
   </dialog>

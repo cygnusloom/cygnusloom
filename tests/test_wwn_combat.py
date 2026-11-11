@@ -18,7 +18,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from cygnusloom.content.character import Feature, Reaction
+from cygnusloom.content.character import Feature
 from cygnusloom.content.library import CombatRules, ContentLibrary, InjuryEntry, InjuryTable
 from cygnusloom.rules import wwn
 from cygnusloom.services import death, encounters
@@ -687,36 +687,53 @@ def test_well_met_improves_a_reaction_and_its_second_rank_is_weekly(client_facto
 
 def test_a_check_reaction_can_reroll_a_failed_social_check(client_factory):
     client, campaign_id, tools = _wwn_campaign(client_factory)
-    base = WWN.character.features["focus_cultured_2"]
-    reroll = Reaction(
-        id="cultured-reroll",
-        trigger="check",
-        when={"skills": ("convince",), "success": False},
-        effect={"op": "reroll", "keep": "better"},
-        uses=1,
-        reset="week",
-        text="Cultured rerolls the failed check.",
-    )
-    spec = replace(
-        WWN.character,
-        features={**WWN.character.features, base.id: replace(base, reactions=(reroll,))},
-    )
-    tools = replace(tools, character=spec, rng=Rolls(6, 6))
-    _learn(client.app, campaign_id, base.id, base.name)
+    feature = WWN.character.features["focus_cultured_2"]
+    tools = replace(tools, rng=Rolls(6, 6))
+    _learn(client.app, campaign_id, feature.id, feature.name)
+
+    # A failed check that is not social is left alone, so it does not spend the weekly use.
+    unrelated = tools.roll_check("skill", PC, skill="sneak", stat="dex", roll=2, difficulty=12)
+    assert unrelated["success"] is False
+    assert "reaction" not in unrelated
 
     result = tools.roll_check("skill", PC, skill="convince", stat="cha", roll=2, difficulty=12)
 
     assert result["success"] is True
     assert result["roll"] == 12
-    assert result["reaction"] == "Cultured rerolls the failed check."
+    assert result["reaction"] == "Cultured rerolls the failed social check."
     with Session(client.app.state.engine) as db:
         character = load_state(db, campaign_id).characters[name_key(PC)]
-    assert character.reaction_uses == {"week:focus_cultured_2:cultured-reroll": 1}
+    assert character.reaction_uses == {"rest:focus_cultured_2:cultured-reroll": 1}
 
-    # The weekly use is spent, so a second failure is not rerolled.
+    # The rest use is spent, so a second failure is not rerolled.
     failed = tools.roll_check("skill", PC, skill="convince", stat="cha", roll=2, difficulty=12)
     assert failed["success"] is False
     assert "reaction" not in failed
+
+
+def test_a_rest_recharges_cultured_and_the_character_panel_shows_it(client_factory):
+    client, campaign_id, tools = _wwn_campaign(client_factory)
+    feature = WWN.character.features["focus_cultured_2"]
+    tools = replace(tools, rng=Rolls(6, 6, 6, 6))
+    _learn(client.app, campaign_id, feature.id, feature.name)
+
+    def sheet() -> str:
+        page = client.get(f"/campaigns/{campaign_id}").text
+        return page[page.index('id="panel-character"') : page.index('id="panel-inventory"')]
+
+    assert "Cultured" in sheet()
+    assert "1 per rest" in sheet()
+    assert "ready" in sheet()
+
+    used = tools.roll_check("skill", PC, skill="convince", stat="cha", roll=2, difficulty=12)
+    assert used["reaction"] == "Cultured rerolls the failed social check."
+    assert "1/1 used" in sheet()
+
+    tools.rest("night", reason="camp")
+    assert "ready" in sheet()
+
+    again = tools.roll_check("skill", PC, skill="convince", stat="cha", roll=2, difficulty=12)
+    assert again["reaction"] == "Cultured rerolls the failed social check."
 
 
 def test_wwn_skill_check_prompts_for_the_players_own_dice(client_factory):

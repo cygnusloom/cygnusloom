@@ -12,7 +12,13 @@ from dataclasses import dataclass, field, replace
 from difflib import get_close_matches
 from typing import Any
 
-from cygnusloom.content.character import CampaignSpec, CharacterSpec, Sheet, describe
+from cygnusloom.content.character import (
+    CampaignSpec,
+    CharacterSpec,
+    Sheet,
+    describe,
+    reaction_effect_text,
+)
 from cygnusloom.content.library import (
     ClockRules,
     CombatRules,
@@ -118,6 +124,23 @@ class FeatureLink:
 
 
 @dataclass(frozen=True)
+class ReactionLink:
+    """A limited reaction the player character has, with what recharges it and how much of its
+    use is left."""
+
+    feature: str
+    name: str
+    text: str
+    uses: int
+    used: int
+    reset: str
+
+    @property
+    def ready(self) -> bool:
+        return self.used < self.uses
+
+
+@dataclass(frozen=True)
 class SceneView:
     """What the player may see: the player character, the place they are in, the NPCs there, the
     player character's statblock, the journal, and everyone the player has met."""
@@ -133,6 +156,7 @@ class SceneView:
     objects: tuple[WorldObject, ...] = ()
     known: tuple[KnownNpcView, ...] = ()
     abilities: tuple[FeatureLink, ...] = ()
+    reactions: tuple[ReactionLink, ...] = ()
     location_entry: str = ""
     # Names printed on the sheet -> compendium entry id, so a sheet line can link its references.
     sheet_links: Mapping[str, str] = field(default_factory=dict)
@@ -698,6 +722,7 @@ def scene_view(
     if pc is not None and conditions is not None:
         sheet += _status_lines(pc, conditions, None, None, None)
     abilities = ()
+    reactions = ()
     if pc is not None:
         abilities = tuple(
             FeatureLink(
@@ -709,6 +734,22 @@ def scene_view(
             )
             for feature_id, feature in spec.features.items()
             if feature_id in pc.features and feature.feature_type != "item"
+        )
+        reactions = tuple(
+            ReactionLink(
+                feature=feature.id,
+                name=feature.name,
+                text=reaction_effect_text(reaction, feature),
+                uses=reaction.uses,
+                used=pc.reaction_uses.get(
+                    f"{reaction.reset}:{feature.id}:{reaction.id}", 0
+                ),
+                reset=reaction.reset,
+            )
+            for feature in spec.features.values()
+            if feature.id in pc.features
+            for reaction in feature.reactions
+            if reaction.uses > 0
         )
     pack = None
     if pc is not None and inventory is not None:
@@ -784,6 +825,7 @@ def scene_view(
         objects=objects,
         known=_known_npc_views(state, pc, place, relations, creature_entries),
         abilities=abilities,
+        reactions=reactions,
         location_entry=location_entry,
         sheet_links=sheet_entries,
     )

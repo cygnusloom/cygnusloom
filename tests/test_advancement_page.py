@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from dataclasses import replace
 
@@ -102,10 +103,12 @@ def test_the_advancement_page_hides_a_capped_stat_and_the_major_subject(
 
     page = _page(client, campaign_id)
 
-    assert '<option value="theory">' not in page
-    assert '<option value="subject-illusion">' not in page
-    assert '<option value="alchemy">' in page
-    assert '<option value="subject-transfiguration">' in page
+    assert 'value="theory"' not in page
+    assert 'value="subject-illusion"' not in page
+    assert 'value="alchemy"' in page
+    assert 'value="subject-transfiguration"' in page
+    assert 'data-pick-control="feature-spell"' in page
+    assert 'data-description="' in page
 
 
 def test_a_dual_partial_level_page_shows_the_combined_chart(
@@ -122,6 +125,81 @@ def test_a_dual_partial_level_page_shows_the_combined_chart(
     assert "Skill points: 3." in page
     assert "Focus pick: 1." in page
     assert "Art pick: 1." in page
+
+
+def test_the_level_up_page_uses_the_rich_pick_widget_for_foci(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    app, campaign_id = _wwn_campaign(client_factory, class_id="warrior")
+    client = _signed_in(client_factory)
+    ctx = _ctx(_world_tools(app, campaign_id))
+    wwn.gain_xp(NAME, 3, "a session", ctx)
+
+    page = _page(client, campaign_id)
+
+    assert 'data-pick-control="pick-focus-0"' in page
+    assert 'data-open-pick="pick-dialog-pick-focus-0"' in page
+    assert 'data-pick-empty="Choose a focus"' in page
+    assert 'name="pick-focus-0"' in page
+    assert 'name="pick-focus-1"' not in page
+    assert 'data-description="' in page
+    assert 'data-repeatable="' in page
+
+
+def test_the_level_up_page_does_not_offer_foci_the_character_has(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    app, campaign_id = _wwn_campaign(client_factory, class_id="warrior")
+    client = _signed_in(client_factory)
+    ctx = _ctx(_world_tools(app, campaign_id))
+    wwn.gain_xp(NAME, 3, "a session", ctx)
+
+    page = _page(client, campaign_id)
+    field = re.search(r'<select name="pick-focus-0".*?</select>', page, re.DOTALL)
+
+    assert field is not None
+    # The warrior starts with Die Hard and Alert.
+    assert 'value="focus_die_hard"' not in field.group(0)
+    assert 'value="focus_alert"' not in field.group(0)
+
+
+def test_a_level_cannot_spend_more_focus_picks_than_it_has(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    app, campaign_id = _wwn_campaign(client_factory, class_id="warrior")
+    client = _signed_in(client_factory)
+    ctx = _ctx(_world_tools(app, campaign_id))
+    wwn.gain_xp(NAME, 3, "a session", ctx)
+
+    response = _submit(
+        client,
+        campaign_id,
+        {
+            "pick-focus-0": "focus_authority",
+            "pick-focus-1": "focus_armsmaster",
+        },
+    )
+
+    assert response.status_code == 400
+    assert "focus" in response.text.lower()
+    assert _counter(app, campaign_id, "level") == 1
+    assert _counter(app, campaign_id, "focus_picks") == 0
+
+
+def test_a_level_cannot_take_a_focus_the_character_has(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    app, campaign_id = _wwn_campaign(client_factory, class_id="warrior")
+    client = _signed_in(client_factory)
+    ctx = _ctx(_world_tools(app, campaign_id))
+    wwn.gain_xp(NAME, 3, "a session", ctx)
+
+    response = _submit(client, campaign_id, {"pick-focus-0": "focus_die_hard"})
+
+    assert response.status_code == 400
+    assert "already has" in response.text
+    assert _counter(app, campaign_id, "level") == 1
+    assert _counter(app, campaign_id, "focus_picks") == 0
 
 
 def test_level_up_applies_the_level_and_the_players_choices(

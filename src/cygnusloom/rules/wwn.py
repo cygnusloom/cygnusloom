@@ -46,6 +46,10 @@ from cygnusloom.services.hooks import HookContext
 EFFORT_MARK = "effort_committed"
 EFFORT_DURATIONS = ("scene", "day", "indefinite")
 
+# A Focus's free bonus skill, when the Focus is taken during advancement, counts as this many
+# skill points toward the skill rather than as a single skill pick.
+FOCUS_BONUS_SKILL_POINTS = 3
+
 
 def _resolve_skill(spec: CharacterSpec, skill: str) -> str:
     """The rule set's skill id for a loose id or display name, such as `Sneak`."""
@@ -1067,15 +1071,19 @@ def learn_focus(character: str, focus: str, ctx: ToolContext) -> dict[str, Any]:
             if skill_progression is None:
                 raise InvalidInput("the rule set has no skill progression")
             before = spec.skill_level(skills, skill)
-            if spec.skill_trained(skills, skill):
-                value = min(skill_progression.maximum, before + delta)
-            elif delta > 0:
-                value = min(skill_progression.maximum, skill_progression.first_level + delta - 1)
-            else:
-                value = before + delta
+            value, remaining = _raise_with_skill_points(
+                spec,
+                skills,
+                skill,
+                FOCUS_BONUS_SKILL_POINTS * max(1, delta),
+                progression.skill_costs,
+                skill_progression.maximum,
+            )
             if value > before:
                 ctx.world.raise_skill(character, skill, value, cause=f"the focus {feature.name}")
                 skills[skill] = value
+            if remaining:
+                ctx.world.adjust_counter(character, "skill_points", remaining)
         elif op == "counter":
             counter = str(effect["id"])
             ctx.world.adjust_counter(character, counter, delta)
@@ -1096,6 +1104,27 @@ def learn_focus(character: str, focus: str, ctx: ToolContext) -> dict[str, Any]:
         "rank": feature.rank,
         "focus_picks": remaining["value"],
     }
+
+
+def _raise_with_skill_points(
+    spec: CharacterSpec,
+    skills: Mapping[str, int],
+    skill: str,
+    points: int,
+    costs: Mapping[int, int],
+    maximum: int,
+) -> tuple[int, int]:
+    """Raise a skill as far as a budget of skill points allows, and return the level reached plus
+    the points left. The book keeps leftover Focus skill points as credit toward a later advance;
+    the engine keeps them as spendable skill points instead."""
+    level = spec.skill_level(skills, skill)
+    while level < maximum:
+        cost = costs.get(level + 1)
+        if cost is None or cost > points:
+            break
+        points -= cost
+        level += 1
+    return level, points
 
 
 def _check_focus_class(spec: CharacterSpec, ids: Iterable[str], feature: Feature) -> None:

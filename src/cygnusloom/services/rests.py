@@ -18,6 +18,7 @@ from cygnusloom.content.library import (
     InventoryRules,
     RestLength,
 )
+from cygnusloom.services import reactions
 from cygnusloom.services.clock import absolute, advance_to, rest_target
 from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.conditions import end_condition
@@ -153,6 +154,9 @@ def take_rest(
             interrupted,
             default=None,
         )
+        # A rest recharges abilities limited per rest. A member the rule set held back did not
+        # rest, so their uses stay spent.
+        reactions.reset(db, campaign_id, "rest", label="a rest", name=target.name)
     if conditions is not None and rng is not None:
         # The rest definition names the condition triggers it counts as, such as "rest" or
         # "extended_rest"; the engine does not infer them from the length or fullness. A

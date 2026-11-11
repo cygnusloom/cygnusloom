@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "macros.html" import pick_control %}
 {% block title %}{{ view.label }} · {{ campaign.name }}{% endblock %}
 {% block content %}
 <section class="advancement-page" aria-labelledby="advancement-title">
@@ -30,46 +31,57 @@
   {% endif %}
 
   {% if view.kind == "options" and view.options %}
+  {% set available_options = view.options | selectattr("available") | list %}
+  {% if available_options %}
   <form method="post" action="/campaigns/{{ campaign.id }}/advancement" class="advancement-form">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="character" value="{{ view.character }}">
     <fieldset>
       <legend>Choose one {{ view.label|lower }}</legend>
       {% for option in view.options %}
-      <label class="advancement-option">
-        <input type="radio" name="option" value="{{ option.value }}" required>
-        <strong>{{ option.label }}</strong>
-        <span class="muted">{{ option.text }}</span>
-      </label>
-      {% if option.picks %}
-      <label>
-        {{ option.label }}: attribute
-        <select name="stat-{{ option.value }}">
-          <option value="">Choose an attribute</option>
-          {% for stat in option.stats %}<option value="{{ stat.id }}">{{ stat.name }}</option>{% endfor %}
-        </select>
-      </label>
-      {% endif %}
-      {% if option.features %}
-      <label>
-        {{ option.label }}: feature
-        <select name="feature-{{ option.value }}">
+      <div class="advancement-option{% if not option.available %} is-unavailable{% endif %}">
+        <label>
+          <input type="radio" name="option" value="{{ option.value }}" required{% if not option.available %} disabled{% endif %}>
+          <strong>{{ option.label }}</strong>
+          <span class="muted">{{ option.text }}</span>
+        </label>
+        {% if not option.available %}
+        <p class="muted">{% if option.picks and not option.stats %}Every attribute is already at its cap.{% else %}Every feature this option could teach is already known.{% endif %}</p>
+        {% else %}
+        {% if option.picks %}
+        <label>
+          {{ option.label }}: attribute
+          <select name="stat-{{ option.value }}">
+            <option value="">Choose an attribute</option>
+            {% for stat in option.stats %}<option value="{{ stat.id }}">{{ stat.name }}</option>{% endfor %}
+          </select>
+        </label>
+        {% endif %}
+        {% if option.needs_feature %}
+        {% call pick_control("feature-" ~ option.value, option.label ~ ": feature", "Choose the feature this option teaches.", "", empty="Choose a feature", roll=false, clear_label="No feature") %}
           <option value="">Choose one</option>
-          {% for feature in option.features %}<option value="{{ feature.id }}">{{ feature.name }}</option>{% endfor %}
-        </select>
-      </label>
-      {% endif %}
+          {% for feature in option.features %}
+          <option value="{{ feature.id }}" data-title="{{ feature.name }}" data-description="{{ feature.description or '' }}" data-rank="{{ feature.rank }}" data-repeatable="{{ 'true' if feature.repeatable else 'false' }}">{{ feature.name }}</option>
+          {% endfor %}
+        {% endcall %}
+        {% endif %}
+        {% endif %}
+      </div>
       {% endfor %}
     </fieldset>
+    <p class="form-error" data-option-error hidden></p>
     <button type="submit">Take the {{ view.label|lower }}</button>
   </form>
+  {% else %}
+  <p class="muted">No {{ view.label|lower }} option can be taken right now.</p>
+  {% endif %}
   {% elif view.picks %}
   <form method="post" action="/campaigns/{{ campaign.id }}/advancement" class="advancement-form">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="character" value="{{ view.character }}">
     {% for pick in view.picks %}
       {% if pick.kind == "skill" %}
-      <fieldset class="creation-panel">
+      <fieldset class="creation-panel" data-pick-kind="skill" data-pick-counter="{{ pick.counter }}" data-pick-label="{{ pick.label }}" data-pick-available="{{ pick.available }}">
         <legend>{{ pick.label }}: {{ pick.available }} available</legend>
         {% if pick.skills %}
         <table class="advancement-skills">
@@ -83,7 +95,7 @@
                 <select name="skill-{{ pick.id }}-{{ skill.id }}">
                   <option value="">No change</option>
                   {% for target in skill.targets %}
-                  <option value="{{ target.level }}">{{ target.level }} ({{ target.cost }} point{{ "" if target.cost == 1 else "s" }}{% if target.minimum_level > 1 %}, needs level {{ target.minimum_level }}{% endif %})</option>
+                  <option value="{{ target.level }}" data-cost="{{ target.cost }}">{{ target.level }} ({{ target.cost }} point{{ "" if target.cost == 1 else "s" }}{% if target.minimum_level > 1 %}, needs level {{ target.minimum_level }}{% endif %})</option>
                   {% endfor %}
                 </select>
               </td>
@@ -97,14 +109,14 @@
         <p class="muted">Skill points are shared with attribute boosts. Leave points unspent to save them for later.</p>
       </fieldset>
       {% elif pick.kind == "stat" %}
-      <fieldset class="creation-panel">
+      <fieldset class="creation-panel" data-pick-kind="stat" data-pick-counter="{{ pick.counter }}" data-pick-label="{{ pick.label }}" data-pick-available="{{ pick.available }}" data-boost-level="{{ pick.level }}" data-boost-steps='{{ pick.steps|tojson }}'>
         <legend>{{ pick.label }}: {{ pick.available }} point{{ "" if pick.available == 1 else "s" }} available</legend>
         {% if pick.can_raise %}
         <p class="muted">The next boost costs {{ pick.next_cost }} point{{ "" if pick.next_cost == 1 else "s" }}{% if pick.next_minimum and pick.next_minimum > 1 %}; it needs character level {{ pick.next_minimum }}{% endif %}. Buying several costs more each time.</p>
         {% for stat in pick.stats %}
         <label>
           {{ stat.name }} (now {{ stat.value }})
-          <input type="number" name="stat-{{ pick.id }}-{{ stat.id }}" min="0" max="{{ pick.available }}" value="0">
+          <input type="number" name="stat-{{ pick.id }}-{{ stat.id }}" min="0" max="{{ pick.available }}" value="0" data-stat-boost="{{ stat.id }}">
         </label>
         {% endfor %}
         {% else %}
@@ -112,19 +124,19 @@
         {% endif %}
       </fieldset>
       {% elif pick.kind == "feature" %}
-      <fieldset class="creation-panel">
+      <fieldset class="creation-panel feat-picks" data-pick-kind="feature" data-unique="true">
         <legend>{{ pick.label }}: {{ pick.available }} pick{{ "" if pick.available == 1 else "s" }} available</legend>
         {% if pick.options %}
+          <p class="panel-hint">Choose up to {{ pick.available }}. Every option explains what it grants; leave a pick blank to save it for later.</p>
           {% for index in range(pick.available) %}
-          <label>
-            {{ pick.label }} {{ index + 1 }}
-            <select name="pick-{{ pick.id }}-{{ index }}">
+          <div data-feature-pick-row>
+            {% call pick_control("pick-" ~ pick.id ~ "-" ~ index, pick.label ~ " " ~ (index + 1), "Choose the " ~ pick.label|lower ~ " this pick learns.", "data-feature-choice", empty="Choose a " ~ pick.label|lower, roll=false, clear_label="No choice") %}
               <option value="">No choice</option>
               {% for option in pick.options %}
-              <option value="{{ option.id }}">{{ option.name }}{% if option.rank %} (rank {{ option.rank }}){% endif %}</option>
+              <option value="{{ option.id }}" data-title="{{ option.name }}" data-description="{{ option.description or '' }}" data-rank="{{ option.rank }}" data-repeatable="{{ 'true' if option.repeatable else 'false' }}">{{ option.name }}{% if option.rank %} (rank {{ option.rank }}){% endif %}</option>
               {% endfor %}
-            </select>
-          </label>
+            {% endcall %}
+          </div>
           {% endfor %}
         {% else %}
         <p class="muted">No {{ pick.label|lower }} is available to this character.</p>
@@ -132,10 +144,16 @@
       </fieldset>
       {% endif %}
     {% endfor %}
+    <p class="muted" data-pick-budget hidden></p>
+    <p class="form-error" data-budget-error hidden></p>
     <button type="submit">{% if view.kind == "level" %}Level up to {{ view.summary.new_level }}{% else %}Spend picks{% endif %}</button>
   </form>
   {% else %}
   <p class="muted">There is nothing to advance right now.</p>
   {% endif %}
 </section>
+{% endblock %}
+{% block scripts %}
+<script src="/static/creation.js"></script>
+<script src="/static/advancement.js"></script>
 {% endblock %}

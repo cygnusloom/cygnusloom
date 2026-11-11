@@ -274,6 +274,11 @@
                 {% for ability in scene.abilities %}{% if not loop.first %} · {% endif %}{% if ability.entry %}<a href="#{{ ability.entry }}" data-view-link="compendium">{{ ability.name }}</a>{% else %}{{ ability.name }}{% endif %}{% endfor %}
               </p>
               {% endif %}
+              {% if scene.reactions %}
+              <p class="compendium-links"><strong>Reactions:</strong>
+                {% for reaction in scene.reactions %}{% if not loop.first %} · {% endif %}{{ reaction.text }} ({{ reaction.uses }} per {{ reaction.reset }}, {{ "ready" if reaction.ready else reaction.used ~ "/" ~ reaction.uses ~ " used" }}){% endfor %}
+              </p>
+              {% endif %}
               {% if advancement_available %}
               <p><a class="button" href="/campaigns/{{ campaign.id }}/advancement">{{ "Level up" if advancement_due else "Advancement" }}</a></p>
               {% endif %}

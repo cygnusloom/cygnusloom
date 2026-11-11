@@ -802,7 +802,17 @@ def test_learn_focus_spends_a_pick_and_applies_skill_stat_and_armor_effects(
     assert result["rank"] == 1
     assert character.features[synthetic.id] == 1
     assert character.counters["focus_picks"] == 0
-    assert character.skills["sneak"] == min(4, before.skills.get("sneak", -1) + 1)
+    # A Focus taken during advancement spends three skill points on its bonus skill.
+    skill_before = before.skills.get("sneak", -1)
+    expected = skill_before
+    budget = 3
+    while expected < 4:
+        cost = WWN.rule_data["progression"].skill_costs.get(expected + 1)
+        if cost is None or cost > budget:
+            break
+        budget -= cost
+        expected += 1
+    assert character.skills["sneak"] == expected
     assert character.stats["str"] == 11
     assert character.armor == 11  # 10 + Dexterity 0 + one point of armor
     (learned,) = _events_of(app, campaign_id, FeatureLearned.kind)
@@ -878,6 +888,50 @@ def test_learn_focus_uses_the_spec_skill_maximum(
     wwn.learn_focus(NAME, synthetic.id, _ctx(tools))
 
     assert _pc(app, campaign_id).skills[skill] == progression.maximum
+
+
+@pytest.mark.parametrize(
+    ("before", "expected", "leftover"),
+    [(-1, 1, 0), (0, 1, 1), (1, 2, 0), (2, 2, 3), (3, 3, 3), (4, 4, 3)],
+)
+def test_a_focus_bonus_skill_is_worth_three_skill_points(
+    client_factory: Callable[[], TestClient], before: int, expected: int, leftover: int
+) -> None:
+    """The book spends three skill points on a Focus's bonus skill. That raises an untrained
+    skill to level 1 and a level-1 skill to level 2, but not a level-2 skill, which needs four;
+    points that buy no level remain available to spend later."""
+    app, campaign_id = _campaign(client_factory)
+    skill = next(
+        skill_id
+        for skill_id in WWN.character.skills
+        if WWN.character.skill_level(_pc(app, campaign_id).skills, skill_id) <= before
+    )
+    synthetic = Feature(
+        id=f"focus_test_bonus_skill_{before + 1}",
+        name="Bonus Skill",
+        feature_type="feat",
+        description="A focus that grants one bonus skill.",
+        size="normal",
+        uses=0,
+        armor=0,
+        tag="focus",
+        rank=1,
+        effects=({"op": "skill", "id": skill, "delta": 1},),
+    )
+    spec = replace(
+        WWN.character,
+        features={**WWN.character.features, synthetic.id: synthetic},
+    )
+    tools = _world_tools(app, campaign_id, spec=spec)
+    if before >= 0:
+        tools.raise_skill(NAME, skill, before, cause="a test")
+    _give_pick(tools, "focus_picks", 1)
+    points_before = _counter(app, campaign_id, "skill_points")
+
+    wwn.learn_focus(NAME, synthetic.id, _ctx(tools))
+
+    assert _pc(app, campaign_id).skills[skill] == expected
+    assert _counter(app, campaign_id, "skill_points") == points_before + leftover
 
 
 def test_learn_focus_needs_a_pick_and_the_first_rank(

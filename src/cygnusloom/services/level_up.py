@@ -9,6 +9,7 @@ the player's submission before any change is recorded.
 from __future__ import annotations
 
 import random
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any
@@ -32,6 +33,10 @@ from cygnusloom.services.world import WorldTools
 LEVEL = "level"
 PICKS = "picks"
 OPTION = "options"
+
+# One field per feature pick: pick-<pick id>-<index>. The index is only used to keep the fields
+# distinct; the pick id may itself contain hyphens.
+FEATURE_FIELD = re.compile(r"^pick-(?P<pick>.+)-(?P<index>\d+)$")
 
 
 @dataclass(frozen=True)
@@ -275,6 +280,7 @@ def _skill_view(
         "id": pick.id,
         "label": pick.label,
         "kind": pick.kind,
+        "counter": pick.counter,
         "available": available,
         "skills": skills,
     }
@@ -307,15 +313,28 @@ def _stat_view(
         if pick.maximum is not None and value >= pick.maximum:
             continue
         stats.append({"id": stat.id, "name": stat.name, "value": value})
+    steps = [
+        {
+            "step": step,
+            "cost": pick.costs[step],
+            "minimum_level": pick.minimum_levels.get(step, 0),
+        }
+        for step in sorted(pick.costs)
+        if step >= next_step
+    ]
     return {
         "id": pick.id,
         "label": pick.label,
         "kind": pick.kind,
+        "counter": pick.counter,
         "available": available,
+        "level": level,
+        "bought": bought,
         "next_cost": cost,
         "next_minimum": minimum,
         "can_raise": cost is not None and (minimum is None or level >= minimum),
         "next_step": next_step,
+        "steps": steps,
         "stats": stats,
     }
 
@@ -357,6 +376,9 @@ def option_views(
                 "picks": option.picks,
                 "stats": stats,
                 "features": features,
+                "needs_feature": option.learn is not None,
+                "available": not (option.picks and not stats)
+                and not (option.learn is not None and not features),
             }
         )
     return tuple(views)
@@ -489,7 +511,15 @@ def _plan_picks(
                 else {}
             )
             seen: set[str] = set()
+            spec = rule_set.character
             for choice in choices:
+                held = spec.features.get(choice)
+                if (
+                    held is not None
+                    and choice in pc.features
+                    and not held.repeatable
+                ):
+                    raise InvalidInput(f"{pc.name} already has {held.name}")
                 if choice not in options:
                     raise InvalidInput(f"{choice!r} is not an available {pick.label.lower()}")
                 if choice in seen and not options[choice].get("repeatable"):
@@ -609,10 +639,13 @@ def _stat_boosts(
 
 def _feature_choices(pick: LevelUpPick, form: Mapping[str, Any]) -> list[str]:
     choices: list[str] = []
-    # The form has one field per available pick, so read the fields it actually sent.
+    # The form has one field per available pick, so read the fields it actually sent. Match the
+    # whole field name so a pick id such as "focus" cannot also collect fields for "focus-2".
     for key, value in form.items():
-        if key.startswith(f"pick-{pick.id}-") and value not in ("", None):
-            choices.append(str(value))
+        match = FEATURE_FIELD.match(str(key))
+        if match is None or match.group("pick") != pick.id or value in ("", None):
+            continue
+        choices.append(str(value))
     return choices
 
 

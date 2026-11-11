@@ -240,11 +240,11 @@
     "id": "focus_connected_2",
     "name": "Connected",
     "rank": 2,
-    "description": "Once per session, if it is not entirely implausible, you can meet someone you know who will do modest favors. You choose when and where.",
+    "description": "Once per rest, if it is not entirely implausible, you can meet someone you know who will do modest favors. You choose when and where.",
     "effects": [
       {
         "op": "note",
-        "text": "Once per session, meet a known contact who will do modest favors, at a time and place you choose; the GM decides who and what they can do."
+        "text": "Once per rest, meet a known contact who will do modest favors, at a time and place you choose; the GM decides who and what they can do."
       }
     ]
   },
@@ -271,11 +271,25 @@
     "id": "focus_cultured_2",
     "name": "Cultured",
     "rank": 2,
-    "description": "Once per session, you can reroll a failed social skill check.",
+    "description": "Once per rest, you can reroll a failed social skill check.",
     "effects": [
       {
         "op": "note",
-        "text": "Once per session, reroll a failed social skill check and use the better result."
+        "text": "Once per rest, reroll a failed social skill check and use the better result."
+      }
+    ],
+    "reactions": [
+      {
+        "id": "cultured-reroll",
+        "trigger": "check",
+        "when": {
+          "skills": ["connect", "convince", "lead", "perform"],
+          "success": false
+        },
+        "effect": {"op": "reroll", "keep": "better"},
+        "uses": 1,
+        "reset": "rest",
+        "text": "Cultured rerolls the failed social check."
       }
     ]
   },
@@ -365,11 +379,11 @@
     "id": "focus_dealmaker_2",
     "name": "Dealmaker",
     "rank": 2,
-    "description": "Once per session, a sentient being not currently trying to kill you agrees to a plausible request for a price or favor.",
+    "description": "Once per rest, a sentient being not currently trying to kill you agrees to a plausible request for a price or favor.",
     "effects": [
       {
         "op": "note",
-        "text": "Once per session, make a plausible request of a sentient being not actively hostile to you; it agrees for a price or favor. Major favors may be expensive."
+        "text": "Once per rest, make a plausible request of a sentient being not actively hostile to you; it agrees for a price or favor. Major favors may be expensive."
       }
     ]
   },
@@ -563,11 +577,11 @@
     "id": "focus_lucky_2",
     "name": "Lucky",
     "rank": 2,
-    "description": "Once per session, in peril, roll 1d6: on 2 or more something fortunate happens; on a 1 the situation worsens as the GM decides.",
+    "description": "Once per rest, in peril, roll 1d6: on 2 or more something fortunate happens; on a 1 the situation worsens as the GM decides.",
     "effects": [
       {
         "op": "note",
-        "text": "Once per session while in peril, roll 1d6: on 2 or more something fortunate happens; on a 1 the situation immediately worsens as the GM sees fit."
+        "text": "Once per rest while in peril, roll 1d6: on 2 or more something fortunate happens; on a 1 the situation immediately worsens as the GM sees fit."
       }
     ]
   },
