@@ -15,7 +15,8 @@ _LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR")
 _ENVIRONMENTS = ("development", "production")
 TOOL_SCHEMA_MODES = ("full", "compact", "summary", "brief")
 RULE_INFO_MODES = ("full", "brief", "index")
-DEFAULT_CONTEXT_TOKENS = 32768
+# The prompt budget a model starts with. Administrators can change it per model at runtime.
+DEFAULT_MODEL_CONTEXT_TOKENS = 65536
 DEFAULT_SESSION_HOURS = 7 * 24
 DEFAULT_STEP_UP_MINUTES = 15
 _TRUE_VALUES = ("1", "true", "yes", "on")
@@ -30,7 +31,6 @@ class Settings:
     provider_base_urls: dict[str, str] = field(default_factory=dict)
     provider_api_keys: dict[str, str] = field(default_factory=dict)
     log_level: str = "INFO"
-    llm_context_tokens: int = DEFAULT_CONTEXT_TOKENS
     # How much of a tool schema reaches the provider. `full` is the authored schema;
     # `compact` drops nested documentation and long choice lists; `brief` also shortens the
     # top-level description. The engine always validates against the full schema.
@@ -105,9 +105,6 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
     log_level = env.get("CYGNUSLOOM_LOG_LEVEL", "INFO").strip().upper()
     if log_level not in _LOG_LEVELS:
         raise RuntimeError(f"CYGNUSLOOM_LOG_LEVEL must be one of {', '.join(_LOG_LEVELS)}")
-    context_tokens = _whole(
-        env, "CYGNUSLOOM_LLM_CONTEXT_TOKENS", DEFAULT_CONTEXT_TOKENS, 1, 1_000_000
-    )
     tool_schema_mode = env.get("CYGNUSLOOM_TOOL_SCHEMA_MODE", "brief").strip().lower()
     if tool_schema_mode not in TOOL_SCHEMA_MODES:
         raise RuntimeError(
@@ -180,7 +177,6 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         provider_base_urls=_per_provider(env, "_BASE_URL"),
         provider_api_keys=_per_provider(env, "_API_KEY"),
         log_level=log_level,
-        llm_context_tokens=context_tokens,
         tool_schema_mode=tool_schema_mode,
         rule_info_mode=rule_info_mode,
         test_login=test_login,

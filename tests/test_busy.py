@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from cygnusloom.config import Settings
+from cygnusloom.config import DEFAULT_MODEL_CONTEXT_TOKENS, Settings
 from cygnusloom.db.models import Campaign
 from cygnusloom.services import campaigns as service
 from tests.conftest import csrf_token
@@ -69,7 +69,7 @@ def test_closing_an_unfinished_turn_releases_the_campaign(
             app.state.providers,
             settings.llm_models,
             app.state.content,
-            settings.llm_context_tokens,
+            DEFAULT_MODEL_CONTEXT_TOKENS,
             owner_id,
             campaign_id,
             "hi",

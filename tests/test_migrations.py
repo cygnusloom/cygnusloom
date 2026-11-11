@@ -47,6 +47,7 @@ def test_migrations_create_the_full_schema(tmp_path, monkeypatch):
     }
     assert "credits_per_turn" in model_columns
     assert "stream_usage" in model_columns
+    assert "context_tokens" in model_columns
     assert "calculator_json" in model_columns
 
 
@@ -86,6 +87,39 @@ def test_the_inventory_space_column_defaults_to_true(tmp_path, monkeypatch):
         )
         value = connection.execute(sa.select(campaign.c.use_inventory_space)).scalar_one()
     assert value is True
+
+
+def test_model_context_tokens_default_to_64k_for_existing_models(tmp_path, monkeypatch):
+    url = f"sqlite:///{tmp_path / 'model-context.db'}"
+    monkeypatch.setenv("CYGNUSLOOM_DATABASE_URL", url)
+    config = migration_config(url)
+    command.upgrade(config, "0014_campaign_major_version")
+
+    engine = make_engine(url)
+    model = sa.Table("llm_model", sa.MetaData(), autoload_with=engine)
+    with engine.begin() as connection:
+        connection.execute(
+            model.insert().values(
+                provider="fake",
+                model="scripted",
+                base_url="",
+                api_key="",
+                credits_per_turn=0,
+                stream_usage=True,
+                calculator_json="{}",
+                enabled=True,
+                is_default=True,
+                created_at=datetime.now(UTC),
+            )
+        )
+
+    command.upgrade(config, "head")
+
+    upgraded = make_engine(url)
+    upgraded_model = sa.Table("llm_model", sa.MetaData(), autoload_with=upgraded)
+    with upgraded.connect() as connection:
+        value = connection.execute(sa.select(upgraded_model.c.context_tokens)).scalar_one()
+    assert value == 65536
 
 
 def test_migrations_can_be_reversed(tmp_path, monkeypatch):
@@ -160,7 +194,7 @@ def test_a_legacy_long_revision_id_is_rewritten(tmp_path, monkeypatch):
         version = connection.execute(
             sa.text("SELECT version_num FROM alembic_version")
         ).scalar_one()
-    assert version == "0014_campaign_major_version"
+    assert version == "0015_llm_model_context_tokens"
     campaign_columns = {
         column["name"] for column in inspect(make_engine(url)).get_columns("campaign")
     }

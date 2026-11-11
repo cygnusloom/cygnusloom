@@ -18,6 +18,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
+from cygnusloom.config import DEFAULT_MODEL_CONTEXT_TOKENS
 from cygnusloom.db.models import Campaign
 from cygnusloom.llm.base import ChatReply, TextDelta
 from cygnusloom.llm.fake import FakeProvider
@@ -82,7 +83,7 @@ def _events(
         app.state.providers,
         settings.llm_models,
         app.state.content,
-        settings.llm_context_tokens,
+        DEFAULT_MODEL_CONTEXT_TOKENS,
         _owner_id(app, campaign_id),
         campaign_id,
         text,

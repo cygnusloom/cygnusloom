@@ -46,6 +46,8 @@
         {% endif %}
         <dt>Stream usage</dt>
         <dd>{{ "requested" if row.stream_usage else "not requested" }}</dd>
+        <dt>Context window</dt>
+        <dd>{{ "{:,}".format(row.context_tokens) }} tokens</dd>
       </dl>
 
       <dialog id="cost-calculator-{{ loop.index }}" class="app-dialog cost-calculator"
@@ -181,6 +183,14 @@
             <input type="checkbox" name="stream_usage" value="1" {% if row.stream_usage %}checked{% endif %}>
             Request token usage in streamed replies
           </label>
+          <label>
+            Context window (tokens)
+            <input type="number" name="context_tokens" min="1" max="1000000" step="1"
+                   value="{{ row.context_tokens }}" required>
+          </label>
+          <p class="muted">
+            Campaigns using this model summarize older chat at half this size.
+          </p>
           <label class="show-hidden-option">
             <input type="checkbox" name="clear_api_key" value="1"> Clear API key
           </label>
@@ -251,6 +261,11 @@
       <label class="show-hidden-option">
         <input type="checkbox" name="stream_usage" value="1" checked>
         Request token usage in streamed replies
+      </label>
+      <label>
+        Context window (tokens)
+        <input type="number" name="context_tokens" min="1" max="1000000" step="1"
+               value="{{ default_context_tokens }}" required>
       </label>
       <label class="show-hidden-option">
         <input type="checkbox" name="is_default" value="1"> Make default

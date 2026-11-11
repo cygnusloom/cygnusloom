@@ -127,6 +127,26 @@ def test_model_turn_price_and_stream_usage_are_stored_and_preserved(settings: Se
         catalog.add("openai", "bad-price", "https://api.openai.com/v1", credits_per_turn=-1)
 
 
+def test_model_context_window_defaults_and_can_change_at_runtime(settings: Settings):
+    catalog, engine = _catalog(settings)
+    spec = catalog.add("openai", "gpt-4o-mini", "https://api.openai.com/v1")
+    assert spec.context_tokens == 65536
+    assert catalog.context_tokens(spec.model_id) == 65536
+
+    updated = catalog.update(
+        spec.row_id or 0, base_url="https://api.openai.com/v1", context_tokens=8192
+    )
+    assert updated.context_tokens == 8192
+    assert catalog.context_tokens(spec.model_id) == 8192
+
+    with Session(engine) as db:
+        row = db.get(LlmModel, spec.row_id)
+    assert row is not None and row.context_tokens == 8192
+
+    with pytest.raises(InvalidInput, match="context tokens"):
+        catalog.add("openai", "bad-window", "https://api.openai.com/v1", context_tokens=0)
+
+
 def test_model_calculator_prices_and_peak_hours_are_stored_and_cleared(settings: Settings):
     catalog, engine = _catalog(settings)
     spec = catalog.add("openai", "gpt-4o-mini", "https://api.openai.com/v1")

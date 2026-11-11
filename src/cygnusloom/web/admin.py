@@ -15,6 +15,7 @@ from cygnusloom.auth.deps import (
     require_recent_auth,
     verify_csrf,
 )
+from cygnusloom.config import DEFAULT_MODEL_CONTEXT_TOKENS
 from cygnusloom.llm.catalog import CALCULATOR_FIELDS
 from cygnusloom.services import admin as service
 from cygnusloom.services import credits as credit_service
@@ -140,6 +141,17 @@ def _turn_price(form) -> int:
         return int(raw)
     except ValueError:
         raise InvalidInput("credits per turn must be a whole number")
+
+
+def _context_tokens(form, default: int = DEFAULT_MODEL_CONTEXT_TOKENS) -> int:
+    raw = form_text(form, "context_tokens").strip()
+    if not raw:
+        # BACKWARDS-COMPATIBILITY: 4 - old admin pages predate this field.
+        return default
+    try:
+        return int(raw)
+    except ValueError:
+        raise InvalidInput("context tokens must be a whole number")
 
 
 def _owner_id(form) -> int:
@@ -400,6 +412,7 @@ def models_page(request: Request) -> Response:
         rows=rows,
         source=catalog.source(),
         usage=usage,
+        default_context_tokens=DEFAULT_MODEL_CONTEXT_TOKENS,
         # Each configured model's card owns a calculator dialog. The usage table links to the
         # same dialog, which loads exact usage for the selected period when it opens.
         calculator_ids={
@@ -505,6 +518,7 @@ async def add_model(request: Request) -> Response:
             form_text(form, "api_key"),
             credits_per_turn=_turn_price(form),
             stream_usage=form_text(form, "stream_usage") == "1",
+            context_tokens=_context_tokens(form),
             is_default=form_text(form, "is_default") == "1",
         )
     except (Conflict, InvalidInput, NotFound) as exc:
@@ -519,6 +533,7 @@ async def add_model(request: Request) -> Response:
             "default": spec.is_default,
             "credits_per_turn": spec.credits_per_turn,
             "stream_usage": spec.stream_usage,
+            "context_tokens": spec.context_tokens,
         },
         ip=client_ip(request),
     )
@@ -546,6 +561,7 @@ async def update_model(request: Request, row_id: int) -> Response:
                 None if request.app.state.settings.single_player else _turn_price(form)
             ),
             stream_usage=form_text(form, "stream_usage") == "1",
+            context_tokens=_context_tokens(form, spec.context_tokens),
             enabled=form_text(form, "enabled") == "1",
             make_default=form_text(form, "is_default") == "1",
         )
@@ -562,6 +578,7 @@ async def update_model(request: Request, row_id: int) -> Response:
             "default": updated.is_default,
             "credits_per_turn": updated.credits_per_turn,
             "stream_usage": updated.stream_usage,
+            "context_tokens": updated.context_tokens,
         },
         ip=client_ip(request),
     )

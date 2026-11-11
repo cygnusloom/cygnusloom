@@ -192,13 +192,12 @@ def test_the_desktop_edition_does_not_inherit_models_from_the_shell():
         "CYGNUSLOOM_LLM_DEFAULT_MODEL": "fake/scripted",
         "CYGNUSLOOM_LLM_DEEPSEEK_API_KEY": "secret",
         "CYGNUSLOOM_LLM_DEEPSEEK_BASE_URL": "https://api.deepseek.com/v1",
-        "CYGNUSLOOM_LLM_CONTEXT_TOKENS": "8192",
         "UNRELATED": "kept",
     }
 
     launcher._ignore_model_environment(env)
 
-    assert env == {"CYGNUSLOOM_LLM_CONTEXT_TOKENS": "8192", "UNRELATED": "kept"}
+    assert env == {"UNRELATED": "kept"}
 
 
 def test_migrations_are_inside_the_package():

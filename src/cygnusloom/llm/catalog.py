@@ -15,13 +15,14 @@ from cryptography.fernet import Fernet, InvalidToken
 from sqlalchemy import Engine, select
 from sqlmodel import Session
 
-from cygnusloom.config import Settings
+from cygnusloom.config import DEFAULT_MODEL_CONTEXT_TOKENS, Settings
 from cygnusloom.db.models import LlmModel, utcnow
 from cygnusloom.services.common import Conflict, InvalidInput, NotFound, session_scope
 
 _PROVIDER = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 _MAX_MODEL_ID = 120
 _MAX_TURN_PRICE = 1_000_000
+_MAX_CONTEXT_TOKENS = 1_000_000
 _MAX_CALCULATOR_PRICE = Decimal(1000000000)
 
 # The keys the model cost calculator saves. Prices are per 1M tokens; the two time fields are
@@ -67,7 +68,8 @@ class ModelSpec:
 
     `credits_per_turn` is shown in the campaign model picker. `stream_usage` asks the provider
     for exact token counts in streamed replies; usage measurements never affect the charge.
-    `calculator` holds the administrator's saved cost-calculator prices and peak hours."""
+    `context_tokens` is the prompt budget for campaigns using this model. `calculator` holds the
+    administrator's saved cost-calculator prices and peak hours."""
 
     row_id: int | None
     provider: str
@@ -77,6 +79,7 @@ class ModelSpec:
     api_key_set: bool
     credits_per_turn: int
     stream_usage: bool
+    context_tokens: int
     enabled: bool
     is_default: bool
     calculator: dict[str, str]
@@ -111,6 +114,16 @@ def _check_base_url(provider: str, base_url: str) -> str:
 def _check_turn_price(value: int) -> int:
     if isinstance(value, bool) or not isinstance(value, int) or not 0 <= value <= _MAX_TURN_PRICE:
         raise InvalidInput(f"credits per turn must be a whole number from 0 to {_MAX_TURN_PRICE}")
+    return value
+
+
+def _check_context_tokens(value: int) -> int:
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, int)
+        or not 1 <= value <= _MAX_CONTEXT_TOKENS
+    ):
+        raise InvalidInput(f"context tokens must be a whole number from 1 to {_MAX_CONTEXT_TOKENS}")
     return value
 
 
@@ -196,6 +209,7 @@ class ModelCatalog:
                     api_key_set=bool(self.settings.provider_api_keys.get(provider)),
                     credits_per_turn=0,
                     stream_usage=True,
+                    context_tokens=DEFAULT_MODEL_CONTEXT_TOKENS,
                     enabled=True,
                     is_default=model_id == default,
                     calculator={},
@@ -212,6 +226,7 @@ class ModelCatalog:
                 api_key_set=first.api_key_set,
                 credits_per_turn=first.credits_per_turn,
                 stream_usage=first.stream_usage,
+                context_tokens=first.context_tokens,
                 enabled=first.enabled,
                 is_default=True,
                 calculator=first.calculator,
@@ -228,6 +243,7 @@ class ModelCatalog:
             api_key_set=bool(row.api_key),
             credits_per_turn=row.credits_per_turn,
             stream_usage=row.stream_usage,
+            context_tokens=row.context_tokens,
             enabled=row.enabled,
             is_default=row.is_default,
             calculator=_parse_calculator(row.calculator_json),
@@ -278,6 +294,19 @@ class ModelCatalog:
             ).scalar_one_or_none()
         return True if value is None else bool(value)
 
+    def context_tokens(self, model_id: str) -> int:
+        """The prompt budget for campaigns using this model, read fresh from the catalogue."""
+        provider, separator, model = model_id.partition("/")
+        if not separator:
+            return DEFAULT_MODEL_CONTEXT_TOKENS
+        with session_scope(self.engine) as db:
+            value = db.execute(
+                select(LlmModel.context_tokens).where(
+                    LlmModel.provider == provider, LlmModel.model == model
+                )
+            ).scalar_one_or_none()
+        return DEFAULT_MODEL_CONTEXT_TOKENS if value is None else int(value)
+
     def seed_from_env(self) -> int:
         """Copy the environment list into an empty catalog, once. Existing rows are never
         overwritten, so administrator edits survive restarts."""
@@ -296,6 +325,7 @@ class ModelCatalog:
                         api_key=encrypt_api_key(self.settings.secret_key, spec.api_key),
                         credits_per_turn=spec.credits_per_turn,
                         stream_usage=spec.stream_usage,
+                        context_tokens=spec.context_tokens,
                         enabled=True,
                         is_default=spec.is_default,
                         created_at=utcnow(),
@@ -313,11 +343,13 @@ class ModelCatalog:
         *,
         credits_per_turn: int = 0,
         stream_usage: bool = True,
+        context_tokens: int = DEFAULT_MODEL_CONTEXT_TOKENS,
         is_default: bool = False,
     ) -> ModelSpec:
         provider, model, _ = _identity(provider, model)
         base_url = _check_base_url(provider, base_url)
         credits_per_turn = _check_turn_price(credits_per_turn)
+        context_tokens = _check_context_tokens(context_tokens)
         # An environment-only list becomes editable before the first database change.
         self.seed_from_env()
         with session_scope(self.engine) as db:
@@ -341,6 +373,7 @@ class ModelCatalog:
                 api_key=encrypt_api_key(self.settings.secret_key, api_key),
                 credits_per_turn=credits_per_turn,
                 stream_usage=stream_usage,
+                context_tokens=context_tokens,
                 enabled=True,
                 is_default=is_default,
             )
@@ -360,15 +393,18 @@ class ModelCatalog:
         *,
         credits_per_turn: int | None = None,
         stream_usage: bool | None = None,
+        context_tokens: int | None = None,
         is_default: bool = True,
     ) -> ModelSpec:
         """Add a model, or make an existing row editable again. Used by the setup wizard, so
-        running it twice with the same details is harmless. Pricing settings are left alone when
-        the caller omits them."""
+        running it twice with the same details is harmless. Settings are left alone when the
+        caller omits them."""
         provider, model, _ = _identity(provider, model)
         base_url = _check_base_url(provider, base_url)
         if credits_per_turn is not None:
             credits_per_turn = _check_turn_price(credits_per_turn)
+        if context_tokens is not None:
+            context_tokens = _check_context_tokens(context_tokens)
         self.seed_from_env()
         with session_scope(self.engine) as db:
             row = (
@@ -386,6 +422,7 @@ class ModelCatalog:
                     api_key=encrypt_api_key(self.settings.secret_key, api_key),
                     credits_per_turn=credits_per_turn or 0,
                     stream_usage=True if stream_usage is None else stream_usage,
+                    context_tokens=context_tokens or DEFAULT_MODEL_CONTEXT_TOKENS,
                     enabled=True,
                     is_default=False,
                 )
@@ -401,6 +438,8 @@ class ModelCatalog:
                     row.credits_per_turn = credits_per_turn
                 if stream_usage is not None:
                     row.stream_usage = stream_usage
+                if context_tokens is not None:
+                    row.context_tokens = context_tokens
                 db.add(row)
             if is_default:
                 for other in db.execute(select(LlmModel)).scalars():
@@ -419,6 +458,7 @@ class ModelCatalog:
         api_key: str | None = None,
         credits_per_turn: int | None = None,
         stream_usage: bool | None = None,
+        context_tokens: int | None = None,
         enabled: bool = True,
         make_default: bool = False,
     ) -> ModelSpec:
@@ -434,6 +474,8 @@ class ModelCatalog:
                 row.credits_per_turn = _check_turn_price(credits_per_turn)
             if stream_usage is not None:
                 row.stream_usage = stream_usage
+            if context_tokens is not None:
+                row.context_tokens = _check_context_tokens(context_tokens)
             if make_default:
                 for other in db.execute(select(LlmModel)).scalars():
                     other.is_default = False

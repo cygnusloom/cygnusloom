@@ -8,6 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import select
 
+from cygnusloom.config import DEFAULT_MODEL_CONTEXT_TOKENS
 from cygnusloom.db.models import CampaignInvite, Event, User
 from cygnusloom.services import campaigns as campaigns_service
 from cygnusloom.services import encounters
@@ -307,7 +308,7 @@ def test_a_multiplayer_prompt_names_players_and_characters(
             app.state.providers,
             app.state.catalog.model_ids(),
             app.state.content,
-            app.state.settings.llm_context_tokens,
+            DEFAULT_MODEL_CONTEXT_TOKENS,
             _account(app, OWNER).id,
             campaign_id,
             "roll",

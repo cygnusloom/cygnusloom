@@ -11,6 +11,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
+from cygnusloom.config import DEFAULT_MODEL_CONTEXT_TOKENS
 from cygnusloom.db.models import Campaign
 from cygnusloom.llm.base import LLMError
 from cygnusloom.llm.fake import FakeProvider
@@ -213,7 +214,7 @@ def test_the_player_roll_uses_the_given_generator(
             app.state.providers,
             app.state.settings.llm_models,
             app.state.content,
-            app.state.settings.llm_context_tokens,
+            DEFAULT_MODEL_CONTEXT_TOKENS,
             owner_id,
             campaign_id,
             "roll",

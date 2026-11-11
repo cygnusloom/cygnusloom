@@ -373,6 +373,7 @@ def test_admin_model_page_lists_and_adds_models(settings: Settings):
             "model": "gpt-4o-mini",
             "base_url": "https://api.openai.com/v1",
             "api_key": "sk-test",
+            "context_tokens": "8192",
             "is_default": "1",
         },
         follow_redirects=False,
@@ -381,6 +382,8 @@ def test_admin_model_page_lists_and_adds_models(settings: Settings):
     page = client.get("/admin/models")
     assert "openai/gpt-4o-mini" in page.text
     assert "sk-test" not in page.text
+    assert "Context window" in page.text
+    assert "8,192 tokens" in page.text
 
     engine = _engine(settings)
     with Session(engine) as db:
@@ -631,6 +634,7 @@ def test_no_models_blocks_campaign_creation_until_one_is_added(settings: Setting
             "provider": "fake",
             "model": "scripted",
             "base_url": "",
+            "context_tokens": "65536",
             "is_default": "1",
         },
         follow_redirects=False,

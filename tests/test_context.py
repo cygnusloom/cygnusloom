@@ -17,9 +17,9 @@ from cygnusloom.rules.context import brief
 from cygnusloom.services.events import CampaignState, Channel, load_state
 from cygnusloom.services.prompts import SUMMARY_PROMPT, SYSTEM_PROMPT, system_parts
 from tests.conftest import is_journal_messages, is_review_messages, make_app
-from tests.test_campaigns import _campaign_id, _send
+from tests.test_campaigns import _campaign_id, _send, _set_model
 
-METER_RE = re.compile(r'<span class="muted">([\d,]+) / 32,768</span>')
+METER_RE = re.compile(r'<span class="muted">([\d,]+) / 65,536</span>')
 
 
 class RecordingProvider:
@@ -59,9 +59,19 @@ class RecordingProvider:
         return [call for call in self.calls if call[0]["content"].startswith(SUMMARY_PROMPT)]
 
 
+def _set_model_context(app: FastAPI, tokens: int, model_id: str | None = None) -> None:
+    """Change a model's runtime context window, as an administrator would."""
+    selected = model_id or app.state.catalog.default_model_id()
+    spec = next(row for row in app.state.catalog.all_specs() if row.model_id == selected)
+    assert spec.row_id is not None
+    app.state.catalog.update(spec.row_id, base_url=spec.base_url, context_tokens=tokens)
+
+
 def _small_window_app(settings: Settings, provider: RecordingProvider) -> FastAPI:
     # A 1000-token window: summaries start at 500 tokens and the verbatim tail is about 100.
-    return make_app(dataclasses.replace(settings, llm_context_tokens=1000), fake_provider=provider)
+    app = make_app(settings, fake_provider=provider)
+    _set_model_context(app, 1000)
+    return app
 
 
 def _stored(app: FastAPI, campaign_id: int) -> Campaign:
@@ -295,18 +305,37 @@ def test_the_composer_has_no_settings_button_and_keeps_the_context_meter(
     client, campaign_id = _campaign_id(client_factory)
     page = client.get(f"/campaigns/{campaign_id}").text
     assert 'class="context-meter"' in page
-    assert 'max="32768"' in page
+    assert 'max="65536"' in page
     assert 'class="composer-settings"' not in page
     assert 'data-dialog-target="dialog-settings"' not in page
 
 
-def test_context_meter_shows_the_window_from_settings(settings: Settings):
-    app = make_app(
-        dataclasses.replace(settings, llm_context_tokens=4096), fake_provider=RecordingProvider()
-    )
+def test_context_meter_shows_the_models_window(settings: Settings):
+    app = make_app(settings, fake_provider=RecordingProvider())
+    _set_model_context(app, 4096)
     client, campaign_id = _campaign_id(lambda: TestClient(app))
     page = client.get(f"/campaigns/{campaign_id}").text
     assert re.search(r'<span class="muted">[\d,]+ / 4,096</span>', page)
+
+
+def test_context_meter_uses_the_campaign_models_window(settings: Settings):
+    app = make_app(
+        dataclasses.replace(settings, provider_base_urls={"ollama": "http://localhost:11434/v1"}),
+        fake_provider=RecordingProvider(),
+    )
+    _set_model_context(app, 4096, "fake/scripted")
+    client, campaign_id = _campaign_id(lambda: TestClient(app))
+    assert re.search(
+        r'<span class="muted">[\d,]+ / 4,096</span>',
+        client.get(f"/campaigns/{campaign_id}").text,
+    )
+
+    _set_model_context(app, 8192, "ollama/test-model")
+    assert _set_model(client, campaign_id, "ollama/test-model").status_code == 303
+    assert re.search(
+        r'<span class="muted">[\d,]+ / 8,192</span>',
+        client.get(f"/campaigns/{campaign_id}").text,
+    )
 
 
 def test_context_meter_grows_with_saved_history(settings: Settings):

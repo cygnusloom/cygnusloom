@@ -3,6 +3,8 @@ from datetime import UTC, datetime
 from sqlalchemy import Column, Text, UniqueConstraint
 from sqlmodel import Field, SQLModel
 
+from cygnusloom.config import DEFAULT_MODEL_CONTEXT_TOKENS
+
 
 def utcnow() -> datetime:
     return datetime.now(UTC)
@@ -45,7 +47,8 @@ class LlmModel(SQLModel, table=True):
     `credits_per_turn` is the average price of one completed AI GM reply with this model. It is
     shown in the campaign's model picker and deducted from the campaign owner's balance.
     `stream_usage` asks the provider for token counts in streamed replies; turn it off for an
-    OpenAI-compatible server that rejects the `stream_options` request field.
+    OpenAI-compatible server that rejects the `stream_options` request field. `context_tokens`
+    is the model's prompt budget; older chat is summarized at half of it.
     `calculator_json` holds the model's saved cost-calculator token prices and optional peak
     hours as JSON; it is configuration for administrators, not part of gameplay."""
 
@@ -59,6 +62,8 @@ class LlmModel(SQLModel, table=True):
     api_key: str = Field(default="", sa_column=Column(Text, nullable=False))
     credits_per_turn: int = Field(default=0)
     stream_usage: bool = Field(default=True)
+    # The prompt budget for campaigns using this model. Older chat is summarized at half of it.
+    context_tokens: int = Field(default=DEFAULT_MODEL_CONTEXT_TOKENS)
     calculator_json: str = Field(default="{}", sa_column=Column(Text, nullable=False))
     enabled: bool = Field(default=True)
     is_default: bool = Field(default=False)

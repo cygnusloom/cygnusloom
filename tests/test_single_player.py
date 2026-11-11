@@ -147,7 +147,13 @@ def test_single_player_model_update_keeps_the_hidden_price(tmp_path):
 
     response = client.post(
         f"/admin/models/{spec.row_id}/update",
-        data={"csrf_token": token, "base_url": "", "stream_usage": "1", "enabled": "1"},
+        data={
+            "csrf_token": token,
+            "base_url": "",
+            "stream_usage": "1",
+            "context_tokens": "65536",
+            "enabled": "1",
+        },
         follow_redirects=False,
     )
 

@@ -128,6 +128,16 @@ def _setup_redirect(request: Request) -> RedirectResponse | None:
     return None
 
 
+def _campaign_context_tokens(request: Request, user_id: int, campaign_id: int) -> int:
+    """The prompt budget of the model this campaign is using, read at turn start.
+
+    Campaign playability is left to the turn service, which reports a blocked campaign as the
+    same conflict the page already understands.
+    """
+    campaign = get_campaign(request.app.state.engine, user_id, campaign_id, playable=False)
+    return request.app.state.catalog.context_tokens(campaign.model)
+
+
 @router.get("")
 def campaigns_page(request: Request) -> Response:
     user = page_user(request)
@@ -1081,13 +1091,12 @@ async def post_message(request: Request, campaign_id: int) -> Response:
     await verify_csrf(request)
     form = await request.form()
     text = form_text(form, "content")
-    settings = request.app.state.settings
     events = stream_message(
         request.app.state.engine,
         request.app.state.providers,
         request.app.state.catalog.model_ids(),
         request.app.state.content,
-        settings.llm_context_tokens,
+        _campaign_context_tokens(request, user.id, campaign_id),
         user.id,
         campaign_id,
         text,
@@ -1119,13 +1128,12 @@ async def post_message_stream(request: Request, campaign_id: int) -> Response:
     await verify_csrf(request)
     form = await request.form()
     text = form_text(form, "content")
-    settings = request.app.state.settings
     events = stream_message(
         request.app.state.engine,
         request.app.state.providers,
         request.app.state.catalog.model_ids(),
         request.app.state.content,
-        settings.llm_context_tokens,
+        _campaign_context_tokens(request, user.id, campaign_id),
         user.id,
         campaign_id,
         text,
@@ -1163,13 +1171,12 @@ async def post_pending_stream(request: Request, campaign_id: int) -> Response:
     form = await request.form()
     action = form_text(form, "kind")
     text = form_text(form, "content")
-    settings = request.app.state.settings
     events = resume_turn(
         request.app.state.engine,
         request.app.state.providers,
         request.app.state.catalog.model_ids(),
         request.app.state.content,
-        settings.llm_context_tokens,
+        _campaign_context_tokens(request, user.id, campaign_id),
         user.id,
         campaign_id,
         action,
@@ -1193,13 +1200,12 @@ async def post_encounter_turn_stream(request: Request, campaign_id: int) -> Resp
     await verify_csrf(request)
     form = await request.form()
     name = form_text(form, "name")
-    settings = request.app.state.settings
     events = start_encounter_turn(
         request.app.state.engine,
         request.app.state.providers,
         request.app.state.catalog.model_ids(),
         request.app.state.content,
-        settings.llm_context_tokens,
+        _campaign_context_tokens(request, user.id, campaign_id),
         user.id,
         campaign_id,
         name,
@@ -1565,7 +1571,7 @@ def _campaign_page(
         messages,
         rule_set,
         options,
-        settings.llm_context_tokens,
+        request.app.state.catalog.context_tokens(campaign.model),
         world_content.rules,
         unattached_world_rules=world_content.unattached_rules,
         world=library.world_templates.get(campaign.world_template),
