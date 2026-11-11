@@ -88,39 +88,70 @@ def browser_login_url(
 
 
 def prefill_script(username: str, password: str) -> str:
-    """Fill the identity provider's login form, without submitting it.
+    """Fill the identity provider's visible login fields, without submitting them.
 
-    MFA and a first-time account creation still belong to the provider's page. Values are only
-    written into empty fields, so a player who edits the username is not overwritten.
+    Authentik renders its stages in open shadow roots, so a plain document query would fill the
+    hidden light-DOM form. Values are only written into empty fields, so a player who edits the
+    username is not overwritten.
     """
     return f"""
     (() => {{
       const username = {json.dumps(username)};
       const password = {json.dumps(password)};
       const userSelector =
-        'input[autocomplete="username"], input[name="username"], input[type="email"]';
+        'input[autocomplete="username"], input[name="username"], input[name="uidField"],' +
+        ' input[type="email"]';
       const passwordSelector =
         'input[autocomplete="current-password"], input[type="password"]';
-      let attempts = 0;
-      const fill = () => {{
-        const user = document.querySelector(userSelector);
-        const passwordField = document.querySelector(passwordSelector);
-        if (!user || !passwordField) {{
-          if (++attempts < 20) setTimeout(fill, 150);
-          return;
+      const visible = (field) => {{
+        if (!field || field.disabled || field.type === 'hidden') return false;
+        const style = window.getComputedStyle(field);
+        return (
+          field.offsetWidth > 0 ||
+          field.offsetHeight > 0 ||
+          field.getClientRects().length > 0
+        ) && style.visibility !== 'hidden' && style.display !== 'none';
+      }};
+      const collect = () => {{
+        const roots = [document];
+        const fields = [];
+        for (let index = 0; index < roots.length; index += 1) {{
+          const root = roots[index];
+          fields.push(...root.querySelectorAll('input'));
+          for (const element of root.querySelectorAll('*')) {{
+            if (element.shadowRoot) roots.push(element.shadowRoot);
+          }}
         }}
-        const setValue =
+        return {{ roots, fields }};
+      }};
+      const shadowOnly = !!document.querySelector('ak-flow-executor');
+      let ticks = 0;
+      const find = (selector) => {{
+        const shadow = collect();
+        const match = shadow.fields.find(
+          (field) => field.matches(selector) && visible(field)
+        );
+        if (match) return match;
+        // Authentik's hidden light-DOM form is not the visible stage; wait for its flow
+        // component. Other providers fall back to the document after a short wait.
+        if (shadowOnly) return null;
+        if (shadow.roots.length && ticks < 200) return null;
+        return [...document.querySelectorAll(selector)].find(visible) || null;
+      }};
+      const setValue = (field, value) => {{
+        if (!field || field.value) return;
+        const setter =
           Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
-        if (!user.value) {{
-          setValue.call(user, username);
-          user.dispatchEvent(new Event('input', {{bubbles: true}}));
-          user.dispatchEvent(new Event('change', {{bubbles: true}}));
-        }}
-        if (!passwordField.value) {{
-          setValue.call(passwordField, password);
-          passwordField.dispatchEvent(new Event('input', {{bubbles: true}}));
-          passwordField.dispatchEvent(new Event('change', {{bubbles: true}}));
-        }}
+        setter.call(field, value);
+        field.dispatchEvent(new Event('input', {{bubbles: true}}));
+        field.dispatchEvent(new Event('change', {{bubbles: true}}));
+      }};
+      const fill = () => {{
+        const user = find(userSelector);
+        const passwordField = find(passwordSelector);
+        setValue(user, username);
+        setValue(passwordField, password);
+        if (++ticks < 800) setTimeout(fill, 150);
       }};
       fill();
     }})();
@@ -136,30 +167,41 @@ def return_button_script(local_url: str) -> str:
       if (location.origin === new URL(local).origin) return;
       if (!/^https?:$/.test(location.protocol)) return;
       const href = local + '/campaigns';
-      const top = document.getElementById('desktop-slot');
-      if (top) {{
-        const link = document.createElement('a');
-        link.className = 'desktop-home';
-        link.href = href;
-        link.textContent = '\\u2190 Main menu';
-        link.title = 'Return to the Cygnus Loom main menu';
-        top.replaceChildren(link);
-        top.hidden = false;
-      }}
-      const side = document.getElementById('desktop-slot-sidebar');
-      if (side) {{
-        const link = document.createElement('a');
-        link.className = 'sidebar-item';
-        link.href = href;
-        link.title = 'Main menu';
-        link.setAttribute('aria-label', 'Main menu');
-        link.innerHTML =
-          '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none"' +
-          ' stroke="currentColor" stroke-width="1.8" stroke-linecap="round"' +
-          ' stroke-linejoin="round"><path d="M4 11 12 4l8 7"/>' +
-          '<path d="M6 10v9h12v-9"/></svg>';
-        side.replaceChildren(link);
-        side.hidden = false;
+      const fill = (attempt = 0) => {{
+        const top = document.getElementById('desktop-slot');
+        const side = document.getElementById('desktop-slot-sidebar');
+        if (!top && !side && attempt < 20) {{
+          setTimeout(() => fill(attempt + 1), 100);
+          return;
+        }}
+        if (top) {{
+          const link = document.createElement('a');
+          link.className = 'desktop-home';
+          link.href = href;
+          link.textContent = '\\u2190 Main menu';
+          link.title = 'Return to the Cygnus Loom main menu';
+          top.replaceChildren(link);
+          top.hidden = false;
+        }}
+        if (side) {{
+          const link = document.createElement('a');
+          link.className = 'sidebar-item';
+          link.href = href;
+          link.title = 'Main menu';
+          link.setAttribute('aria-label', 'Main menu');
+          link.innerHTML =
+            '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none"' +
+            ' stroke="currentColor" stroke-width="1.8" stroke-linecap="round"' +
+            ' stroke-linejoin="round"><path d="M4 11 12 4l8 7"/>' +
+            '<path d="M6 10v9h12v-9"/></svg>';
+          side.replaceChildren(link);
+          side.hidden = false;
+        }}
+      }};
+      if (document.readyState === 'loading') {{
+        document.addEventListener('DOMContentLoaded', fill, {{ once: true }});
+      }} else {{
+        fill();
       }}
     }})();
     """
@@ -359,7 +401,7 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
             self._install_script(
                 "cygnus-return",
                 return_button_script(url),
-                QWebEngineScript.InjectionPoint.DocumentReady,
+                QWebEngineScript.InjectionPoint.DocumentCreation,
             )
             self.network = QNetworkAccessManager(self)
             self.view.loadFinished.connect(self._page_loaded)
@@ -524,12 +566,14 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
                 self.invite_origin = ""
                 self.fill_saved = True
                 return
+            self.page.runJavaScript(return_button_script(url))
             if self.invite_pending and page_origin != self.invite_origin:
                 self._probe_invite(page_origin)
             server = self._server_at(page_origin)
             if server is not None:
                 self.current_server_id = server.id
-                self.pending_login_id = ""
+                if not self._is_login_path(self.view.url().toString()):
+                    self.pending_login_id = ""
                 self.fill_saved = True
                 return
             login_server = self._login_server()
@@ -555,6 +599,12 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
                 return servers.get(self.pending_login_id)
             except ServerError:
                 return None
+
+        @staticmethod
+        def _is_login_path(page_url: str) -> bool:
+            return urlsplit(page_url).path.startswith(
+                ("/login", "/auth/login", "/auth/callback")
+            )
 
         def _fill_login(self, server) -> None:
             if not self.fill_saved:

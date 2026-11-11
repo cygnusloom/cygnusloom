@@ -241,6 +241,10 @@ def test_the_prefill_script_only_fills_fields():
     assert json.dumps("pa\\ss") in script
     assert "submit" not in script
     assert "passwordSelector" in script
+    assert "shadowRoot" in script
+    assert "ak-flow-executor" in script
+    assert "uidField" in script
+    assert "setTimeout(fill" in script
 
 
 def test_the_return_script_fills_both_prepared_slots():
@@ -251,6 +255,8 @@ def test_the_return_script_fills_both_prepared_slots():
     assert 'const local = "http://127.0.0.1:8123"' in script
     assert "local + '/campaigns'" in script
     assert "Main menu" in script
+    assert "DOMContentLoaded" in script
+    assert "attempt < 20" in script
 
 
 def test_the_desktop_sentinel_is_limited_to_the_local_app():
