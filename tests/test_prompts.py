@@ -80,6 +80,14 @@ def test_ooc_instruction_does_not_restart_the_ooc_step():
     assert "state step already decided" in OOC_INSTRUCTION
 
 
+def test_movement_within_a_local_map_is_recorded_before_the_narration():
+    assert "place_map_token" in STATE_INSTRUCTION
+    assert "onto a free cell beside what they approach" in STATE_INSTRUCTION
+    assert "even when the message also speaks or acts" in STATE_INSTRUCTION
+    told = narrate_instruction(rules_for())
+    assert "only when a place_map_token or place_participant result records the move" in told
+
+
 def test_speech_instruction_without_a_ruleset_cap_adds_the_global_two_sentence_limit():
     text = speech_instruction(None)
     assert "say it, one sentence where you can and two at most, and under 40 words." in text

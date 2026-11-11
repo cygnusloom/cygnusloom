@@ -1123,8 +1123,8 @@ def _local_map_lines(
     lines = [
         (
             f"Local map: {view['map']} at {view['location']}, {view['columns']} by "
-            f"{view['rows']} cells, columns and rows counted from 0 at the top left. "
-            f"{view['description']}"
+            f"{view['rows']} cells, columns and rows counted from 0 at the top left, each cell a "
+            f"few paces across. {view['description']}"
         )
     ]
     if view["background"] is not None:
@@ -1146,8 +1146,11 @@ def _local_map_lines(
             "Place every unplaced character with place_map_token before narrating where they stand."
         )
     lines.append(
-        "Move a character's token with place_map_token whenever the scene moves them, in this "
-        "state step and before the narration; a token left in the old cell contradicts the scene."
+        "Whenever the player's message takes a character toward a person or thing, across the "
+        "room, or to a door, move that character's token with place_map_token in this state step "
+        "and before the narration, onto a free cell beside what they approach; a message that "
+        "also speaks or acts still moves them. A token left in the old cell contradicts the "
+        "narration the player sees."
     )
     return lines
 

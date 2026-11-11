@@ -794,6 +794,7 @@ def place_map_token(
                 f"column {column}, row {row} is taken by {_token_name(other)} on {entry.name}"
             )
     display = character.name if character is not None else name
+    previous = entry.tokens.get(key)
     event = MapTokenPlaced(map=entry.name, name=display, column=column, row=row)
     event.apply(state, record(db, campaign_id, event))
     db.commit()
@@ -803,6 +804,8 @@ def place_map_token(
         "column": column,
         "row": row,
     }
+    if previous is not None and previous != target:
+        result["moved_from"] = {"column": previous[0], "row": previous[1]}
     result.update(_map_space(entry, entry.tokens, encounter_objects or {}))
     return result
 
@@ -1111,6 +1114,8 @@ def place_participant(
         "cost": cost,
         "moves_left": after,
     }
+    if previous is not None and previous != target:
+        result["moved_from"] = {"column": previous[0], "row": previous[1]}
     result.update(_map_space(entry, cells, encounter_objects or {}))
     return result
 

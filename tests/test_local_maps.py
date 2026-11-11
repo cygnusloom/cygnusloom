@@ -106,6 +106,36 @@ def test_a_token_marks_where_an_npc_stands_and_carries_into_the_encounter(
     assert state.encounter.cells[name_key("Pip")] == (3, 4)
 
 
+def test_moving_a_token_reports_the_cell_it_left(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _campaign_id(client_factory)
+    _place_pc(client, campaign_id, TOWN)
+    _create_local_map(client, campaign_id)
+    first = _call(
+        client.app,
+        campaign_id,
+        "place_map_token",
+        {"map": MAP, "name": "Ada", "column": 3, "row": 4},
+    )
+    assert "moved_from" not in first
+    moved = _call(
+        client.app,
+        campaign_id,
+        "place_map_token",
+        {"map": MAP, "name": "Ada", "column": 5, "row": 4},
+    )
+    assert moved["column"] == 5
+    assert moved["moved_from"] == {"column": 3, "row": 4}
+    stayed = _call(
+        client.app,
+        campaign_id,
+        "place_map_token",
+        {"map": MAP, "name": "Ada", "column": 5, "row": 4},
+    )
+    assert "moved_from" not in stayed
+
+
 def test_a_local_map_can_be_named_by_its_place_without_the_suffix(
     client_factory: Callable[[], TestClient],
 ):
@@ -459,10 +489,12 @@ def test_the_gm_orientation_lists_local_map_positions_and_unplaced_characters(
         encounter_objects=rules.encounter_objects,
     )
     assert f"Local map: {MAP} at {TOWN}" in text
+    assert "each cell a few paces across" in text
     assert "- Pip (npc), column 2, row 1." in text
     assert "- Ada (player character), not yet placed." in text
     assert "Place every unplaced character with place_map_token" in text
-    assert "Move a character's token with place_map_token whenever the scene moves them" in text
+    assert "Whenever the player's message takes a character toward a person or thing" in text
+    assert "a message that also speaks or acts still moves them" in text
 
 
 def test_get_statblock_reports_a_local_map_position(

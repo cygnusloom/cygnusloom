@@ -301,6 +301,18 @@ def test_movement_without_marks_is_the_plain_distance(client_factory: Callable[[
     assert moved["moves_left"] == 3
 
 
+def test_moving_a_participant_reports_the_cell_it_left(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _started(client_factory, {"columns": 10, "rows": 10})
+    app = client.app
+    assert "moved_from" not in _move(app, campaign_id, 2, 2)
+    _begin_pip(app, campaign_id)
+    moved = _move(app, campaign_id, 4, 2)
+    assert moved["placed"] == "Pip"
+    assert moved["moved_from"] == {"column": 2, "row": 2}
+
+
 def test_template_marks_survive_a_replay_of_the_event_log(
     client_factory: Callable[[], TestClient],
 ):
