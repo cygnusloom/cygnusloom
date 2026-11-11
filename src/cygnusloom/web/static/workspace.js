@@ -358,6 +358,30 @@
       });
     });
   };
+
+  // The newest GM reply carries an edit button. Its dialog sits outside the transcript, so a
+  // live update cannot replace it while the player is rewriting the reply.
+  const messageEditDialog = document.getElementById("dialog-message-edit");
+  const bindMessageEditButtons = (root) => {
+    if (!messageEditDialog) return;
+    const text = messageEditDialog.querySelector("[data-message-edit-text]");
+    const form = messageEditDialog.querySelector("form");
+    root.querySelectorAll("[data-message-edit-url]").forEach((button) => {
+      on(button, "message-edit", "click", () => {
+        form.action = button.dataset.messageEditUrl;
+        text.value = button.dataset.messageEditContent || "";
+        dialogOpeners.set(messageEditDialog, button);
+        messageEditDialog.showModal();
+        text.focus();
+        text.setSelectionRange(text.value.length, text.value.length);
+      });
+    });
+  };
+  if (messageEditDialog) {
+    messageEditDialog.querySelectorAll("[data-dialog-close]").forEach((button) => {
+      on(button, "message-edit-close", "click", () => messageEditDialog.close());
+    });
+  }
   // Dialogs sit outside the regions a turn replaces, so bind their close handlers only once.
   document.querySelectorAll("dialog").forEach((dialog) => {
     dialog.addEventListener("close", () => dialogOpeners.get(dialog)?.focus());
@@ -436,6 +460,7 @@
     bindFilters(root);
     bindCompendiumSearch(root);
     bindDialogButtons(root);
+    bindMessageEditButtons(root);
     bindTurnContextButtons(root);
     bindComposer(root);
     measureCompendiumToolbars(root);

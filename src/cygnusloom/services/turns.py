@@ -47,6 +47,7 @@ from cygnusloom.services.events import (
     Channel,
     Character,
     ChatGM,
+    ChatGMEdited,
     ChatPlayer,
     ClockAdvanced,
     ContextPart,
@@ -2205,6 +2206,39 @@ def rollback_to(engine: Engine, owner_id: int, campaign_id: int, event_id: int) 
         )
         refund_replies(db, removed)
         truncate(db, campaign_id, event_id)
+        db.commit()
+
+
+def edit_last_reply(
+    engine: Engine, user_id: int, campaign_id: int, event_id: int, text: str
+) -> None:
+    """Replace the text of the campaign's most recent GM reply. The reply's turn, its tool
+    calls, and the rest of the Log stay as they were, and the next turn reads the edited text
+    as history. Only the newest reply may be edited, so a correction cannot rewrite settled
+    story."""
+    _campaigns().get_campaign(engine, user_id, campaign_id)
+    content = text.strip()
+    if not content:
+        raise InvalidInput("the edited reply cannot be empty")
+    if len(content) > MAX_MESSAGE:
+        raise InvalidInput(f"the edited reply must be at most {MAX_MESSAGE} characters")
+    with _campaigns()._exclusive(campaign_id), session_scope(engine) as db:
+        event = db.get(Event, event_id)
+        if event is None or event.campaign_id != campaign_id or event.kind != ChatGM.kind:
+            raise NotFound("message not found")
+        latest = (
+            db.exec(
+                select(Event.id)
+                .where(Event.campaign_id == campaign_id, Event.kind == ChatGM.kind)
+                .order_by(Event.seq.desc())
+                .limit(1)
+            )
+            .scalars()
+            .one_or_none()
+        )
+        if latest != event_id:
+            raise InvalidInput("only the most recent GM reply can be edited")
+        record(db, campaign_id, ChatGMEdited(reply_id=event_id, content=content))
         db.commit()
 
 

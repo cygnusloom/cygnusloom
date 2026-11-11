@@ -1416,6 +1416,23 @@ class ChatGM(GameEvent):
 
 
 @dataclass(frozen=True)
+class ChatGMEdited(GameEvent):
+    """The player rewrote a GM reply in the transcript. Only the reply's text changes: its turn,
+    its tool calls, and the Log stay as they were. Later turns read the edited text as history,
+    and the reply's reasoning is dropped because it explains the text that was replaced."""
+
+    kind: ClassVar[str] = "chat.gm.edited"
+    channel: ClassVar[Channel] = Channel.TRANSCRIPT
+    id_refs: ClassVar[dict[str, tuple[str, ...]]] = {"reply_id": ("chat.gm",)}
+
+    reply_id: int
+    content: str
+
+    def render(self) -> None:
+        return None
+
+
+@dataclass(frozen=True)
 class TurnFailed(GameEvent):
     """A turn step stopped with an error. The turn stays open so it can be continued."""
 

@@ -550,3 +550,27 @@ def test_import_rejects_a_file_over_the_limit(
     assert response.status_code == 303
     page = target_client.get("/campaigns")
     assert "larger than" in page.text
+
+
+def test_a_corrected_reply_survives_export_and_import(
+    tmp_path, settings: Settings, client_factory: Callable[[], TestClient]
+):
+    client, campaign_id = campaign_ready_fast(client_factory)
+    with db(client.app) as session:
+        reply_id = record(session, campaign_id, ChatGM(content="The first telling.", model="test"))
+        session.commit()
+    token = csrf_token(client, f"/campaigns/{campaign_id}")
+    edited = client.post(
+        f"/campaigns/{campaign_id}/messages/{reply_id}/edit",
+        data={"csrf_token": token, "content": "The corrected telling."},
+        follow_redirects=False,
+    )
+    assert edited.status_code == 303
+
+    target_app = _target_app(tmp_path, settings)
+    target_client = _target_client(target_app)
+    new_id = _imported_id(_import(target_client, _export(client, campaign_id).content))
+
+    messages = campaigns_service.list_messages(target_app.state.engine, new_id)
+    assert messages[-1].role == "assistant"
+    assert messages[-1].content == "The corrected telling."

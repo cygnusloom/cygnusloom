@@ -38,6 +38,7 @@ from cygnusloom.services.events import (
     CampaignState,
     Channel,
     ChatGM,
+    ChatGMEdited,
     ChatPlayer,
     ContextPart,
     DebugInjectionCleared,
@@ -907,7 +908,12 @@ def list_messages(engine: Engine, campaign_id: int) -> list[ChatMessage]:
     with session_scope(engine) as db:
         rows = events_since(db, campaign_id, channel=Channel.TRANSCRIPT)
         names, owner_name = _chat_names(db, campaign_id, rows)
-        return [_chat_message(row, names, owner_name) for row in rows]
+        edits = _reply_edits(rows)
+        return [
+            _chat_message(row, names, owner_name, edits)
+            for row in rows
+            if row.kind != ChatGMEdited.kind
+        ]
 
 
 def campaign_transcript(
@@ -924,8 +930,11 @@ def campaign_transcript(
         )
         transcript_rows = events_since(db, campaign_id, channel=Channel.TRANSCRIPT)
         names, owner_name = _chat_names(db, campaign_id, transcript_rows)
+        edits = _reply_edits(transcript_rows)
         items: list[ChatMessage | LogLine] = [
-            _chat_message(row, names, owner_name) for row in transcript_rows
+            _chat_message(row, names, owner_name, edits)
+            for row in transcript_rows
+            if row.kind != ChatGMEdited.kind
         ]
         for row in events_since(db, campaign_id, channel=Channel.LOG):
             event = decode(row)
@@ -952,7 +961,25 @@ def _chat_names(db: Any, campaign_id: int, rows: Sequence[Event]) -> tuple[dict[
     return names, names.get(owner_id or 0, "")
 
 
-def _chat_message(row: Event, names: dict[int, str], owner_name: str) -> ChatMessage:
+def _reply_edits(rows: Sequence[Event]) -> dict[int, str]:
+    """The current text of every edited GM reply, keyed by the reply's event id. The rows are in
+    order, so the newest edit of a reply wins."""
+    edits: dict[int, str] = {}
+    for row in rows:
+        if row.kind != ChatGMEdited.kind:
+            continue
+        event = decode(row)
+        assert isinstance(event, ChatGMEdited)
+        edits[event.reply_id] = event.content
+    return edits
+
+
+def _chat_message(
+    row: Event,
+    names: dict[int, str],
+    owner_name: str,
+    edits: Mapping[int, str],
+) -> ChatMessage:
     event = decode(row)
     if isinstance(event, ChatPlayer):
         player_name = owner_name if event.player_id is None else names.get(event.player_id, "")
@@ -965,12 +992,14 @@ def _chat_message(row: Event, names: dict[int, str], owner_name: str) -> ChatMes
             player_name=player_name,
         )
     if isinstance(event, ChatGM):
+        edited = (row.id or 0) in edits
         return ChatMessage(
             id=row.id or 0,
             role="assistant",
-            content=event.content,
+            content=edits[row.id or 0] if edited else event.content,
             model=event.model,
-            reasoning=event.reasoning,
+            # Stale reasoning explains the original text, so an edited reply drops it.
+            reasoning="" if edited else event.reasoning,
         )
     raise TypeError(f"{row.kind} is not a chat event")
 
@@ -1195,6 +1224,7 @@ from cygnusloom.services.turns import (  # noqa: F401
     begin_encounter_turn,
     campaign_log,
     discard_pending,
+    edit_last_reply,
     end_encounter_turn,
     end_player_turn,
     get_turn_context,

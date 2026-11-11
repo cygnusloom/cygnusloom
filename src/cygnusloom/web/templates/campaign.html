@@ -22,6 +22,18 @@
   </form>
 </dialog>
 {% endif %}
+<dialog id="dialog-message-edit" class="app-dialog message-edit-dialog" aria-labelledby="dialog-message-edit-title">
+  <form method="post" action="/campaigns/{{ campaign.id }}/messages/{{ editable_message_id or 0 }}/edit">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <h2 id="dialog-message-edit-title">Edit the last reply</h2>
+    <p class="muted">This changes the transcript and the story from here on. The turn's tool calls and results stay as they were.</p>
+    <textarea name="content" rows="10" required maxlength="8000" aria-label="The GM's reply" data-message-edit-text></textarea>
+    <div class="dialog-actions">
+      <button type="submit">Save changes</button>
+      <button type="button" class="secondary" data-dialog-close>Cancel</button>
+    </div>
+  </form>
+</dialog>
 {% endblock %}
 {% block scripts %}
   {{ super() }}

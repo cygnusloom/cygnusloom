@@ -219,9 +219,9 @@ label.check input { width: auto; margin: 0; }
 .message .content blockquote { margin-left: 0; padding-left: 0.75rem; border-left: 3px solid var(--border); color: var(--muted); }
 .message-header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
 .message-tools { display: flex; align-items: center; gap: 0.25rem; margin-left: auto; }
-.message-gear, .message-rollback { display: inline-flex; padding: 0.2rem; border: 0; background: transparent; color: var(--muted); cursor: pointer; border-radius: 4px; }
-.message-gear:hover, .message-gear:focus-visible, .message-rollback:hover, .message-rollback:focus-visible { color: var(--text); }
-.message-gear svg, .message-rollback svg { width: 1rem; height: 1rem; }
+.message-gear, .message-rollback, .message-edit { display: inline-flex; padding: 0.2rem; border: 0; background: transparent; color: var(--muted); cursor: pointer; border-radius: 4px; }
+.message-gear:hover, .message-gear:focus-visible, .message-rollback:hover, .message-rollback:focus-visible, .message-edit:hover, .message-edit:focus-visible { color: var(--text); }
+.message-gear svg, .message-rollback svg, .message-edit svg { width: 1rem; height: 1rem; }
 .rollback-form { margin: 0; }
 .log-line { font-size: 0.8rem; color: var(--muted); overflow-wrap: anywhere; }
 .transcript:not(.show-hidden) .hidden-event { display: none; }
@@ -849,6 +849,8 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 .app-dialog form { display: flex; flex-direction: column; gap: 0.75rem; }
 .app-dialog form > button { align-self: flex-end; }
 .app-dialog .dialog-actions { display: flex; justify-content: flex-end; gap: 0.5rem; }
+.message-edit-dialog { width: min(44rem, calc(100% - 2rem)); }
+.message-edit-dialog textarea { width: 100%; resize: vertical; font-family: ui-monospace, Menlo, monospace; font-size: 0.9rem; }
 dialog.choice-dialog { width: min(42rem, calc(100% - 2rem)); max-height: 85vh; }
 dialog.choice-dialog[open] { display: flex; flex-direction: column; }
 .choice-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr)); gap: 0.5rem; min-height: 0; overflow-y: auto; padding: 0.25rem; }

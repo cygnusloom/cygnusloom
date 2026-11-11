@@ -49,6 +49,7 @@ from cygnusloom.services.campaigns import (
     context_usage,
     create_campaign,
     default_campaign_labels,
+    edit_last_reply,
     end_encounter_turn,
     get_campaign,
     get_owned_campaign,
@@ -1136,6 +1137,27 @@ async def rollback(request: Request, campaign_id: int, event_id: int) -> Respons
     return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
 
 
+@router.post("/{campaign_id}/messages/{event_id}/edit")
+async def edit_message(request: Request, campaign_id: int, event_id: int) -> Response:
+    """Replace the text of the most recent GM reply, leaving its turn and tool calls intact."""
+    user = page_user(request)
+    await verify_csrf(request)
+    form = await request.form()
+    try:
+        edit_last_reply(
+            request.app.state.engine,
+            user.id,
+            campaign_id,
+            event_id,
+            form_text(form, "content"),
+        )
+    except InvalidInput as exc:
+        return _campaign_page(request, user, campaign_id, 400, str(exc))
+    except Conflict as exc:
+        return _campaign_page(request, user, campaign_id, 409, str(exc))
+    return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
+
+
 @router.post("/{campaign_id}/messages")
 async def post_message(request: Request, campaign_id: int) -> Response:
     user = page_user(request)
@@ -1660,6 +1682,8 @@ def _campaign_page(
     )
     player_name = viewer_pc.name if viewer_pc is not None else ""
     acting_name = speaker_name(world.state, user.id) or player_name
+    # Only the newest GM reply may be corrected, so only its message offers an edit control.
+    editable_message_id = next((m.id for m in reversed(messages) if m.role == "assistant"), 0)
     # A running turn is visible to every page, including a second tab of the account that
     # started it. The busy flag is in-process, like the typing hints; a page that misses it
     # still catches the saved reply through the live stream's newest event.
@@ -1727,6 +1751,7 @@ def _campaign_page(
         "item_kind_icons": magic.item_kind_icons if magic is not None else {},
         "is_owner": is_owner,
         "viewer_id": user.id,
+        "editable_message_id": editable_message_id,
         "show_internal_thinking": bool(user.show_internal_thinking),
         "music": music,
         "members": members,
