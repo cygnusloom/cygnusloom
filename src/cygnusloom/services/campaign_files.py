@@ -213,14 +213,26 @@ def import_campaign(
         opaque = major_version != CAMPAIGN_MAJOR_VERSION
         for row, entry in zip(rows, entries, strict=True):
             changed = False
-            if not opaque:
-                for field_name in entry.cls.id_refs:
-                    if field_name in entry.payload:
-                        entry.payload[field_name] = old_to_new[entry.payload[field_name]]
+            # A foreign-major event whose kind still exists gets its known references remapped
+            # too. Its log is not replayed now, but an upgrade later must not inherit ids from
+            # the source database; unknown kinds keep their payload verbatim.
+            event_class = entry.cls or EVENT_TYPES.get(entry.kind)
+            if event_class is not None:
+                for field_name in event_class.id_refs:
+                    if field_name not in entry.payload:
+                        continue
+                    target = entry.payload[field_name]
+                    if type(target) is not int:
+                        continue
+                    if not opaque or target in old_to_new:
+                        entry.payload[field_name] = old_to_new[target]
                         changed = True
                 # Account ids do not travel between servers. Every character and message in an
                 # imported campaign belongs to the account importing it, which can share it again.
-                if entry.kind in ("pc.added", "hireling.promoted", "turn.opening", "chat.player"):
+                if (
+                    entry.kind in ("pc.added", "hireling.promoted", "turn.opening", "chat.player")
+                    and entry.payload.get("player_id") != owner_id
+                ):
                     entry.payload["player_id"] = owner_id
                     changed = True
             if changed:

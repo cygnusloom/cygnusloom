@@ -13,7 +13,7 @@ from cygnusloom import CAMPAIGN_MAJOR_VERSION
 from cygnusloom.config import Settings
 from cygnusloom.db.models import Campaign, Event
 from cygnusloom.llm.fake import FakeProvider
-from cygnusloom.services.events import is_hidden
+from cygnusloom.services.events import NoteAdded, NoteUpdated, is_hidden, record
 from tests.conftest import csrf_token, make_app
 from tests.factories import campaign_ready_fast, db, signed_in_client
 
@@ -114,6 +114,22 @@ def _old_document(
     return document
 
 
+def _add_note_pair(client: TestClient, campaign_id: int) -> None:
+    with db(client.app) as session:
+        note_id = record(
+            session,
+            campaign_id,
+            NoteAdded(text="A key under the stone.", subject="The mill"),
+        )
+        session.commit()
+        record(
+            session,
+            campaign_id,
+            NoteUpdated(note_id=note_id, text="A brass key under the stone."),
+        )
+        session.commit()
+
+
 def _convert(client: TestClient, campaign_id: int):
     return client.post(
         f"/campaigns/{campaign_id}/convert",
@@ -173,6 +189,35 @@ def test_a_3x_campaign_converts_in_place_and_keeps_its_log(
     assert payload["to_major"] == CAMPAIGN_MAJOR_VERSION
     assert payload["from_version"] == "3.6.0"
     assert "Out of character" in page.text
+
+
+def test_an_upgraded_campaign_round_trips_through_export(
+    tmp_path, settings: Settings, client_factory
+):
+    client, campaign_id = campaign_ready_fast(client_factory)
+    _add_note_pair(client, campaign_id)
+    document = _old_document(client, campaign_id)
+
+    target = _target_client(_target_app(tmp_path, settings))
+    new_id = _import(target, json.dumps(document).encode())
+    assert _convert(target, new_id).status_code == 303
+
+    exported = target.get(f"/campaigns/{new_id}/export")
+    assert exported.status_code == 200, exported.text
+    imported = target.post(
+        "/campaigns/import",
+        data={"csrf_token": csrf_token(target, "/campaigns")},
+        files={"file": ("campaign.json", exported.content, "application/json")},
+        follow_redirects=False,
+    )
+    assert imported.status_code == 303
+    assert imported.headers["location"] != "/campaigns", imported.text
+    copy_id = int(imported.headers["location"].rsplit("/", 1)[-1])
+    page = target.get(f"/campaigns/{copy_id}")
+    assert page.status_code == 200, page.text
+    with db(target.app) as session:
+        copy = session.get(Campaign, copy_id)
+        assert copy is not None and copy.major_version == CAMPAIGN_MAJOR_VERSION
 
 
 def test_an_unknown_event_kind_leaves_the_campaign_untouched(

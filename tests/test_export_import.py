@@ -315,6 +315,7 @@ def test_an_old_major_export_stores_its_events_opaque(
 ):
     """A removed event kind from another major is kept verbatim, but the log is not replayed."""
     client, campaign_id = campaign_ready_fast(client_factory)
+    _add_referenced_events(client.app, campaign_id)
     document = _export(client, campaign_id).json()
     document["campaign"]["major_version"] = 3
     last = document["events"][-1]
@@ -338,6 +339,14 @@ def test_an_old_major_export_stores_its_events_opaque(
         assert campaign is not None and campaign.major_version == 3
         kinds = list(session.exec(select(Event.kind).where(Event.campaign_id == new_id)).all())
     assert "campaign.upgraded" in kinds
+    # A foreign-major import still remaps references between known event kinds, so a later
+    # upgrade does not inherit ids from the source database.
+    grouped = _by_kind(target_app, new_id)
+    note_added = next(
+        row for row in grouped["note.added"] if "A key under the stone." in row.payload
+    )
+    note_updated = grouped["note.updated"][0]
+    assert json.loads(note_updated.payload)["note_id"] == note_added.id
 
 
 def test_import_remaps_event_id_references(
