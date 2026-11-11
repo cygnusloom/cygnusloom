@@ -53,6 +53,11 @@ def test_prompt_detail_modes_default_to_brief_tools_and_rules():
     assert settings.rule_info_mode == "brief"
 
 
+def test_music_is_enabled_by_default_and_can_be_disabled():
+    assert load_settings(BASE).disable_music is False
+    assert load_settings({**BASE, "CYGNUSLOOM_DISABLE_MUSIC": "1"}).disable_music is True
+
+
 @pytest.mark.parametrize("value", ["full", "compact", "summary", "brief"])
 def test_tool_schema_mode_accepts_each_supported_value(value: str):
     assert (

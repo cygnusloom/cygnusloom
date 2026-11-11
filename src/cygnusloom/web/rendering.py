@@ -89,6 +89,7 @@ def render(request: Request, name: str, status_code: int = 200, **context: Any) 
         "oidc_account_url": settings.oidc_account_url
         or account_management_url(settings.oidc_issuer),
         "single_player": settings.single_player,
+        "music_default_enabled": not settings.disable_music,
         "data_dir": settings.data_dir,
         "app_version": __version__,
         "website_url": WEBSITE_URL,
@@ -107,6 +108,7 @@ def render_fragment(request: Request, name: str, **context: Any) -> Response:
     values = {
         "csrf_token": get_csrf(request),
         "single_player": request.app.state.settings.single_player,
+        "music_default_enabled": not request.app.state.settings.disable_music,
         **context,
     }
     return templates.TemplateResponse(

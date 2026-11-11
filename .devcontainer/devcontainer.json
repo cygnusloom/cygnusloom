@@ -8,7 +8,9 @@
   "image": "ghcr.io/bare-devcontainer/uv:trixie",
   "remoteUser": "dev",
   "containerEnv": {
-    "CYGNUSLOOM_LLM_OLLAMA_BASE_URL": "http://host.docker.internal:11434/v1"
+    "CYGNUSLOOM_LLM_OLLAMA_BASE_URL": "http://host.docker.internal:11434/v1",
+    // AI agents drive the app in the browser here; keep background music out of their tests.
+    "CYGNUSLOOM_DISABLE_MUSIC": "1"
   },
   "forwardPorts": [
     8000

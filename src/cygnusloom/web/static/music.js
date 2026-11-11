@@ -49,7 +49,8 @@
     }
   };
 
-  let userEnabled = readBool(ENABLED_KEY, true);
+  // An automated test server mutes music for a fresh profile; an explicit player choice wins.
+  let userEnabled = readBool(ENABLED_KEY, root.dataset.musicDefaultEnabled !== "0");
   let volume = readNumber(VOLUME_KEY, DEFAULT_VOLUME);
   let mood = root.dataset.musicMood || "silence";
   let intensity = Number(root.dataset.musicIntensity || 1);

@@ -56,6 +56,8 @@ class Settings:
     auto_create_schema: bool = True
     test_login_admin: bool = False
     single_player: bool = False
+    # Development and test servers mute background music for a fresh browser profile.
+    disable_music: bool = False
     data_dir: str = ""
 
 
@@ -197,5 +199,6 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         auto_create_schema=_bool(auto_create),
         test_login_admin=test_login_admin,
         single_player=single_player,
+        disable_music=_bool(env.get("CYGNUSLOOM_DISABLE_MUSIC")),
         data_dir=env.get("CYGNUSLOOM_DATA_DIR", "").strip(),
     )

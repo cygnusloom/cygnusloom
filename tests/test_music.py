@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable
+from dataclasses import replace
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -234,9 +235,21 @@ def test_the_page_has_player_controls_and_the_license_page_has_music_credits(
     assert "data-music-volume" in page
     assert "data-music-ticker" in page
     assert "data-music-menu-toggle" in page
+    assert 'data-music-default-enabled="1"' in page
     assert 'id="settings-music-title"' in page
     assert "Play background music" in page
 
     license_page = client.get("/license").text
     assert "Music" in license_page
     assert "Scott Buckley" in license_page
+
+
+def test_a_test_server_can_mute_music_by_default(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    client, campaign_id = campaign_ready_fast(client_factory)
+    app.state.settings = replace(app.state.settings, disable_music=True)
+
+    page = client.get(f"/campaigns/{campaign_id}").text
+
+    assert 'data-music-default-enabled="0"' in page
