@@ -11,9 +11,11 @@ a Cygnus Loom server before adding it to the list.
 from __future__ import annotations
 
 import hashlib
+import http.client
 import json
 import re
 import secrets
+import ssl
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -135,33 +137,66 @@ def _no_store(response: Response) -> Response:
     return response
 
 
-def probe_server(url: str) -> ServerInfo:
-    """Ask a server for ``/desktop/info``. Only that endpoint, with no cookies or credentials."""
-    endpoint = f"{url}/desktop/info"
+def _http_probe(endpoint: str) -> tuple[int, bytes]:
+    """Read the server information over plain HTTP, without building an SSL context."""
+    parsed = urlsplit(endpoint)
+    if parsed.scheme != "http" or not parsed.hostname:
+        raise ServerCheckError("That server address is not a valid HTTP address.")
+    path = parsed.path or "/"
+    if parsed.query:
+        path += f"?{parsed.query}"
+    connection = http.client.HTTPConnection(parsed.hostname, parsed.port or 80, timeout=10.0)
     try:
-        with httpx.stream(
+        connection.request(
             "GET",
-            endpoint,
-            timeout=10.0,
-            follow_redirects=False,
+            path,
             headers={
                 "Accept": "application/json",
                 "User-Agent": f"CygnusLoom/{__version__}",
             },
-        ) as response:
-            if response.status_code != 200:
-                raise ServerCheckError(
-                    f"{url} did not answer as a Cygnus Loom server (HTTP {response.status_code})."
-                )
-            body = bytearray()
-            for chunk in response.iter_bytes():
-                body.extend(chunk)
-                if len(body) > MAX_INFO_BYTES:
-                    raise ServerCheckError(f"{url} answered with too much server information.")
-    except httpx.HTTPError as exc:
+        )
+        response = connection.getresponse()
+        return response.status, response.read(MAX_INFO_BYTES + 1)
+    finally:
+        connection.close()
+
+
+def probe_server(url: str) -> ServerInfo:
+    """Ask a server for ``/desktop/info``. Only that endpoint, with no cookies or credentials."""
+    endpoint = f"{url}/desktop/info"
+    try:
+        if urlsplit(endpoint).scheme == "http":
+            status, body = _http_probe(endpoint)
+        else:
+            with httpx.stream(
+                "GET",
+                endpoint,
+                timeout=10.0,
+                follow_redirects=False,
+                headers={
+                    "Accept": "application/json",
+                    "User-Agent": f"CygnusLoom/{__version__}",
+                },
+            ) as response:
+                status = response.status_code
+                body = bytearray()
+                for chunk in response.iter_bytes():
+                    body.extend(chunk)
+                    if len(body) > MAX_INFO_BYTES:
+                        raise ServerCheckError(f"{url} answered with too much server information.")
+    except ssl.SSLError as exc:
+        raise ServerCheckError(
+            f"Could not establish a secure connection to {url}. "
+            "Check this computer's SSL configuration and the server's certificate."
+        ) from exc
+    except (httpx.HTTPError, http.client.HTTPException, OSError, ValueError) as exc:
         raise ServerCheckError(
             f"Could not reach {url}. Check the address and that the server is running."
         ) from exc
+    if status != 200:
+        raise ServerCheckError(f"{url} did not answer as a Cygnus Loom server (HTTP {status}).")
+    if len(body) > MAX_INFO_BYTES:
+        raise ServerCheckError(f"{url} answered with too much server information.")
     try:
         payload = json.loads(body)
     except ValueError as exc:

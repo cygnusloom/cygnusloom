@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import http.server
 import json
 import os
+import ssl
 import threading
 import urllib.error
 import urllib.request
@@ -266,6 +268,24 @@ def test_the_desktop_sentinel_is_limited_to_the_local_app():
     assert "__cygnusDesktop" in script
 
 
+def test_clicked_links_stay_in_the_app_during_an_invite():
+    assert not desktop.should_hand_to_browser(
+        "https", "https://table.example.com", set(), invite_pending=True
+    )
+    assert desktop.should_hand_to_browser(
+        "https", "https://table.example.com", set(), invite_pending=False
+    )
+    assert not desktop.should_hand_to_browser(
+        "https",
+        "https://table.example.com",
+        {"https://table.example.com"},
+        invite_pending=False,
+    )
+    assert desktop.should_hand_to_browser(
+        "mailto", "mailto:ada@example.com", set(), invite_pending=True
+    )
+
+
 def test_desktop_actions_are_parsed_and_validated():
     assert desktop.parse_desktop_action({"action": "connect", "server": "abc"}) == (
         "connect",
@@ -411,6 +431,59 @@ def test_adding_a_remote_http_server_is_rejected_before_it_is_probed(tmp_path):
 
     assert "Use https://" in response.text
     assert not (tmp_path / "servers.json").exists()
+
+
+class InfoHandler(http.server.BaseHTTPRequestHandler):
+    """A minimal Cygnus Loom /desktop/info endpoint for probe tests."""
+
+    def do_GET(self) -> None:
+        body = json.dumps(
+            {
+                "app": "cygnusloom",
+                "version": "4.3.1",
+                "oidc_issuer": "https://idp.example.com",
+            }
+        ).encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, *args) -> None:
+        pass
+
+
+def test_probe_server_uses_plain_http_without_an_ssl_context(monkeypatch):
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), InfoHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    monkeypatch.setattr(
+        desktop_web.httpx,
+        "stream",
+        lambda *args, **kwargs: pytest.fail("HTTP probing must not use httpx"),
+    )
+    try:
+        info = desktop_web.probe_server(f"http://127.0.0.1:{server.server_address[1]}")
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)
+
+    assert info.version == "4.3.1"
+    assert info.oidc_issuer == "https://idp.example.com"
+
+
+def test_probe_server_reports_an_ssl_configuration_failure(monkeypatch):
+    def fail(*args, **kwargs):
+        raise ssl.SSLError("unknown error")
+
+    monkeypatch.setattr(desktop_web.httpx, "stream", fail)
+
+    with pytest.raises(desktop_web.ServerCheckError) as error:
+        desktop_web.probe_server("https://table.example.com")
+
+    assert "secure connection" in str(error.value)
 
 
 def test_saving_a_login_stores_it_in_the_keyring(tmp_path, monkeypatch):

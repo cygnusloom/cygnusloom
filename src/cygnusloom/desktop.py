@@ -238,6 +238,21 @@ def parse_desktop_action(payload: object) -> tuple[str, str, bool] | None:
     return None
 
 
+def should_hand_to_browser(
+    scheme: str, target: str, allowed: set[str], *, invite_pending: bool
+) -> bool:
+    """Whether a clicked link leaves the app.
+
+    An invitation finishes on a server that is not in the list yet, so its main-frame links stay
+    in the window until the server has been added.
+    """
+    if scheme not in ("http", "https"):
+        return True
+    if target in allowed:
+        return False
+    return not invite_pending
+
+
 class LoopbackReceiver:
     """One local callback request from the host browser.
 
@@ -343,6 +358,7 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
         """Keep app pages in the window and send other sites to the system browser."""
 
         desktop_handler = None
+        invite_navigation = None
 
         def __init__(self, profile, parent, allowed):
             super().__init__(profile, parent)
@@ -350,9 +366,17 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
 
         def acceptNavigationRequest(self, navigation_url, nav_type, is_main_frame):
             if nav_type == QWebEnginePage.NavigationType.NavigationTypeLinkClicked:
-                scheme = navigation_url.scheme()
-                target = origin_of(navigation_url.toString())
-                if scheme not in ("http", "https") or target not in self._allowed():
+                invite = bool(
+                    is_main_frame
+                    and self.invite_navigation is not None
+                    and self.invite_navigation()
+                )
+                if should_hand_to_browser(
+                    navigation_url.scheme(),
+                    origin_of(navigation_url.toString()),
+                    self._allowed(),
+                    invite_pending=invite,
+                ):
                     QDesktopServices.openUrl(navigation_url)
                     return False
             return super().acceptNavigationRequest(navigation_url, nav_type, is_main_frame)
@@ -389,6 +413,7 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
             self.view = QWebEngineView(self)
             self.page = LocalPage(profile, self.view, self.allowed_origins)
             self.page.desktop_handler = self._desktop_action
+            self.page.invite_navigation = lambda: self.invite_pending
             self.view.setPage(self.page)
             self.setCentralWidget(self.view)
             self.view.settings().setAttribute(
@@ -619,9 +644,7 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
 
         @staticmethod
         def _is_login_path(page_url: str) -> bool:
-            return urlsplit(page_url).path.startswith(
-                ("/login", "/auth/login", "/auth/callback")
-            )
+            return urlsplit(page_url).path.startswith(("/login", "/auth/login", "/auth/callback"))
 
         def _fill_login(self, server) -> None:
             if not self.fill_saved:
