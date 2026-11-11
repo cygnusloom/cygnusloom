@@ -182,7 +182,7 @@ def test_the_advancement_page_lists_every_character_waiting(client_factory):
     page = client.get(f"/campaigns/{campaign_id}/advancement")
 
     assert page.status_code == 200
-    assert "Waiting:" in page.text
+    assert "Advancement waiting for:" in page.text
     assert NAME in page.text
     assert HIRELING in page.text
 
@@ -206,6 +206,35 @@ def test_the_advancement_page_can_submit_for_a_hireling(client_factory):
 
     assert response.status_code == 303
     assert _character(app, campaign_id, HIRELING).counters["level"] == 2
+
+
+def test_the_level_up_redirect_explains_the_hirelings_waiting_level(client_factory):
+    _app, campaign_id, tools = _hireling_campaign(client_factory)
+    tools.hire_hireling(HIRELING, NAME, WAGE, "A steady hand.", character=CHOICES)
+    wwn.gain_xp(NAME, 3, "a session", _ctx(tools))
+    client = _signed_in(client_factory)
+    url = f"/campaigns/{campaign_id}/advancement"
+    token = csrf_token(client, url)
+
+    response = client.post(
+        f"/campaigns/{campaign_id}/advancement",
+        data={
+            "csrf_token": token,
+            # Spend the whole level's pools in one go, so the hireling's catch-up level is the
+            # next page the player sees.
+            "skill-skills-sneak": "1",
+            "pick-focus-0": "focus_authority",
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303, response.text
+    assert response.headers["location"] == url
+    page = client.get(url)
+    assert f"{NAME} reached level 2." in page.text
+    assert f"Next: {HIRELING} has a hireling level-up waiting." in page.text
+    assert f"Level Up: {HIRELING}" in page.text
+    assert "Hireling" in page.text
 
 
 def test_a_legacy_hireling_without_a_class_is_not_queued_for_a_level(client_factory):

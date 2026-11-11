@@ -67,6 +67,10 @@ class AdvancementPage:
     options: tuple[Mapping[str, Any], ...] = ()
     # The Advancement rules whose counter is available.
     advancement: Any = None
+    # The character's level now, so the page can say which level its picks belong to.
+    level: int = 0
+    # Whether the page advances a hireling rather than the player character.
+    hireling: bool = False
     # Why the page is blocked, if it is.
     blocked: str = ""
 
@@ -197,15 +201,19 @@ def page_view(
                 summary=summary,
                 grants=grants,
                 picks=picks,
+                level=_new_level(pc, rule_set, summary),
+                hireling=pc.hireling,
             )
         picks = pick_views(pc, rule_set, level_rules, None, {}, ctx)
         if picks:
             return AdvancementPage(
                 kind=PICKS,
                 character=pc.name,
-                label="Spend advancement picks",
+                label="Spend picks",
                 level_up=level_rules,
                 picks=picks,
+                level=_new_level(pc, rule_set, None),
+                hireling=pc.hireling,
             )
     for advancement in rule_set.advancements.values():
         counter = rule_set.counters[advancement.counter]
@@ -216,6 +224,8 @@ def page_view(
                 label=advancement.label,
                 advancement=advancement,
                 options=option_views(pc, rule_set, advancement),
+                level=_new_level(pc, rule_set, None),
+                hireling=pc.hireling,
             )
     return None
 
@@ -384,9 +394,7 @@ def option_views(
                 "description": feature.description,
                 "rank": str(feature.rank),
                 "repeatable": "true" if feature.repeatable else "",
-                "picks": [
-                    dict(choice) for choice in feature_choice_views(spec, feature)
-                ]
+                "picks": [dict(choice) for choice in feature_choice_views(spec, feature)]
                 if feature.picks
                 else [],
             }
@@ -431,8 +439,9 @@ def apply_page(
     world: WorldContent,
     form: Mapping[str, Any],
     pc_name: str | None = None,
-) -> None:
-    """Apply the player's level-up or training choices after validating every one."""
+) -> AdvancementPage:
+    """Apply the player's level-up or training choices after validating every one, and return
+    the page that was applied so the caller can say what just happened."""
     view = page_view(engine, campaign_id, rule_set, world, pc_name)
     if view is None:
         raise InvalidInput("there is no advancement to take")
@@ -445,6 +454,7 @@ def apply_page(
         _apply_option(view, ctx, form)
     else:
         raise InvalidInput("there is no advancement to take")
+    return view
 
 
 def _apply_level(
@@ -545,11 +555,7 @@ def _plan_picks(
             spec = rule_set.character
             for choice in choices:
                 held = spec.features.get(choice)
-                if (
-                    held is not None
-                    and choice in pc.features
-                    and not held.repeatable
-                ):
+                if held is not None and choice in pc.features and not held.repeatable:
                     raise InvalidInput(f"{pc.name} already has {held.name}")
                 if choice not in options:
                     raise InvalidInput(f"{choice!r} is not an available {pick.label.lower()}")
@@ -681,9 +687,7 @@ def _feature_choices(pick: LevelUpPick, form: Mapping[str, Any]) -> list[str]:
     return choices
 
 
-def _submitted_feature_choices(
-    feature: Any, pick: Any, form: Mapping[str, Any]
-) -> list[str]:
+def _submitted_feature_choices(feature: Any, pick: Any, form: Mapping[str, Any]) -> list[str]:
     """The choices the form sent for one feature pick."""
     return [
         str(value)
@@ -693,9 +697,7 @@ def _submitted_feature_choices(
     ]
 
 
-def _check_feature_choices(
-    spec: Any, feature_id: str, form: Mapping[str, Any]
-) -> None:
+def _check_feature_choices(spec: Any, feature_id: str, form: Mapping[str, Any]) -> None:
     """Validate a learned feature's structured choices before any change is recorded."""
     feature = spec.features.get(feature_id)
     if feature is None:

@@ -80,6 +80,64 @@ def _submit(
     )
 
 
+def test_the_level_up_page_says_unspent_picks_are_banked(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    app, campaign_id = _wwn_campaign(client_factory, class_id="warrior")
+    client = _signed_in(client_factory)
+    ctx = _ctx(_world_tools(app, campaign_id))
+    wwn.gain_xp(NAME, 3, "a session", ctx)
+
+    page = _page(client, campaign_id)
+
+    assert "stay banked" in page
+    assert "Spend picks" in page
+    assert 'data-busy-label="Applying level 2…"' in page
+
+
+def test_a_level_up_explains_the_leftover_picks_page_it_redirects_to(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    app, campaign_id = _wwn_campaign(client_factory, class_id="warrior")
+    client = _signed_in(client_factory)
+    ctx = _ctx(_world_tools(app, campaign_id))
+    wwn.gain_xp(NAME, 3, "a session", ctx)
+
+    response = _submit(client, campaign_id, {"skill-skills-sneak": "0"})
+
+    assert response.status_code == 303
+    # The remaining skill points belong to the same character, so the next page stays on them.
+    assert response.headers["location"] == f"/campaigns/{campaign_id}/advancement?character={NAME}"
+    page = _page(client, campaign_id)
+    assert f"{NAME} reached level 2." in page
+    assert "Spend the remaining picks, or save them for later." in page
+    assert f"Spend picks: {NAME}" in page
+    assert "saved instead of spending" in page
+    assert "Level 2" in page
+    assert 'data-busy-label="Spending picks…"' in page
+
+
+def test_a_second_ready_level_is_explained_instead_of_silently_shown(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    app, campaign_id = _wwn_campaign(client_factory, class_id="warrior")
+    client = _signed_in(client_factory)
+    ctx = _ctx(_world_tools(app, campaign_id))
+    # The fast track needs 3 experience for level 2 and 6 for level 3, so one award readies
+    # both levels; the page takes them one at a time.
+    wwn.gain_xp(NAME, 6, "two sessions", ctx)
+
+    response = _submit(client, campaign_id, {})
+
+    assert response.status_code == 303
+    assert response.headers["location"] == f"/campaigns/{campaign_id}/advancement?character={NAME}"
+    page = _page(client, campaign_id)
+    assert f"{NAME} reached level 2." in page
+    assert "Another level is ready." in page
+    assert f"Level Up: {NAME}" in page
+    assert "Level 3" in page
+
+
 def test_a_ready_level_shows_its_automatic_gains_and_picks(
     client_factory: Callable[[], TestClient],
 ) -> None:
@@ -431,9 +489,7 @@ def test_the_debug_panel_teaches_a_feature_to_an_npc(
     client = _signed_in(client_factory)
     tools = _world_tools(app, campaign_id)
     tools.create_location("Yard", "A muddy yard.", discovered=True)
-    tools.create_npc(
-        "Foe", "Yard", "A lucky rival.", character={"stats": BASE_STATS}, force=True
-    )
+    tools.create_npc("Foe", "Yard", "A lucky rival.", character={"stats": BASE_STATS}, force=True)
     token = csrf_token(client, f"/campaigns/{campaign_id}")
 
     response = client.post(

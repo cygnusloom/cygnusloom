@@ -8,6 +8,7 @@ from collections.abc import AsyncIterator, Sequence
 from dataclasses import dataclass
 from types import ModuleType
 from typing import Any
+from urllib.parse import quote
 
 from fastapi import APIRouter, Request
 from fastapi.responses import (
@@ -547,7 +548,7 @@ async def submit_advancement(request: Request, campaign_id: int) -> Response:
         target.name if target is not None else (viewer_pc.name if viewer_pc is not None else None)
     )
     try:
-        level_up_service.apply_page(
+        applied = level_up_service.apply_page(
             engine, campaign.id, rule_set, world, dict(form), character_name
         )
     except InvalidInput as exc:
@@ -563,9 +564,48 @@ async def submit_advancement(request: Request, campaign_id: int) -> Response:
         remaining = level_up_service.pages_for_player(engine, campaign.id, rule_set, world, user.id)
     except InvalidInput:
         remaining = []
+    _flash(request, _advancement_done_message(applied, remaining))
     if remaining:
+        next_page = remaining[0]
+        if name_key(next_page.character) == name_key(applied.character):
+            # Keep the player on the same character's next step, such as banked picks or a
+            # second level, instead of jumping to another character's page.
+            return RedirectResponse(
+                f"/campaigns/{campaign_id}/advancement?character={quote(next_page.character)}",
+                status_code=303,
+            )
         return RedirectResponse(f"/campaigns/{campaign_id}/advancement", status_code=303)
     return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
+
+
+def _advancement_done_message(
+    applied: level_up_service.AdvancementPage,
+    remaining: Sequence[level_up_service.AdvancementPage],
+) -> str:
+    """Say what the submission did, and what is still waiting, so a redirect to another
+    advancement page never arrives without an explanation."""
+    if applied.kind == level_up_service.LEVEL and applied.summary:
+        message = f"{applied.character} reached level {applied.summary.get('new_level', '?')}."
+    elif applied.kind == level_up_service.OPTION:
+        message = f"{applied.character} took the {applied.label}."
+    else:
+        message = f"Saved {applied.character}'s picks."
+    if not remaining:
+        return message
+    next_page = remaining[0]
+    if name_key(next_page.character) == name_key(applied.character):
+        if next_page.kind == level_up_service.LEVEL:
+            return f"{message} Another level is ready."
+        if next_page.kind == level_up_service.OPTION:
+            return f"{message} Another {next_page.label} is ready."
+        return f"{message} Spend the remaining picks, or save them for later."
+    if next_page.kind == level_up_service.LEVEL:
+        waiting = "a hireling level-up" if next_page.hireling else "a level-up"
+    elif next_page.kind == level_up_service.OPTION:
+        waiting = "a hireling advancement" if next_page.hireling else "an advancement"
+    else:
+        waiting = "hireling picks" if next_page.hireling else "picks"
+    return f"{message} Next: {next_page.character} has {waiting} waiting."
 
 
 @router.get("/{campaign_id}/export")
@@ -1554,7 +1594,7 @@ def _advancement_page(
         rule_set=rule_set,
         world=library.world_templates.get(campaign.world_template),
         view=view,
-        pending=tuple(page.character for page in pages),
+        pending=tuple(pages),
     )
 
 
