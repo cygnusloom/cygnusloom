@@ -57,6 +57,37 @@ def test_context_window_must_be_a_positive_whole_number(value: str):
         load_settings({**BASE, "CYGNUSLOOM_LLM_CONTEXT_TOKENS": value})
 
 
+def test_prompt_detail_modes_default_to_brief_tools_and_rules():
+    settings = load_settings(BASE)
+    assert settings.tool_schema_mode == "brief"
+    assert settings.rule_info_mode == "brief"
+
+
+@pytest.mark.parametrize("value", ["full", "compact", "summary", "brief"])
+def test_tool_schema_mode_accepts_each_supported_value(value: str):
+    assert (
+        load_settings({**BASE, "CYGNUSLOOM_TOOL_SCHEMA_MODE": f" {value} "}).tool_schema_mode
+        == value
+    )
+
+
+def test_an_unknown_tool_schema_mode_is_refused():
+    with pytest.raises(RuntimeError, match="CYGNUSLOOM_TOOL_SCHEMA_MODE"):
+        load_settings({**BASE, "CYGNUSLOOM_TOOL_SCHEMA_MODE": "tiny"})
+
+
+@pytest.mark.parametrize("value", ["full", "brief", "index"])
+def test_rule_info_mode_accepts_each_supported_value(value: str):
+    assert (
+        load_settings({**BASE, "CYGNUSLOOM_RULE_INFO_MODE": f" {value} "}).rule_info_mode == value
+    )
+
+
+def test_an_unknown_rule_info_mode_is_refused():
+    with pytest.raises(RuntimeError, match="CYGNUSLOOM_RULE_INFO_MODE"):
+        load_settings({**BASE, "CYGNUSLOOM_RULE_INFO_MODE": "footnotes"})
+
+
 def test_test_login_is_off_by_default():
     assert load_settings(BASE).test_login is False
 

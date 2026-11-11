@@ -98,7 +98,7 @@ from cygnusloom.services.tools import (
     TextAnswer,
     ToolRun,
     run_tool,
-    tool_specs,
+    wire_tool_specs,
 )
 from cygnusloom.services.views import present_rules_text, world_state_text
 
@@ -439,6 +439,10 @@ class _Run:
     # has none, and any player at the table may continue it. Its display name is resolved from
     # the account when the log is folded, so a name change reaches an open turn.
     player_id: int | None = None
+    # How much of each tool schema and rule list reaches the model. The engine keeps the full
+    # authored schema for validation; these modes only change the wire prompt.
+    tool_schema_mode: str = "brief"
+    rule_info_mode: str = "brief"
 
     @property
     def tool_calls(self) -> Mapping[str, ToolCall]:
@@ -586,6 +590,8 @@ def _start_run(
         setting=campaign.setting,
         tracks_inventory=campaign.use_inventory_space,
         player_id=player_id,
+        tool_schema_mode=getattr(settings, "tool_schema_mode", "brief"),
+        rule_info_mode=getattr(settings, "rule_info_mode", "brief"),
     )
 
 
@@ -662,6 +668,7 @@ def _narration_messages(
         _world_text(run, state),
         present_rules_text(state, run.ctx.rules),
         run.setting,
+        rule_info_mode=run.rule_info_mode,
     )
     messages: list[dict[str, Any]] = [
         {"role": "system", "content": "\n\n".join(p.content for p in scene)},
@@ -858,6 +865,8 @@ async def _begin(run: _Run, turn: Turn) -> AsyncIterator[TurnEvent]:
         if watermark < m.id < turn.opener
     ]
     present_text = present_rules_text(state, run.ctx.rules)
+    state_text = state_instruction(run.rule_set, run.world)
+    tool_parts = _campaigns().tool_definition_parts(rule_set, run.tool_schema_mode)
     prompt_tokens = sum(
         p.tokens
         for p in system_parts(
@@ -869,8 +878,11 @@ async def _begin(run: _Run, turn: Turn) -> AsyncIterator[TurnEvent]:
             world_text,
             present_text,
             run.setting,
+            rule_info_mode=run.rule_info_mode,
         )
     )
+    prompt_tokens += estimate_tokens(state_text)
+    prompt_tokens += sum(part.tokens for part in tool_parts)
     prompt_tokens += estimate_tokens(message) + sum(estimate_tokens(m.content) for m in history)
     summary_record: list[ContextPart] = []
     events: list[GameEvent] = []
@@ -915,21 +927,20 @@ async def _begin(run: _Run, turn: Turn) -> AsyncIterator[TurnEvent]:
         world_text,
         present_text,
         run.setting,
+        rule_info_mode=run.rule_info_mode,
     )
     conversation = [
         *(ContextPart(m.role, _campaigns()._message_source(m), m.content) for m in history),
         player,
     ]
-    context = [*system, *_campaigns().tool_definition_parts(rule_set), *conversation]
+    context = [*system, *tool_parts, *conversation]
     messages: list[dict[str, Any]] = [
         {"role": "system", "content": "\n\n".join(p.content for p in system)},
         *(_history_message(m, multiplayer) for m in history),
         {"role": player.role, "content": player.content},
     ]
     round_start = len(context)
-    context.append(
-        ContextPart("system", "State instruction", state_instruction(run.rule_set, run.world))
-    )
+    context.append(ContextPart("system", "State instruction", state_text))
     events.append(
         TurnBegun(
             head=_dicts([*summary_record, player]),
@@ -950,7 +961,7 @@ async def _write_journal(
     introduction is passed as intro, since it is written before the journal step and the player
     reads it. The journal tools record their own events, so the turn's messages and Log are left
     as they are."""
-    journal_tools = tool_specs(run.tool_calls, journal_step=True)
+    journal_tools = wire_tool_specs(run.tool_calls, journal_step=True, mode=run.tool_schema_mode)
     if journal_tools is None:
         return
     yield Status("Updating the journal...")
@@ -1249,11 +1260,13 @@ async def _review_narration(
     the review touched the record. The caller writes the story again when `result` says the
     narration was undone. With `journal`, the same step first brings the journal up to date, so a
     normal turn needs one model call for both instead of a separate journal call."""
-    tools = tool_specs(run.tool_calls, review_step=True)
+    tools = wire_tool_specs(run.tool_calls, review_step=True, mode=run.tool_schema_mode)
     if tools is None:
         result.append(_ReviewResult(undone=False))
         return
-    journal_tools = tool_specs(run.tool_calls, journal_step=True) or []
+    journal_tools = (
+        wire_tool_specs(run.tool_calls, journal_step=True, mode=run.tool_schema_mode) or []
+    )
     journal = journal and bool(journal_tools)
     journal_names: set[str] = set()
     if journal:
@@ -1415,7 +1428,7 @@ async def _review_narration(
 async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
     """Run the reply until it is recorded or paused. Log entries are yielded as the steps that
     recorded them finish. A pause is recorded before the player hears of it."""
-    tools = tool_specs(run.tool_calls)
+    tools = wire_tool_specs(run.tool_calls, mode=run.tool_schema_mode)
     ooc_tools = (
         [spec for spec in tools if spec["function"]["name"] != OOC_TOOL]
         if tools is not None

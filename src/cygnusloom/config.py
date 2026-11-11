@@ -13,6 +13,8 @@ DEFAULT_ADMIN_VALUES = ("cygnusloom-admins",)
 _PREFIX = "CYGNUSLOOM_LLM_"
 _LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR")
 _ENVIRONMENTS = ("development", "production")
+TOOL_SCHEMA_MODES = ("full", "compact", "summary", "brief")
+RULE_INFO_MODES = ("full", "brief", "index")
 DEFAULT_CONTEXT_TOKENS = 32768
 DEFAULT_SESSION_HOURS = 7 * 24
 DEFAULT_STEP_UP_MINUTES = 15
@@ -29,6 +31,13 @@ class Settings:
     provider_api_keys: dict[str, str] = field(default_factory=dict)
     log_level: str = "INFO"
     llm_context_tokens: int = DEFAULT_CONTEXT_TOKENS
+    # How much of a tool schema reaches the provider. `full` is the authored schema;
+    # `compact` drops nested documentation and long choice lists; `brief` also shortens the
+    # top-level description. The engine always validates against the full schema.
+    tool_schema_mode: str = "brief"
+    # How much rule text the system prompt carries. `brief` gives each rule one line; `index`
+    # gives only its id and relies on lookup_rule; `full` inlines every rule.
+    rule_info_mode: str = "brief"
     test_login: bool = False
     debug_panel: bool = False
     environment: str = "development"
@@ -99,6 +108,14 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
     context_tokens = _whole(
         env, "CYGNUSLOOM_LLM_CONTEXT_TOKENS", DEFAULT_CONTEXT_TOKENS, 1, 1_000_000
     )
+    tool_schema_mode = env.get("CYGNUSLOOM_TOOL_SCHEMA_MODE", "brief").strip().lower()
+    if tool_schema_mode not in TOOL_SCHEMA_MODES:
+        raise RuntimeError(
+            "CYGNUSLOOM_TOOL_SCHEMA_MODE must be one of " + ", ".join(TOOL_SCHEMA_MODES)
+        )
+    rule_info_mode = env.get("CYGNUSLOOM_RULE_INFO_MODE", "brief").strip().lower()
+    if rule_info_mode not in RULE_INFO_MODES:
+        raise RuntimeError("CYGNUSLOOM_RULE_INFO_MODE must be one of " + ", ".join(RULE_INFO_MODES))
     environment = env.get("CYGNUSLOOM_ENVIRONMENT", "development").strip().lower()
     if environment not in _ENVIRONMENTS:
         raise RuntimeError(f"CYGNUSLOOM_ENVIRONMENT must be one of {', '.join(_ENVIRONMENTS)}")
@@ -164,6 +181,8 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         provider_api_keys=_per_provider(env, "_API_KEY"),
         log_level=log_level,
         llm_context_tokens=context_tokens,
+        tool_schema_mode=tool_schema_mode,
+        rule_info_mode=rule_info_mode,
         test_login=test_login,
         debug_panel=_bool(env.get("CYGNUSLOOM_DEBUG_PANEL")),
         environment=environment,

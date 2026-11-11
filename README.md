@@ -77,6 +77,16 @@ uv run uvicorn --factory cygnusloom.web.app:app_from_env --reload
 
 Open http://127.0.0.1:8000, use the development login, and create a campaign. These variables seed a fresh database only; the admin panel is authoritative afterwards, so manage existing models under **Admin > Models**. Keep a stable `CYGNUSLOOM_SECRET_KEY` across restarts: it encrypts model API keys.
 
+The GM prompt trades detail for tokens through two optional settings. The defaults keep the
+smallest useful prompt; the fuller modes are available for comparison and debugging:
+
+- `CYGNUSLOOM_TOOL_SCHEMA_MODE=brief` (default), or `compact`, `summary`, `full`. The engine
+always validates against the authored schema; the mode changes only what the model is shown.
+- `CYGNUSLOOM_RULE_INFO_MODE=brief` (default), or `index`, `full`. `index` lists rule ids and
+asks the GM to read the rule with `lookup_rule`; `brief` gives one-line summaries and the
+important rules in full.
+
+
 Run checks with `uv run python scripts/test.py` and `uv run ruff check`. The test runner sizes
 its worker pool from the CPU and memory free at the moment, never takes more than half of
 either (swap excluded), and enforces those ceilings where the operating system allows it. A

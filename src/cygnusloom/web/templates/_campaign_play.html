@@ -167,7 +167,7 @@
                   <span class="muted">{{ credit_balance }} / {{ credit_price }} credits</span>
                 </a>
                 {% else %}
-                <span class="context-meter" aria-label="Context usage" title="Estimated prompt size against the context window. At {{ '{:,}'.format(context.summary_at) }} tokens, older messages are summarized and the newest ones stay verbatim.">
+                <span class="context-meter" aria-label="Context usage" title="Estimated state-step prompt against the context window: {{ '{:,}'.format(context.fixed) }} fixed prompt, {{ '{:,}'.format(context.tools) }} tools, {{ '{:,}'.format(context.messages) }} messages. At {{ '{:,}'.format(context.summary_at) }} tokens, older messages are summarized and the newest ones stay verbatim.">
                   <meter min="0" max="{{ context.limit }}" value="{{ context.used }}" low="{{ context.summary_at }}" high="{{ context.summary_at }}"></meter>
                   <span class="muted">{{ '{:,}'.format(context.used) }} / {{ '{:,}'.format(context.limit) }}</span>
                 </span>

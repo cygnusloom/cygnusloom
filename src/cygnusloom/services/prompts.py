@@ -311,24 +311,43 @@ def system_parts(
     world_text: str = "",
     present_text: str = "",
     setting: str = "",
+    rule_info_mode: str = "brief",
 ) -> list[ContextPart]:
     """The system prompt in sections. Joined with blank lines, they are the system message.
 
-    Every rule is listed with a brief. The important rules are given in full. The others are read
-    with lookup_rule.
+    `rule_info_mode` controls how much rule text the prompt carries. `brief` lists every rule with
+    a one-line summary and gives the important rules in full. `index` lists only rule ids, so the
+    GM reads each rule with lookup_rule. `full` inlines every rule, for an A/B comparison.
     """
+    if rule_info_mode not in ("full", "brief", "index"):
+        raise ValueError(f"unknown rule info mode {rule_info_mode!r}")
     parts = [ContextPart("system", "Base prompt", SYSTEM_PROMPT)]
     if rules:
-        intro = (
-            "Rules for this campaign. The important rules are given in full; "
-            "read any other rule with lookup_rule."
-        )
-        lines = [intro]
-        for rule_id, text in rules.items():
-            if rule_id in important:
-                lines.append(f"- {rule_id}: {text}")
-            else:
-                lines.append(f"- {rule_id}: {brief(text)}")
+        if rule_info_mode == "index":
+            lines = [
+                (
+                    "Rules for this campaign. These are only the rule ids. Read a rule with "
+                    "lookup_rule before relying on its wording, a number, or a procedure."
+                ),
+                *(f"- {rule_id}" for rule_id in rules),
+            ]
+        elif rule_info_mode == "full":
+            lines = [
+                "Rules for this campaign.",
+                *(f"- {rule_id}: {text}" for rule_id, text in rules.items()),
+            ]
+        else:
+            lines = [
+                (
+                    "Rules for this campaign. The important rules are given in full; "
+                    "read any other rule with lookup_rule, and read a rule before relying "
+                    "on its exact wording or a specific number."
+                ),
+                *(
+                    f"- {rule_id}: {text if rule_id in important else brief(text)}"
+                    for rule_id, text in rules.items()
+                ),
+            ]
         parts.append(
             ContextPart(
                 "system",

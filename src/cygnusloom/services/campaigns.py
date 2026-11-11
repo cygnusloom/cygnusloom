@@ -20,6 +20,7 @@ from cygnusloom.content.definitions import ContentError
 from cygnusloom.content.library import (
     ContentLibrary,
     RuleSet,
+    WorldTemplate,
     read_table_genres,
 )
 from cygnusloom.db.models import Campaign, CampaignInvite, CampaignMember, Event, User
@@ -54,11 +55,12 @@ from cygnusloom.services.names import next_campaign_label
 from cygnusloom.services.prompts import (
     NAME_CHECK_PROMPT,
     SUMMARY_HEADING,
+    state_instruction,
     summary_messages,
     system_parts,
 )
 from cygnusloom.services.tools import (
-    tool_specs,
+    wire_tool_specs,
 )
 from cygnusloom.services.views import present_rules_text, world_state_text
 from cygnusloom.services.world import (
@@ -966,14 +968,15 @@ def _chat_message(row: Event, names: dict[int, str], owner_name: str) -> ChatMes
     raise TypeError(f"{row.kind} is not a chat event")
 
 
-def tool_definition_parts(rule_set: RuleSet) -> list[ContextPart]:
-    """Tool definitions are sent beside the messages, so they are recorded as their own parts."""
-    specs = tool_specs(rule_set.tool_calls) or []
+def tool_definition_parts(rule_set: RuleSet, mode: str = "brief") -> list[ContextPart]:
+    """Tool definitions are sent beside the messages, so they are recorded as their own parts.
+    The parts use the same wire projection the provider receives."""
+    specs = wire_tool_specs(rule_set.tool_calls, mode=mode) or []
     return [
         ContextPart(
             "tool definition",
             f"Tool '{spec['function']['name']}' from rule set '{rule_set.id}'",
-            json.dumps(spec["function"], indent=2),
+            json.dumps(spec["function"], separators=(",", ":")),
         )
         for spec in specs
     ]
@@ -991,6 +994,11 @@ class ContextUsage:
 
     used: int
     limit: int
+    # `used` is the sum. The split lets the UI explain a large fixed overhead, especially the
+    # tool definitions that are sent beside the messages.
+    fixed: int = 0
+    tools: int = 0
+    messages: int = 0
 
     @property
     def summary_at(self) -> int:
@@ -1006,6 +1014,9 @@ def context_usage(
     limit: int,
     world_rules: Mapping[str, str],
     unattached_world_rules: Mapping[str, str] | None = None,
+    world: WorldTemplate | None = None,
+    tool_schema_mode: str = "brief",
+    rule_info_mode: str = "brief",
 ) -> ContextUsage:
     unsummarized = [m for m in history if m.id > state.through]
     all_rules = {
@@ -1013,36 +1024,52 @@ def context_usage(
         **(rule_set.attached_rules if rule_set else {}),
         **world_rules,
     }
-    used = sum(
-        part.tokens
-        for part in system_parts(
-            campaign.rule_set,
-            {**(rule_set.rules if rule_set else {}), **(unattached_world_rules or {})},
-            rule_set.important if rule_set else frozenset(),
-            state.summary,
-            state.through,
-            world_state_text(
-                state,
-                options,
-                rule_set.grid if rule_set else None,
-                rule_set.combat if rule_set else None,
-                rule_set.conditions if rule_set else None,
-                clock_rules=rule_set.clock if rule_set else None,
-                inventory=rule_set.inventory if rule_set else None,
-                hooks=rule_set.hooks if rule_set else None,
-                counters=rule_set.counters if rule_set else None,
-                tallies=rule_set.tallies if rule_set else None,
-                track_inventory=campaign.use_inventory_space,
-                currency=(
-                    rule_set.marketplace.currency if rule_set and rule_set.marketplace else ""
-                ),
-            ),
-            present_rules_text(state, all_rules),
-            campaign.setting,
-        )
+    system = system_parts(
+        campaign.rule_set,
+        {**(rule_set.rules if rule_set else {}), **(unattached_world_rules or {})},
+        rule_set.important if rule_set else frozenset(),
+        state.summary,
+        state.through,
+        world_state_text(
+            state,
+            options,
+            rule_set.grid if rule_set else None,
+            rule_set.combat if rule_set else None,
+            rule_set.conditions if rule_set else None,
+            clock_rules=rule_set.clock if rule_set else None,
+            inventory=rule_set.inventory if rule_set else None,
+            hooks=rule_set.hooks if rule_set else None,
+            counters=rule_set.counters if rule_set else None,
+            tallies=rule_set.tallies if rule_set else None,
+            track_inventory=campaign.use_inventory_space,
+            currency=(rule_set.marketplace.currency if rule_set and rule_set.marketplace else ""),
+        ),
+        present_rules_text(state, all_rules),
+        campaign.setting,
+        rule_info_mode=rule_info_mode,
     )
-    used += sum(estimate_tokens(m.content) for m in unsummarized)
-    return ContextUsage(used=used, limit=limit)
+    system_tokens = sum(part.tokens for part in system)
+    instruction_tokens = (
+        estimate_tokens(state_instruction(rule_set, world)) if rule_set is not None else 0
+    )
+    tool_tokens = (
+        sum(
+            estimate_tokens(json.dumps(spec, separators=(",", ":")))
+            for spec in wire_tool_specs(rule_set.tool_calls, mode=tool_schema_mode) or []
+        )
+        if rule_set is not None
+        else 0
+    )
+    message_tokens = sum(estimate_tokens(m.content) for m in unsummarized)
+    fixed = system_tokens + instruction_tokens
+    used = fixed + tool_tokens + message_tokens
+    return ContextUsage(
+        used=used,
+        limit=limit,
+        fixed=fixed,
+        tools=tool_tokens,
+        messages=message_tokens,
+    )
 
 
 def _verbatim_start(history: Sequence[ChatMessage], budget: int) -> int:

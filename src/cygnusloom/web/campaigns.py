@@ -1568,6 +1568,9 @@ def _campaign_page(
         settings.llm_context_tokens,
         world_content.rules,
         unattached_world_rules=world_content.unattached_rules,
+        world=library.world_templates.get(campaign.world_template),
+        tool_schema_mode=settings.tool_schema_mode,
+        rule_info_mode=settings.rule_info_mode,
     )
     credit_price = credit_service.model_price(engine, campaign.model)
     credit_balance = credit_service.balance(engine, campaign.owner_id)

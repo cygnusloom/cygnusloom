@@ -19,7 +19,7 @@ from cygnusloom.content.library import (
     ToolCall,
 )
 from cygnusloom.llm.base import LLMError, ToolRequest
-from cygnusloom.rules.context import ToolContext
+from cygnusloom.rules.context import ToolContext, brief
 from cygnusloom.rules.dice import is_formula
 from cygnusloom.services.attacks import modifier_name
 from cygnusloom.services.common import InvalidInput, NotFound
@@ -30,6 +30,35 @@ _PYTHON_TYPES: dict[str, type] = {"string": str, "array": list, "object": dict}
 # The turn review must not speak for an NPC or restart the out-of-character step. Those tools
 # stay in the state step's list, but are left out of the review's.
 _REVIEW_STEP_EXCLUDED = frozenset({"speak", "ooc"})
+# Tool-schema bytes are sent on every tool-bearing round. The authored schema stays the source
+# of truth for the engine; the wire copy may omit documentation and long choice lists, which the
+# engine still validates. `full` keeps the authored schema for an A/B comparison.
+WIRE_TOOL_SCHEMA_MODES = ("full", "compact", "summary", "brief")
+_WIRE_STRUCTURAL_KEYS = (
+    "type",
+    "properties",
+    "required",
+    "items",
+    "additionalProperties",
+    "oneOf",
+    "anyOf",
+    "allOf",
+    "not",
+    "$ref",
+    "const",
+    "format",
+    "pattern",
+    "default",
+)
+_CHARACTER_SCHEMA_BYTES = 500
+_CHARACTER_OPTIONS_SCHEMA = {
+    "type": "object",
+    "description": (
+        "Optional character options: stats, templates, fields, and feature picks. Use "
+        "character_options for the valid field values."
+    ),
+    "additionalProperties": True,
+}
 
 
 @dataclass(frozen=True)
@@ -105,6 +134,120 @@ def tool_specs(
         }
         for tool in selected
     ]
+
+
+def wire_tool_specs(
+    tool_calls: Mapping[str, ToolCall],
+    journal_step: bool = False,
+    review_step: bool = False,
+    mode: str = "compact",
+) -> list[dict[str, Any]] | None:
+    """The tool list sent to a provider. `mode` controls how much of the authored schema reaches
+    the wire; the engine always validates against the full schema in `tool_specs`. `brief` also
+    shortens each top-level description to its first sentence."""
+    if mode not in WIRE_TOOL_SCHEMA_MODES:
+        raise ValueError(f"unknown tool schema mode {mode!r}")
+    specs = tool_specs(tool_calls, journal_step=journal_step, review_step=review_step)
+    if not specs or mode == "full":
+        return specs
+    return [
+        {
+            "type": "function",
+            "function": {
+                "name": spec["function"]["name"],
+                "description": (
+                    brief(spec["function"]["description"], 240)
+                    if mode in ("summary", "brief")
+                    else spec["function"]["description"]
+                ),
+                "parameters": _wire_schema(
+                    spec["function"]["parameters"],
+                    description_depth=1 if mode in ("compact", "summary") else 0,
+                    description_limit=80 if mode == "summary" else None,
+                ),
+            },
+        }
+        for spec in specs
+    ]
+
+
+def _wire_schema(
+    schema: Any,
+    depth: int = 0,
+    description_depth: int = 1,
+    description_limit: int | None = None,
+) -> Any:
+    """A smaller but still valid JSON Schema. Structural keys stay; descriptions deeper than
+    `description_depth`, numeric bounds, and long enums are dropped. A `description_limit`
+    shortens the descriptions that remain. The authored schema stays on the ToolCall and is what
+    `run_tool` validates against."""
+    if isinstance(schema, list):
+        return [_wire_schema(item, depth, description_depth, description_limit) for item in schema]
+    if not isinstance(schema, dict):
+        return schema
+    out: dict[str, Any] = {}
+    for key in _WIRE_STRUCTURAL_KEYS:
+        if key not in schema:
+            continue
+        value = schema[key]
+        if key == "properties" and isinstance(value, dict):
+            out[key] = {
+                name: _wire_property(name, child, depth + 1, description_depth, description_limit)
+                for name, child in value.items()
+            }
+        elif key in ("items", "additionalProperties", "not"):
+            out[key] = _wire_schema(value, depth + 1, description_depth, description_limit)
+        elif key in ("oneOf", "anyOf", "allOf") and isinstance(value, list):
+            out[key] = [
+                _wire_schema(item, depth + 1, description_depth, description_limit)
+                for item in value
+            ]
+        else:
+            out[key] = value
+    if "description" in schema and depth <= description_depth:
+        text = schema["description"]
+        if description_limit is not None:
+            text = brief(text, description_limit)
+        out["description"] = text
+    if "enum" in schema:
+        enum_type = _wire_enum_type(schema["enum"])
+        if "type" not in out and enum_type is not None:
+            out["type"] = enum_type
+        if "description" not in out and depth <= description_depth:
+            out["description"] = "A valid id from the campaign content; use its lookup tool."
+    return out
+
+
+def _wire_property(
+    name: str,
+    schema: Any,
+    depth: int,
+    description_depth: int,
+    description_limit: int | None,
+) -> Any:
+    if (
+        name == "character"
+        and isinstance(schema, dict)
+        and len(json.dumps(schema, separators=(",", ":"))) > _CHARACTER_SCHEMA_BYTES
+    ):
+        return dict(_CHARACTER_OPTIONS_SCHEMA)
+    return _wire_schema(schema, depth, description_depth, description_limit)
+
+
+def _wire_enum_type(values: Any) -> str | None:
+    """The JSON type a dropped enum implies, so the wire schema is not empty."""
+    if not isinstance(values, list) or not values:
+        return None
+    first = values[0]
+    if isinstance(first, bool):
+        return None
+    if isinstance(first, str):
+        return "string"
+    if isinstance(first, int):
+        return "integer"
+    if isinstance(first, float):
+        return "number"
+    return None
 
 
 def find_tool(tool_calls: Mapping[str, ToolCall], name: str) -> ToolCall | None:
