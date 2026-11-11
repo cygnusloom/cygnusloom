@@ -6,6 +6,7 @@ import asyncio
 import json
 from collections.abc import AsyncIterator, Sequence
 from dataclasses import dataclass
+from types import ModuleType
 from typing import Any
 
 from fastapi import APIRouter, Request
@@ -18,6 +19,7 @@ from fastapi.responses import (
 from sqlalchemy.exc import SQLAlchemyError
 from starlette.responses import Response
 
+from cygnusloom import CAMPAIGN_MAJOR_VERSION
 from cygnusloom.auth.deps import page_user, verify_csrf
 from cygnusloom.content.character import NO_CAMPAIGN, NO_CHARACTER, character_schema
 from cygnusloom.db.models import User
@@ -538,6 +540,40 @@ def export_campaign_file(request: Request, campaign_id: int) -> Response:
             "Cache-Control": "no-store",
         },
     )
+
+
+@router.post("/{campaign_id}/convert")
+async def convert_campaign_page(request: Request, campaign_id: int) -> Response:
+    """Upgrade an older-major campaign in place after replaying its rewritten log."""
+    user = page_user(request)
+    await verify_csrf(request)
+    campaign = get_owned_campaign(request.app.state.engine, user.id, campaign_id)
+    if campaign.major_version == CAMPAIGN_MAJOR_VERSION:
+        _flash(
+            request,
+            f"This campaign already plays on Cygnus Loom {CAMPAIGN_MAJOR_VERSION}.",
+        )
+        return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
+    adapter = _upgrade_adapter(campaign.major_version)
+    if adapter is None:
+        _flash(
+            request,
+            f"There is no upgrade path from Cygnus Loom {campaign.major_version} to "
+            f"Cygnus Loom {CAMPAIGN_MAJOR_VERSION}.",
+            "error",
+        )
+        return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
+    try:
+        adapter.convert_campaign(
+            request.app.state.engine,
+            user.id,
+            campaign_id,
+            request.app.state.content,
+        )
+    except (Conflict, InvalidInput) as exc:
+        _flash(request, f"Could not upgrade the campaign: {exc}", "error")
+        return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
+    return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
 
 
 @router.get("/{campaign_id}")
@@ -1338,6 +1374,13 @@ def _flash(request: Request, message: str, kind: str = "info") -> None:
     request.session["flash"] = {"message": message, "kind": kind}
 
 
+def _upgrade_adapter(major: int) -> ModuleType | None:
+    """The adapter that upgrades a campaign of `major`, imported only when one is offered."""
+    from cygnusloom.services import compat_v3
+
+    return compat_v3 if compat_v3.supports(major) else None
+
+
 def _new_form(
     request: Request,
     user: User,
@@ -1446,6 +1489,8 @@ def _campaign_page(
             status_code=status_code,
             campaign=campaign,
             is_owner=campaign.owner_id == user.id,
+            current_major=CAMPAIGN_MAJOR_VERSION,
+            can_upgrade=_upgrade_adapter(campaign.major_version) is not None,
         )
     rule_set = library.rule_sets.get(campaign.rule_set)
     debug_tools = (

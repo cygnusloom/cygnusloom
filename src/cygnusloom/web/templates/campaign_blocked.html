@@ -10,11 +10,22 @@
     <div class="settings-section" role="alert">
       <p>
         <strong>This campaign was made for Cygnus Loom {{ campaign.major_version }}.</strong>
-        Cygnus Loom 4.0 cannot play it because the campaign contract changed.
+        Cygnus Loom {{ current_major }} cannot play it because the campaign contract changed.
         The campaign is intact and can still be exported.
       </p>
       {% if is_owner %}
-      <p><a class="button" href="/campaigns/{{ campaign.id }}/export">Export this campaign as JSON</a></p>
+      <p>
+        <a class="button secondary" href="/campaigns/{{ campaign.id }}/export">Export this campaign as JSON</a>
+      </p>
+      {% if can_upgrade %}
+      <form method="post" action="/campaigns/{{ campaign.id }}/convert" class="inline" data-confirm="Upgrade this campaign to Cygnus Loom {{ current_major }}? The event log is rewritten in place. Export a copy first if you want to keep the original Cygnus Loom {{ campaign.major_version }} log.">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="button" type="submit">Upgrade to Cygnus Loom {{ current_major }}</button>
+      </form>
+      <p class="muted">Upgrading is one-way. It keeps the campaign, its players, and its history, then replays the whole log before making it playable.</p>
+      {% else %}
+      <p class="muted">This server has no upgrade path from Cygnus Loom {{ campaign.major_version }} to Cygnus Loom {{ current_major }}.</p>
+      {% endif %}
       {% endif %}
     </div>
   </section>

@@ -497,6 +497,27 @@ class CampaignOptionsChosen(GameEvent):
 
 
 @dataclass(frozen=True)
+class CampaignConverted(GameEvent):
+    """A campaign made for another major version was converted to this contract. It is visible
+    in the Log so the table can see when the rules and tools changed under the story."""
+
+    kind: ClassVar[str] = "campaign.converted"
+    channel: ClassVar[Channel] = Channel.LOG
+
+    from_major: int
+    to_major: int
+    from_version: str = ""
+    to_version: str = ""
+
+    def render(self) -> str:
+        return (
+            f"This campaign was upgraded from Cygnus Loom {self.from_major} to "
+            f"Cygnus Loom {self.to_major}. The rules and tools may have changed; the story "
+            "continues from here."
+        )
+
+
+@dataclass(frozen=True)
 class NpcAdded(GameEvent):
     kind: ClassVar[str] = "npc.added"
     hidden: ClassVar[bool] = True
