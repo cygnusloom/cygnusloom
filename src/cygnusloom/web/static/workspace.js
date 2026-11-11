@@ -161,6 +161,9 @@
   document.querySelectorAll("[data-view-target]").forEach((button) => {
     button.addEventListener("click", () => {
       showView(button.dataset.viewTarget);
+      // A sidebar view is a fresh place to start; a deep link into the view we left must not
+      // reopen it on reload or Back.
+      if (location.hash) history.replaceState(null, "", location.pathname + location.search);
       setSide(false, false);
     });
   });
