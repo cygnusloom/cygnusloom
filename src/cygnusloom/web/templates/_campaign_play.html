@@ -306,37 +306,27 @@
               </ul>
             </div>
             {% endif %}
-            <div class="tab-panel" role="tabpanel" id="panel-inventory" aria-labelledby="tab-inventory" hidden>
-              {% if scene.pack %}
-              <p>{% if scene.pack.tracked %}Carrying {{ scene.pack.used }} of {{ scene.pack.capacity }} slots.{% else %}Carrying {{ scene.pack.used }} slots; inventory space is not tracked.{% endif %}</p>
-              {% if scene.pc and scene.pc.defense_tracked %}
-              <p>Armor: {{ scene.pc.armor }} · Worn: {{ scene.pc.equipped_armor or "none" }} · Wielded shield: {{ scene.pc.equipped_shield or "none" }}</p>
-              {% endif %}
-              {% if scene.currency %}
-              <p class="inventory-currency">
-                {% for coin in scene.currency %}{% if not loop.first %} · {% endif %}{% if coin.icon %}<img class="item-icon" src="{{ icon_path(coin.icon) }}" alt="">{% endif %}<strong>{{ coin.amount }}</strong> {{ coin.name }}{% endfor %}
-              </p>
-              {% endif %}
-              {% if scene.pack.items %}
-              <ul data-inventory>
-                {% for item in scene.pack.items %}
-                <li>
-                  {% set icon = item.icon or item_icon_id(item.kind, item.damage, item_kind_icons) %}{% if icon %}<img class="item-icon" src="{{ icon_path(icon) }}" alt="">{% endif %}{% if item.entry %}<a href="#{{ item.entry }}" data-view-link="compendium"><strong>{{ item.name }}</strong></a>{% else %}<strong>{{ item.name }}</strong>{% endif %}
-                  {% if item.size %}{{ item.size }}, {% endif %}{% if item.slots %}{{ item.slots }} slot{{ "" if item.slots == 1 else "s" }}{% else %}no slots{% endif %}
-                  {% if item.max_uses > 0 %}· {{ item.uses }} uses left{% endif %}
-                  {% if item.kind %}<span class="muted">({{ item.kind|capitalize }})</span>{% endif %}
-                  {% if scene.pack.has_readied %}· {{ "Readied" if item.ready else "Stowed" }}{% endif %}
-                  {% if item.equipped %}· {{ item.equipped }}{% endif %}
-                  {% if item.text %}<p class="muted">{{ item.text }}</p>{% endif %}
-                </li>
+            <div class="tab-panel inventory-panel" role="tabpanel" id="panel-inventory" aria-labelledby="tab-inventory" hidden>
+              {% if scene.hireling_inventories %}
+              <div class="tab-list inventory-tab-list" role="tablist" aria-label="Inventories">
+                <button type="button" class="tab" role="tab" id="tab-pack-pc" aria-controls="panel-pack-pc" aria-selected="true">{{ scene.inventory.name if scene.inventory else "Character" }}</button>
+                {% for inventory in scene.hireling_inventories %}
+                <button type="button" class="tab" role="tab" id="tab-pack-{{ loop.index }}" aria-controls="panel-pack-{{ loop.index }}" aria-selected="false" tabindex="-1">{{ inventory.name }}{% if inventory.dead %} <span class="muted">(dead)</span>{% endif %}</button>
                 {% endfor %}
-              </ul>
-              {% else %}
-              <p class="muted">Carrying nothing.</p>
+              </div>
               {% endif %}
-              {% else %}
-              <p class="muted">No inventory yet.</p>
-              {% endif %}
+              <div class="tab-panel inventory-pack-panel" id="panel-pack-pc"{% if scene.hireling_inventories %} role="tabpanel" aria-labelledby="tab-pack-pc"{% endif %}>
+                {% if scene.inventory %}
+                {% with inventory=scene.inventory %}{% include "_inventory_pack.html" %}{% endwith %}
+                {% else %}
+                <p class="muted">No inventory yet.</p>
+                {% endif %}
+              </div>
+              {% for inventory in scene.hireling_inventories %}
+              <div class="tab-panel inventory-pack-panel" role="tabpanel" id="panel-pack-{{ loop.index }}" aria-labelledby="tab-pack-{{ loop.index }}" hidden>
+                {% include "_inventory_pack.html" %}
+              </div>
+              {% endfor %}
             </div>
             {% if not single_player %}
             <div class="tab-panel" role="tabpanel" id="panel-players" aria-labelledby="tab-players" hidden>

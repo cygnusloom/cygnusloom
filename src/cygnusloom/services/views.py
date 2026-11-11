@@ -168,8 +168,10 @@ class SceneView:
     npcs: list[Character]
     sheet: list[str]
     journal: str = ""
-    pack: PackView | None = None
-    currency: tuple[CurrencyView, ...] = ()
+    # The player character's inventory, and the inventory of every hireling the player plays
+    # for. Both are None or empty when the rule set has no inventory.
+    inventory: CharacterInventoryView | None = None
+    hireling_inventories: tuple[CharacterInventoryView, ...] = ()
     hirelings: tuple[Character, ...] = ()
     objects: tuple[WorldObject, ...] = ()
     known: tuple[KnownNpcView, ...] = ()
@@ -182,10 +184,20 @@ class SceneView:
     pc_sheet: CharacterSheetView | None = None
     hireling_sheets: tuple[CharacterSheetView, ...] = ()
 
+    @property
+    def pack(self) -> PackView | None:
+        """The player character's carried items, when the rule set has an inventory."""
+        return self.inventory.pack if self.inventory is not None else None
+
+    @property
+    def currency(self) -> tuple[CurrencyView, ...]:
+        """The coins the player character carries."""
+        return self.inventory.currency if self.inventory is not None else ()
+
 
 @dataclass(frozen=True)
 class PackItem:
-    """One item the player character carries, as the player sees it."""
+    """One item a character carries, as the player sees it."""
 
     name: str
     size: str
@@ -205,9 +217,9 @@ class PackItem:
 
 @dataclass(frozen=True)
 class PackView:
-    """The player character's items in carried order, with the slots used and the capacity.
-    `tracked` is False when the campaign does not enforce inventory space, so the page says the
-    space is not tracked instead of showing a limit."""
+    """One character's items in carried order, with the slots used and the capacity. `tracked`
+    is False when the campaign does not enforce inventory space, so the page says the space is
+    not tracked instead of showing a limit."""
 
     items: list[PackItem]
     used: int
@@ -218,11 +230,28 @@ class PackView:
 
 @dataclass(frozen=True)
 class CurrencyView:
-    """One kind of coin the player character carries, such as the rule set's silver or gold."""
+    """One kind of coin a character carries, such as the rule set's silver or gold."""
 
     name: str
     amount: int
     icon: str = ""
+
+
+@dataclass(frozen=True)
+class CharacterInventoryView:
+    """One character's inventory as the player sees it: the player character's own pack or a
+    hireling's, with the coins they carry and the armor they have equipped."""
+
+    name: str
+    pack: PackView
+    currency: tuple[CurrencyView, ...] = ()
+    employer: str = ""
+    location: str = ""
+    dead: bool = False
+    armor: int = 0
+    equipped_armor: str = ""
+    equipped_shield: str = ""
+    defense_tracked: bool = False
 
 
 @dataclass(frozen=True)
@@ -759,64 +788,31 @@ def scene_view(
             employer=pc.employer,
             sheet_links=sheet_entries,
         )
-    pack = None
-    if pc is not None and inventory is not None:
-        armor, shield = pc.equipped_armor, pc.equipped_shield
-        feature_icons = {
-            name_key(feature.name): feature.icon
-            for feature in spec.features.values()
-            if feature.feature_type == "item" and feature.icon
-        }
-        items = []
-        for item in pc.items:
-            equipped = ""
-            if armor and same_item_name(item.name, armor):
-                equipped, armor = "Worn", ""
-            elif shield and same_item_name(item.name, shield):
-                equipped, shield = "Wielded", ""
-            items.append(
-                PackItem(
-                    name=item.name,
-                    size=item.size,
-                    slots=item.slots,
-                    uses=item.uses,
-                    max_uses=item.max_uses,
-                    kind=item.kind,
-                    text=item.text,
-                    damage=item.damage,
-                    ready=item.ready,
-                    equipped=equipped,
-                    entry=links.get(item.name) or links.get(name_key(item.name)) or "",
-                    icon=feature_icons.get(name_key(item.name), ""),
-                )
-            )
-        pack = PackView(
-            items=items,
-            used=inventory_service.used_slots(pc),
-            capacity=inventory_service.capacity_of(pc, inventory, spec),
-            has_readied=bool(inventory.readied_stat or any(pool.ready for pool in inventory.pools)),
-            tracked=track_inventory,
-        )
+    feature_icons = _item_feature_icons(spec)
+    inventory_view = (
+        _inventory_view(spec, pc, inventory, links, feature_icons, track_inventory)
+        if pc is not None and inventory is not None
+        else None
+    )
     hirelings = tuple(
         c
         for c in state.characters.values()
         if c.hireling and place is not None and c.location == place.name
     )
+    controlled = _controlled_hirelings(state, pc)
     hireling_sheets = _hireling_sheets(
-        state, spec, pc, conditions, ability_entries, sheet_entries, wage_currency=wage_currency
+        controlled,
+        spec,
+        conditions,
+        ability_entries,
+        sheet_entries,
+        wage_currency=wage_currency,
     )
-    currency = ()
-    if pc is not None:
-        currency = tuple(
-            CurrencyView(
-                name=feature.name,
-                amount=pc.features[feature_id],
-                icon=feature.icon or "",
-            )
-            for feature_id, feature in spec.features.items()
-            if feature.feature_type == "item"
-            and feature.looks_like == "coin"
-            and feature_id in pc.features
+    hireling_inventories: tuple[CharacterInventoryView, ...] = ()
+    if inventory is not None:
+        hireling_inventories = tuple(
+            _inventory_view(spec, hireling, inventory, links, feature_icons, track_inventory)
+            for hireling in controlled
         )
     objects = tuple(visible_objects(state, place.name)) if place is not None else ()
     location_entry = ""
@@ -830,8 +826,8 @@ def scene_view(
         npcs=npcs,
         sheet=sheet,
         journal=state.journal,
-        pack=pack,
-        currency=currency,
+        inventory=inventory_view,
+        hireling_inventories=hireling_inventories,
         hirelings=hirelings,
         objects=objects,
         known=_known_npc_views(state, pc, place, relations, creature_entries),
@@ -1508,31 +1504,37 @@ def _reaction_links(spec: CharacterSpec, character: Character) -> tuple[Reaction
     )
 
 
-def _hireling_sheets(
-    state: CampaignState,
-    spec: CharacterSpec,
-    pc: Character | None,
-    conditions: Mapping[str, ConditionRules] | None,
-    ability_entries: Mapping[str, str],
-    sheet_entries: Mapping[str, str],
-    *,
-    wage_currency: str = "",
-) -> tuple[CharacterSheetView, ...]:
-    """Every hireling the player plays for, wherever it is, with the same detail as the player's
-    own sheet. A hireling's employer may be any character the player controls, so a hireling of a
-    hireling is included too."""
+def _controlled_hirelings(state: CampaignState, pc: Character | None) -> tuple[Character, ...]:
+    """Every hireling the player plays for, wherever it is. A hireling's employer may be any
+    character the player controls, so a hireling of a hireling is included too."""
     if pc is None:
         return ()
     player_id = state.owner_of(pc)
     if player_id is None:
         return ()
-    sheets = []
+    found = []
     for character in state.characters.values():
         if not character.hireling or character.kind != PC_KIND:
             continue
         employer = state.named(character.employer)
         if not isinstance(employer, Character) or not state.owned_by(employer, player_id):
             continue
+        found.append(character)
+    return tuple(sorted(found, key=lambda character: name_key(character.name)))
+
+
+def _hireling_sheets(
+    hirelings: tuple[Character, ...],
+    spec: CharacterSpec,
+    conditions: Mapping[str, ConditionRules] | None,
+    ability_entries: Mapping[str, str],
+    sheet_entries: Mapping[str, str],
+    *,
+    wage_currency: str = "",
+) -> tuple[CharacterSheetView, ...]:
+    """Every hireling's sheet, with the same detail as the player's own sheet."""
+    sheets = []
+    for character in hirelings:
         lines = _sheet_text(spec, character).splitlines()
         if conditions is not None:
             lines += _status_lines(character, conditions, None, None, None)
@@ -1555,7 +1557,85 @@ def _hireling_sheets(
                 sheet_links=sheet_entries,
             )
         )
-    return tuple(sorted(sheets, key=lambda sheet: name_key(sheet.name)))
+    return tuple(sheets)
+
+
+def _item_feature_icons(spec: CharacterSpec) -> dict[str, str]:
+    """The icon each item feature names, by that item's name key."""
+    return {
+        name_key(feature.name): feature.icon
+        for feature in spec.features.values()
+        if feature.feature_type == "item" and feature.icon
+    }
+
+
+def _currency_views(spec: CharacterSpec, character: Character) -> tuple[CurrencyView, ...]:
+    """The kinds of coin the character carries, in the rule set's order."""
+    return tuple(
+        CurrencyView(
+            name=feature.name,
+            amount=character.features[feature_id],
+            icon=feature.icon or "",
+        )
+        for feature_id, feature in spec.features.items()
+        if feature.feature_type == "item"
+        and feature.looks_like == "coin"
+        and feature_id in character.features
+    )
+
+
+def _inventory_view(
+    spec: CharacterSpec,
+    character: Character,
+    inventory: InventoryRules,
+    links: Mapping[str, str],
+    feature_icons: Mapping[str, str],
+    track_inventory: bool,
+) -> CharacterInventoryView:
+    """One character's pack, coins, and equipped armor, as the player sees them."""
+    armor, shield = character.equipped_armor, character.equipped_shield
+    items = []
+    for item in character.items:
+        equipped = ""
+        if armor and same_item_name(item.name, armor):
+            equipped, armor = "Worn", ""
+        elif shield and same_item_name(item.name, shield):
+            equipped, shield = "Wielded", ""
+        items.append(
+            PackItem(
+                name=item.name,
+                size=item.size,
+                slots=item.slots,
+                uses=item.uses,
+                max_uses=item.max_uses,
+                kind=item.kind,
+                text=item.text,
+                damage=item.damage,
+                ready=item.ready,
+                equipped=equipped,
+                entry=links.get(item.name) or links.get(name_key(item.name)) or "",
+                icon=feature_icons.get(name_key(item.name), ""),
+            )
+        )
+    pack = PackView(
+        items=items,
+        used=inventory_service.used_slots(character),
+        capacity=inventory_service.capacity_of(character, inventory, spec),
+        has_readied=bool(inventory.readied_stat or any(pool.ready for pool in inventory.pools)),
+        tracked=track_inventory,
+    )
+    return CharacterInventoryView(
+        name=character.name,
+        pack=pack,
+        currency=_currency_views(spec, character),
+        employer=character.employer,
+        location=character.location or "",
+        dead=character.dead,
+        armor=character.armor,
+        equipped_armor=character.equipped_armor,
+        equipped_shield=character.equipped_shield,
+        defense_tracked=character.defense_tracked,
+    )
 
 
 def _sheet_text(spec: CharacterSpec, character: Character) -> str:
