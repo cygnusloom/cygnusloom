@@ -212,14 +212,26 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 .chat-heading-text { min-width: 0; }
 .chat-title { margin: 0; font-size: 1.25rem; overflow-wrap: anywhere; }
 .chat-heading .muted { margin: 0.15rem 0 0; }
-.music-widget {
-  position: relative; flex: none; max-width: 12rem;
-  padding: 0.25rem 0.5rem 0.3rem;
-  border: 1px solid var(--border); border-radius: 0.75rem; background: var(--panel);
+/* The music controls stay behind one small button at every width. The panel folds out under
+   the button, so the heading keeps the height of its title instead of a second control row. */
+.music-widget { position: relative; flex: none; }
+.music-menu-toggle {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.9rem; height: 1.9rem; padding: 0;
+  border: 1px solid var(--border); border-radius: 999px;
+  background: var(--panel); color: var(--text); cursor: pointer;
 }
-.music-menu-toggle { display: none; }
-.music-panel { display: flex; flex-direction: column; align-items: stretch; gap: 0.2rem; }
-.music-controls { display: flex; align-items: center; justify-content: center; gap: 0.35rem; }
+.music-menu-toggle svg { width: 1rem; height: 1rem; }
+.music-menu-toggle[aria-expanded="true"] { color: var(--accent); }
+.music-panel {
+  display: none; position: absolute; right: 0; top: calc(100% + 0.4rem); z-index: 6;
+  flex-direction: column; align-items: stretch; gap: 0.2rem;
+  width: 11.5rem; padding: 0.5rem 0.6rem;
+  border: 1px solid var(--border); border-radius: 0.6rem; background: var(--panel);
+  box-shadow: 0 10px 24px rgba(20, 16, 12, 0.35);
+}
+.music-widget[data-music-menu-open="true"] .music-panel { display: flex; }
+.music-controls { display: flex; align-items: center; justify-content: space-between; gap: 0.35rem; }
 .music-toggle {
   display: inline-flex; align-items: center; justify-content: center;
   padding: 0.2rem; border: 0; background: transparent; color: var(--text);
@@ -227,12 +239,12 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 }
 .music-toggle svg { width: 1rem; height: 1rem; }
 .music-toggle[aria-pressed="false"] { color: var(--muted); }
-.music-volume { width: 4.5rem; accent-color: var(--accent); }
+.music-volume { width: 3.2rem; accent-color: var(--accent); }
 /* The track's name and artist scroll under the controls. The second copy makes the loop
    seamless; it only exists while the text is wider than the widget. */
 .music-ticker {
   display: block; width: 100%; overflow: hidden; white-space: nowrap;
-  font-size: 0.72rem; line-height: 1.3; color: var(--muted); text-align: center;
+  font-size: 0.72rem; line-height: 1.3; color: var(--muted); text-align: left;
 }
 .music-ticker[hidden] { display: none; }
 .music-ticker-track { display: inline-flex; }
@@ -924,26 +936,6 @@ main > .card + .card, main > .card + .admin-grid, main > .admin-grid + .card { m
     flex: none; min-width: 0; margin: 0.1rem 0 0; font-size: 0.75rem; line-height: 1.3;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
-  .music-widget { max-width: none; padding: 0; border: 0; background: transparent; }
-  .music-menu-toggle {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 1.9rem; height: 1.9rem; padding: 0;
-    border: 1px solid var(--border); border-radius: 999px;
-    background: var(--panel); color: var(--text); cursor: pointer;
-  }
-  .music-menu-toggle svg { width: 1rem; height: 1rem; }
-  .music-menu-toggle[aria-expanded="true"] { color: var(--accent); }
-  /* The phone keeps one small button in the heading; it opens the full widget as a panel. */
-  .music-panel {
-    display: none; position: absolute; right: 0; top: calc(100% + 0.4rem); z-index: 6;
-    align-items: stretch; width: 11.5rem; padding: 0.5rem 0.6rem;
-    border: 1px solid var(--border); border-radius: 0.6rem; background: var(--panel);
-    box-shadow: 0 10px 24px rgba(20, 16, 12, 0.35);
-  }
-  .music-widget[data-music-menu-open="true"] .music-panel { display: flex; }
-  .music-controls { justify-content: space-between; }
-  .music-ticker { text-align: left; }
-  .music-volume { width: 3.2rem; }
   .chat .transcript { gap: 0.45rem; margin: 0.4rem 0; overscroll-behavior: contain; }
   .message { padding: 0.5rem 0.65rem; }
   .message .role { font-size: 0.72rem; }
@@ -952,8 +944,14 @@ main > .card + .card, main > .card + .admin-grid, main > .admin-grid + .card { m
   .advancement-pause {
     margin: 0.35rem 0.75rem; padding: 0.45rem 0.6rem; font-size: 0.85rem;
   }
+  /* The bottom bar stays one row; its buttons share the width instead of wrapping under the
+     side panel and being covered. */
   body.workspace-page .sidebar {
+    flex-wrap: nowrap;
     gap: 0.15rem; padding: 0.15rem 0.4rem calc(0.15rem + env(safe-area-inset-bottom));
+  }
+  body.workspace-page .sidebar-item {
+    flex: 1 1 0; width: auto; min-width: 0; max-width: 3rem;
   }
 
   main { margin: 1rem auto; padding: 0 1rem; }
@@ -996,6 +994,12 @@ main > .card + .card, main > .card + .admin-grid, main > .admin-grid + .card { m
   .context-meter meter, .credit-meter meter { width: 3.5rem; }
   .pending-prompt form { flex-wrap: wrap; }
   .pending-prompt textarea { flex-basis: 100%; }
+}
+
+/* Very narrow phones shrink the bottom bar's icons a little rather than letting it crowd. */
+@media (max-width: 380px) {
+  body.workspace-page .sidebar { gap: 0.1rem; }
+  body.workspace-page .sidebar-item svg { width: 1.1rem; height: 1.1rem; }
 }
 
 /* ===== LOCAL MAPS: palettes, ambients, and patterns ===== */
