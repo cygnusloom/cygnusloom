@@ -11,6 +11,7 @@ from cygnusloom.content.library import (
     CombatRules,
     ConditionRules,
 )
+from cygnusloom.content.lookup import AmbiguousId, resolve_id
 from cygnusloom.services import death, resolution
 from cygnusloom.services.combat.damage import _end_if_one_side_left
 from cygnusloom.services.common import InvalidInput, whole_number
@@ -25,6 +26,21 @@ from cygnusloom.services.events import (
     load_state,
     record,
 )
+
+
+def _hazard_stat(stat: str, known: Mapping[str, Any], spec: CharacterSpec | None) -> str:
+    """The stat id a hazard save names, accepting a display name and different capitalization."""
+    try:
+        return resolve_id(
+            known,
+            stat,
+            kind="stat",
+            names=(lambda rules: (rules.name,)) if spec is not None else None,
+        )
+    except AmbiguousId as exc:
+        raise InvalidInput(str(exc)) from exc
+    except LookupError:
+        raise InvalidInput(f"there is no stat named {stat!r}") from None
 
 
 def resolve_save(
@@ -141,8 +157,7 @@ def player_save(
         if not stat:
             raise InvalidInput("no player character owes a save; name the stat for a hazard save")
         known = spec.stats if spec is not None else pc.stats
-        if stat not in known:
-            raise InvalidInput(f"there is no stat named {stat!r}")
+        stat = _hazard_stat(stat, known, spec)
         roll = whole_number(roll, "roll", 1, combat.check_sides)
         result = resolve_save(combat, current(pc, stat), rng=rng, roll=roll, plus=plus)
         record(

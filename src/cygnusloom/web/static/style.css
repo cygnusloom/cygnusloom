@@ -419,6 +419,17 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 .character-group > h3 { grid-column: 1 / -1; margin: 0; }
 .character-card { padding: 0.75rem 1rem; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); }
 .character-card[hidden] { display: none; }
+.character-card.is-dead {
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
+  background: color-mix(in srgb, var(--danger) 6%, var(--panel));
+}
+.character-card.is-dead h4 { color: var(--muted); }
+.tag-dead {
+  color: var(--danger);
+  border-color: currentColor;
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+  font-weight: 700;
+}
 .character-card h4 { margin: 0 0 0.25rem; }
 .character-card p { margin: 0.25rem 0; overflow-wrap: anywhere; }
 .character-facts { display: flex; flex-wrap: wrap; gap: 0.2rem 1rem; color: var(--muted); font-size: 0.9rem; }
@@ -524,6 +535,8 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 .storyline + .storyline { margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid var(--border); }
 .storyline h3 { margin: 0 0 0.35rem; font-size: 1rem; }
 .storyline.is-inactive { opacity: 0.65; }
+.storyline.is-resolved { opacity: 0.65; }
+.story-resolved-heading { margin: 1.5rem 0 0.75rem; font-size: 1rem; }
 .story-status { margin-left: 0.35rem; padding: 0.05rem 0.45rem; border: 1px solid var(--border); border-radius: 999px; font-size: 0.75rem; font-weight: normal; color: var(--muted); vertical-align: middle; }
 /* The map panel's own tabs are chrome, not part of the board: never let the map squeeze them. */
 .map-panel > .tab-list {
@@ -546,6 +559,20 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 .map-frame > .map-recenter { position: absolute; top: 0.5rem; right: 0.5rem; z-index: 1; }
 .map-frame > .map-board { width: min(100cqw, 100cqh); height: auto; max-height: none; min-height: 0; transform-origin: 0 0; }
 .map-frame > .encounter-board { width: min(100cqw, calc(100cqh * var(--columns) / var(--rows))); }
+/* Touch hygiene: no selection, callout or tap flash, and paint stays inside the frame. */
+.map-frame {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  contain: paint;
+}
+/* During wheel and pointer gestures, skip layers that re-rasterise on every zoom step. */
+.map-frame.gesturing .map-grain,
+.map-frame.gesturing .map-clouds { display: none; }
+.map-frame.gesturing .map-terrain { mask: none; }
+.map-frame.gesturing .map-ground { filter: none; }
+.map-frame.gesturing > .map-board { will-change: transform; }
 /* The Location tab splits in half when a map is in play: the place on the left, the map's
    caption and the people and props on it (or the fight's turn order) on the right. */
 .location-panel { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0 1.25rem; align-content: start; }

@@ -368,7 +368,7 @@
   {
     "type": "tool_call",
     "id": "update_storyline",
-    "description": "Change a storyline as the story moves. Leave a field out to keep it as it is, pass an empty string or list to clear it, or give a new value. Use the storyline's name or its id. Set active false to deactivate it, or active true to bring a deactivated storyline back; at most three may be active. Keep its player-facing summary current whenever the plot advances.",
+    "description": "Change a storyline as the story moves. Leave a field out to keep it as it is, pass an empty string or list to clear it, or give a new value. Use the storyline's name or its id. Set active false to deactivate it, or active true to bring a deactivated storyline back; at most three may be active. A resolved storyline cannot be reactivated. Keep its player-facing summary current whenever the plot advances.",
     "parameters": {
       "properties": {
         "storyline": {
@@ -423,7 +423,7 @@
   {
     "type": "tool_call",
     "id": "focus_storyline",
-    "description": "Make one active storyline the focused one: the main plot of the moment and the thread the player is most interested in. The previously focused storyline stays active as a secondary thread. A deactivated storyline must be made active with update_storyline before it can be focused.",
+    "description": "Make one active storyline the focused one: the main plot of the moment and the thread the player is most interested in. The previously focused storyline stays active as a secondary thread. A deactivated storyline must be made active with update_storyline before it can be focused, and a resolved storyline cannot be focused.",
     "parameters": {
       "properties": {
         "storyline": {
@@ -437,7 +437,7 @@
   {
     "type": "tool_call",
     "id": "deactivate_storyline",
-    "description": "Take a storyline out of play when it is resolved or no longer matters. It leaves the active list and the turn context, and the Story page shows it as deactivated. search_storylines still finds it, and update_storyline can make it active again. If it was focused, the oldest remaining active storyline takes over the focus.",
+    "description": "Take a storyline out of play when it only pauses or no longer matters. It leaves the active list and the turn context, and the Story page shows it as deactivated. search_storylines still finds it, update_storyline can make it active again, and it cannot be focused until it is active. If it was focused, the oldest remaining active storyline takes over the focus. Use resolve_storyline instead when the plot has concluded.",
     "parameters": {
       "properties": {
         "storyline": {
@@ -450,9 +450,27 @@
   },
   {
     "type": "tool_call",
+    "id": "resolve_storyline",
+    "description": "Mark a storyline resolved when its plot concludes. It leaves the focused and active lists and the GM's turn context, and the Story page shows it as resolved with its closing note. search_storylines still finds it, so a later storyline can grow from what happened. A resolved storyline cannot be reactivated or focused. Use deactivate_storyline for a thread that only pauses.",
+    "parameters": {
+      "properties": {
+        "storyline": {
+          "type": "string",
+          "description": "The name or id of the storyline to resolve."
+        },
+        "resolution": {
+          "type": "string",
+          "description": "A short player-facing note on how the storyline ended, with no secrets."
+        }
+      },
+      "required": ["storyline", "resolution"]
+    }
+  },
+  {
+    "type": "tool_call",
     "id": "search_storylines",
     "lookup": true,
-    "description": "Find storylines by words in their name, summary, plot, characters, locations, objects, or notes. Deactivated storylines are included even though the turn context leaves them out. Use it to recall a dormant thread or to check whether a storyline already exists before creating one. Each result includes the id, the active and focused flags, and every field.",
+    "description": "Find storylines by words in their name, summary, plot, characters, locations, objects, notes, or resolution. Deactivated and resolved storylines are included even though the turn context leaves them out. Use it to recall a dormant or finished thread, or to check whether a storyline already exists before creating one. Each result includes the id, the active, resolved, and focused flags, and every field.",
     "parameters": {
       "properties": {
         "query": {

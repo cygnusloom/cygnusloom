@@ -36,6 +36,7 @@ from cygnusloom.content.library import (
     CombatRules,
     EncounterObject,
     Hooks,
+    HousekeepingRules,
     InventoryRules,
     MagicRules,
     Marketplace,
@@ -49,6 +50,7 @@ from cygnusloom.rules.context import brief
 from cygnusloom.rules.dice import is_formula, roll_total
 from cygnusloom.services import clock as clock_service
 from cygnusloom.services import combat, encounters
+from cygnusloom.services import housekeeping as housekeeping_service
 from cygnusloom.services import inventory as inventory_service
 from cygnusloom.services import market as market_service
 from cygnusloom.services import wilderness as wilderness_service
@@ -100,6 +102,7 @@ from cygnusloom.services.events import (
     Storyline,
     StorylineCreated,
     StorylineFocused,
+    StorylineResolved,
     StorylineUpdated,
     TravelCharged,
     WorldDescribed,
@@ -1668,6 +1671,7 @@ def move_actor(
     hooks: Hooks | None = None,
     inventory: InventoryRules | None = None,
     encounter_objects: Mapping[str, EncounterObject] | None = None,
+    housekeeping: HousekeepingRules | None = None,
 ) -> dict[str, Any]:
     """Move a character to a place. With no place, an NPC goes into the wind: it is nowhere
     in particular until a later move brings it back. A player character's move in a settlement
@@ -1691,6 +1695,11 @@ def move_actor(
             f"there is no travel mode named {speed!r}; use one of {', '.join(sorted(travel.modes))}"
         )
     where = _place_named(state, location)
+    tasks = (
+        housekeeping_service.scene_tasks(state, where, housekeeping)
+        if housekeeping is not None and actor.kind == PC_KIND and not actor.hireling
+        else []
+    )
     minutes = None
     if travel is not None and actor.kind == PC_KIND and mode == IN_SETTLEMENT:
         minutes = _travel_minutes(state, actor, where, travel, speed)
@@ -1709,6 +1718,8 @@ def move_actor(
                 record(db, campaign_id, ActorMoved(name=hireling.name, location=where.name))
                 travelers.append(hireling.name)
     result: dict[str, Any] = {"moved": actor.name, "location": where.name}
+    if tasks:
+        result["housekeeping"] = [task.text for task in tasks]
     if encounter_objects is not None:
         placed = encounters.place_arrivals(db, campaign_id, travelers, encounter_objects)
         if placed:
@@ -1975,6 +1986,8 @@ def _storyline_payload(state: CampaignState, storyline: Storyline) -> dict[str, 
         "objects": list(storyline.objects),
         "notes": storyline.notes,
         "active": storyline.active,
+        "resolved": storyline.resolved,
+        "resolution": storyline.resolution,
         "focused": focused is not None and focused.id == storyline.id,
     }
 
@@ -2003,8 +2016,8 @@ def create_storyline(
     if len(active) >= MAX_ACTIVE_STORYLINES:
         names = ", ".join(storyline.name for storyline in active)
         raise InvalidInput(
-            f"{MAX_ACTIVE_STORYLINES} storylines are already active ({names}); deactivate one "
-            "with deactivate_storyline before creating another"
+            f"{MAX_ACTIVE_STORYLINES} storylines are already active ({names}); resolve or "
+            "deactivate one with resolve_storyline or deactivate_storyline before creating another"
         )
     storyline_id = record(
         db,
@@ -2060,13 +2073,17 @@ def update_storyline(
             if other.id != old.id and name_key(other.name) == name_key(new_name):
                 raise InvalidInput(f"another storyline is already named {new_name!r}")
     new_active = old.active if active is None else active
+    if old.resolved and new_active:
+        raise InvalidInput(
+            f"{old.name!r} is resolved; create a new storyline that follows it instead"
+        )
     if new_active and not old.active:
         active_storylines = state.active_storylines()
         if len(active_storylines) >= MAX_ACTIVE_STORYLINES:
             names = ", ".join(item.name for item in active_storylines)
             raise InvalidInput(
-                f"{MAX_ACTIVE_STORYLINES} storylines are already active ({names}); deactivate "
-                "one before reactivating this storyline"
+                f"{MAX_ACTIVE_STORYLINES} storylines are already active ({names}); resolve or "
+                "deactivate one before reactivating this storyline"
             )
     record(
         db,
@@ -2100,6 +2117,10 @@ def focus_storyline(db: Session, campaign_id: int, storyline: str) -> dict[str, 
     """Make one active storyline the main plot of the moment."""
     state = load_state(db, campaign_id)
     story = _storyline_named(state, storyline)
+    if story.resolved:
+        raise InvalidInput(
+            f"{story.name!r} is resolved; create a new storyline that follows it instead"
+        )
     if not story.active:
         raise InvalidInput(
             f"{story.name!r} is deactivated; make it active with update_storyline before focusing it"
@@ -2115,6 +2136,8 @@ def deactivate_storyline(db: Session, campaign_id: int, storyline: str) -> dict[
     active storyline takes over the focus when this one had it."""
     state = load_state(db, campaign_id)
     story = _storyline_named(state, storyline)
+    if story.resolved:
+        return {"deactivated": story.name, "id": story.id, "already": True, "resolved": True}
     if not story.active:
         return {"deactivated": story.name, "id": story.id, "already": True}
     record(
@@ -2142,9 +2165,40 @@ def deactivate_storyline(db: Session, campaign_id: int, storyline: str) -> dict[
     }
 
 
+def resolve_storyline(
+    db: Session, campaign_id: int, storyline: str, resolution: str
+) -> dict[str, Any]:
+    """Mark a storyline concluded. It leaves the active and focused lists but stays in the
+    record, with a player-facing closing note, for search_storylines to find later."""
+    state = load_state(db, campaign_id)
+    story = _storyline_named(state, storyline)
+    if story.resolved:
+        return {"resolved": story.name, "id": story.id, "already": True}
+    text = _storyline_text(resolution, "resolution", MAX_SUMMARY)
+    record(
+        db,
+        campaign_id,
+        StorylineResolved(
+            storyline_id=story.id,
+            name=story.name,
+            resolution=text,
+        ),
+    )
+    db.commit()
+    state = load_state(db, campaign_id)
+    focused = state.focused_storyline()
+    return {
+        "resolved": story.name,
+        "id": story.id,
+        "resolution": text,
+        "focused": focused.name if focused is not None else None,
+    }
+
+
 def search_storylines(state: CampaignState, query: str) -> dict[str, list[dict[str, Any]]]:
-    """Storylines whose name, summary, plot, cast, places, objects, or notes contain every word
-    of `query`. Deactivated storylines are included, since the turn context leaves them out."""
+    """Storylines whose name, summary, plot, cast, places, objects, notes, or resolution contain
+    every word of `query`. Deactivated and resolved storylines are included, since the turn
+    context leaves them out."""
     words = _words(query)
     matches = [
         _storyline_payload(state, storyline)
@@ -2155,12 +2209,13 @@ def search_storylines(state: CampaignState, query: str) -> dict[str, list[dict[s
             storyline.summary,
             storyline.plot,
             storyline.notes,
+            storyline.resolution,
             *storyline.characters,
             *storyline.locations,
             *storyline.objects,
         )
     ]
-    matches.sort(key=lambda item: (not item["active"], item["id"]))
+    matches.sort(key=lambda item: (item["resolved"], not item["active"], item["id"]))
     return {"storylines": matches[:MAX_STORYLINE_RESULTS]}
 
 

@@ -141,6 +141,7 @@ class TravelMixin:
                             hooks=self.hooks,
                             inventory=self.inventory,
                             encounter_objects=self.encounter_objects,
+                            housekeeping=self.housekeeping,
                         )
                     result["note"] = (
                         "This rule set does not track wilderness; the GM narrates the journey."
@@ -160,6 +161,7 @@ class TravelMixin:
                 hooks=self.hooks,
                 inventory=self.inventory,
                 encounter_objects=self.encounter_objects,
+                housekeeping=self.housekeeping,
             )
 
     def _overland_move(
@@ -286,6 +288,7 @@ class TravelMixin:
                 hooks=self.hooks,
                 inventory=self.inventory,
                 encounter_objects=self.encounter_objects,
+                housekeeping=self.housekeeping,
             )
         result.update(
             {

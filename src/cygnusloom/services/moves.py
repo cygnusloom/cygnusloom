@@ -20,6 +20,7 @@ from cygnusloom.content.library import (
     MoveBand,
     MoveRules,
 )
+from cygnusloom.content.lookup import AmbiguousId, resolve_id
 from cygnusloom.rules.dice import roll_total
 from cygnusloom.services import reactions
 from cygnusloom.services.common import InvalidInput, whole_number
@@ -55,6 +56,25 @@ def condition_bonus(
     )
 
 
+def canonical_stat(character: Character, spec: CharacterSpec | None, stat: str) -> str:
+    """The stat id the character knows, accepting a display name or different capitalization."""
+    if stat in character.stats:
+        return stat
+    table = spec.stats if spec is not None else character.stats
+    names = (lambda rules: (rules.name,)) if spec is not None else None
+    try:
+        found = resolve_id(table, stat, kind="stat", names=names)
+    except AmbiguousId as exc:
+        raise InvalidInput(str(exc)) from exc
+    except LookupError:
+        found = ""
+    if found not in character.stats:
+        raise InvalidInput(
+            f"there is no stat named {stat!r}; choose one of {sorted(character.stats)}"
+        )
+    return found
+
+
 def make_move(
     db: Session,
     campaign_id: int,
@@ -88,6 +108,18 @@ def make_move(
     character = state.characters.get(name_key(name))
     if character is None:
         raise InvalidInput(f"there is no character named {name!r}")
+    if stat is not None and not stat.strip():
+        stat = None
+    if stat is not None and move.stat != HIGHEST:
+        try:
+            stat = canonical_stat(character, spec, stat)
+        except InvalidInput:
+            if move.stat is None and move.stat_choice:
+                raise InvalidInput(
+                    f"{move.label} rolls a stat the player chooses: "
+                    f"pick one of {list(move.stat_choice)}"
+                ) from None
+            raise
     if move.stat == HIGHEST:
         if stat is not None:
             raise InvalidInput(
@@ -113,10 +145,8 @@ def make_move(
     rolled_stat = (
         best_stat(character, move.stat_choice, spec) if move.stat == HIGHEST else move.stat or stat
     )
-    if rolled_stat is not None and rolled_stat not in character.stats:
-        raise InvalidInput(
-            f"there is no stat named {rolled_stat!r}; choose one of {sorted(character.stats)}"
-        )
+    if rolled_stat is not None:
+        rolled_stat = canonical_stat(character, spec, rolled_stat)
     if roll is None:
         roll = roll_total(move.dice, rng, plus=plus)
     else:

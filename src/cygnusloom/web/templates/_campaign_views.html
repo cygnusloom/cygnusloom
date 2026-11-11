@@ -16,13 +16,23 @@
         <div class="journal">{{ journal_text(scene.journal) }}</div>
       </div>
       <div class="journal-tab-panel" role="tabpanel" id="journal-panel-story" aria-labelledby="journal-tab-story" hidden>
-        {% if story and story.storylines %}
+        {% if story and (story.storylines or story.resolved) %}
         {% for storyline in story.storylines %}
         <article class="storyline{% if not storyline.active %} is-inactive{% endif %}">
           <h3>{{ storyline.name }} <span class="story-status">{{ "Focused" if storyline.focused else ("Active" if storyline.active else "Deactivated") }}</span></h3>
           {% if storyline.summary %}<p>{{ storyline.summary }}</p>{% endif %}
         </article>
         {% endfor %}
+        {% if story.resolved %}
+        <h3 class="story-resolved-heading">Resolved</h3>
+        {% for storyline in story.resolved %}
+        <article class="storyline is-resolved">
+          <h3>{{ storyline.name }} <span class="story-status">Resolved</span></h3>
+          {% if storyline.summary %}<p>{{ storyline.summary }}</p>{% endif %}
+          {% if storyline.resolution %}<p><strong>Outcome:</strong> {{ storyline.resolution }}</p>{% endif %}
+        </article>
+        {% endfor %}
+        {% endif %}
         {% else %}
         <p class="muted">No storylines yet. The GM adds one as the story begins.</p>
         {% endif %}
@@ -35,11 +45,15 @@
         <input type="search" data-filter="#character-list" placeholder="Search by name, relationship, or place" autocomplete="off">
       </label>
       <div id="character-list" class="character-list">
+        {% set living_hirelings = scene.hirelings | rejectattr("dead") | rejectattr("defeated") | list %}
+        {% set fallen_hirelings = (scene.hirelings | selectattr("dead") | list) + (scene.hirelings | selectattr("defeated") | rejectattr("dead") | list) %}
+        {% set living_known = scene.known | rejectattr("fallen") | list %}
+        {% set fallen_known = scene.known | selectattr("fallen") | list %}
         {% if scene.pc %}
         <section class="character-group" data-filter-group aria-labelledby="characters-you">
           <h3 id="characters-you">You</h3>
-          <article class="character-card" data-filter-item>
-            <h4>{{ scene.pc.name }}{% if scene.pc.dead %} <span class="muted">(dead)</span>{% elif scene.pc.retired %} <span class="muted">(left the story)</span>{% endif %}</h4>
+          <article class="character-card{% if scene.pc.dead %} is-dead{% endif %}" data-filter-item>
+            <h4>{{ scene.pc.name }}{% if scene.pc.dead %} <span class="tag tag-dead">Dead</span>{% elif scene.pc.retired %} <span class="muted">(left the story)</span>{% endif %}</h4>
             <p class="character-facts">
               {% if scene.pc.pronouns %}<span>Pronouns: {{ scene.pc.pronouns }}</span>{% endif %}
               <span>{% if scene.location %}At {{ scene.location.name }}{% else %}Not yet placed{% endif %}</span>
@@ -48,12 +62,12 @@
           </article>
         </section>
         {% endif %}
-        {% if scene.hirelings %}
+        {% if living_hirelings %}
         <section class="character-group" data-filter-group aria-labelledby="characters-hirelings">
           <h3 id="characters-hirelings">Hirelings</h3>
-          {% for hireling in scene.hirelings %}
+          {% for hireling in living_hirelings %}
           <article class="character-card" data-filter-item>
-            <h4>{{ hireling.name }}{% if hireling.dead %} <span class="muted">(dead)</span>{% endif %}</h4>
+            <h4>{{ hireling.name }}</h4>
             <p class="character-facts">
               {% if hireling.pronouns %}<span>Pronouns: {{ hireling.pronouns }}</span>{% endif %}
               <span>Hired by {{ hireling.employer }}</span>
@@ -66,9 +80,9 @@
         {% endif %}
         <section class="character-group" data-filter-group aria-labelledby="characters-known">
           <h3 id="characters-known">People you know</h3>
-          {% for npc in scene.known %}
+          {% for npc in living_known %}
           <article class="character-card" data-filter-item>
-            <h4>{{ npc.name }}{% if npc.dead %} <span class="muted">(dead)</span>{% endif %}</h4>
+            <h4>{{ npc.name }}</h4>
             <p class="character-facts">
               {% if npc.pronouns %}<span>Pronouns: {{ npc.pronouns }}</span>{% endif %}
               {% if npc.relation %}<span class="character-relation">{{ npc.relation }}</span>{% endif %}
@@ -79,9 +93,38 @@
             {% if npc.summary %}<p>{{ npc.summary }}</p>{% endif %}
           </article>
           {% else %}
-          <p class="muted">You have not met anyone yet.</p>
+          <p class="muted">{% if scene.known %}No one you know is still living.{% else %}You have not met anyone yet.{% endif %}</p>
           {% endfor %}
         </section>
+        {% if fallen_hirelings or fallen_known %}
+        <section class="character-group" data-filter-group aria-labelledby="characters-fallen">
+          <h3 id="characters-fallen">Fallen</h3>
+          {% for hireling in fallen_hirelings %}
+          <article class="character-card is-dead" data-filter-item>
+            <h4>{{ hireling.name }} <span class="tag tag-dead">{{ "Dead" if hireling.dead else "Fallen" }}</span></h4>
+            <p class="character-facts">
+              {% if hireling.pronouns %}<span>Pronouns: {{ hireling.pronouns }}</span>{% endif %}
+              <span>Hired by {{ hireling.employer }}</span>
+              {% if hireling.location %}<span>Last known: {{ hireling.location }}</span>{% endif %}
+            </p>
+            {% if hireling.summary %}<p>{{ hireling.summary }}</p>{% endif %}
+          </article>
+          {% endfor %}
+          {% for npc in fallen_known %}
+          <article class="character-card is-dead" data-filter-item>
+            <h4>{{ npc.name }} <span class="tag tag-dead">{{ "Dead" if npc.dead else "Fallen" }}</span></h4>
+            <p class="character-facts">
+              {% if npc.pronouns %}<span>Pronouns: {{ npc.pronouns }}</span>{% endif %}
+              {% if npc.relation %}<span class="character-relation">{{ npc.relation }}</span>{% endif %}
+              {% if npc.creature and npc.creature_entry %}<span>Creature: <a href="#{{ npc.creature_entry }}" data-view-link="compendium">{{ npc.creature }}</a></span>{% endif %}
+              {% if npc.location %}<span>Fell at: {{ npc.location }}</span>{% else %}<span>Whereabouts unknown</span>{% endif %}
+            </p>
+            {% if npc.relationship %}<p><strong>Relationship:</strong> {{ npc.relationship }}</p>{% endif %}
+            {% if npc.summary %}<p>{{ npc.summary }}</p>{% endif %}
+          </article>
+          {% endfor %}
+        </section>
+        {% endif %}
       </div>
       <p class="muted" data-filter-empty hidden>No characters match that search.</p>
     </section>

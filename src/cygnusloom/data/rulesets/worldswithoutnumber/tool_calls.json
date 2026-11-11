@@ -16,6 +16,7 @@
         },
         "skill": {
           "type": "string",
+          "enum_from": "skills",
           "description": "The skill id used, such as notice, sneak, heal, exert, or magic. A skill the character lacks counts as -1."
         },
         "stat": {
@@ -149,6 +150,7 @@
         },
         "skill": {
           "type": "string",
+          "enum_from": "skills",
           "description": "The skill id to raise, such as notice or stab. It must be a skill of this rule set."
         }
       },

@@ -23,5 +23,11 @@
     "id": "encounter_start",
     "requires": ["combat"],
     "text": "When a fight or other tactical action starts, set it up yourself without asking the player whether to use the encounter system: create or choose a map, start the encounter, add every combatant, then settle initiative. The encounter is how turns, positions, and attacks are tracked. Do not start a later turn on your own: the player presses Start for an NPC's turn, while the player character's own turn starts automatically. An NPC's turn ends automatically when your reply finishes; the player presses End only for their own character's turn. Never take a player character's turn for them."
+  },
+  {
+    "type": "prompt",
+    "id": "scene_housekeeping",
+    "step": "state",
+    "text": "The Housekeeping block suggests what earlier scenes may have left behind at the place the player is in. It is a prompt for continuity, not a command: use it when it helps set the scene, and leave it alone when the story is better served by the place looking unchanged. When you use it, you might say in the location's description what the place looks like now, such as buried, burned, dragged off, rotted, or repaired, and move or remove bodies that are gone. Never invent a body or a fight the record does not list."
   }
 ]

@@ -1,0 +1,14 @@
+[
+  {
+    "type": "housekeeping",
+    "id": "common",
+    "bodies": {
+      "after_days": 1,
+      "task": "Bodies at {place}: {names}. If enough time has passed, consider what happened to them, such as burial, burning, being carried off, or being left to the weather. When it fits the story, update {place}'s description and move or remove the bodies."
+    },
+    "fight_debris": {
+      "after_days": 1,
+      "task": "A fight ended at {place} {days} ago. If the scene calls for it, describe how the place looks now, including any blood, broken ground, dropped gear, or repairs, and update {place}'s description."
+    }
+  }
+]

@@ -13,10 +13,45 @@ from sqlmodel import Session
 
 from cygnusloom.content.character import CharacterSpec, Feature
 from cygnusloom.content.library import ALL_STATS, CheckRules, ConditionRules
+from cygnusloom.content.lookup import AmbiguousId, resolve_id
 from cygnusloom.services import reactions, resolution
 from cygnusloom.services.common import InvalidInput, whole_number
 from cygnusloom.services.conditions import active_conditions
 from cygnusloom.services.events import CheckMade, load_state, name_key, record
+
+
+def resolve_skill(spec: CharacterSpec, skill: str) -> str:
+    """The rule set's canonical skill id for a loose id or display name, or "" when none is
+    named. An exact id wins; an ambiguous display name is an error."""
+    wanted = skill.strip()
+    if not wanted:
+        return ""
+    try:
+        return resolve_id(spec.skills, wanted, kind="skill", names=lambda rules: (rules.name,))
+    except AmbiguousId as exc:
+        raise InvalidInput(str(exc)) from exc
+    except LookupError:
+        options = ", ".join(sorted(spec.skills)) or "none"
+        raise InvalidInput(
+            f"there is no skill named {wanted!r}; the rule set's skills are: {options}"
+        ) from None
+
+
+def resolve_stat(spec: CharacterSpec, stat: str) -> str:
+    """The rule set's canonical stat id for a loose id or display name, or "" when none is
+    named. An exact id wins; an ambiguous display name is an error."""
+    wanted = stat.strip()
+    if not wanted:
+        return ""
+    try:
+        return resolve_id(spec.stats, wanted, kind="stat", names=lambda rules: (rules.name,))
+    except AmbiguousId as exc:
+        raise InvalidInput(str(exc)) from exc
+    except LookupError:
+        options = ", ".join(sorted(spec.stats)) or "none"
+        raise InvalidInput(
+            f"there is no stat named {wanted!r}; the rule set's stats are: {options}"
+        ) from None
 
 
 def roll_check(
@@ -50,26 +85,21 @@ def roll_check(
     found = load_state(db, campaign_id).characters.get(name_key(character))
     if found is None:
         raise InvalidInput(f"there is no character named {character!r}")
-    skill_id = skill.strip()
+    skill_id = resolve_skill(spec, skill)
     skill_name = ""
     skill_level = 0
     skill_bonus = 0
     if skill_id:
-        skill_rules = spec.skills.get(skill_id)
-        if skill_rules is None:
-            options = ", ".join(sorted(spec.skills)) or "none"
-            raise InvalidInput(
-                f"there is no skill named {skill_id!r}; the rule set's skills are: {options}"
-            )
+        skill_rules = spec.skills[skill_id]
         skill_name = skill_rules.name
         skill_level = spec.skill_level(found.skills, skill_id)
         skill_bonus = skill_level if spec.skill_trained(found.skills, skill_id) else check.unskilled
-    stat_id = stat.strip()
+    stat_id = resolve_stat(spec, stat)
     stat_name = ""
     stat_bonus = 0
     if stat_id:
-        stat_rules = spec.stats.get(stat_id)
-        if stat_rules is None or stat_id not in found.stats:
+        stat_rules = spec.stats[stat_id]
+        if stat_id not in found.stats:
             options = ", ".join(sorted(found.stats)) or "none"
             raise InvalidInput(
                 f"{found.name} has no stat {stat_id!r}; the character's stats are: {options}"

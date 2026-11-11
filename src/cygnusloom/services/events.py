@@ -874,6 +874,7 @@ class LocationUpdated(GameEvent):
             position=_position(self.x, self.y),
             icon=self.icon if self.icon_changed else before.icon,
             summary=self.summary if self.summary_changed else before.summary,
+            fight_day=None if self.description != before.description else before.fight_day,
         )
 
     def render(self) -> str:
@@ -1123,8 +1124,8 @@ class StorylineUpdated(GameEvent):
         old = state.storylines.get(self.storyline_id)
         if old is None:
             return
-        state.storylines[self.storyline_id] = Storyline(
-            id=old.id,
+        state.storylines[self.storyline_id] = replace(
+            old,
             name=self.name,
             summary=self.summary,
             plot=self.plot,
@@ -1157,6 +1158,36 @@ class StorylineFocused(GameEvent):
 
     def render(self) -> str:
         return f"Storyline focused: {self.name}."
+
+
+@dataclass(frozen=True)
+class StorylineResolved(GameEvent):
+    """A storyline's plot concludes. It leaves the active and focused lists but stays in the
+    record, with a player-facing closing note, so a later storyline can grow from it."""
+
+    kind: ClassVar[str] = "storyline.resolved"
+    hidden: ClassVar[bool] = True
+    id_refs: ClassVar[dict[str, tuple[str, ...]]] = {"storyline_id": ("storyline.created",)}
+
+    storyline_id: int
+    name: str
+    resolution: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        old = state.storylines.get(self.storyline_id)
+        if old is None:
+            return
+        state.storylines[self.storyline_id] = replace(
+            old,
+            active=False,
+            resolved=True,
+            resolution=self.resolution,
+        )
+        if state.focus_storyline_id == self.storyline_id:
+            state.focus_storyline_id = None
+
+    def render(self) -> str:
+        return f"Storyline resolved: {self.name}."
 
 
 @dataclass(frozen=True)
@@ -1796,6 +1827,12 @@ class EncounterEnded(GameEvent):
     reason: str = ""
 
     def apply(self, state: CampaignState, event_id: int) -> None:
+        encounter = state.encounter
+        if encounter is not None:
+            key = name_key(encounter.location)
+            place = state.places.get(key)
+            if place is not None:
+                state.places[key] = replace(place, fight_day=state.clock.day)
         for character in state.characters.values():
             character.fled = False
             character.surrendered = False
@@ -2022,6 +2059,7 @@ class CharacterRecovered(GameEvent):
     def apply(self, state: CampaignState, event_id: int) -> None:
         character = state.characters[name_key(self.name)]
         character.defeated = False
+        character.fell_day = None
         character.dying_hours = None
         character.dying_rounds = None
 
@@ -2414,6 +2452,8 @@ class Struck(GameEvent):
             character.shock_blocked_round = self.shield_round
         if self.defeats:
             character.defeated = True
+            if character.fell_day is None:
+                character.fell_day = state.clock.day
 
     def render(self) -> str:
         taken = sum(self.harm.values())
@@ -2471,6 +2511,8 @@ class SaveRolled(GameEvent):
                 character.critical_due = True
             else:
                 character.defeated = True
+                if character.fell_day is None:
+                    character.fell_day = state.clock.day
 
     def render(self) -> str:
         result = "succeeds" if self.passed else "fails"
@@ -2498,6 +2540,8 @@ class GroupBreakResolved(GameEvent):
         character.critical_due = False
         if self.outcome == "defeat":
             character.defeated = True
+            if character.fell_day is None:
+                character.fell_day = state.clock.day
         else:
             character.fled = True
 
@@ -3578,6 +3622,8 @@ class Harmed(GameEvent):
             character.harm[self.stat] = character.harm.get(self.stat, 0) + self.taken
         if self.defeats:
             character.defeated = True
+            if character.fell_day is None:
+                character.fell_day = state.clock.day
 
     def render(self) -> str:
         text = f"{self.name} loses {self.taken} {self.stat.upper()}"
@@ -3864,6 +3910,8 @@ class CharacterDied(GameEvent):
         character = state.characters[name_key(self.name)]
         character.dead = True
         character.defeated = True
+        if character.fell_day is None:
+            character.fell_day = state.clock.day
         character.dying_hours = None
         character.dying_rounds = None
 

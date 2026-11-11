@@ -1,12 +1,26 @@
 (() => {
   const MAX_SCALE = 6;
+  const MIN_SCALE = 1;
   const WHEEL_SENSITIVITY = 0.0015;
+  // `--zoom` is inherited by labels, markers and tokens, so rewrite it only on a visible step.
+  const ZOOM_STEP = 0.01;
+  const WHEEL_GESTURE_MS = 140;
 
   // Each board keeps its own zoom and position; hidden tabs keep their state.
   // `left` and `top` are where the board's top-left corner sits inside its frame.
   const states = new WeakMap();
   const stateOf = (board) => {
-    if (!states.has(board)) states.set(board, { scale: 1, left: null, top: null });
+    if (!states.has(board)) {
+      states.set(board, {
+        scale: 1, left: null, top: null,
+        frameWidth: 0, frameHeight: 0,
+        boardWidth: 0, boardHeight: 0,
+        boardLeft: 0, boardTop: 0,
+        measured: false,
+        renderedScale: null,
+        raf: 0,
+      });
+    }
     return states.get(board);
   };
 
@@ -16,32 +30,31 @@
     return Math.min(0, Math.max(frameSize - size, position ?? (frameSize - size) / 2));
   };
 
-  const fit = (frame, board) => {
-    // Hidden tabs have no size; the board is fitted again when it is shown.
-    if (!frame.clientWidth || !frame.clientHeight) return;
+  // Layout metrics only change with layout, never with the transform, so they are read on attach,
+  // pointerdown, ResizeObserver and window resize rather than on every zoom or pan event.
+  const measure = (frame, board) => {
     const state = stateOf(board);
-    const width = board.offsetWidth * state.scale;
-    const height = board.offsetHeight * state.scale;
-    state.left = clampAxis(state.left, width, frame.clientWidth);
-    state.top = clampAxis(state.top, height, frame.clientHeight);
-    board.style.transform = `translate(${state.left - board.offsetLeft}px, ${state.top - board.offsetTop}px) scale(${state.scale})`;
-    board.style.setProperty("--zoom", state.scale);
-  };
-
-  const zoomAt = (frame, board, factor, pointX, pointY) => {
-    const state = stateOf(board);
-    const scale = Math.min(MAX_SCALE, Math.max(1, state.scale * factor));
-    if (scale === state.scale) return;
-    // Keep the board point under the pointer where it was.
-    const boardX = (pointX - state.left) / state.scale;
-    const boardY = (pointY - state.top) / state.scale;
-    state.left = pointX - boardX * scale;
-    state.top = pointY - boardY * scale;
-    state.scale = scale;
-    fit(frame, board);
+    state.frameWidth = frame.clientWidth;
+    state.frameHeight = frame.clientHeight;
+    if (!state.frameWidth || !state.frameHeight) {
+      // Hidden tabs and closed side sheets have no size; measure again when they are shown.
+      state.measured = false;
+      return;
+    }
+    state.boardWidth = board.offsetWidth;
+    state.boardHeight = board.offsetHeight;
+    state.boardLeft = board.offsetLeft;
+    state.boardTop = board.offsetTop;
+    state.measured = true;
   };
 
   const attachedFrames = new WeakSet();
+  // One shared resize listener: live turns replace map panels, so per-frame window listeners would pile up.
+  const refreshers = new WeakMap();
+  window.addEventListener("resize", () => {
+    document.querySelectorAll(".map-frame").forEach((frame) => refreshers.get(frame)?.());
+  });
+
   const attach = (frame) => {
     if (attachedFrames.has(frame)) return;
     attachedFrames.add(frame);
@@ -49,24 +62,101 @@
     if (!board) return;
     frame.title = "Pinch or scroll to zoom, drag to pan, double-tap to reset";
 
-    const reset = () => {
-      Object.assign(stateOf(board), { scale: 1, left: null, top: null });
-      fit(frame, board);
-    };
-
-    frame.addEventListener("wheel", (event) => {
-      event.preventDefault();
-      const rect = frame.getBoundingClientRect();
-      const deltaY = event.deltaMode === 1 ? event.deltaY * 16 : event.deltaY;
-      zoomAt(frame, board, Math.exp(-deltaY * WHEEL_SENSITIVITY), event.clientX - rect.left, event.clientY - rect.top);
-    }, { passive: false });
-
+    let frameRect = null;
+    let wheelActive = false;
+    let wheelTimer = 0;
     let lastPointer = null;
     const pointed = new Map();
     let pinch = null;
     let moved = false;
     let tapTarget = null;
     let lastTap = null;
+
+    const apply = () => {
+      const state = stateOf(board);
+      if (!state.measured) return;
+      state.left = clampAxis(state.left, state.boardWidth * state.scale, state.frameWidth);
+      state.top = clampAxis(state.top, state.boardHeight * state.scale, state.frameHeight);
+      // The transform is always exact; only the inherited `--zoom` is quantised on screen.
+      board.style.transform = `translate(${state.left - state.boardLeft}px, ${state.top - state.boardTop}px) scale(${state.scale})`;
+      if (state.renderedScale === null || Math.abs(state.scale - state.renderedScale) >= ZOOM_STEP) {
+        board.style.setProperty("--zoom", state.scale);
+        state.renderedScale = state.scale;
+      }
+    };
+
+    // Handlers mutate the numbers, then ask for one frame; several events in a frame coalesce.
+    const schedule = () => {
+      const state = stateOf(board);
+      if (state.raf) return;
+      state.raf = requestAnimationFrame(() => {
+        state.raf = 0;
+        apply();
+      });
+    };
+    const flush = () => {
+      const state = stateOf(board);
+      if (state.raf) cancelAnimationFrame(state.raf);
+      state.raf = 0;
+      apply();
+    };
+    // Gesture end writes the exact final transform and `--zoom`, even if a stepped write skipped it.
+    const settle = () => {
+      stateOf(board).renderedScale = null;
+      flush();
+    };
+    const refresh = () => {
+      measure(frame, board);
+      frameRect = null;
+      flush();
+    };
+    // Clamp against the cached metrics: no layout reads while a gesture is running.
+    const clampState = (state) => {
+      if (!state.measured) return;
+      state.left = clampAxis(state.left, state.boardWidth * state.scale, state.frameWidth);
+      state.top = clampAxis(state.top, state.boardHeight * state.scale, state.frameHeight);
+    };
+    // Zoom about a frame-local point, keeping the board point under that point where it was.
+    const zoomState = (factor, x, y) => {
+      const state = stateOf(board);
+      const scale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, state.scale * factor));
+      if (scale === state.scale) return;
+      const boardX = (x - state.left) / state.scale;
+      const boardY = (y - state.top) / state.scale;
+      state.left = x - boardX * scale;
+      state.top = y - boardY * scale;
+      state.scale = scale;
+      clampState(state);
+    };
+    const reset = () => {
+      Object.assign(stateOf(board), { scale: 1, left: null, top: null });
+      settle();
+    };
+    const endWheel = () => {
+      wheelTimer = 0;
+      wheelActive = false;
+      if (pointed.size) return;
+      frame.classList.remove("gesturing");
+      frameRect = null;
+      settle();
+    };
+
+    frame.addEventListener("wheel", (event) => {
+      event.preventDefault();
+      if (!frameRect) frameRect = frame.getBoundingClientRect();
+      const deltaY = event.deltaMode === 1 ? event.deltaY * 16 : event.deltaY;
+      zoomState(
+        Math.exp(-deltaY * WHEEL_SENSITIVITY),
+        event.clientX - frameRect.left,
+        event.clientY - frameRect.top,
+      );
+      frame.classList.add("gesturing");
+      wheelActive = true;
+      clearTimeout(wheelTimer);
+      wheelTimer = setTimeout(endWheel, WHEEL_GESTURE_MS);
+      schedule();
+    }, { passive: false });
+
     const pinchAt = () => {
       const [a, b] = [...pointed.values()];
       return {
@@ -75,8 +165,17 @@
         y: (a.y + b.y) / 2,
       };
     };
+
+    // Buttons, links and form controls keep their own pointer defaults.
+    const INTERACTIVE = "button, a, input, select, textarea, summary, label, [role='button'], [role='link'], [contenteditable='true']";
     frame.addEventListener("pointerdown", (event) => {
-      if (event.button !== 0 || event.target.closest?.("button")) return;
+      if (event.button !== 0 || event.target.closest?.(INTERACTIVE)) return;
+      // Stop text selection and native image drags without swallowing control clicks.
+      event.preventDefault();
+      // Layout can have changed since attach (side sheet opening, tab switch), so refresh here.
+      measure(frame, board);
+      frameRect = frame.getBoundingClientRect();
+      flush();
       pointed.set(event.pointerId, { x: event.clientX, y: event.clientY });
       // Synthetic pointers and a few embedded browsers refuse capture; the pointer map alone
       // is enough to keep dragging and pinching inside the frame.
@@ -96,6 +195,7 @@
         pinch = null;
       }
       frame.classList.add("panning");
+      frame.classList.add("gesturing");
     });
     frame.addEventListener("pointermove", (event) => {
       if (!pointed.has(event.pointerId)) return;
@@ -103,18 +203,18 @@
       if (pointed.size >= 2) {
         const next = pinchAt();
         if (pinch && next.distance > 0 && pinch.distance > 0) {
-          const rect = frame.getBoundingClientRect();
-          zoomAt(
-            frame,
-            board,
-            next.distance / pinch.distance,
-            next.x - rect.left,
-            next.y - rect.top,
-          );
+          if (!frameRect) frameRect = frame.getBoundingClientRect();
           const state = stateOf(board);
+          // Scale about the new midpoint, then move that midpoint with the fingers: one update.
+          zoomState(
+            next.distance / pinch.distance,
+            next.x - frameRect.left,
+            next.y - frameRect.top,
+          );
           state.left += next.x - pinch.x;
           state.top += next.y - pinch.y;
-          fit(frame, board);
+          clampState(state);
+          schedule();
         }
         pinch = next;
         moved = true;
@@ -128,7 +228,8 @@
       state.left += dx;
       state.top += dy;
       lastPointer = { x: event.clientX, y: event.clientY };
-      fit(frame, board);
+      clampState(state);
+      schedule();
     });
     const endPan = (event) => {
       pointed.delete(event.pointerId);
@@ -140,6 +241,9 @@
       if (pointed.size === 0) {
         lastPointer = null;
         frame.classList.remove("panning");
+        frame.classList.remove("gesturing");
+        if (!wheelActive) frameRect = null;
+        settle();
       }
       if (event.type !== "pointerup" || pointed.size !== 0) return;
       // A tap, not a drag: show the token or region tip and detect a double tap.
@@ -163,7 +267,10 @@
     frame.addEventListener("dblclick", reset);
     frame.querySelector(".map-recenter")?.addEventListener("click", reset);
 
-    new ResizeObserver(() => fit(frame, board)).observe(frame);
+    refreshers.set(frame, refresh);
+    new ResizeObserver(refresh).observe(frame);
+    // Hidden frames stay unmeasured until ResizeObserver reports a size.
+    refresh();
   };
 
   // Token names pop up in the same pill as the token. The popup sits on the page, not in the board,

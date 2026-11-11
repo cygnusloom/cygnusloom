@@ -9,11 +9,18 @@ from typing import Any
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from sqlmodel import Session
 
 from cygnusloom.content.character import NO_CAMPAIGN
 from cygnusloom.llm.base import ToolRequest
 from cygnusloom.services import world
-from cygnusloom.services.events import name_key
+from cygnusloom.services.events import (
+    CharacterDied,
+    CharacterSurrendered,
+    Struck,
+    name_key,
+    record,
+)
 from cygnusloom.services.tools import ToolRun, run_tool
 from tests.test_campaigns import _campaign_id, _place_pc
 from tests.test_world import CAIRN_TOOLS, _ctx, _state
@@ -35,6 +42,19 @@ def _characters_section(page: str) -> str:
     start = page.index('id="character-list"')
     known = page.index("People you know", start)
     return page[start : page.index("</section>", known)]
+
+
+def _fallen_section(page: str) -> str:
+    """The Fallen part of the Characters page."""
+    start = page.index('id="characters-fallen"')
+    return page[start : page.index("</section>", start)]
+
+
+def _record(app: FastAPI, campaign_id: int, event: Any) -> None:
+    """Append an event to the campaign log as play would."""
+    with Session(app.state.engine) as db:
+        record(db, campaign_id, event)
+        db.commit()
 
 
 def test_meeting_an_npc_records_what_the_player_knows(
@@ -399,3 +419,84 @@ def test_the_gm_is_reminded_to_write_missing_character_summaries(
     )
     text = world.world_state_text(_state(app, campaign_id), NO_CAMPAIGN)
     assert "Characters with no player-facing summary" not in text
+
+
+def test_a_defeated_npc_moves_to_the_fallen_group(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    client, campaign_id = _campaign_id(client_factory)
+    _place_pc(client, campaign_id, "Glowcap Ring")
+    summary = "A sharp-eyed forager who trades mushroom caps and gossip."
+    _tool(
+        app,
+        campaign_id,
+        "update_npc_knowledge",
+        {"name": "Brin Gallowcap", "relationship": "friendly, owes a debt"},
+    )
+    _tool(app, campaign_id, "describe_character", {"name": "Brin Gallowcap", "summary": summary})
+    _record(
+        app,
+        campaign_id,
+        Struck(
+            name="Brin Gallowcap",
+            attacker="a wolf",
+            weapon="bite",
+            raw=8,
+            armor=0,
+            harm={"hp": 8},
+            defeats=True,
+            status="dead",
+        ),
+    )
+
+    page = client.get(f"/campaigns/{campaign_id}").text
+    living = _characters_section(page)
+    fallen = _fallen_section(page)
+    assert "Brin Gallowcap" not in living
+    assert "Brin Gallowcap" in fallen
+    assert '<span class="tag tag-dead">Fallen</span>' in fallen
+    assert 'class="character-card is-dead"' in fallen
+    assert "Fell at: Glowcap Ring" in fallen
+    assert "friendly, owes a debt" in fallen
+    assert summary in fallen
+
+
+def test_a_dead_npc_shows_the_dead_badge(client_factory: Callable[[], TestClient], app: FastAPI):
+    client, campaign_id = _campaign_id(client_factory)
+    _place_pc(client, campaign_id, "Glowcap Ring")
+    _record(app, campaign_id, CharacterDied(name="Brin Gallowcap", cause="a wolf"))
+
+    page = client.get(f"/campaigns/{campaign_id}").text
+    living = _characters_section(page)
+    fallen = _fallen_section(page)
+    assert "Brin Gallowcap" not in living
+    assert "Brin Gallowcap" in fallen
+    assert '<span class="tag tag-dead">Dead</span>' in fallen
+    assert 'class="character-card is-dead"' in fallen
+
+
+def test_a_surrendered_npc_stays_with_the_living(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    client, campaign_id = _campaign_id(client_factory)
+    _place_pc(client, campaign_id, "Glowcap Ring")
+    _record(app, campaign_id, CharacterSurrendered(name="Brin Gallowcap"))
+
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert "Brin Gallowcap" in _characters_section(page)
+    assert 'id="characters-fallen"' not in page
+
+
+def test_a_dead_player_character_stays_under_you_and_is_marked_dead(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    client, campaign_id = _campaign_id(client_factory)
+    _place_pc(client, campaign_id, "Glowcap Ring")
+    _record(app, campaign_id, CharacterDied(name=PC, cause="a wolf"))
+
+    page = client.get(f"/campaigns/{campaign_id}").text
+    start = page.index('id="characters-you"')
+    you = page[start : page.index("</section>", start)]
+    assert PC in you
+    assert 'class="character-card is-dead"' in you
+    assert '<span class="tag tag-dead">Dead</span>' in you

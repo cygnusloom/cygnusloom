@@ -22,12 +22,14 @@ from cygnusloom.content.library import (
     EncounterObject,
     EncounterTerrain,
     Hooks,
+    HousekeepingRules,
     InventoryRules,
     RelationRules,
     TallyRules,
     WorldTerrain,
 )
 from cygnusloom.services import custom_features, encounters
+from cygnusloom.services import housekeeping as housekeeping_service
 from cygnusloom.services import inventory as inventory_service
 from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.conditions import active_conditions
@@ -74,6 +76,9 @@ class KnownNpcView:
     # The NPC is at the player character's location now.
     here: bool
     dead: bool
+    # Dead, or an ordinary NPC the rule set's defeat leaves dead in the fiction. An important
+    # NPC is only mortally wounded by a defeat, so it stays among the living until it dies.
+    fallen: bool = False
     # The short player-facing summary of what the player knows of the NPC.
     summary: str = ""
     # The bestiary statblock the NPC was built from, and its compendium entry when one exists.
@@ -83,21 +88,24 @@ class KnownNpcView:
 
 @dataclass(frozen=True)
 class StorylineView:
-    """One storyline on the player-facing Story page. Only the name and summary are shown;
-    the GM's private plot, cast, places, objects, and notes stay hidden."""
+    """One storyline on the player-facing Story page. Only the name, summary, and resolution are
+    shown; the GM's private plot, cast, places, objects, and notes stay hidden."""
 
     name: str
     summary: str
     active: bool
     focused: bool
+    resolved: bool = False
+    resolution: str = ""
 
 
 @dataclass(frozen=True)
 class StoryView:
     """The player-facing Story page: every storyline, focused first, then the other active
-    threads, then deactivated ones."""
+    threads, then deactivated ones, and concluded threads in their own resolved section."""
 
     storylines: tuple[StorylineView, ...] = ()
+    resolved: tuple[StorylineView, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -618,15 +626,20 @@ def _region_pattern_style(region: Region, kind: WorldTerrain | None) -> tuple[st
 
 def story_view(state: CampaignState) -> StoryView:
     """The player-facing Story page. The focused thread comes first, the other active threads
-    follow, and deactivated threads come last. Only names and summaries are exposed; the GM's
-    private fields stay private."""
+    follow, deactivated threads come last, and resolved threads get their own section. Only
+    names, summaries, and resolutions are exposed; the GM's private fields stay private."""
     focused = state.focused_storyline()
     active = [
         storyline
         for storyline in state.active_storylines()
         if focused is None or storyline.id != focused.id
     ]
-    inactive = [storyline for storyline in state.storylines.values() if not storyline.active]
+    inactive = [
+        storyline
+        for storyline in state.storylines.values()
+        if not storyline.active and not storyline.resolved
+    ]
+    resolved = [storyline for storyline in state.storylines.values() if storyline.resolved]
     ordered = ([focused] if focused is not None else []) + active + inactive
     return StoryView(
         storylines=tuple(
@@ -637,7 +650,18 @@ def story_view(state: CampaignState) -> StoryView:
                 focused=focused is not None and storyline.id == focused.id,
             )
             for storyline in ordered
-        )
+        ),
+        resolved=tuple(
+            StorylineView(
+                name=storyline.name,
+                summary=storyline.summary,
+                active=False,
+                focused=False,
+                resolved=True,
+                resolution=storyline.resolution,
+            )
+            for storyline in resolved
+        ),
     )
 
 
@@ -781,6 +805,7 @@ def world_state_text(
     unwritten_world: bool = False,
     track_inventory: bool = True,
     currency: str = "",
+    housekeeping: HousekeepingRules | None = None,
 ) -> str:
     """The GM's orientation at the start of a turn: the campaign options, the day, the player
     character and where they are, the NPCs there, the factions and their cup, and any encounter in
@@ -875,6 +900,17 @@ def world_state_text(
             when += f", hour {state.clock.hour + 1} of {clock_rules.hours_per_part}"
         lines.append(f"It is {when}.")
     lines.extend(_storyline_lines(state))
+    if housekeeping is not None:
+        seen_locations: set[str] = set()
+        for player in pcs:
+            if player.retired or player.location is None or player.location in seen_locations:
+                continue
+            seen_locations.add(player.location)
+            place = _place_named(state, player.location)
+            tasks = housekeeping_service.scene_tasks(state, place, housekeeping)
+            if tasks:
+                lines.append(f"Housekeeping suggestions at {place.name}:")
+                lines.extend(f"- {task.text}" for task in tasks)
     lines.extend(_player_lines(state, pcs))
     hirelings = [c for c in state.characters.values() if c.hireling]
     if hirelings:
@@ -1034,7 +1070,11 @@ def _npc_state_name(npc: Character) -> str:
     """An NPC as the turn orientation lists them: the name and the traits a player can see. The
     personality is there so the GM can weigh how likely the NPC is to speak unprompted."""
     tags = ["story only, no stats yet"] if npc.story_only else []
-    if npc.personality and not npc.dead:
+    if npc.dead:
+        tags.append("dead body")
+    elif npc.defeated:
+        tags.append("defeated" if npc.important else "body")
+    elif npc.personality:
         tags.append(npc.personality)
     return f"{npc.name} ({'; '.join(tags)})" if tags else npc.name
 
@@ -1213,7 +1253,8 @@ def _known_npc_views(
     creature_links: Mapping[str, str] | None = None,
 ) -> tuple[KnownNpcView, ...]:
     """Everyone the player has met, with the rule set's named relation where the player character
-    holds one. A known NPC whose record was removed is left out."""
+    holds one. The living come first and the fallen last, each by name. A known NPC whose record
+    was removed is left out."""
     views = []
     for key, knowledge in state.known.items():
         npc = state.characters.get(key)
@@ -1245,12 +1286,13 @@ def _known_npc_views(
                 location=knowledge.location,
                 here=place is not None and npc.location == place.name,
                 dead=npc.dead,
+                fallen=npc.dead or (npc.defeated and not npc.important),
                 summary=knowledge.summary,
                 creature=creature,
                 creature_entry=creature_entry,
             )
         )
-    views.sort(key=lambda view: view.name.casefold())
+    views.sort(key=lambda view: (view.fallen, view.name.casefold()))
     return tuple(views)
 
 

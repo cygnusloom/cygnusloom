@@ -18,6 +18,7 @@ from cygnusloom.content.character import (
     feature_pick_options,
 )
 from cygnusloom.content.library import LevelGrants
+from cygnusloom.content.lookup import AmbiguousId, resolve_id
 from cygnusloom.rules.context import ToolContext
 from cygnusloom.rules.dice import roll_total
 from cygnusloom.rules.wwn_progression import (
@@ -44,6 +45,47 @@ from cygnusloom.services.hooks import HookContext
 # {"scene": {"high": 1}, "day": {"necromancer": 2}}.
 EFFORT_MARK = "effort_committed"
 EFFORT_DURATIONS = ("scene", "day", "indefinite")
+
+
+def _resolve_skill(spec: CharacterSpec, skill: str) -> str:
+    """The rule set's skill id for a loose id or display name, such as `Sneak`."""
+    try:
+        return resolve_id(spec.skills, skill, kind="skill", names=lambda rules: (rules.name,))
+    except AmbiguousId as exc:
+        raise InvalidInput(str(exc)) from exc
+    except LookupError:
+        options = ", ".join(sorted(spec.skills)) or "none"
+        raise InvalidInput(
+            f"there is no skill named {skill!r}; the skills are: {options}"
+        ) from None
+
+
+def _resolve_feature(spec: CharacterSpec, feature: str) -> Feature:
+    """The rule set's feature for a loose id or display name. Shared names, such as a Focus's
+    two ranks, are an error rather than a guess."""
+    try:
+        ident = resolve_id(
+            spec.features, feature, kind="feature", names=lambda found: (found.name,)
+        )
+    except AmbiguousId as exc:
+        raise InvalidInput(str(exc)) from exc
+    except LookupError:
+        raise InvalidInput(f"there is no feature named {feature!r}") from None
+    return spec.features[ident]
+
+
+def _resolve_attribute(spec: CharacterSpec, stat: str) -> str:
+    """The rule set's non-derived attribute id for a loose id or display name."""
+    attributes = {ident: rules for ident, rules in spec.stats.items() if rules.derived is None}
+    try:
+        return resolve_id(attributes, stat, kind="attribute", names=lambda rules: (rules.name,))
+    except AmbiguousId as exc:
+        raise InvalidInput(str(exc)) from exc
+    except LookupError:
+        options = ", ".join(attributes) or "none"
+        raise InvalidInput(
+            f"there is no attribute named {stat!r}; the attributes are: {options}"
+        ) from None
 
 
 def class_table(class_id: str, progression: WWNProgression) -> ClassTable:
@@ -810,6 +852,7 @@ def apply_skill_points(
 
 def _pc_skill_level(character: str, skill: str, ctx: ToolContext) -> int:
     spec = ctx.world.character
+    skill = _resolve_skill(spec, skill)
 
     def read(hc: HookContext) -> int:
         found = hc.character(character)
@@ -852,9 +895,7 @@ def spend_skill_point(character: str, skill: str, ctx: ToolContext) -> dict[str,
     the character-level prerequisite for each skill level."""
     spec = ctx.world.character
     progression = require_wwn_progression(ctx.world)
-    if skill not in spec.skills:
-        options = ", ".join(sorted(spec.skills)) or "none"
-        raise InvalidInput(f"there is no skill named {skill!r}; the skills are: {options}")
+    skill = _resolve_skill(spec, skill)
 
     def read(hc: HookContext) -> dict[str, int]:
         found = hc.character(character)
@@ -922,9 +963,7 @@ def improve_attribute(character: str, stat: str, ctx: ToolContext) -> dict[str, 
     sets each boost's cost, minimum character level, and the attribute maximum."""
     spec = ctx.world.character
     progression = require_wwn_progression(ctx.world)
-    if stat not in spec.stats or spec.stats[stat].derived is not None:
-        options = ", ".join(s for s in spec.stats if spec.stats[s].derived is None)
-        raise InvalidInput(f"there is no attribute named {stat!r}; the attributes are: {options}")
+    stat = _resolve_attribute(spec, stat)
 
     def read(hc: HookContext) -> dict[str, int]:
         found = hc.character(character)
@@ -977,9 +1016,8 @@ def learn_focus(character: str, focus: str, ctx: ToolContext) -> dict[str, Any]:
     creation effects are applied through the world's tools."""
     spec = ctx.world.character
     progression = require_wwn_progression(ctx.world)
-    feature = spec.features.get(focus)
-    if feature is None:
-        raise InvalidInput(f"there is no feature named {focus!r}")
+    feature = _resolve_feature(spec, focus)
+    focus = feature.id
     if feature.tag not in ("focus", "origin"):
         raise InvalidInput(f"{feature.name} is not a focus")
     required = _prior_focus(feature)
@@ -1086,9 +1124,8 @@ def learn_art(character: str, art: str, ctx: ToolContext) -> dict[str, Any]:
     """Spend an art pick on an art of the character's own configured tradition."""
     spec = ctx.world.character
     progression = require_wwn_progression(ctx.world)
-    feature = spec.features.get(art)
-    if feature is None:
-        raise InvalidInput(f"there is no feature named {art!r}")
+    feature = _resolve_feature(spec, art)
+    art = feature.id
     if feature.feature_type != "feat" or feature.tag not in progression.art_levels_partial:
         raise InvalidInput(f"{feature.name} is not an art")
 
@@ -1126,9 +1163,8 @@ def learn_spell(character: str, spell: str, ctx: ToolContext) -> dict[str, Any]:
     be one the character can cast."""
     spec = ctx.world.character
     progression = require_wwn_progression(ctx.world)
-    feature = spec.features.get(spell)
-    if feature is None:
-        raise InvalidInput(f"there is no feature named {spell!r}")
+    feature = _resolve_feature(spec, spell)
+    spell = feature.id
     if feature.feature_type != "spell":
         raise InvalidInput(f"{feature.name} is not a spell")
 

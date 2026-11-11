@@ -33,6 +33,7 @@ from cygnusloom.content.library import (
     EncounterTerrain,
     FactionAssetDefinition,
     Hooks,
+    HousekeepingRules,
     InventoryRules,
     JourneyRules,
     MagicRules,
@@ -49,6 +50,7 @@ from cygnusloom.content.library import (
     Wilderness,
     WorldTerrain,
 )
+from cygnusloom.content.lookup import AmbiguousId, resolve_id
 from cygnusloom.rules.dice import is_formula, max_total, roll_total
 from cygnusloom.services import advancements as advancements_service
 from cygnusloom.services import aid, combat, custom_features, encounters, morale
@@ -196,6 +198,8 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
     wilderness: Wilderness | None = None
     # The kinds of ground a world map's regions can be, by id.
     world_terrain: Mapping[str, WorldTerrain] = field(default_factory=dict)
+    # What the GM should tidy at a place earlier scenes left behind, or None for none.
+    housekeeping: HousekeepingRules | None = None
 
     def roll_tables(self, tables: list[str]) -> dict[str, Any]:
         with session_scope(self.engine) as db:
@@ -669,17 +673,20 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
         roll: int | None = None,
         spell: str = "",
     ) -> dict[str, Any]:
-        rules = self.moves.get(move)
-        if rules is None:
+        try:
+            move_id = resolve_id(self.moves, move, kind="move", names=lambda rules: (rules.label,))
+        except AmbiguousId as exc:
+            raise InvalidInput(str(exc)) from exc
+        except LookupError:
             raise InvalidInput(
                 f"there is no move named {move!r}; choose one of {sorted(self.moves)}"
-            )
+            ) from None
         with session_scope(self.engine) as db:
             return moves_service.make_move(
                 db,
                 self.campaign_id,
                 character,
-                rules,
+                self.moves[move_id],
                 self.rng,
                 plus=self.plus,
                 combat=self.combat,
@@ -771,31 +778,41 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
         features: Mapping[str, Feature] | None = None,
         roll: int | None = None,
     ) -> dict[str, Any]:
-        rules = self.checks.get(check)
-        if rules is None:
+        try:
+            check_id = resolve_id(
+                self.checks, check, kind="check", names=lambda rules: (rules.label,)
+            )
+        except AmbiguousId as exc:
+            raise InvalidInput(str(exc)) from exc
+        except LookupError:
             options = ", ".join(sorted(self.checks)) or "none"
-            raise InvalidInput(f"there is no check named {check!r}; the checks are: {options}")
+            raise InvalidInput(
+                f"there is no check named {check!r}; the checks are: {options}"
+            ) from None
+        skill_id = checks_service.resolve_skill(self.character, skill)
+        stat_id = checks_service.resolve_stat(self.character, stat)
         with session_scope(self.engine) as db:
             return checks_service.roll_check(
                 db,
                 self.campaign_id,
                 character,
-                rules,
+                self.checks[check_id],
                 self.character,
                 self.rng,
                 plus=self.plus,
-                skill=skill,
-                stat=stat,
+                skill=skill_id,
+                stat=stat_id,
                 difficulty=difficulty,
                 modifier=modifier,
                 cause=cause,
                 conditions=self.conditions,
-                armor_penalty=self._armor_check_penalty(db, character, skill),
+                armor_penalty=self._armor_check_penalty(db, character, skill_id),
                 features=features if features is not None else self.features,
                 roll=roll,
             )
 
     def raise_skill(self, name: str, skill: str, level: int, cause: str = "") -> dict[str, Any]:
+        skill = checks_service.resolve_skill(self.character, skill)
         found = self.character.skills.get(skill)
         if found is None:
             options = ", ".join(sorted(self.character.skills)) or "none"
@@ -1242,6 +1259,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
     def roll_save(
         self, name: str, stat: str, reason: str, natural: int | None = None
     ) -> dict[str, Any]:
+        stat = magic_service.save_stat_id(self.character, stat)
         with session_scope(self.engine) as db:
             return magic_service.roll_save(
                 db,
@@ -1914,6 +1932,10 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
         with session_scope(self.engine) as db:
             return deactivate_storyline(db, self.campaign_id, storyline)
 
+    def resolve_storyline(self, storyline: str, resolution: str) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return resolve_storyline(db, self.campaign_id, storyline, resolution)
+
     def search_storylines(self, query: str) -> dict[str, list[dict[str, Any]]]:
         with session_scope(self.engine) as db:
             return search_storylines(load_state(db, self.campaign_id), query)
@@ -2140,16 +2162,18 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
         """A feature's full definition, by id or name, so the GM can read a spell, art, Focus,
         or class ability before resolving it."""
         wanted = feature.strip()
-        found = self.character.features.get(wanted)
-        if found is None:
-            found = next(
-                (
-                    candidate
-                    for candidate in self.character.features.values()
-                    if candidate.name.casefold() == wanted.casefold()
-                ),
-                None,
+        try:
+            ident = resolve_id(
+                self.character.features,
+                wanted,
+                kind="feature",
+                names=lambda found: (found.name,),
             )
+        except AmbiguousId as exc:
+            raise InvalidInput(str(exc)) from exc
+        except LookupError:
+            ident = ""
+        found = self.character.features.get(ident) if ident else None
         if found is None:
             with session_scope(self.engine) as db:
                 state = load_state(db, self.campaign_id)

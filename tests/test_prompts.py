@@ -125,6 +125,8 @@ def test_state_prompt_keeps_the_active_storylines_current():
     assert "player-facing summary" in text
     assert "make it the focus with focus_storyline" in text
     assert "not the one that mattered last turn" in text
+    assert "resolve it with resolve_storyline" in text
+    assert "search_storylines still finds it" in text
 
 
 def test_state_prompt_keeps_character_summaries_current():
@@ -134,12 +136,21 @@ def test_state_prompt_keeps_character_summaries_current():
     assert "keep the summary brief and free of GM-only secrets" in text
 
 
+def test_housekeeping_is_a_suggestion_not_a_command():
+    text = state_instruction(rules_for())
+    assert "Housekeeping block suggests what earlier scenes may have left behind" in text
+    assert "It is a prompt for continuity, not a command" in text
+    assert "leave it alone when the story is better served" in text
+    assert "Treat it as fact, not suggestion" not in text
+
+
 def test_core_storyline_rule_explains_focus_the_active_limit_and_splitting():
     text = content_library().core.rules["storylines"]
     assert "player-facing name and running summary" in text
     assert "Keep exactly one storyline focused" in text
     assert "at most three active storylines" in text
     assert "deactivate_storyline" in text
+    assert "resolve_storyline" in text
     assert "search_storylines" in text
     assert "never hold a secret" in text
     assert "split it" in text

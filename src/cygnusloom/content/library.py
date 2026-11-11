@@ -1493,6 +1493,24 @@ class ClockRules:
 
 
 @dataclass(frozen=True)
+class HousekeepingTaskRules:
+    """A scene task the GM should settle after `after_days` campaign days. `task` is the sentence
+    the GM sees; it may use the placeholders {place}, {names}, {count}, and {days}."""
+
+    after_days: int
+    task: str
+
+
+@dataclass(frozen=True)
+class HousekeepingRules:
+    """What the GM should tidy in a place that earlier scenes left behind: the bodies of the
+    fallen and the debris of a fight. Both are optional; a rule set may define neither."""
+
+    bodies: HousekeepingTaskRules | None = None
+    fight_debris: HousekeepingTaskRules | None = None
+
+
+@dataclass(frozen=True)
 class RestLength:
     """A rest the GM can call for. It passes `hours` hours, `parts` parts of a day, or `days`
     days, and `until_morning` runs on to the next morning. A full rest restores what `restores`
@@ -1781,6 +1799,9 @@ class RuleContent:
     encounter_templates: Mapping[str, EncounterTemplate] = field(default_factory=dict)
     world_terrain: Mapping[str, WorldTerrain] = field(default_factory=dict)
     optional_templates: tuple[str, ...] = ()
+    # What the GM should tidy at a place that earlier scenes left behind, or None when the rule
+    # set does not ask for scene housekeeping.
+    housekeeping: HousekeepingRules | None = None
 
 
 @dataclass(frozen=True)
@@ -2040,6 +2061,10 @@ class RuleSet:
         return self.content.optional_templates
 
     @property
+    def housekeeping(self) -> HousekeepingRules | None:
+        return self.content.housekeeping
+
+    @property
     def counters(self) -> Mapping[str, CounterRules]:
         return self.progression.counters
 
@@ -2280,6 +2305,7 @@ RULE_SET_DEFINITION_TYPES = frozenset(
         "check",
         "rest",
         "clock",
+        "housekeeping",
         "item_size",
         "inventory",
         "magic",
@@ -4004,6 +4030,7 @@ def _build_rule_set(
                     "in the rule set"
                 )
     clock = _load_clock(definitions, template)
+    housekeeping = _load_housekeeping(definitions, template)
     rests = _load_rests(definitions, character, template, clock, condition_ends)
     interrupted_rest = _load_interrupted_rest(definitions, rests, template)
     item_sizes = _load_item_sizes(definitions, template)
@@ -4100,6 +4127,7 @@ def _build_rule_set(
             encounter_templates=encounter_templates,
             world_terrain=world_terrain,
             optional_templates=optional_templates,
+            housekeeping=housekeeping,
         ),
         tool_calls=tool_calls,
         character=character,
@@ -5824,6 +5852,43 @@ def _names(data: Mapping[str, Any], key: str, label: str) -> tuple[str, ...]:
     if not isinstance(value, list) or not all(isinstance(v, str) and v.strip() for v in value):
         raise ContentError(f"{label}: {key!r} must be a list of non-empty strings")
     return tuple(value)
+
+
+HOUSEKEEPING_PLACEHOLDERS = frozenset({"place", "names", "count", "days"})
+
+
+def _load_housekeeping(definitions: list[Definition], template: str) -> HousekeepingRules | None:
+    """The rule set's scene housekeeping tasks. Each task may name only the placeholders the
+    engine can fill, so a typo is a content error rather than text the GM sees."""
+    definition = _single_optional(definitions, "housekeeping", template)
+    if definition is None:
+        return None
+    label = f"{template}: housekeeping {definition.id}"
+    check_keys(definition.data, {"type", "id", "bodies", "fight_debris"}, label)
+
+    def task_rules(key: str) -> HousekeepingTaskRules | None:
+        data = definition.data.get(key)
+        if data is None:
+            return None
+        sublabel = f"{label}: {key}"
+        if not isinstance(data, Mapping):
+            raise ContentError(f"{sublabel}: must be an object")
+        check_keys(data, {"after_days", "task"}, sublabel)
+        after_days = _whole(data, "after_days", sublabel, 0)
+        text = required_text(data, "task", sublabel)
+        placeholders = set(re.findall(r"\{([^{}]+)\}", text))
+        unknown = placeholders - HOUSEKEEPING_PLACEHOLDERS
+        if unknown:
+            names = ", ".join(sorted(repr(item) for item in unknown))
+            allowed = ", ".join(sorted(HOUSEKEEPING_PLACEHOLDERS))
+            raise ContentError(f"{sublabel}: unknown placeholder(s) {names}; use {allowed}")
+        return HousekeepingTaskRules(after_days=after_days, task=text)
+
+    bodies = task_rules("bodies")
+    fight_debris = task_rules("fight_debris")
+    if bodies is None and fight_debris is None:
+        raise ContentError(f"{label}: give 'bodies', 'fight_debris', or both")
+    return HousekeepingRules(bodies=bodies, fight_debris=fight_debris)
 
 
 def _load_clock(definitions: list[Definition], template: str) -> ClockRules | None:

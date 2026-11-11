@@ -24,6 +24,7 @@ from cygnusloom.services.events import (
     ObjectTaken,
     StorylineCreated,
     StorylineFocused,
+    StorylineResolved,
     StorylineUpdated,
     SummaryUpdated,
     record,
@@ -166,6 +167,15 @@ def _add_referenced_events(app: FastAPI, campaign_id: int, *, close: bool = True
                 active=False,
             ),
         )
+        record(
+            session,
+            campaign_id,
+            StorylineResolved(
+                storyline_id=salt_id,
+                name="The Salt Road",
+                resolution="The road reopened before the harvest.",
+            ),
+        )
         object_id = record(
             session,
             campaign_id,
@@ -258,6 +268,8 @@ def test_export_and_import_round_trip(
             storyline.objects,
             storyline.notes,
             storyline.active,
+            storyline.resolved,
+            storyline.resolution,
         )
         for storyline in source.storylines.values()
     ] == [
@@ -270,6 +282,8 @@ def test_export_and_import_round_trip(
             storyline.objects,
             storyline.notes,
             storyline.active,
+            storyline.resolved,
+            storyline.resolution,
         )
         for storyline in target.storylines.values()
     ]
@@ -402,6 +416,7 @@ def test_import_remaps_event_id_references(
         if json.loads(row.payload)["name"] == "The Salt Road"
     )
     assert json.loads(grouped["storyline.updated"][0].payload)["storyline_id"] == salt.id
+    assert json.loads(grouped["storyline.resolved"][0].payload)["storyline_id"] == salt.id
     chat = grouped["chat.player"][0]
     assert json.loads(grouped["summary.updated"][0].payload)["through"] == chat.id
 

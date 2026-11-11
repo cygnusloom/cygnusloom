@@ -15,6 +15,7 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 from cygnusloom.content.character import CharacterSpec, derived_stats
+from cygnusloom.content.lookup import AmbiguousId, resolve_id
 from cygnusloom.rules.context import ToolContext
 from cygnusloom.rules.dice import roll_total
 from cygnusloom.rules.wwn import (
@@ -48,7 +49,9 @@ def prepare_spells(character: str, spells: Sequence[str], ctx: ToolContext) -> d
     """Prepare a set of known spells. The list replaces the old set, and may hold no more spells
     than the character's class, level, and tradition allow."""
     spec = ctx.world.character
-    chosen = [str(spell) for spell in spells]
+    chosen: list[str] = []
+    for spell in spells:
+        chosen.append(_spell(spec, str(spell)).id)
     if len(set(chosen)) != len(chosen):
         raise InvalidInput("a prepared spell may not be listed twice")
     if len(chosen) > MAX_SPELLS:
@@ -119,8 +122,8 @@ def cast_spell(character: str, spell: str, ctx: ToolContext) -> dict[str, Any]:
     def action(hc: HookContext) -> dict[str, Any]:
         found = hc.character(character)
         feature = _spell(spec, spell)
-        prepared = found.marks.get(PREPARED_MARK) or []
-        if spell not in prepared:
+        prepared = [str(item) for item in found.marks.get(PREPARED_MARK) or []]
+        if feature.id not in prepared:
             raise InvalidInput(f"{found.name} has not prepared {feature.name}")
         if "castings" not in found.stats:
             raise InvalidInput(f"{found.name} has no castings stat")
@@ -144,7 +147,7 @@ def cast_spell(character: str, spell: str, ctx: ToolContext) -> dict[str, Any]:
         )
         return {
             "character": found.name,
-            "spell": spell,
+            "spell": feature.id,
             "name": feature.name,
             "castings_left": current(found, "castings") - 1,
         }
@@ -381,9 +384,15 @@ def first_aid(healer: str, target: str, ctx: ToolContext) -> dict[str, Any]:
 
 
 def _spell(spec: CharacterSpec, spell: str) -> Any:
-    feature = spec.features.get(spell)
-    if feature is None:
-        raise InvalidInput(f"there is no feature named {spell!r}")
+    try:
+        ident = resolve_id(
+            spec.features, spell, kind="feature", names=lambda feature: (feature.name,)
+        )
+    except AmbiguousId as exc:
+        raise InvalidInput(str(exc)) from exc
+    except LookupError:
+        raise InvalidInput(f"there is no feature named {spell!r}") from None
+    feature = spec.features[ident]
     if feature.feature_type != "spell":
         raise InvalidInput(f"{feature.name} is not a spell")
     return feature

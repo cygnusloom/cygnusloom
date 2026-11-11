@@ -119,7 +119,7 @@
         </filter>
       </defs>
       <rect x="-200" y="-200" width="500" height="500" fill="var(--world-bg)"/>
-      <rect x="-200" y="-200" width="500" height="500" fill="#000" filter="url(#{{ prefix }}-grain)" opacity="0.35"/>
+      <rect class="map-grain" x="-200" y="-200" width="500" height="500" fill="#000" filter="url(#{{ prefix }}-grain)" opacity="0.35"/>
       {% if view.style.show_clouds %}<rect class="map-clouds" x="-200" y="-200" width="500" height="500" fill="#000" filter="url(#{{ prefix }}-clouds)" opacity="0.55"/>{% endif %}
       {% if view.style.show_contours %}
       <g class="map-contours" fill="none" stroke="var(--world-line)" stroke-width="0.5" stroke-opacity="0.18">

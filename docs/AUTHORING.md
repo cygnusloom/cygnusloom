@@ -172,6 +172,34 @@ definition when it is absent.
 Shared defaults currently cover the common clock skeleton, the `moments` rest
 length, shared world-terrain visuals, and the base prompt/tool data.
 
+## Scene housekeeping
+
+A rule set may define one `housekeeping` definition to suggest what earlier
+scenes may have left at a place. `bodies` waits for the fallen; `fight_debris`
+waits after an encounter ends. Each has `after_days` and a `task`. The task may
+use `{place}`, `{names}`, `{count}`, and `{days}`. The engine lists the suggestion
+in the GM's turn orientation and returns it from `move_actor` on arrival. The GM
+decides whether the suggestion fits the scene: they may update the place, move or
+delete bodies, or leave things as they are. Updating a place's description clears
+its fight debris. A rule set disables the core definition with
+`{"type": "housekeeping", "id": "common", "disabled": true}` to turn housekeeping
+off.
+
+```json
+{
+  "type": "housekeeping",
+  "id": "common",
+  "bodies": {
+    "after_days": 1,
+    "task": "Bodies at {place}: {names}. Decide what happened to them and update {place}."
+  },
+  "fight_debris": {
+    "after_days": 1,
+    "task": "A fight ended at {place} {days} ago. Say how it looks now."
+  }
+}
+```
+
 ## Shared template features
 
 A rule set head may declare default feature grants per template kind:

@@ -270,6 +270,7 @@ def tools_for(
         journey=rules.journey,
         wilderness=rules.wilderness,
         world_terrain=rules.world_terrain,
+        housekeeping=rules.housekeeping,
     )
 
 

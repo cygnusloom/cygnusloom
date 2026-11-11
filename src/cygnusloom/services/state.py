@@ -72,6 +72,9 @@ class Place:
     parent: str | None = None
     # The campaign day a player character was last in this place, or None if none has been.
     visited_day: int | None = None
+    # The campaign day a fight last ended here, so the GM can describe the aftermath and clean
+    # the scene. Cleared when the location's description is updated.
+    fight_day: int | None = None
     icon: str | None = None
     # What the player sees of a discovered place. The full description stays GM-only.
     summary: str | None = None
@@ -340,6 +343,9 @@ class Character:
     feature_choices: dict[str, list[str]] = field(default_factory=dict)
     # The character is dead. The body stays where the character fell, with its gear.
     dead: bool = False
+    # The campaign day the character fell, for scene clean-up. None while the character has not
+    # fallen, or when the fall predates this record.
+    fell_day: int | None = None
     # The character has left the story, and the player plays someone else. It can come back later.
     retired: bool = False
     # The account that plays this character. None means the campaign's owner, unless the
@@ -430,6 +436,11 @@ class Storyline:
     objects: tuple[str, ...] = ()
     notes: str = ""
     active: bool = True
+    # A resolved storyline's plot has concluded. It leaves the active and focused lists, but its
+    # record and resolution stay searchable so a later storyline can grow from it.
+    resolved: bool = False
+    # The short player-facing note on how a resolved storyline ended. Empty until resolved.
+    resolution: str = ""
 
 
 @dataclass(frozen=True)
@@ -725,6 +736,10 @@ class CampaignState:
     def active_storylines(self) -> list[Storyline]:
         """The storylines still in play, oldest first."""
         return [storyline for storyline in self.storylines.values() if storyline.active]
+
+    def resolved_storylines(self) -> list[Storyline]:
+        """The storylines whose plots have concluded, oldest first."""
+        return [storyline for storyline in self.storylines.values() if storyline.resolved]
 
     def focused_storyline(self) -> Storyline | None:
         """The storyline the GM is focused on: the chosen one while it is active, otherwise the

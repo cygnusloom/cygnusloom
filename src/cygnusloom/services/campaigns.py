@@ -1060,6 +1060,7 @@ def context_usage(
             tallies=rule_set.tallies if rule_set else None,
             track_inventory=campaign.use_inventory_space,
             currency=(rule_set.marketplace.currency if rule_set and rule_set.marketplace else ""),
+            housekeeping=rule_set.housekeeping if rule_set else None,
         ),
         present_rules_text(state, all_rules),
         campaign.setting,

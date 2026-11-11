@@ -18,7 +18,7 @@ from cygnusloom.services.events import CampaignState, load_state
 from cygnusloom.services.tools import ToolRun, run_tool
 from cygnusloom.services.views import story_view, world_state_text
 from tests.conftest import content_library
-from tests.factories import campaign_ready_fast
+from tests.factories import campaign_ready_fast, send_message
 
 LIBRARY = content_library()
 CONTRACT = LIBRARY.rule_sets["rolltest"]
@@ -367,3 +367,211 @@ def test_the_journal_story_tab_shows_every_player_facing_storyline(
     assert "Deactivated" in page.text
     # The private plot and notes never reach the player-facing page.
     assert "bog witch" not in page.text
+
+
+def test_resolving_the_focused_storyline_hides_it_from_context_and_keeps_its_outcome(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = campaign_ready_fast(client_factory)
+    app = client.app
+    first = _create(app, campaign_id, name="The Missing Heir", summary="The heir is missing.")
+    second = _create(app, campaign_id, name="The Salt Road", summary="The road is closed.")
+    third = _create(app, campaign_id, name="The Drowned Bell", summary="The bell rings below.")
+    _tool(app, campaign_id, "focus_storyline", {"storyline": "The Salt Road"})
+
+    resolution = "The heir is home, and the miller's debt is paid."
+    result = _tool(
+        app,
+        campaign_id,
+        "resolve_storyline",
+        {"storyline": "The Salt Road", "resolution": resolution},
+    )
+    assert result["resolved"] == "The Salt Road"
+    assert result["resolution"] == resolution
+    assert result["focused"] == "The Missing Heir"
+
+    state = _state(app, campaign_id)
+    storyline = state.storylines[second["id"]]
+    assert storyline.active is False
+    assert storyline.resolved is True
+    assert storyline.resolution == resolution
+    assert state.focused_storyline() is not None
+    assert state.focused_storyline().id == first["id"]
+    assert [story.id for story in state.active_storylines()] == [first["id"], third["id"]]
+    assert [story.id for story in state.resolved_storylines()] == [second["id"]]
+
+    view = story_view(state)
+    assert [(item.name, item.active, item.focused) for item in view.storylines] == [
+        ("The Missing Heir", True, True),
+        ("The Drowned Bell", True, False),
+    ]
+    assert [(item.name, item.resolved, item.resolution) for item in view.resolved] == [
+        ("The Salt Road", True, resolution)
+    ]
+
+    context = world_state_text(state, NO_CAMPAIGN)
+    assert "The Salt Road" not in context
+
+    found = _tool(app, campaign_id, "search_storylines", {"query": "miller's debt"})
+    assert found["storylines"][0]["id"] == second["id"]
+    assert found["storylines"][0]["resolved"] is True
+    assert found["storylines"][0]["resolution"] == resolution
+
+    refused = _tool(app, campaign_id, "focus_storyline", {"storyline": "The Salt Road"})
+    assert "resolved" in refused["error"]
+    refused = _tool(
+        app,
+        campaign_id,
+        "update_storyline",
+        {"storyline": "The Salt Road", "active": True},
+    )
+    assert "resolved" in refused["error"]
+    assert _state(app, campaign_id).storylines[second["id"]].active is False
+
+
+def test_resolving_a_storyline_frees_an_active_slot(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = campaign_ready_fast(client_factory)
+    app = client.app
+    _create(app, campaign_id, name="The Missing Heir")
+    _create(app, campaign_id, name="The Salt Road")
+    _create(app, campaign_id, name="The Drowned Bell")
+
+    resolved = _tool(
+        app,
+        campaign_id,
+        "resolve_storyline",
+        {"storyline": "The Missing Heir", "resolution": "The miller's son is found."},
+    )
+    assert resolved["resolved"] == "The Missing Heir"
+
+    fourth = _create(app, campaign_id, name="The Fourth Thread")
+    assert fourth["created"] == "storyline"
+    assert len(_state(app, campaign_id).active_storylines()) == 3
+
+
+def test_resolving_a_storyline_twice_is_idempotent(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = campaign_ready_fast(client_factory)
+    app = client.app
+    created = _create(app, campaign_id, name="The Missing Heir")
+    first = _tool(
+        app,
+        campaign_id,
+        "resolve_storyline",
+        {"storyline": "The Missing Heir", "resolution": "The heir is home."},
+    )
+    second = _tool(
+        app,
+        campaign_id,
+        "resolve_storyline",
+        {"storyline": "The Missing Heir", "resolution": "A second outcome."},
+    )
+    assert first["id"] == created["id"]
+    assert second == {"resolved": "The Missing Heir", "id": created["id"], "already": True}
+    assert _state(app, campaign_id).storylines[created["id"]].resolution == "The heir is home."
+
+
+def test_a_resolved_storyline_can_still_feed_a_later_storyline(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = campaign_ready_fast(client_factory)
+    app = client.app
+    first = _create(
+        app,
+        campaign_id,
+        name="The Missing Heir",
+        characters=["Mara Thistledown"],
+        notes="The mill cellar hides the bargain.",
+    )
+    _tool(
+        app,
+        campaign_id,
+        "resolve_storyline",
+        {"storyline": "The Missing Heir", "resolution": "The heir is home."},
+    )
+    second = _create(
+        app,
+        campaign_id,
+        name="The Miller's Debt",
+        summary="The miller now owes a debt to the bog witch.",
+        plot="The old bargain resurfaces at the mill.",
+        notes="Follows The Missing Heir; the cellar bargain is still open.",
+    )
+
+    state = _state(app, campaign_id)
+    assert state.storylines[first["id"]].resolved is True
+    assert state.storylines[second["id"]].resolved is False
+    found = _tool(app, campaign_id, "search_storylines", {"query": "cellar bargain"})
+    by_id = {storyline["id"]: storyline for storyline in found["storylines"]}
+    assert by_id[first["id"]]["resolved"] is True
+    assert by_id[second["id"]]["resolved"] is False
+
+
+def test_the_gm_can_resolve_a_storyline_in_a_turn(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = campaign_ready_fast(client_factory)
+    app = client.app
+    created = _create(app, campaign_id, name="The Missing Heir")
+    script = "__FAKE__:" + json.dumps(
+        {
+            "turns": [
+                {
+                    "rounds": [
+                        [
+                            {
+                                "name": "resolve_storyline",
+                                "arguments": {
+                                    "storyline": "The Missing Heir",
+                                    "resolution": "The heir is home.",
+                                },
+                            }
+                        ]
+                    ],
+                    "text": "The heir comes home.",
+                }
+            ]
+        }
+    )
+
+    response = send_message(client, campaign_id, script)
+
+    assert response.status_code == 303
+    state = _state(app, campaign_id)
+    assert state.storylines[created["id"]].resolved is True
+    assert state.storylines[created["id"]].resolution == "The heir is home."
+    assert "The Missing Heir" not in world_state_text(state, NO_CAMPAIGN)
+
+
+def test_the_story_tab_shows_resolved_storylines_in_their_own_section(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = campaign_ready_fast(client_factory)
+    app = client.app
+    _create(
+        app,
+        campaign_id,
+        name="The Missing Heir",
+        summary="The heir is missing.",
+        plot="The bog witch took him.",
+    )
+    _tool(
+        app,
+        campaign_id,
+        "resolve_storyline",
+        {
+            "storyline": "The Missing Heir",
+            "resolution": "The heir is home, and the bargain is paid.",
+        },
+    )
+
+    page = client.get(f"/campaigns/{campaign_id}")
+    assert page.status_code == 200
+    assert "Resolved" in page.text
+    assert "The Missing Heir" in page.text
+    assert "Outcome:" in page.text
+    assert "The heir is home, and the bargain is paid." in page.text
+    assert "The bog witch took him." not in page.text

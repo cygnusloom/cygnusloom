@@ -19,6 +19,7 @@ from cygnusloom.content.library import (
     ItemKind,
     MagicRules,
 )
+from cygnusloom.content.lookup import AmbiguousId, resolve_id
 from cygnusloom.services import inventory as inventory_service
 from cygnusloom.services.combat import resolve_save
 from cygnusloom.services.common import InvalidInput
@@ -191,13 +192,23 @@ def recharge_charged_item(
     return {"name": character_name, "item": held.name, "uses": held.max_uses}
 
 
-def _save_stat(spec: CharacterSpec, stat: str) -> str:
-    """The stat for a save, accepting a short name such as `physical` for `save_physical` when
-    the rule set names its saves that way. A name that is already a stat is returned unchanged."""
-    if stat in spec.stats:
-        return stat
-    full = f"save_{stat}"
-    return full if full in spec.stats else stat
+def save_stat_id(spec: CharacterSpec, stat: str) -> str:
+    """The stat id a save uses. Accepts a display name, different capitalization, and the short
+    form `physical` for a rule set's `save_physical`."""
+    wanted = stat.strip()
+    names = lambda rules: (rules.name,)
+    try:
+        return resolve_id(spec.stats, wanted, kind="stat", names=names)
+    except AmbiguousId as exc:
+        raise InvalidInput(str(exc)) from exc
+    except LookupError:
+        pass
+    try:
+        return resolve_id(spec.stats, f"save_{wanted}", kind="stat", names=names)
+    except AmbiguousId as exc:
+        raise InvalidInput(str(exc)) from exc
+    except LookupError:
+        raise InvalidInput(f"there is no stat named {stat!r}") from None
 
 
 def roll_save(
@@ -216,7 +227,7 @@ def roll_save(
     """A save against a stat, recorded with its reason. The engine rolls unless the player's own
     roll is passed as `natural`. A failure only records the result; the GM applies what it
     costs."""
-    stat = _save_stat(spec, stat)
+    stat = save_stat_id(spec, stat)
     if stat not in spec.stats:
         raise InvalidInput(f"there is no stat named {stat!r}")
     if natural is not None and (

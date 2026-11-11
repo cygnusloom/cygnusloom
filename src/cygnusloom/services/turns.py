@@ -535,6 +535,7 @@ def _tool_context(
         journey=rule_set.journey,
         wilderness=rule_set.wilderness,
         world_terrain=rule_set.world_terrain,
+        housekeeping=rule_set.housekeeping,
     )
 
     async def check_new_location(name: str) -> None:
@@ -655,6 +656,7 @@ def _world_text(run: _Run, state: CampaignState) -> str:
         unwritten_world=run.world is not None and not run.world.has_setting,
         track_inventory=run.tracks_inventory,
         currency=rule_set.marketplace.currency if rule_set.marketplace else "",
+        housekeeping=rule_set.housekeeping,
     )
 
 
