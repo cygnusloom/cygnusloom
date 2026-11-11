@@ -16,7 +16,7 @@ from cygnusloom.services.inventory import carry_listed
 from cygnusloom.services.market import listed_item
 from cygnusloom.services.world import WorldTools
 from tests.conftest import content_library
-from tests.test_combat import CAIRN, PC, _character, _fight, _fight_client
+from tests.test_combat import CAIRN, PC, YARD, _character, _fight, _fight_client
 
 CAPACITY = CAIRN.inventory.capacity
 
@@ -266,6 +266,24 @@ def _pooled(tools: WorldTools) -> WorldTools:
             default_pool="stowed",
         ),
     )
+
+
+def test_transfer_item_is_refused_when_the_receivers_pool_is_full(
+    client_factory: Callable[[], TestClient],
+):
+    app, campaign_id, tools = _fight(client_factory)
+    tools = _pooled(tools)
+    _empty_pack(app, campaign_id, tools)
+    tools.create_npc("Bran", YARD, "A porter waiting by the well.")
+    tools.give_item(PC, "Rope")
+    for number in range(4):
+        tools.give_item("Bran", f"Sack {number}")
+
+    with pytest.raises(InvalidInput, match="Stowed pool is full"):
+        tools.transfer_item(PC, "Bran", "Rope")
+
+    assert "Rope" in [i.name for i in _character(app, campaign_id, PC).items]
+    assert "Rope" not in [i.name for i in _character(app, campaign_id, "Bran").items]
 
 
 def test_named_pools_hold_items_and_readying_moves_one_to_the_readied_pool(

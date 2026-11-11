@@ -505,6 +505,39 @@ def drop_item(
     }
 
 
+def transfer_item(
+    db: Session,
+    campaign_id: int,
+    rules: InventoryRules,
+    giver_name: str,
+    receiver_name: str,
+    item: str,
+) -> dict[str, Any]:
+    """Move one carried item from one character to another, keeping its uses and description.
+    The receiver's pack must have room: a full pool refuses the move rather than making a copy.
+    Money is not an item; move it with transfer_currency."""
+    state = load_state(db, campaign_id)
+    giver = character_named(state, giver_name)
+    receiver = character_named(state, receiver_name)
+    if name_key(giver.name) == name_key(receiver.name):
+        raise InvalidInput("the giver and the receiver must be different characters")
+    held = next((i for i in giver.items if same_item_name(i.name, item)), None)
+    if held is None:
+        raise InvalidInput(f"{giver.name} carries no {item!r}")
+    if held.kind == rules.penalty_item:
+        raise InvalidInput(f"{giver.name}'s {rules.penalty_name} lasts {rules.penalty_lasts}")
+    record(db, campaign_id, ItemRemoved(name=giver.name, item=held.name, kind_of_item=held.kind))
+    giver_slots = used_slots(giver) - held.slots
+    if rules.pools and giver_slots <= capacity_of(giver, rules) and carries_penalty(giver, rules):
+        _remove_penalty_event(db, campaign_id, giver, rules)
+        giver_slots -= rules.penalty_slots
+    result = carry_item(db, campaign_id, rules, receiver.name, held, cause=f"from {giver.name}")
+    result["giver"] = giver.name
+    result["receiver"] = receiver.name
+    result["giver_slots_used"] = giver_slots
+    return result
+
+
 def use_item(
     db: Session,
     campaign_id: int,

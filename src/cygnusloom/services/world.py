@@ -658,6 +658,20 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 damage,
             )
 
+    def transfer_item(self, giver: str, receiver: str, item: str) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            result = inventory_service.transfer_item(
+                db,
+                self.campaign_id,
+                _required(self.inventory, "inventory"),
+                giver,
+                receiver,
+                item,
+            )
+            self._unequip_item(db, giver, item)
+            db.commit()
+            return result
+
     def drop_item(self, name: str, item: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             result = inventory_service.drop_item(
