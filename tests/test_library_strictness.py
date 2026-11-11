@@ -300,10 +300,10 @@ def test_unknown_nested_character_keys_are_rejected(tree: Path):
         (
             {
                 "id": "gift",
-                "trigger": "save",
+                "trigger": "attack",
                 "effect": {"op": "add_total", "amount": 1},
             },
-            "trigger must be one of move, check, reaction",
+            "trigger must be one of move, check, reaction, save",
         ),
         (
             {

@@ -341,6 +341,8 @@ class Character:
     execution_weapon: str = ""
     # Structured feature choices, keyed "feature_id:pick_id", in the order taken.
     feature_choices: dict[str, list[str]] = field(default_factory=dict)
+    # Extra modifiers from feature choices, by stat id, such as Developed Attribute's +1.
+    stat_modifiers: dict[str, int] = field(default_factory=dict)
     # The character is dead. The body stays where the character fell, with its gear.
     dead: bool = False
     # The campaign day the character fell, for scene clean-up. None while the character has not
@@ -362,6 +364,10 @@ class Character:
     def out_of_play(self) -> bool:
         """Whether the player can no longer act as this character: dead, or left the story."""
         return self.dead or self.retired
+
+    def modifier(self, spec: Any, stat: str) -> int:
+        """The stat's modifier, including any bonus a feature choice added."""
+        return spec.modifier(self.stats, stat) + self.stat_modifiers.get(stat, 0)
 
 
 def current(character: Character, stat: str) -> int:

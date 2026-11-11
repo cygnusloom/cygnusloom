@@ -9,6 +9,7 @@ from cygnusloom.services import hireling_levels
 from cygnusloom.services import level_up as level_up_service
 from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.events import PC_KIND, HirelingAdded, load_state, record
+from cygnusloom.services.views import scene_view
 from tests.conftest import csrf_token
 from tests.test_campaigns import _signed_in
 from tests.test_wwn_advancement import (
@@ -81,6 +82,21 @@ def test_a_hired_npc_is_queued_to_catch_up_to_the_employers_level(client_factory
     assert pages[0].kind == level_up_service.LEVEL
     assert pages[0].summary is not None
     assert pages[0].summary["new_level"] == 2
+
+
+def test_the_player_sees_the_hirelings_features_with_its_sheet(client_factory):
+    app, campaign_id, tools = _hireling_campaign(client_factory)
+    tools.hire_hireling(HIRELING, NAME, WAGE, "A steady hand.", character=CHOICES)
+    with Session(app.state.engine) as db:
+        state = load_state(db, campaign_id)
+    scene = scene_view(state, WWN.character)
+
+    assert [sheet.name for sheet in scene.hireling_sheets] == [HIRELING]
+    sheet = scene.hireling_sheets[0]
+    assert sheet.employer == NAME
+    assert sheet.abilities
+    assert any(line.startswith("Stats:") for line in sheet.sheet)
+    assert any(line.startswith("Skills:") for line in sheet.sheet)
 
 
 def test_the_player_levels_the_hireling_through_each_catch_up_level(client_factory):

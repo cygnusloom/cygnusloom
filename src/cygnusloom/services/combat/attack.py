@@ -71,7 +71,7 @@ def _attribute_modifier(
     if spec is None:
         return 0
     scores = [
-        spec.modifier(character.stats, stat) for stat in attributes if stat in character.stats
+        character.modifier(spec, stat) for stat in attributes if stat in character.stats
     ]
     return max(scores) if scores else 0
 

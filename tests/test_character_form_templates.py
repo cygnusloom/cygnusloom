@@ -568,6 +568,9 @@ def test_creation_page_shows_template_grants_and_rich_pick_controls(
     assert "data-detail=" in page
     assert "Catch small details" in page
     assert "(learning_" not in page
+    assert 'data-feature-choice-for="focus_valiant_defender"' in page
+    assert 'name="feature-choice-focus_valiant_defender-skill-0"' in page
+    assert 'data-feature-choice-for="focus_origin_elf"' in page
 
 
 def test_creation_page_renders_stats_as_swap_cards(

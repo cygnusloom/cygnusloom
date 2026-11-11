@@ -14,6 +14,7 @@ from cygnusloom.content.character import (
     Restriction,
     TableOption,
     Template,
+    feature_choice_views,
     feature_next_ranks,
     feature_pick_options,
     kind_label,
@@ -144,6 +145,7 @@ def creation_view(spec: CharacterSpec, rolled: dict[str, int]) -> dict[str, Any]
         "kinds": kinds,
         "choice_fields": choice_fields,
         "text_fields": text_fields,
+        "feature_choices": _feature_choice_views(spec),
         "skill_progression": (
             {
                 "first_level": spec.skill_progression.first_level,
@@ -310,6 +312,20 @@ def submission_from_form(spec: CharacterSpec, form: FormData) -> dict[str, Any]:
                 feature_picks[pick.id] = chosen
             if repeats:
                 feature_repeats[pick.id] = repeats
+    feature_choices: dict[str, list[str]] = {}
+    for feature in spec.features.values():
+        for pick in feature.picks:
+            chosen = [
+                value
+                for index in range(pick.count)
+                if (
+                    value := form_text(
+                        form, f"feature-choice-{feature.id}-{pick.id}-{index}"
+                    )
+                )
+            ]
+            if chosen:
+                feature_choices[f"{feature.id}:{pick.id}"] = chosen
     submitted: dict[str, Any] = {"fields": fields}
     if stats:
         submitted["stats"] = stats
@@ -323,6 +339,8 @@ def submission_from_form(spec: CharacterSpec, form: FormData) -> dict[str, Any]:
         submitted["feature_picks"] = feature_picks
     if feature_repeats:
         submitted["feature_repeats"] = feature_repeats
+    if feature_choices:
+        submitted["feature_choices"] = feature_choices
     progression = spec.skill_progression
     if progression is not None and progression.creation_replacements is not None:
         replacements: dict[str, list[str]] = {}
@@ -533,6 +551,19 @@ def _feature_detail(feature: Any) -> str | None:
         note = f"Choose its {labels} when you take it."
         detail = f"{detail} {note}".strip()
     return detail or None
+
+
+def _feature_choice_views(spec: CharacterSpec) -> list[dict[str, Any]]:
+    """The choice panels a feature with structured picks shows when the player takes it."""
+    return [
+        {
+            "id": feature.id,
+            "name": feature.name,
+            "picks": [dict(pick) for pick in feature_choice_views(spec, feature)],
+        }
+        for feature in spec.features.values()
+        if feature.picks
+    ]
 
 
 def _template_grants(spec: CharacterSpec, template: Template) -> list[str]:

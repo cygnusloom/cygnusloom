@@ -1289,6 +1289,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 reason,
                 plus=self.plus,
                 natural=natural,
+                features=self.features,
             )
 
     def place_names(self) -> list[str]:
@@ -1484,6 +1485,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 spec=self.character,
                 stat=stat,
                 cause=cause,
+                features=self.features,
             )
 
     def player_initiative(self, roll: int = 0) -> dict[str, Any]:
@@ -1608,10 +1610,29 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 raise InvalidInput(f"{found.name} has no {rule.label} choice left")
             if rule.kind != "text" and choice in taken:
                 raise InvalidInput(f"{choice!r} is already chosen for {found.name}")
+            skill = choice if rule.grant == "trained" else ""
+            stat = ""
+            if rule.grant == "modifier":
+                bonus = spec.modifier(character.stats, choice) + character.stat_modifiers.get(
+                    choice, 0
+                )
+                if rule.max_value and bonus >= rule.max_value:
+                    raise InvalidInput(
+                        f"{character.name}'s {spec.stats[choice].name} modifier is already at "
+                        f"{rule.max_value}; {found.name} cannot raise it further"
+                    )
+                stat = choice
             record(
                 db,
                 self.campaign_id,
-                FeatureChoiceMade(name=character.name, feature=found.id, pick=pick, choice=choice),
+                FeatureChoiceMade(
+                    name=character.name,
+                    feature=found.id,
+                    pick=pick,
+                    choice=choice,
+                    skill=skill,
+                    stat=stat,
+                ),
             )
             db.commit()
             return {

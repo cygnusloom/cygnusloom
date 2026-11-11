@@ -17,7 +17,7 @@ from cygnusloom.services.events import (
     record,
 )
 from cygnusloom.services.views import scene_view, world_state_text
-from tests.test_campaigns import _create_character
+from tests.test_campaigns import _create_character, _signed_in
 from tests.test_character_creation import _cairn_campaign, _complete_form
 from tests.test_combat import CAIRN, PC, _character, _tools
 
@@ -235,6 +235,35 @@ def test_a_hireling_is_listed_on_the_players_scene_only_where_it_is(client_facto
     tools.create_location("The Inn", "A warm room with a fire.")
     tools.move_actor(HIRELING, "The Inn")
     assert _scene(app, campaign_id).hirelings == ()
+
+
+def test_the_player_sees_their_hirelings_whole_sheet_even_when_it_is_away(client_factory):
+    app, campaign_id, tools = _pcs(client_factory)
+    _hire(tools)
+    scene = _scene(app, campaign_id)
+    assert [sheet.name for sheet in scene.hireling_sheets] == [HIRELING]
+    sheet = scene.hireling_sheets[0]
+    assert sheet.employer == PC
+    assert any(line.startswith("Stats:") for line in sheet.sheet)
+
+    tools.create_location("The Inn", "A warm room with a fire.")
+    tools.move_actor(HIRELING, "The Inn")
+    scene = _scene(app, campaign_id)
+    assert scene.hirelings == ()
+    assert [sheet.name for sheet in scene.hireling_sheets] == [HIRELING]
+    assert scene.hireling_sheets[0].location == "The Inn"
+
+
+def test_the_character_tab_shows_the_hirelings_sheet(client_factory):
+    app, campaign_id, tools = _pcs(client_factory)
+    _hire(tools)
+    client = _signed_in(client_factory)
+
+    page = client.get(f"/campaigns/{campaign_id}").text
+
+    assert "Hirelings you play" in page
+    assert f"{HIRELING}" in page
+    assert "Stats:" in page
 
 
 def _scene(app: FastAPI, campaign_id: int):

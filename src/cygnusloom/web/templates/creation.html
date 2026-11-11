@@ -239,6 +239,13 @@
             </div>
           {% endfor %}
         {% endfor %}
+        {% if character.feature_choices %}
+        <section class="creation-panel" data-feature-choice-section>
+          <h3>Feature choices</h3>
+          <p class="panel-hint">Some features ask you to choose a skill, attribute, or detail. Choose the features above and their choices appear here.</p>
+          {% with feature_choices=character.feature_choices %}{% include "_feature_choice_fields.html" %}{% endwith %}
+        </section>
+        {% endif %}
         {% for field in character.choice_fields %}
           {{ choice_panel("field-" ~ field.id, field.name, field.options, field.description, field.restriction) }}
         {% endfor %}

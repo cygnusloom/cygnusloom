@@ -100,6 +100,8 @@ def advance_to(
     )
     if new.day != before.day:
         reactions.reset(db, campaign_id, "day", label="a new day")
+    if target > start:
+        reactions.reset(db, campaign_id, "hour", label="an hour")
     week_days = max(1, clock_rules.week_days)
     if (new.day - 1) // week_days != (before.day - 1) // week_days:
         reactions.reset(db, campaign_id, "week", label="a new week")

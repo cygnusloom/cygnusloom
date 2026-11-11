@@ -736,6 +736,98 @@ def test_a_rest_recharges_cultured_and_the_character_panel_shows_it(client_facto
     assert again["reaction"] == "Cultured rerolls the failed social check."
 
 
+def test_impostor_rerolls_a_disguise_check_once_per_hour(client_factory):
+    client, campaign_id, tools = _wwn_campaign(client_factory)
+    feature = WWN.character.features["focus_impostor"]
+    tools = replace(tools, rng=Rolls(6, 6, 6, 6))
+    _learn(client.app, campaign_id, feature.id, feature.name)
+
+    result = tools.roll_check(
+        "skill",
+        PC,
+        skill="sneak",
+        stat="dex",
+        roll=2,
+        difficulty=12,
+        cause="maintaining a disguise",
+    )
+
+    assert result["success"] is True
+    assert result["reaction"] == "Impostor rerolls the failed check to maintain the disguise."
+    with Session(client.app.state.engine) as db:
+        character = load_state(db, campaign_id).characters[name_key(PC)]
+    assert character.reaction_uses == {"hour:focus_impostor:impostor-reroll": 1}
+
+    # The shared check/save use is spent, so another disguise check is not rerolled.
+    spent = tools.roll_check(
+        "skill",
+        PC,
+        skill="sneak",
+        stat="dex",
+        roll=2,
+        difficulty=12,
+        cause="maintaining a disguise",
+    )
+    assert "reaction" not in spent
+
+    tools.advance_time(hours=1)
+    recharged = tools.roll_check(
+        "skill",
+        PC,
+        skill="sneak",
+        stat="dex",
+        roll=2,
+        difficulty=12,
+        cause="maintaining a disguise",
+    )
+    assert recharged["reaction"] == "Impostor rerolls the failed check to maintain the disguise."
+
+
+def test_rider_rerolls_a_failed_ride_check_once_per_hour(client_factory):
+    client, campaign_id, tools = _wwn_campaign(client_factory)
+    feature = WWN.character.features["focus_rider_2"]
+    tools = replace(tools, rng=Rolls(6, 6))
+    _learn(client.app, campaign_id, feature.id, feature.name)
+
+    result = tools.roll_check("skill", PC, skill="ride", stat="dex", roll=2, difficulty=12)
+
+    assert result["success"] is True
+    assert result["reaction"] == "Rider rerolls the failed Ride check."
+
+
+def test_poisoner_rerolls_a_failed_poison_save(client_factory):
+    client, campaign_id, tools = _wwn_campaign(client_factory)
+    feature = WWN.character.features["focus_poisoner"]
+    tools = replace(tools, rng=Rolls(20))
+    _learn(client.app, campaign_id, feature.id, feature.name)
+
+    result = tools.player_save(roll=1, stat="save_physical", cause="a poisoned blade")
+
+    assert result["passed"] is True
+    assert result["reaction"] == "Poisoner rerolls the failed save against poison."
+
+
+def test_trapmaster_shares_one_hourly_reroll_between_checks_and_saves(client_factory):
+    client, campaign_id, tools = _wwn_campaign(client_factory)
+    feature = WWN.character.features["focus_trapmaster"]
+    tools = replace(tools, rng=Rolls(6, 6, 20))
+    _learn(client.app, campaign_id, feature.id, feature.name)
+
+    check = tools.roll_check(
+        "skill", PC, skill="notice", stat="int", roll=2, difficulty=12, cause="a trap"
+    )
+    assert check["reaction"] == "Trapmaster rerolls the failed check involving a trap."
+
+    # The check spent the shared use, so the trap save is not rerolled.
+    save = tools.player_save(roll=1, stat="save_physical", cause="a trap")
+    assert save["passed"] is False
+    assert "reaction" not in save
+
+    tools.advance_time(hours=1)
+    recharged = tools.player_save(roll=1, stat="save_physical", cause="a trap")
+    assert recharged["reaction"] == "Trapmaster rerolls the failed save involving a trap."
+
+
 def test_wwn_skill_check_prompts_for_the_players_own_dice(client_factory):
     """A skill check is the player's roll, not the engine's."""
     _client, _campaign_id, tools = _wwn_campaign(client_factory)
@@ -1102,6 +1194,8 @@ def test_a_developed_attribute_focus_stores_a_validated_choice(client_factory):
     with Session(client.app.state.engine) as db:
         pc = load_state(db, campaign_id).characters[name_key(PC)]
     assert pc.feature_choices["focus_developed_attribute:attribute"] == ["str"]
+    assert pc.stat_modifiers["str"] == 1
+    assert pc.modifier(WWN.character, "str") == WWN.character.modifier(pc.stats, "str") + 1
     with pytest.raises(InvalidInput, match="not an attribute"):
         tools.choose_feature_choice(PC, "Developed Attribute", "attribute", "magic")
 

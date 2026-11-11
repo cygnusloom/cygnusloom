@@ -6,13 +6,13 @@ from typing import Any
 
 from sqlmodel import Session
 
-from cygnusloom.content.character import CharacterSpec
+from cygnusloom.content.character import CharacterSpec, Feature
 from cygnusloom.content.library import (
     CombatRules,
     ConditionRules,
 )
 from cygnusloom.content.lookup import AmbiguousId, resolve_id
-from cygnusloom.services import death, resolution
+from cygnusloom.services import death, reactions, resolution
 from cygnusloom.services.combat.damage import _end_if_one_side_left
 from cygnusloom.services.common import InvalidInput, whole_number
 from cygnusloom.services.conditions import end_condition
@@ -142,6 +142,7 @@ def player_save(
     spec: CharacterSpec | None = None,
     stat: str = "",
     cause: str = "",
+    features: Mapping[str, Feature] | None = None,
 ) -> dict[str, Any]:
     """The save a player character owes after harm overflowed, rolled by the player. Passing it
     ends any fatal condition the character has, such as Doomed, when the rule set defines it.
@@ -160,6 +161,9 @@ def player_save(
         stat = _hazard_stat(stat, known, spec)
         roll = whole_number(roll, "roll", 1, combat.check_sides)
         result = resolve_save(combat, current(pc, stat), rng=rng, roll=roll, plus=plus)
+        result, triggered = _save_reaction(
+            pc, spec, features, stat, cause, result, combat, rng=rng, plus=plus
+        )
         record(
             db,
             campaign_id,
@@ -172,17 +176,25 @@ def player_save(
                 cause=cause,
             ),
         )
+        if triggered is not None:
+            reactions.use(db, campaign_id, pc, triggered)
         db.commit()
-        return {
+        payload = {
             "character": pc.name,
             "stat": stat,
             "roll": result.roll,
             "score": result.score,
             "passed": result.passed,
         }
+        if triggered is not None:
+            payload["reaction"] = triggered.text
+        return payload
     roll = whole_number(roll, "roll", 1, combat.check_sides)
     stat = pc.save_due
     result = resolve_save(combat, current(pc, stat), rng=rng, roll=roll, plus=plus)
+    result, triggered = _save_reaction(
+        pc, spec, features, stat, cause, result, combat, rng=rng, plus=plus
+    )
     record(
         db,
         campaign_id,
@@ -195,6 +207,8 @@ def player_save(
             status=defeat_status(pc, combat.defeat),
         ),
     )
+    if triggered is not None:
+        reactions.use(db, campaign_id, pc, triggered)
     db.commit()
     if not result.passed:
         death.on_critical_save_failed(db, campaign_id, combat, pc.name)
@@ -214,10 +228,40 @@ def player_save(
                     spec=spec,
                 )
     _end_if_one_side_left(db, campaign_id)
-    return {
+    payload = {
         "character": pc.name,
         "stat": stat,
         "roll": result.roll,
         "score": result.score,
         "passed": result.passed,
     }
+    if triggered is not None:
+        payload["reaction"] = triggered.text
+    return payload
+
+
+def _save_reaction(
+    pc: Character,
+    spec: CharacterSpec | None,
+    features: Mapping[str, Feature] | None,
+    stat: str,
+    cause: str,
+    result: resolution.RollResult,
+    combat: CombatRules,
+    *,
+    rng: random.Random | None,
+    plus: str,
+) -> tuple[resolution.RollResult, reactions.Triggered | None]:
+    """Apply a feature's save reaction before the save is recorded."""
+    if spec is None or rng is None:
+        return result, None
+    triggered = reactions.match_save(pc, spec, features, stat, result.roll, result.passed, cause)
+    if triggered is None:
+        return result, None
+    result = reactions.apply_save_effect(
+        triggered,
+        result,
+        reroll=lambda: resolve_save(combat, result.score, rng=rng, plus=plus),
+        resolve_total=lambda total: resolve_save(combat, result.score, roll=total, plus=plus),
+    )
+    return result, triggered

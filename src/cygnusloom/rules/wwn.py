@@ -343,7 +343,7 @@ def roll_reaction(
 
         def read(hc: HookContext) -> dict[str, int]:
             found = hc.character(character)
-            return {"bonus": spec.modifier(found.stats, "cha")}
+            return {"bonus": found.modifier(spec, "cha")}
 
         bonus = int(ctx.world.with_hook_context(read)["bonus"])
     roll = roll_total("2d6", ctx.world.rng)
@@ -521,7 +521,7 @@ def _level_facts(
             "casting_class": casting_class_id(found, progression),
             "traditions": tradition_ids(found, progression),
             "hp": found.stats.get("hp", 0),
-            "con": spec.modifier(found.stats, "con"),
+            "con": found.modifier(spec, "con"),
             "level_hp_bonus": level_hp_bonus,
         }
 
@@ -1433,7 +1433,7 @@ def _armor_total(ctx: ToolContext, character: str, spec: CharacterSpec) -> int:
 
     def action(hc: HookContext) -> int:
         found = hc.character(character)
-        dexterity = spec.modifier(found.stats, "dex")
+        dexterity = found.modifier(spec, "dex")
         return found.armor or 10 + dexterity
 
     return ctx.world.with_hook_context(action)

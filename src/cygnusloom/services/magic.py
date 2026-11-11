@@ -12,6 +12,7 @@ from typing import Any
 
 from sqlmodel import Session
 
+from cygnusloom.content.character import Feature
 from cygnusloom.content.library import (
     CharacterSpec,
     CombatRules,
@@ -21,6 +22,7 @@ from cygnusloom.content.library import (
 )
 from cygnusloom.content.lookup import AmbiguousId, resolve_id
 from cygnusloom.services import inventory as inventory_service
+from cygnusloom.services import reactions
 from cygnusloom.services.combat import resolve_save
 from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.events import (
@@ -223,6 +225,7 @@ def roll_save(
     *,
     plus: str,
     natural: int | None = None,
+    features: Mapping[str, Feature] | None = None,
 ) -> dict[str, Any]:
     """A save against a stat, recorded with its reason. The engine rolls unless the player's own
     roll is passed as `natural`. A failure only records the result; the GM applies what it
@@ -243,6 +246,18 @@ def roll_save(
             f"{character.name} has no stats yet; give them stats with update_npc first"
         )
     result = resolve_save(combat, current(character, stat), rng=rng, roll=natural, plus=plus)
+    triggered = reactions.match_save(
+        character, spec, features, stat, result.roll, result.passed, reason
+    )
+    if triggered is not None:
+        result = reactions.apply_save_effect(
+            triggered,
+            result,
+            reroll=lambda: resolve_save(combat, result.score, rng=rng, plus=plus),
+            resolve_total=lambda total: resolve_save(
+                combat, result.score, roll=total, plus=plus
+            ),
+        )
     record(
         db,
         campaign_id,
@@ -255,11 +270,16 @@ def roll_save(
             cause=reason,
         ),
     )
+    if triggered is not None:
+        reactions.use(db, campaign_id, character, triggered)
     db.commit()
-    return {
+    payload = {
         "name": character.name,
         "stat": stat,
         "roll": result.roll,
         "score": result.score,
         "passed": result.passed,
     }
+    if triggered is not None:
+        payload["reaction"] = triggered.text
+    return payload

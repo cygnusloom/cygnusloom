@@ -154,7 +154,7 @@ def make_move(
     stat_bonus = 0
     if rolled_stat is not None:
         if spec is not None:
-            stat_bonus = spec.modifier(character.stats, rolled_stat)
+            stat_bonus = character.modifier(spec, rolled_stat)
         else:
             stat_bonus = modifier_value(character, rolled_stat)
         stat_bonus += condition_bonus(character, conditions, rolled_stat)
@@ -372,5 +372,5 @@ def best_stat(
     """The stat in `choice` with the highest modifier, the first one listed on a tie. When the
     rule set has modifier bands, compare the same modifier the roll will add, not the raw score."""
     if spec is not None:
-        return max(choice, key=lambda stat: spec.modifier(character.stats, stat))
+        return max(choice, key=lambda stat: character.modifier(spec, stat))
     return max(choice, key=lambda stat: modifier_value(character, stat))

@@ -210,7 +210,7 @@
     "id": "art_elemental_sparks",
     "name": "Elemental Sparks",
     "tag": "elementalist",
-    "description": "Passive, with no Effort. The Elementalist conjures petty flame, water, ice, stone, or wind for minor tricks lasting up to a scene. Conjured water cannot quench thirst. The art can solve a real challenge only once per game session."
+    "description": "Passive, with no Effort. The Elementalist conjures petty flame, water, ice, stone, or wind for minor tricks lasting up to a scene. Conjured water cannot quench thirst. The art can solve a real challenge only once per rest."
   },
   {
     "type": "feature",

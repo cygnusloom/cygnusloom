@@ -649,6 +649,28 @@
   refreshSkillPickOptions();
   refreshFeaturePickOptions();
 
+  const featureChoicePanels = [...document.querySelectorAll("[data-feature-choice-for]")];
+
+  // A feature that asks for a skill, attribute, or free text shows its panel only while one of
+  // the feature selects names it. Disabled controls are not submitted, so a hidden panel cannot
+  // send a stale choice for a feature the player did not take.
+  const syncFeatureChoicePanels = () => {
+    const chosen = new Set(
+      [...document.querySelectorAll("select[data-feature-choice]")]
+        .map((select) => select.value)
+        .filter(Boolean),
+    );
+    for (const panel of featureChoicePanels) {
+      const shown = chosen.has(panel.dataset.featureChoiceFor);
+      panel.hidden = !shown;
+      for (const control of panel.querySelectorAll("select, input")) {
+        control.disabled = !shown;
+      }
+    }
+  };
+
+  syncFeatureChoicePanels();
+
   document.addEventListener("input", (event) => {
     const pickSearch = event.target.closest("[data-pick-search]");
     if (pickSearch) {
@@ -665,6 +687,7 @@
       if (target.closest('[data-pick-kind="skill"]')) refreshSkillPickOptions();
       if (target.closest('[data-pick-kind="feature"]')) refreshFeaturePickOptions();
       if (target.matches("[data-pick-source]")) syncPickControls();
+      if (target.matches("[data-feature-choice]")) syncFeatureChoicePanels();
       if (target.closest("[data-replacement-row]")) syncReplacementDetails();
       return;
     }

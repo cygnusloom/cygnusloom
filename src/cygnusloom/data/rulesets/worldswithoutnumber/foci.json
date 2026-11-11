@@ -405,7 +405,8 @@
         "id": "attribute",
         "kind": "stat",
         "label": "Attribute",
-        "max_value": 3
+        "max_value": 3,
+        "grant": "modifier"
       }
     ]
   },
@@ -538,11 +539,49 @@
     "id": "focus_impostor",
     "name": "Impostor",
     "rank": 1,
-    "description": "You gain Perform or Sneak. Once per scene you can reroll a check or save to maintain a disguise, and you hold one false identity of minor importance.",
+    "description": "You gain Perform or Sneak. Once per hour you can reroll a check or save to maintain a disguise, and you hold one false identity of minor importance.",
     "effects": [
       {
         "op": "note",
-        "text": "Gain level-0 in Perform or Sneak. Once per scene, reroll a failed check or save to maintain an imposture or disguise. Hold one false identity of minor social importance, changeable with a week's work."
+        "text": "Gain level-0 in Perform or Sneak. Once per hour, reroll a failed check or save to maintain an imposture or disguise. Hold one false identity of minor social importance, changeable with a week's work."
+      }
+    ],
+    "picks": [
+      {
+        "id": "skill",
+        "kind": "skill",
+        "label": "Skill",
+        "choices": ["perform", "sneak"],
+        "grant": "trained"
+      }
+    ],
+    "reactions": [
+      {
+        "id": "impostor-check",
+        "trigger": "check",
+        "when": {
+          "skills": ["perform", "sneak"],
+          "success": false,
+          "cause_contains": ["disguise", "imposture", "impersonat"]
+        },
+        "effect": {"op": "reroll", "keep": "better"},
+        "uses": 1,
+        "reset": "hour",
+        "shared": "impostor-reroll",
+        "text": "Impostor rerolls the failed check to maintain the disguise."
+      },
+      {
+        "id": "impostor-save",
+        "trigger": "save",
+        "when": {
+          "success": false,
+          "cause_contains": ["disguise", "imposture", "impersonat"]
+        },
+        "effect": {"op": "reroll", "keep": "better"},
+        "uses": 1,
+        "reset": "hour",
+        "shared": "impostor-reroll",
+        "text": "Impostor rerolls the failed save to maintain the disguise."
       }
     ]
   },
@@ -688,6 +727,25 @@
         "op": "note",
         "text": "Any attribute score below 9 must be raised to 9 by moving points from your other attributes; afflictions gained after play begins can still lower a score below that floor."
       }
+    ],
+    "picks": [
+      {
+        "id": "skill",
+        "kind": "skill",
+        "label": "Bonus skill",
+        "grant": "trained"
+      }
+    ],
+    "reactions": [
+      {
+        "id": "elf-reroll",
+        "trigger": "check",
+        "when": {"skill_choice": "focus_origin_elf:skill", "success": false},
+        "effect": {"op": "reroll", "keep": "better"},
+        "uses": 1,
+        "reset": "day",
+        "text": "Elf rerolls the failed check with the chosen skill."
+      }
     ]
   },
   {
@@ -815,6 +873,19 @@
         "op": "note",
         "text": "Reroll a failed save against poison. Brew a toxin in an hour that deals 2d6 + level damage on a hit or Shock, with a Physical save for half. Keep fresh doses equal to your level. Blade venom lasts 10 minutes or until a hit or Shock."
       }
+    ],
+    "reactions": [
+      {
+        "id": "poisoner-reroll",
+        "trigger": "save",
+        "when": {
+          "stats": ["save_physical"],
+          "success": false,
+          "cause_contains": ["poison", "venom", "toxin"]
+        },
+        "effect": {"op": "reroll", "keep": "better"},
+        "text": "Poisoner rerolls the failed save against poison."
+      }
     ]
   },
   {
@@ -879,11 +950,22 @@
     "id": "focus_rider_2",
     "name": "Rider",
     "rank": 2,
-    "description": "Once per scene you can negate a hit on your steed, once per scene reroll a failed Ride check, and you can send simple thoughts to a bonded mount within 200 feet.",
+    "description": "Once per hour you can negate a hit on your steed, once per hour reroll a failed Ride check, and you can send simple thoughts to a bonded mount within 200 feet.",
     "effects": [
       {
         "op": "note",
-        "text": "Once per scene, negate a successful attack on your steed as an Instant action. Once per scene, reroll a failed Ride check. Send simple warnings and commands to a bonded mount within 200 feet."
+        "text": "Once per hour, negate a successful attack on your steed as an Instant action. Once per hour, reroll a failed Ride check. Send simple warnings and commands to a bonded mount within 200 feet."
+      }
+    ],
+    "reactions": [
+      {
+        "id": "rider-reroll",
+        "trigger": "check",
+        "when": {"skills": ["ride"], "success": false},
+        "effect": {"op": "reroll", "keep": "better"},
+        "uses": 1,
+        "reset": "hour",
+        "text": "Rider rerolls the failed Ride check."
       }
     ]
   },
@@ -974,7 +1056,19 @@
         "id": "skill",
         "kind": "skill",
         "label": "Skill",
-        "exclude": ["magic", "stab", "shoot", "punch"]
+        "exclude": ["magic", "stab", "shoot", "punch"],
+        "grant": "check_best",
+        "dice": 3,
+        "keep": 2
+      }
+    ],
+    "reactions": [
+      {
+        "id": "specialist-best",
+        "trigger": "check",
+        "when": {"skill_choice": "focus_specialist:skill"},
+        "effect": {"op": "best_of", "dice": 3, "keep": 2},
+        "text": "Specialist rolls 3d6 and keeps the best 2."
       }
     ]
   },
@@ -995,7 +1089,19 @@
         "id": "skill",
         "kind": "skill",
         "label": "Skill",
-        "exclude": ["magic", "stab", "shoot", "punch"]
+        "exclude": ["magic", "stab", "shoot", "punch"],
+        "grant": "check_best",
+        "dice": 4,
+        "keep": 2
+      }
+    ],
+    "reactions": [
+      {
+        "id": "specialist-best-2",
+        "trigger": "check",
+        "when": {"skill_choice": "focus_specialist_2:skill"},
+        "effect": {"op": "best_of", "dice": 4, "keep": 2},
+        "text": "Specialist rolls 4d6 and keeps the best 2."
       }
     ]
   },
@@ -1046,7 +1152,7 @@
     "id": "focus_trapmaster",
     "name": "Trapmaster",
     "rank": 1,
-    "description": "You gain Notice. Once per scene you can reroll a failed check or save involving traps, and in five minutes you can rig a portal or passage with a snare, caltrops, or needles.",
+    "description": "You gain Notice. Once per hour you can reroll a failed check or save involving traps, and in five minutes you can rig a portal or passage with a snare, caltrops, or needles.",
     "effects": [
       {
         "op": "skill",
@@ -1055,7 +1161,35 @@
       },
       {
         "op": "note",
-        "text": "Once per scene, reroll a failed check or save related to traps or snares. In five minutes, rig a portal, container, passage, or narrow space. A non-lethal trap costs the first victim a round; a dangerous trap deals 1d6 + twice your level with a save for half. Only one improvised trap may be active."
+        "text": "Once per hour, reroll a failed check or save related to traps or snares. In five minutes, rig a portal, container, passage, or narrow space. A non-lethal trap costs the first victim a round; a dangerous trap deals 1d6 + twice your level with a save for half. Only one improvised trap may be active."
+      }
+    ],
+    "reactions": [
+      {
+        "id": "trapmaster-check",
+        "trigger": "check",
+        "when": {
+          "success": false,
+          "cause_contains": ["trap", "snare", "hazard"]
+        },
+        "effect": {"op": "reroll", "keep": "better"},
+        "uses": 1,
+        "reset": "hour",
+        "shared": "trapmaster-reroll",
+        "text": "Trapmaster rerolls the failed check involving a trap."
+      },
+      {
+        "id": "trapmaster-save",
+        "trigger": "save",
+        "when": {
+          "success": false,
+          "cause_contains": ["trap", "snare", "hazard"]
+        },
+        "effect": {"op": "reroll", "keep": "better"},
+        "uses": 1,
+        "reset": "hour",
+        "shared": "trapmaster-reroll",
+        "text": "Trapmaster rerolls the failed save involving a trap."
       }
     ]
   },
@@ -1126,6 +1260,15 @@
       {
         "op": "note",
         "text": "Gain level-0 in Stab or Punch. Add +2 on Screen Ally checks and screen one more attacker per round than normal. Once per round, screen against an intangible spell or magical attack, or shield allies from area magic; the assailant's Magic check opposes you."
+      }
+    ],
+    "picks": [
+      {
+        "id": "skill",
+        "kind": "skill",
+        "label": "Skill",
+        "choices": ["stab", "punch"],
+        "grant": "trained"
       }
     ]
   },

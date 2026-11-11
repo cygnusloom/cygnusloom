@@ -141,6 +141,22 @@ class ReactionLink:
 
 
 @dataclass(frozen=True)
+class CharacterSheetView:
+    """A character sheet the player can read: their own, or a hireling they play for."""
+
+    name: str
+    pronouns: str
+    description: str
+    sheet: list[str]
+    abilities: tuple[FeatureLink, ...] = ()
+    reactions: tuple[ReactionLink, ...] = ()
+    dead: bool = False
+    location: str = ""
+    employer: str = ""
+    sheet_links: Mapping[str, str] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
 class SceneView:
     """What the player may see: the player character, the place they are in, the NPCs there, the
     player character's statblock, the journal, and everyone the player has met."""
@@ -160,6 +176,9 @@ class SceneView:
     location_entry: str = ""
     # Names printed on the sheet -> compendium entry id, so a sheet line can link its references.
     sheet_links: Mapping[str, str] = field(default_factory=dict)
+    # The player character's own sheet, and the sheets of every hireling the player plays for.
+    pc_sheet: CharacterSheetView | None = None
+    hireling_sheets: tuple[CharacterSheetView, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -721,35 +740,21 @@ def scene_view(
     sheet = _sheet_text(spec, pc).splitlines() if pc is not None else []
     if pc is not None and conditions is not None:
         sheet += _status_lines(pc, conditions, None, None, None)
-    abilities = ()
-    reactions = ()
+    abilities = _feature_links(spec, pc, ability_entries) if pc is not None else ()
+    reactions = _reaction_links(spec, pc) if pc is not None else ()
+    pc_sheet = None
     if pc is not None:
-        abilities = tuple(
-            FeatureLink(
-                id=feature_id,
-                name=feature.name,
-                entry=ability_entries.get(feature_id)
-                or ability_entries.get(name_key(feature.name))
-                or "",
-            )
-            for feature_id, feature in spec.features.items()
-            if feature_id in pc.features and feature.feature_type != "item"
-        )
-        reactions = tuple(
-            ReactionLink(
-                feature=feature.id,
-                name=feature.name,
-                text=reaction_effect_text(reaction, feature),
-                uses=reaction.uses,
-                used=pc.reaction_uses.get(
-                    f"{reaction.reset}:{feature.id}:{reaction.id}", 0
-                ),
-                reset=reaction.reset,
-            )
-            for feature in spec.features.values()
-            if feature.id in pc.features
-            for reaction in feature.reactions
-            if reaction.uses > 0
+        pc_sheet = CharacterSheetView(
+            name=pc.name,
+            pronouns=pc.pronouns or "",
+            description=pc.description,
+            sheet=sheet,
+            abilities=abilities,
+            reactions=reactions,
+            dead=pc.dead,
+            location=pc.location or "",
+            employer=pc.employer,
+            sheet_links=sheet_entries,
         )
     pack = None
     if pc is not None and inventory is not None:
@@ -794,6 +799,7 @@ def scene_view(
         for c in state.characters.values()
         if c.hireling and place is not None and c.location == place.name
     )
+    hireling_sheets = _hireling_sheets(state, spec, pc, conditions, ability_entries, sheet_entries)
     currency = ()
     if pc is not None:
         currency = tuple(
@@ -828,6 +834,8 @@ def scene_view(
         reactions=reactions,
         location_entry=location_entry,
         sheet_links=sheet_entries,
+        pc_sheet=pc_sheet,
+        hireling_sheets=hireling_sheets,
     )
 
 
@@ -1451,7 +1459,91 @@ def _sheet_of(character: Character) -> Sheet:
         fields=character.fields,
         counters=character.counters,
         skills=character.skills,
+        feature_choices=character.feature_choices,
+        stat_modifiers=character.stat_modifiers,
     )
+
+
+def _feature_links(
+    spec: CharacterSpec, character: Character, ability_entries: Mapping[str, str]
+) -> tuple[FeatureLink, ...]:
+    """The features a character has, with compendium links, in the rule set's order."""
+    effective = custom_features.merged_features(spec, character)
+    return tuple(
+        FeatureLink(
+            id=feature_id,
+            name=feature.name,
+            entry=ability_entries.get(feature_id)
+            or ability_entries.get(name_key(feature.name))
+            or "",
+        )
+        for feature_id, feature in effective.items()
+        if feature_id in character.features and feature.feature_type != "item"
+    )
+
+
+def _reaction_links(spec: CharacterSpec, character: Character) -> tuple[ReactionLink, ...]:
+    """The limited reactions a character has, with their remaining uses."""
+    effective = custom_features.merged_features(spec, character)
+    return tuple(
+        ReactionLink(
+            feature=feature.id,
+            name=feature.name,
+            text=reaction_effect_text(reaction, feature),
+            uses=reaction.uses,
+            used=character.reaction_uses.get(
+                f"{reaction.reset}:{feature.id}:{reaction.shared or reaction.id}", 0
+            ),
+            reset=reaction.reset,
+        )
+        for feature in effective.values()
+        if feature.id in character.features
+        for reaction in feature.reactions
+        if reaction.uses > 0
+    )
+
+
+def _hireling_sheets(
+    state: CampaignState,
+    spec: CharacterSpec,
+    pc: Character | None,
+    conditions: Mapping[str, ConditionRules] | None,
+    ability_entries: Mapping[str, str],
+    sheet_entries: Mapping[str, str],
+) -> tuple[CharacterSheetView, ...]:
+    """Every hireling the player plays for, wherever it is, with the same detail as the player's
+    own sheet. A hireling's employer may be any character the player controls, so a hireling of a
+    hireling is included too."""
+    if pc is None:
+        return ()
+    player_id = state.owner_of(pc)
+    if player_id is None:
+        return ()
+    sheets = []
+    for character in state.characters.values():
+        if not character.hireling or character.kind != PC_KIND:
+            continue
+        employer = state.named(character.employer)
+        if not isinstance(employer, Character) or not state.owned_by(employer, player_id):
+            continue
+        lines = _sheet_text(spec, character).splitlines()
+        if conditions is not None:
+            lines += _status_lines(character, conditions, None, None, None)
+        sheets.append(
+            CharacterSheetView(
+                name=character.name,
+                pronouns=character.pronouns or "",
+                description=character.summary or character.description,
+                sheet=lines,
+                abilities=_feature_links(spec, character, ability_entries),
+                reactions=_reaction_links(spec, character),
+                dead=character.dead,
+                location=character.location or "",
+                employer=character.employer,
+                sheet_links=sheet_entries,
+            )
+        )
+    return tuple(sorted(sheets, key=lambda sheet: name_key(sheet.name)))
 
 
 def _sheet_text(spec: CharacterSpec, character: Character) -> str:

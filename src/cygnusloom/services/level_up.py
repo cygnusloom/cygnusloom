@@ -16,6 +16,7 @@ from typing import Any
 
 from sqlalchemy import Engine
 
+from cygnusloom.content.character import feature_choice_options, feature_choice_views
 from cygnusloom.content.library import (
     LevelUpPick,
     LevelUpRules,
@@ -235,6 +236,12 @@ def pick_views(
         elif pick.kind == "feature" and ctx is not None:
             level = _new_level(pc, rule_set, summary)
             options = pick.options(pc.name, pick, ctx, level) if pick.options else []
+            for option in options:
+                feature = rule_set.character.features.get(option.get("id", ""))
+                if feature is not None:
+                    option["picks"] = [
+                        dict(choice) for choice in feature_choice_views(rule_set.character, feature)
+                    ]
             views.append(
                 {
                     "id": pick.id,
@@ -242,6 +249,11 @@ def pick_views(
                     "kind": pick.kind,
                     "available": available,
                     "options": options,
+                    "feature_choices": [
+                        {"id": option["id"], "name": option["name"], "picks": option["picks"]}
+                        for option in options
+                        if option.get("picks")
+                    ],
                 }
             )
     return tuple(views)
@@ -358,13 +370,18 @@ def option_views(
                 if stat.derived is None
                 and (maximum is None or pc.stats.get(stat.id, stat.low) < maximum)
             ]
-        features: list[dict[str, str]] = [
+        features: list[dict[str, Any]] = [
             {
                 "id": feature.id,
                 "name": feature.name,
                 "description": feature.description,
                 "rank": str(feature.rank),
                 "repeatable": "true" if feature.repeatable else "",
+                "picks": [
+                    dict(choice) for choice in feature_choice_views(spec, feature)
+                ]
+                if feature.picks
+                else [],
             }
             for feature in learnable_features(option.learn, pc, spec.features, spec)
         ]
@@ -376,6 +393,11 @@ def option_views(
                 "picks": option.picks,
                 "stats": stats,
                 "features": features,
+                "feature_choices": [
+                    {"id": feature["id"], "name": feature["name"], "picks": feature["picks"]}
+                    for feature in features
+                    if feature["picks"]
+                ],
                 "needs_feature": option.learn is not None,
                 "available": not (option.picks and not stats)
                 and not (option.learn is not None and not features),
@@ -431,7 +453,7 @@ def _apply_level(
     # apply that same plan once the level has added those pools.
     changes = _plan_picks(view, engine, campaign_id, rule_set, ctx, form)
     view.level_up.apply_level(view.character, ctx)
-    _apply_changes(view, changes, ctx)
+    _apply_changes(view, changes, ctx, form)
     # A hireling is always the employer's level. Queue the catch-up levels; the player still
     # makes the choices for them on this page.
     hireling_levels.sync_employer(ctx.world, view.character)
@@ -445,18 +467,20 @@ def _apply_picks(
     ctx: ToolContext,
     form: Mapping[str, Any],
 ) -> None:
-    _apply_changes(view, _plan_picks(view, engine, campaign_id, rule_set, ctx, form), ctx)
+    _apply_changes(view, _plan_picks(view, engine, campaign_id, rule_set, ctx, form), ctx, form)
 
 
 def _apply_changes(
     view: AdvancementPage,
     changes: list[tuple[LevelUpPick, Any]],
     ctx: ToolContext,
+    form: Mapping[str, Any],
 ) -> None:
     for pick, value in changes:
         if pick.kind == "feature":
             for choice in value:
                 pick.apply(view.character, pick, choice, ctx)
+                _apply_feature_choices(view.character, choice, ctx, form)
         else:
             pick.apply(view.character, pick, value, ctx)
 
@@ -525,6 +549,7 @@ def _plan_picks(
                 if choice in seen and not options[choice].get("repeatable"):
                     raise InvalidInput(f"{options[choice]['name']} was chosen twice")
                 seen.add(choice)
+                _check_feature_choices(spec, choice, form)
             changes.append((pick, choices))
     return changes
 
@@ -649,13 +674,70 @@ def _feature_choices(pick: LevelUpPick, form: Mapping[str, Any]) -> list[str]:
     return choices
 
 
+def _submitted_feature_choices(
+    feature: Any, pick: Any, form: Mapping[str, Any]
+) -> list[str]:
+    """The choices the form sent for one feature pick."""
+    return [
+        str(value)
+        for index in range(pick.count)
+        if (value := form.get(f"feature-choice-{feature.id}-{pick.id}-{index}", ""))
+        not in ("", None)
+    ]
+
+
+def _check_feature_choices(
+    spec: Any, feature_id: str, form: Mapping[str, Any]
+) -> None:
+    """Validate a learned feature's structured choices before any change is recorded."""
+    feature = spec.features.get(feature_id)
+    if feature is None:
+        return
+    for pick in feature.picks:
+        values = _submitted_feature_choices(feature, pick, form)
+        if len(values) > pick.count:
+            raise InvalidInput(
+                f"{feature.name} takes {pick.count} {pick.label.lower()} choice"
+                f"{'' if pick.count == 1 else 's'}"
+            )
+        options = feature_choice_options(spec, pick)
+        for value in values:
+            if pick.kind != "text" and value not in options:
+                raise InvalidInput(
+                    f"{value!r} is not a valid {pick.label.lower()} for {feature.name}"
+                )
+        if pick.kind != "text" and len(set(values)) != len(values):
+            raise InvalidInput(f"{feature.name} chooses the same {pick.label.lower()} twice")
+
+
+def _apply_feature_choices(
+    character: str, feature_id: str, ctx: ToolContext, form: Mapping[str, Any]
+) -> None:
+    """Record a learned feature's choices, filling a blank skill or stat with its first option."""
+    spec = ctx.world.character
+    feature = spec.features.get(feature_id)
+    if feature is None:
+        return
+    for pick in feature.picks:
+        values = _submitted_feature_choices(feature, pick, form)
+        if not values and pick.kind != "text":
+            options = feature_choice_options(spec, pick)
+            values = [options[0]] if options else []
+        for value in values:
+            ctx.world.choose_feature_choice(character, feature_id, pick.id, value)  # type: ignore[attr-defined]
+
+
 def _apply_option(view: AdvancementPage, ctx: ToolContext, form: Mapping[str, Any]) -> None:
     option = str(form.get("option", "")).strip()
     if not option:
         raise InvalidInput("Choose an Advancement")
     stat = str(form.get(f"stat-{option}", "")).strip() or None
     feature = str(form.get(f"feature-{option}", "")).strip() or None
+    if feature:
+        _check_feature_choices(ctx.world.character, feature, form)
     ctx.world.take_advancement(view.character, option, stat, feature)  # type: ignore[attr-defined]
+    if feature:
+        _apply_feature_choices(view.character, feature, ctx, form)
 
 
 def tool_context(

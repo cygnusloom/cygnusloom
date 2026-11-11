@@ -6,6 +6,7 @@ here names a particular game."""
 from __future__ import annotations
 
 import random
+import re
 from collections.abc import Mapping
 from typing import Any
 
@@ -52,6 +53,13 @@ def resolve_stat(spec: CharacterSpec, stat: str) -> str:
         raise InvalidInput(
             f"there is no stat named {wanted!r}; the rule set's stats are: {options}"
         ) from None
+
+
+def _best_of_die(dice: str) -> str:
+    """The single die a best-of check rolls several times, such as "1d6" for a "2d6" check.
+    Empty when the check's dice are not a simple handful of one die."""
+    match = re.fullmatch(r"\s*(?:\d+)?d(\d+)\s*", dice)
+    return f"1d{match.group(1)}" if match else ""
 
 
 def roll_check(
@@ -105,7 +113,7 @@ def roll_check(
                 f"{found.name} has no stat {stat_id!r}; the character's stats are: {options}"
             )
         stat_name = stat_rules.name
-        stat_bonus = spec.modifier(found.stats, stat_id)
+        stat_bonus = found.modifier(spec, stat_id)
     target = check.default_difficulty if difficulty is None else difficulty
     if isinstance(target, bool) or not isinstance(target, int):
         raise InvalidInput("difficulty must be a whole number")
@@ -120,7 +128,18 @@ def roll_check(
         for rules in active_conditions(found, conditions or {})
     )
     bonus = skill_bonus + stat_bonus + modifier + condition_modifier + armor_penalty
-    if roll is None:
+    best = reactions.check_best(found, spec, features, skill_id) if skill_id else None
+    best_die = _best_of_die(check.dice) if best is not None else ""
+    if roll is None and best is not None and best_die:
+        dice, keep = best
+        rolled = sorted(
+            (resolution.roll_die(rng, best_die, plus=plus) for _ in range(dice)), reverse=True
+        )
+        kept = sum(rolled[:keep])
+        result = resolution.CheckResult(
+            roll=kept, total=kept + bonus, difficulty=target, passed=kept + bonus >= target
+        )
+    elif roll is None:
         result = resolution.roll_check(
             rng,
             check.dice,
@@ -137,7 +156,7 @@ def roll_check(
             roll=rolled, total=total, difficulty=target, passed=total >= target
         )
     triggered = reactions.match_check(
-        found, spec, features, check, skill_id, stat_id, result.total, result.passed
+        found, spec, features, check, skill_id, stat_id, result.total, result.passed, cause
     )
     if triggered is not None:
         effect = triggered.reaction.effect

@@ -230,6 +230,30 @@ def test_level_up_applies_the_level_and_the_players_choices(
     assert _counter(app, campaign_id, "focus_picks") == 0
 
 
+def test_level_up_records_a_focus_choice_and_trains_the_chosen_skill(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    app, campaign_id = _wwn_campaign(client_factory, class_id="warrior")
+    client = _signed_in(client_factory)
+    ctx = _ctx(_world_tools(app, campaign_id))
+    wwn.gain_xp(NAME, 3, "a session", ctx)
+
+    response = _submit(
+        client,
+        campaign_id,
+        {
+            "pick-focus-0": "focus_valiant_defender",
+            "feature-choice-focus_valiant_defender-skill-0": "punch",
+        },
+    )
+
+    assert response.status_code == 303, response.text
+    character = _pc(app, campaign_id)
+    assert character.feature_choices["focus_valiant_defender:skill"] == ["punch"]
+    assert character.skills["punch"] == WWN.character.skill_progression.first_level
+    assert WWN.character.skill_trained(character.skills, "punch")
+
+
 def test_a_level_up_waits_for_the_player_instead_of_the_gm(
     client_factory: Callable[[], TestClient],
 ) -> None:

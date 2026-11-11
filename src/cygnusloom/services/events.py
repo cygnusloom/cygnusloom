@@ -451,6 +451,10 @@ class PcAdded(GameEvent):
     counters: dict[str, int] = field(default_factory=dict)
     skills: dict[str, int] = field(default_factory=dict)
     attack_shock: dict[str, list[int]] = field(default_factory=dict)
+    # Structured feature choices, keyed "feature:pick", made when the character was created.
+    feature_choices: dict[str, list[str]] = field(default_factory=dict)
+    # Extra modifiers from feature choices, by stat id.
+    stat_modifiers: dict[str, int] = field(default_factory=dict)
     # The account that plays the character. Older logs leave this out, and those characters
     # belong to the campaign owner. The account's display name is resolved when the log is
     # folded, never stored in the event.
@@ -473,6 +477,8 @@ class PcAdded(GameEvent):
             counters=dict(self.counters),
             skills=dict(self.skills),
             attack_shock={name: list(pair) for name, pair in self.attack_shock.items()},
+            feature_choices={key: list(values) for key, values in self.feature_choices.items()},
+            stat_modifiers=dict(self.stat_modifiers),
             player_id=self.player_id,
         )
 
@@ -568,6 +574,8 @@ class NpcAdded(GameEvent):
     important: bool = False
     rules: list[str] = field(default_factory=list)
     skills: dict[str, int] = field(default_factory=dict)
+    feature_choices: dict[str, list[str]] = field(default_factory=dict)
+    stat_modifiers: dict[str, int] = field(default_factory=dict)
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         npc = Character(
@@ -594,6 +602,8 @@ class NpcAdded(GameEvent):
             important=self.important,
             rules=list(self.rules),
             skills=dict(self.skills),
+            feature_choices={key: list(values) for key, values in self.feature_choices.items()},
+            stat_modifiers=dict(self.stat_modifiers),
         )
         state.characters[name_key(self.name)] = npc
         pc = _player_present(state)
@@ -622,6 +632,8 @@ class NpcStatted(GameEvent):
     attack_shock: dict[str, list[int]] = field(default_factory=dict)
     counters: dict[str, int] = field(default_factory=dict)
     skills: dict[str, int] = field(default_factory=dict)
+    feature_choices: dict[str, list[str]] = field(default_factory=dict)
+    stat_modifiers: dict[str, int] = field(default_factory=dict)
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         npc = state.characters[name_key(self.name)]
@@ -635,6 +647,10 @@ class NpcStatted(GameEvent):
         npc.attack_flags = {name: list(flags) for name, flags in self.attack_flags.items()}
         npc.attack_shock = {name: list(pair) for name, pair in self.attack_shock.items()}
         npc.skills = dict(self.skills)
+        npc.feature_choices = {
+            key: list(values) for key, values in self.feature_choices.items()
+        }
+        npc.stat_modifiers = dict(self.stat_modifiers)
         npc.story_only = False
 
     def render(self) -> str:
@@ -666,6 +682,8 @@ class HirelingAdded(GameEvent):
     # Generated the way an NPC's are. The hireling's passive defense starts from these.
     counters: dict[str, int] = field(default_factory=dict)
     armor: int = 0
+    feature_choices: dict[str, list[str]] = field(default_factory=dict)
+    stat_modifiers: dict[str, int] = field(default_factory=dict)
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         state.characters[name_key(self.name)] = Character(
@@ -685,6 +703,10 @@ class HirelingAdded(GameEvent):
             armor=self.armor,
             skills=dict(self.skills),
             attack_shock={name: list(pair) for name, pair in self.attack_shock.items()},
+            feature_choices={
+                key: list(values) for key, values in self.feature_choices.items()
+            },
+            stat_modifiers=dict(self.stat_modifiers),
             hireling=True,
             employer=self.employer,
             wage=self.wage,
@@ -715,6 +737,8 @@ class NpcHired(GameEvent):
     skills: dict[str, int] = field(default_factory=dict)
     attack_shock: dict[str, list[int]] = field(default_factory=dict)
     armor: int = 0
+    feature_choices: dict[str, list[str]] = field(default_factory=dict)
+    stat_modifiers: dict[str, int] = field(default_factory=dict)
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         character = state.characters[name_key(self.name)]
@@ -732,6 +756,10 @@ class NpcHired(GameEvent):
         character.counters = dict(self.counters)
         character.skills = dict(self.skills)
         character.attack_shock = {name: list(pair) for name, pair in self.attack_shock.items()}
+        character.feature_choices = {
+            key: list(values) for key, values in self.feature_choices.items()
+        }
+        character.stat_modifiers = dict(self.stat_modifiers)
         character.armor = self.armor
         # A hireling fights from its character sheet, not an NPC statblock.
         character.attacks = {}
@@ -2402,11 +2430,19 @@ class FeatureChoiceMade(GameEvent):
     feature: str
     pick: str
     choice: str
+    # A skill the choice trains at level 0, when the feature's pick grants training.
+    skill: str = ""
+    # A stat whose modifier the choice raises by one, when the pick grants a modifier.
+    stat: str = ""
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         character = state.characters[name_key(self.name)]
         key = f"{self.feature}:{self.pick}"
         character.feature_choices.setdefault(key, []).append(self.choice)
+        if self.skill:
+            character.skills.setdefault(self.skill, 0)
+        if self.stat:
+            character.stat_modifiers[self.stat] = character.stat_modifiers.get(self.stat, 0) + 1
 
     def render(self) -> str:
         return f"{self.name} chooses {self.choice} for {self.feature} ({self.pick})."

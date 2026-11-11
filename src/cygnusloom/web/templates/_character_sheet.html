@@ -1,0 +1,18 @@
+{# One character sheet: the player's own, or a hireling they play for. Expects `sheet_view`. #}
+{% if sheet_view.pronouns %}<p class="muted">Pronouns: {{ sheet_view.pronouns }}.</p>{% endif %}
+{% if sheet_view.description %}<p>{{ sheet_view.description }}</p>{% endif %}
+{% for line in sheet_view.sheet %}
+<p>{{ line | compendium_links(sheet_view.sheet_links) }}</p>
+{% else %}
+<p class="muted">No character sheet yet.</p>
+{% endfor %}
+{% if sheet_view.abilities %}
+<p class="compendium-links"><strong>Abilities:</strong>
+  {% for ability in sheet_view.abilities %}{% if not loop.first %} · {% endif %}{% if ability.entry %}<a href="#{{ ability.entry }}" data-view-link="compendium">{{ ability.name }}</a>{% else %}{{ ability.name }}{% endif %}{% endfor %}
+</p>
+{% endif %}
+{% if sheet_view.reactions %}
+<p class="compendium-links"><strong>Reactions:</strong>
+  {% for reaction in sheet_view.reactions %}{% if not loop.first %} · {% endif %}{{ reaction.text }} ({{ reaction.uses }} per {{ reaction.reset }}, {{ "ready" if reaction.ready else reaction.used ~ "/" ~ reaction.uses ~ " used" }}){% endfor %}
+</p>
+{% endif %}

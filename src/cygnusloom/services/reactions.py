@@ -8,7 +8,7 @@ the result with `effect`. A reaction with `uses` above zero is spent until an ev
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 
 from sqlmodel import Session
@@ -20,6 +20,7 @@ from cygnusloom.content.character import (
     reaction_effect_text,
 )
 from cygnusloom.content.library import CheckRules, MoveBand, MoveRules
+from cygnusloom.services import resolution
 from cygnusloom.services.events import (
     Character,
     ReactionsReset,
@@ -56,7 +57,7 @@ def _features(
 
 
 def _key(feature: Feature, reaction: Reaction) -> str:
-    return f"{reaction.reset}:{feature.id}:{reaction.id}"
+    return f"{reaction.reset}:{feature.id}:{reaction.shared or reaction.id}"
 
 
 def _available(character: Character, feature: Feature, reaction: Reaction) -> bool:
@@ -69,6 +70,49 @@ def _within_total(reaction: Reaction, total: int) -> bool:
     low = reaction.when.get("min_total")
     high = reaction.when.get("max_total")
     return (low is None or total >= low) and (high is None or total <= high)
+
+
+def _cause_matches(reaction: Reaction, cause: str) -> bool:
+    """Whether the cause names one of the fragments a reaction watches for."""
+    wanted = reaction.when.get("cause_contains")
+    if not wanted:
+        return True
+    haystack = cause.casefold()
+    return any(fragment.casefold() in haystack for fragment in wanted)
+
+
+def _chosen_skill(character: Character, key: str, skill: str) -> bool:
+    """Whether the character chose `skill` for the feature pick named by `key`, such as
+    `focus_elf:skill`."""
+    return skill in character.feature_choices.get(key, [])
+
+
+def check_best(
+    character: Character,
+    spec: CharacterSpec,
+    extra: Mapping[str, Feature] | None,
+    skill: str,
+) -> tuple[int, int] | None:
+    """The best-of dice a check with `skill` rolls, as `(dice, keep)`, or None. The strongest
+    matching reaction wins, so a rank-2 Focus replaces its rank-1 version."""
+    best: tuple[int, int] | None = None
+    for feature in _features(character, spec, extra):
+        for reaction in feature.reactions:
+            if reaction.trigger != "check" or reaction.effect.get("op") != "best_of":
+                continue
+            when = reaction.when
+            choice = when.get("skill_choice")
+            if choice and not _chosen_skill(character, choice, skill):
+                continue
+            if when.get("skills") and skill not in when["skills"]:
+                continue
+            dice = int(reaction.effect.get("dice", 0))
+            keep = int(reaction.effect.get("keep", 0))
+            if dice < 2 or keep < 1 or keep >= dice:
+                continue
+            if best is None or (keep, dice) > (best[1], best[0]):
+                best = (dice, keep)
+    return best
 
 
 def match_move(
@@ -123,6 +167,7 @@ def match_check(
     stat: str,
     total: int,
     success: bool,
+    cause: str = "",
 ) -> Triggered | None:
     """The reaction a check triggers, the most specific first."""
     candidates: list[tuple[int, int, Triggered]] = []
@@ -130,18 +175,30 @@ def match_check(
         for reaction in feature.reactions:
             if reaction.trigger != "check" or not _available(character, feature, reaction):
                 continue
+            if reaction.effect.get("op") == "best_of":
+                continue
             when = reaction.when
-            if not _within_total(reaction, total):
+            if not _within_total(reaction, total) or not _cause_matches(reaction, cause):
                 continue
             if when.get("checks") and check.id not in when["checks"]:
                 continue
             if when.get("skills") and skill not in when["skills"]:
                 continue
+            if when.get("skill_choice") and not _chosen_skill(
+                character, when["skill_choice"], skill
+            ):
+                continue
             if when.get("stats") and stat not in when["stats"]:
                 continue
             if "success" in when and success is not when["success"]:
                 continue
-            specificity = 2 if when.get("checks") else 1 if when.get("skills") else 0
+            specificity = 0
+            if when.get("checks"):
+                specificity = 3
+            elif when.get("skills") or when.get("skill_choice"):
+                specificity = 2
+            elif when.get("cause_contains"):
+                specificity = 1
             candidates.append(
                 (
                     -specificity,
@@ -156,6 +213,70 @@ def match_check(
     if not candidates:
         return None
     return min(candidates, key=lambda item: (item[0], item[1]))[2]
+
+
+def match_save(
+    character: Character,
+    spec: CharacterSpec,
+    extra: Mapping[str, Feature] | None,
+    stat: str,
+    total: int,
+    success: bool,
+    cause: str = "",
+) -> Triggered | None:
+    """The reaction a saving throw triggers, the most specific first."""
+    candidates: list[tuple[int, int, Triggered]] = []
+    for order, feature in enumerate(_features(character, spec, extra)):
+        for reaction in feature.reactions:
+            if reaction.trigger != "save" or not _available(character, feature, reaction):
+                continue
+            when = reaction.when
+            if not _within_total(reaction, total) or not _cause_matches(reaction, cause):
+                continue
+            if when.get("stats") and stat not in when["stats"]:
+                continue
+            if "success" in when and success is not when["success"]:
+                continue
+            specificity = 2 if when.get("stats") else 1 if when.get("cause_contains") else 0
+            candidates.append(
+                (
+                    -specificity,
+                    order,
+                    Triggered(
+                        feature=feature,
+                        reaction=reaction,
+                        text=reaction_effect_text(reaction, feature),
+                    ),
+                )
+            )
+    if not candidates:
+        return None
+    return min(candidates, key=lambda item: (item[0], item[1]))[2]
+
+
+def apply_save_effect(
+    triggered: Triggered,
+    result: resolution.RollResult,
+    *,
+    reroll: Callable[[], resolution.RollResult],
+    resolve_total: Callable[[int], resolution.RollResult],
+) -> resolution.RollResult:
+    """Apply a save reaction to a save already resolved, returning the result to record."""
+    effect = triggered.reaction.effect
+    if effect["op"] == "reroll":
+        rerolled = reroll()
+        keep = "better" if effect.get("keep", "better") == "better" else "worse"
+        better = (rerolled.passed and not result.passed) or (
+            rerolled.passed == result.passed and rerolled.roll > result.roll
+        )
+        worse = (result.passed and not rerolled.passed) or (
+            rerolled.passed == result.passed and rerolled.roll < result.roll
+        )
+        if (keep == "better" and better) or (keep == "worse" and worse):
+            return rerolled
+    elif effect["op"] == "add_total":
+        return resolve_total(result.roll + int(effect["amount"]))
+    return result
 
 
 def match_reaction_roll(
@@ -194,7 +315,7 @@ def use(db: Session, campaign_id: int, character: Character, triggered: Triggere
             name=character.name,
             feature=triggered.feature.id,
             feature_name=triggered.feature.name,
-            reaction=triggered.reaction.id,
+            reaction=triggered.reaction.shared or triggered.reaction.id,
             reset=triggered.reaction.reset,
             text=triggered.text,
         ),
@@ -219,9 +340,12 @@ def reset(db: Session, campaign_id: int, reset: str, label: str = "", name: str 
 
 __all__ = [
     "Triggered",
+    "apply_save_effect",
+    "check_best",
     "match_check",
     "match_move",
     "match_reaction_roll",
+    "match_save",
     "reset",
     "use",
 ]

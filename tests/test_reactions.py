@@ -13,7 +13,7 @@ def _reactions(rule_set: RuleSet, feature_id: str) -> tuple[Reaction, ...]:
 
 def test_every_limited_bundled_reaction_uses_a_reset_the_engine_fires() -> None:
     for rule_set in content_library().rule_sets.values():
-        resets = {"day", "week", "rest"}
+        resets = {"hour", "day", "week", "rest"}
         for period in rule_set.periods.values():
             resets.update(period.resets)
         for feature in rule_set.character.features.values():
@@ -64,3 +64,27 @@ def test_academia_weekly_spell_reactions_raise_a_six_minus_to_seven_to_nine() ->
         assert dict(reaction.when) == when
         assert dict(reaction.effect) == {"op": "raise_band", "to": "7-9"}
         assert (reaction.uses, reaction.reset) == (1, "week")
+
+
+def test_per_scene_reroll_abilities_are_wired_as_per_hour() -> None:
+    rule_set = content_library().rule_sets["worldswithoutnumber"]
+
+    impostor = _reactions(rule_set, "focus_impostor")
+    assert {reaction.trigger for reaction in impostor} == {"check", "save"}
+    assert {reaction.shared for reaction in impostor} == {"impostor-reroll"}
+    assert {(reaction.uses, reaction.reset) for reaction in impostor} == {(1, "hour")}
+
+    rider = _reactions(rule_set, "focus_rider_2")
+    assert [(reaction.trigger, reaction.reset, dict(reaction.when)) for reaction in rider] == [
+        ("check", "hour", {"skills": ("ride",), "success": False})
+    ]
+
+    poisoner = _reactions(rule_set, "focus_poisoner")
+    assert [(reaction.trigger, reaction.uses, reaction.reset) for reaction in poisoner] == [
+        ("save", 0, "")
+    ]
+
+    trapmaster = _reactions(rule_set, "focus_trapmaster")
+    assert {reaction.trigger for reaction in trapmaster} == {"check", "save"}
+    assert {reaction.shared for reaction in trapmaster} == {"trapmaster-reroll"}
+    assert {(reaction.uses, reaction.reset) for reaction in trapmaster} == {(1, "hour")}

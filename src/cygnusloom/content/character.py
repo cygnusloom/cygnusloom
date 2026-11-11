@@ -59,9 +59,9 @@ DEFAULT_FEATURE_TYPES: Mapping[str, FeatureTypeRules] = {
 # `armor` effect adds its `delta` to the character's armor. A `note` effect only says something.
 FEATURE_EFFECT_OPS = ("stat", "skill", "counter", "armor", "note")
 # When a feature may react to a roll that is already being resolved.
-REACTION_TRIGGERS = ("move", "check", "reaction")
+REACTION_TRIGGERS = ("move", "check", "reaction", "save")
 # What a reaction may do to that roll.
-REACTION_EFFECT_OPS = ("raise_band", "add_total", "set_reaction", "reroll")
+REACTION_EFFECT_OPS = ("raise_band", "add_total", "set_reaction", "reroll", "reroll_ones", "best_of")
 
 
 @dataclass(frozen=True)
@@ -189,7 +189,9 @@ class DefenseFloor:
 class FeaturePick:
     """A structured choice a feature requires, such as the attribute for Developed Attribute.
     `choices` limits the pick and `exclude` removes options; an empty `choices` means every stat
-    or skill of the pick's kind."""
+    or skill of the pick's kind. `grant` says what the choice gives: `trained` makes a skill
+    trained at level 0, `modifier` adds one to a stat's modifier, and `check_best` makes checks
+    with a chosen skill roll `dice` dice and keep the best `keep`."""
 
     id: str
     kind: str
@@ -198,6 +200,9 @@ class FeaturePick:
     exclude: tuple[str, ...] = ()
     max_value: int = 0
     count: int = 1
+    grant: str = ""
+    dice: int = 0
+    keep: int = 0
 
 
 @dataclass(frozen=True)
@@ -214,6 +219,9 @@ class Reaction:
     uses: int = 0
     reset: str = ""
     text: str = ""
+    # Reactions with the same `shared` name spend one pool of uses, such as a Focus that can
+    # reroll either a check or a save once before it recharges.
+    shared: str = ""
 
 
 @dataclass(frozen=True)
@@ -1116,6 +1124,29 @@ def _feature_picks(
         count = entry.get("count", 1)
         if isinstance(count, bool) or not isinstance(count, int) or count < 1:
             raise ContentError(f"{label}: pick {pick_id!r} 'count' must be at least 1")
+        grant = entry.get("grant", "")
+        if grant not in ("", "trained", "modifier", "check_best"):
+            raise ContentError(
+                f"{label}: pick {pick_id!r} 'grant' must be '', 'trained', 'modifier', or "
+                "'check_best'"
+            )
+        if grant == "trained" and kind != "skill":
+            raise ContentError(f"{label}: pick {pick_id!r} can grant training only to a skill")
+        if grant == "modifier" and kind != "stat":
+            raise ContentError(f"{label}: pick {pick_id!r} can grant a modifier only to a stat")
+        if grant == "check_best" and kind != "skill":
+            raise ContentError(f"{label}: pick {pick_id!r} can improve checks only with a skill")
+        dice = _pick_number(entry, "dice", label, pick_id)
+        keep = _pick_number(entry, "keep", label, pick_id)
+        if grant == "check_best":
+            if keep < 1 or dice < keep:
+                raise ContentError(
+                    f"{label}: pick {pick_id!r} needs 'keep' between 1 and 'dice'"
+                )
+        elif dice or keep:
+            raise ContentError(
+                f"{label}: pick {pick_id!r} 'dice' and 'keep' need grant 'check_best'"
+            )
         picks.append(
             FeaturePick(
                 id=pick_id,
@@ -1125,9 +1156,20 @@ def _feature_picks(
                 exclude=exclude,
                 max_value=max_value,
                 count=count,
+                grant=grant,
+                dice=dice,
+                keep=keep,
             )
         )
     return tuple(picks)
+
+
+def _pick_number(entry: Mapping[str, Any], key: str, label: str, pick_id: str) -> int:
+    """A whole number of 0 or more on a feature pick, such as the dice a check keeps."""
+    value = entry.get(key, 0)
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise ContentError(f"{label}: pick {pick_id!r} {key!r} must be 0 or more")
+    return value
 
 
 def _text_list(value: object, key: str, label: str) -> tuple[str, ...]:
@@ -1246,7 +1288,7 @@ def _feature_reactions(entries: object, label: str) -> tuple[Reaction, ...]:
             raise ContentError(f"{label}: each reaction must be an object")
         _check_reaction_keys(
             entry,
-            {"id", "trigger", "when", "effect", "uses", "reset", "text"},
+            {"id", "trigger", "when", "effect", "uses", "reset", "text", "shared"},
             f"{label}: reaction",
         )
         ident = required_text(entry, "id", f"{label}: reaction")
@@ -1277,6 +1319,11 @@ def _feature_reactions(entries: object, label: str) -> tuple[Reaction, ...]:
         text = entry.get("text", "")
         if not isinstance(text, str):
             raise ContentError(f"{label}: reaction {ident} 'text' must be text")
+        shared = entry.get("shared", "")
+        if not isinstance(shared, str):
+            raise ContentError(f"{label}: reaction {ident} 'shared' must be text")
+        if ":" in shared:
+            raise ContentError(f"{label}: reaction {ident} 'shared' must not contain ':'")
         checked.append(
             Reaction(
                 id=ident,
@@ -1286,6 +1333,7 @@ def _feature_reactions(entries: object, label: str) -> tuple[Reaction, ...]:
                 uses=uses,
                 reset=reset,
                 text=text,
+                shared=shared,
             )
         )
     return tuple(checked)
@@ -1300,10 +1348,12 @@ def _reaction_when(data: object, trigger: str, label: str) -> Mapping[str, Any]:
     if trigger == "move":
         allowed |= {"moves", "move_tags", "bands", "stats"}
     elif trigger == "check":
-        allowed |= {"checks", "skills", "stats", "success"}
+        allowed |= {"checks", "skills", "stats", "success", "cause_contains", "skill_choice"}
+    elif trigger == "save":
+        allowed |= {"stats", "success", "cause_contains"}
     _check_reaction_keys(data, allowed, f"{label}: when")
     checked: dict[str, Any] = {}
-    for key in ("moves", "move_tags", "bands", "stats", "checks", "skills"):
+    for key in ("moves", "move_tags", "bands", "stats", "checks", "skills", "cause_contains"):
         if key in data:
             values = _text_list(data[key], f"when.{key}", label)
             if not values:
@@ -1319,6 +1369,8 @@ def _reaction_when(data: object, trigger: str, label: str) -> Mapping[str, Any]:
         if not isinstance(data["success"], bool):
             raise ContentError(f"{label}: 'when.success' must be true or false")
         checked["success"] = data["success"]
+    if "skill_choice" in data:
+        checked["skill_choice"] = required_text(data, "skill_choice", f"{label}: when")
     return checked
 
 
@@ -1345,9 +1397,23 @@ def _reaction_effect(data: object, trigger: str, label: str) -> Mapping[str, Any
             raise ContentError(f"{label}: set_reaction only applies to a reaction roll")
         _check_reaction_keys(data, {"op", "to"}, f"{label}: effect")
         required_text(data, "to", f"{label}: effect")
-    else:
+    elif op == "reroll_ones":
         if trigger != "check":
-            raise ContentError(f"{label}: reroll only applies to a check")
+            raise ContentError(f"{label}: reroll_ones only applies to a check")
+        _check_reaction_keys(data, {"op"}, f"{label}: effect")
+    elif op == "best_of":
+        if trigger != "check":
+            raise ContentError(f"{label}: best_of only applies to a check")
+        _check_reaction_keys(data, {"op", "dice", "keep"}, f"{label}: effect")
+        dice = data.get("dice")
+        keep = data.get("keep")
+        if not isinstance(dice, int) or isinstance(dice, bool) or dice < 2:
+            raise ContentError(f"{label}: best_of 'dice' must be a whole number of 2 or more")
+        if not isinstance(keep, int) or isinstance(keep, bool) or not 1 <= keep < dice:
+            raise ContentError(f"{label}: best_of 'keep' must be between 1 and 'dice' - 1")
+    else:
+        if trigger not in ("check", "save"):
+            raise ContentError(f"{label}: reroll only applies to a check or save")
         _check_reaction_keys(data, {"op", "keep"}, f"{label}: effect")
         if data.get("keep", "better") not in ("better", "worse"):
             raise ContentError(f"{label}: reroll 'keep' must be 'better' or 'worse'")
@@ -1380,6 +1446,10 @@ def reaction_effect_text(reaction: Reaction, feature: Feature) -> str:
         return f"{feature.name} adds {effect['amount']:+d} to the total."
     if effect["op"] == "set_reaction":
         return f"{feature.name} makes the reaction {effect['to']}."
+    if effect["op"] == "reroll_ones":
+        return f"{feature.name} rerolls 1s on the check."
+    if effect["op"] == "best_of":
+        return f"{feature.name} rolls {effect['dice']} dice and keeps the best {effect['keep']}."
     return f"{feature.name} rerolls the check."
 
 
@@ -2164,6 +2234,9 @@ def character_schema(spec: CharacterSpec) -> dict[str, Any]:
     repeat_picks = _feature_repeat_schemas(spec)
     if repeat_picks:
         properties["feature_repeats"] = _object(repeat_picks)
+    feature_choices = _feature_choice_schemas(spec)
+    if feature_choices:
+        properties["feature_choices"] = _object(feature_choices)
     skill_picks = _skill_pick_schemas(spec)
     if skill_picks:
         properties["skill_picks"] = _object(skill_picks)
@@ -2230,6 +2303,29 @@ def _feature_pick_schemas(spec: CharacterSpec) -> dict[str, Any]:
         }
         for pick_id, options in choices.items()
     }
+
+
+def _feature_choice_schemas(spec: CharacterSpec) -> dict[str, Any]:
+    """The `feature_choices` schema: `feature:pick` to the choices that pick allows."""
+    schemas: dict[str, Any] = {}
+    for feature in spec.features.values():
+        for pick in feature.picks:
+            key = f"{feature.id}:{pick.id}"
+            if pick.kind == "text":
+                schemas[key] = {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": f"{feature.name}: {pick.label}",
+                }
+                continue
+            options = list(_feature_choice_options(spec, pick))
+            schemas[key] = {
+                "type": "array",
+                "items": {"type": "string", "enum": options},
+                "uniqueItems": True,
+                "description": f"{feature.name}: {pick.label}",
+            }
+    return schemas
 
 
 def _skill_pick_schemas(spec: CharacterSpec) -> dict[str, Any]:
@@ -2359,6 +2455,7 @@ def check_choices(spec: CharacterSpec, submitted: Mapping[str, Any]) -> None:
     _check_skill_picks(spec, submitted)
     _check_feature_picks(spec, submitted)
     _check_feature_repeats(spec, submitted)
+    _check_feature_choices(spec, submitted)
 
 
 def _check_templates(spec: CharacterSpec, submitted: Mapping[str, Any]) -> None:
@@ -2597,6 +2694,40 @@ def _not_offered(spec: CharacterSpec, pick: FeatPick, feature_id: str) -> str:
     return f"{feature.name!r} is no{kind} tagged {names} of {rank}"
 
 
+def _check_feature_choices(spec: CharacterSpec, submitted: Mapping[str, Any]) -> None:
+    """Check the choices given for the features a character may hold. A feature chosen through a
+    `feature_picks` entry is allowed even before `resolve` turns it into a held feature."""
+    given = submitted.get("feature_choices", {})
+    if not isinstance(given, Mapping):
+        raise CharacterError("'feature_choices' must map feature picks to lists of choices")
+    possible = set(submitted.get("features", []))
+    for values in _pick_object(submitted.get("feature_picks", {}), "feature_picks").values():
+        if isinstance(values, list):
+            possible.update(values)
+    for key, values in given.items():
+        feature_id, separator, pick_id = str(key).partition(":")
+        feature = spec.features.get(feature_id)
+        pick = (
+            next((pick for pick in feature.picks if pick.id == pick_id), None)
+            if feature is not None and separator
+            else None
+        )
+        if feature is None or pick is None:
+            raise CharacterError(f"there is no feature choice {key!r}")
+        if feature_id not in possible:
+            raise CharacterError(f"{feature.name!r} is not a feature this character may take")
+        if not isinstance(values, list) or not all(isinstance(value, str) for value in values):
+            raise CharacterError(f"feature choice {key!r} must be a list of choices")
+        options = _feature_choice_options(spec, pick)
+        for value in values:
+            if pick.kind != "text" and value not in options:
+                raise CharacterError(
+                    f"{value!r} is not a valid {pick.label.lower()} for {feature.name!r}"
+                )
+        if pick.kind != "text" and len(set(values)) != len(values):
+            raise CharacterError(f"{feature.name!r} chooses the same {pick.label.lower()} twice")
+
+
 def _check_field_values(spec: CharacterSpec, fields: Mapping[str, Any]) -> None:
     """The table-value checks for `check_choices`."""
     tables = option_fields(spec)
@@ -2724,6 +2855,10 @@ class Sheet:
     skills: dict[str, int] = field(default_factory=dict)
     # The armor feature effects add to the armor of the features the character carries.
     armor: int = 0
+    # Structured feature choices, keyed "feature:pick", in the order taken.
+    feature_choices: dict[str, list[str]] = field(default_factory=dict)
+    # Extra modifiers from feature choices, by stat id.
+    stat_modifiers: dict[str, int] = field(default_factory=dict)
 
 
 def fixed_stats(spec: CharacterSpec) -> dict[str, int]:
@@ -2801,6 +2936,9 @@ def resolve(
     given_fields = submitted.get("fields", {})
     given_skill_picks = _pick_object(submitted.get("skill_picks", {}), "skill_picks")
     given_feature_picks = _pick_object(submitted.get("feature_picks", {}), "feature_picks")
+    given_feature_choices = _pick_object(
+        submitted.get("feature_choices", {}), "feature_choices"
+    )
     given_feature_repeats = _pick_object(submitted.get("feature_repeats", {}), "feature_repeats")
     _check_feature_repeats(spec, submitted)
     skill_replacements = _skill_replacement_choices(spec, submitted)
@@ -2939,13 +3077,23 @@ def resolve(
                 repeat_as_new=feature_id in given_feature_repeats.get(pick.id, []),
             )
     _check_ordered_feature_ranks(spec, features)
+    stat_modifiers: dict[str, int] = {}
+    feature_choices = _feature_choice_values(
+        spec, features, given_feature_choices, increments, stat_modifiers
+    )
     counters = {
         counter_id: _within(spec.counters[counter_id], spec.counters[counter_id].initial + amount)
         for counter_id, amount in counter_amounts.items()
     }
     stats.update(
         derived_stats(
-            spec, stats, counters, _final_skills(spec, increments), templates, fields=fields
+            spec,
+            stats,
+            counters,
+            _final_skills(spec, increments),
+            templates,
+            fields=fields,
+            modifier_bonus=stat_modifiers,
         )
     )
     armor = 0
@@ -2958,7 +3106,17 @@ def resolve(
                         spec, effect, stats, increments, counters, skill_replacements, rng
                     )
     skills = _final_skills(spec, increments)
-    stats.update(derived_stats(spec, stats, counters, skills, templates, fields=fields))
+    stats.update(
+        derived_stats(
+            spec,
+            stats,
+            counters,
+            skills,
+            templates,
+            fields=fields,
+            modifier_bonus=stat_modifiers,
+        )
+    )
     return Sheet(
         stats=stats,
         templates=templates,
@@ -2967,7 +3125,101 @@ def resolve(
         counters=counters,
         skills=skills,
         armor=armor,
+        feature_choices=feature_choices,
+        stat_modifiers=stat_modifiers,
     )
+
+
+def _feature_choice_values(
+    spec: CharacterSpec,
+    features: Mapping[str, int],
+    given: Mapping[str, list[str]],
+    increments: dict[str, int],
+    stat_modifiers: dict[str, int],
+) -> dict[str, list[str]]:
+    """Validate the choices the features the character holds ask for, filling in one when a
+    rolled feature left the choice blank. A `trained` choice marks a level-0 skill as trained."""
+    choices: dict[str, list[str]] = {}
+    for feature_id, count in features.items():
+        feature = spec.features[feature_id]
+        for pick in feature.picks:
+            key = f"{feature_id}:{pick.id}"
+            values = list(given.get(key, []))
+            allowed = pick.count * count
+            if len(values) > allowed:
+                raise CharacterError(
+                    f"{feature.name!r} takes {allowed} {pick.label.lower()} choice"
+                    f"{'' if allowed == 1 else 's'}; {len(values)} were given"
+                )
+            options = _feature_choice_options(spec, pick)
+            if pick.kind == "text":
+                if values:
+                    choices[key] = values
+                continue
+            if not options:
+                raise CharacterError(f"{feature.name!r} has no {pick.label.lower()} to choose")
+            if len(values) < allowed and pick.kind == "skill":
+                # A rolled skill feature still needs a usable choice. Unlike a stat modifier,
+                # which the player or GM can pick later, a skill grant cannot be applied without
+                # knowing the skill, so fill it deterministically.
+                remaining = [option for option in options if option not in values]
+                while len(values) < allowed and remaining:
+                    values.append(remaining.pop(0))
+            for value in values:
+                if value not in options:
+                    raise CharacterError(
+                        f"{value!r} is not a valid {pick.label.lower()} for {feature.name!r}"
+                    )
+            if len(set(values)) != len(values):
+                raise CharacterError(
+                    f"{feature.name!r} chooses the same {pick.label.lower()} twice"
+                )
+            choices[key] = values
+            if pick.grant == "trained":
+                for value in values:
+                    increments.setdefault(value, 0)
+            elif pick.grant == "modifier":
+                for value in values:
+                    stat_modifiers[value] = stat_modifiers.get(value, 0) + 1
+    return choices
+
+
+def _feature_choice_options(spec: CharacterSpec, pick: FeaturePick) -> tuple[str, ...]:
+    """The ids a feature pick offers, in the rule set's order."""
+    if pick.kind == "stat":
+        options = [stat.id for stat in spec.stats.values() if stat.derived is None]
+    elif pick.kind == "skill":
+        options = list(spec.skills)
+    else:
+        return ()
+    if pick.choices:
+        options = [option for option in options if option in pick.choices]
+    return tuple(option for option in options if option not in pick.exclude)
+
+
+def feature_choice_options(spec: CharacterSpec, pick: FeaturePick) -> tuple[str, ...]:
+    """The ids a feature pick offers, in the rule set's order."""
+    return _feature_choice_options(spec, pick)
+
+
+def feature_choice_views(spec: CharacterSpec, feature: Feature) -> tuple[Mapping[str, Any], ...]:
+    """A feature's structured picks, with the names of the options each offers, for a form."""
+    views: list[Mapping[str, Any]] = []
+    for pick in feature.picks:
+        options = _feature_choice_options(spec, pick)
+        names = spec.stats if pick.kind == "stat" else spec.skills
+        views.append(
+            {
+                "id": pick.id,
+                "kind": pick.kind,
+                "label": pick.label,
+                "count": pick.count,
+                "options": [
+                    {"value": option, "title": names[option].name} for option in options
+                ],
+            }
+        )
+    return tuple(views)
 
 
 def _grant_feature_pick(
@@ -3337,11 +3589,16 @@ def _skill_level_of(spec: CharacterSpec, increments: Mapping[str, int], skill: s
 
 
 def _final_skills(spec: CharacterSpec, increments: Mapping[str, int]) -> dict[str, int]:
-    """Resolve trained skills, including those whose level equals the untrained value."""
+    """Resolve trained skills, including those whose level equals the untrained value. A
+    `trained` feature choice adds the skill at the progression's first level, which may be 0
+    even when the rule set's untrained value is lower."""
     skills: dict[str, int] = {}
+    progression = spec.skill_progression
     for skill_id, count in increments.items():
         if count > 0:
             skills[skill_id] = _skill_level_of(spec, increments, skill_id)
+        elif count == 0 and progression is not None:
+            skills[skill_id] = progression.first_level
     return skills
 
 
@@ -3353,6 +3610,7 @@ def derived_stats(
     templates: Mapping[str, str] | None = None,
     *,
     fields: Mapping[str, str] | None = None,
+    modifier_bonus: Mapping[str, int] | None = None,
 ) -> dict[str, int]:
     """The value of every derived stat the character has, by stat id. A stat whose
     `requires_templates` are not among the chosen templates is left out. A derived stat earlier
@@ -3367,7 +3625,7 @@ def derived_stats(
         if stat.derived is None or not _derived_available(stat.derived, templates):
             continue
         found[stat.id] = _derived_value(
-            spec, stat.derived, scores, counters, skills, templates, fields
+            spec, stat.derived, scores, counters, skills, templates, fields, modifier_bonus
         )
         scores[stat.id] = found[stat.id]
     return found
@@ -3389,11 +3647,24 @@ def _derived_value(
     skills: Mapping[str, int],
     templates: Mapping[str, str] | None,
     fields: Mapping[str, str] | None,
+    modifier_bonus: Mapping[str, int] | None = None,
 ) -> int:
     value = derived.base + derived.plus
     value -= sum(_counter_start(spec, counters, name) for name in derived.minus_counters)
-    value += max((spec.modifier(stats, name) for name in derived.best_modifier), default=0)
-    value -= max((spec.modifier(stats, name) for name in derived.minus_best_modifier), default=0)
+    value += max(
+        (
+            spec.modifier(stats, name) + (modifier_bonus or {}).get(name, 0)
+            for name in derived.best_modifier
+        ),
+        default=0,
+    )
+    value -= max(
+        (
+            spec.modifier(stats, name) + (modifier_bonus or {}).get(name, 0)
+            for name in derived.minus_best_modifier
+        ),
+        default=0,
+    )
     value += max((_score(stats, name) for name in derived.best_score), default=0)
     value += sum(spec.skill_level(skills, name) for name in derived.plus_skills)
     value += sum(
@@ -3588,7 +3859,7 @@ def describe(spec: CharacterSpec, sheet: Sheet) -> str:
         if known:
             lines.append(f"Knows every {known[0]} tagged with an earlier {known[1]}: {known[2]}")
     if sheet.features:
-        parts = []
+        lines.append("Features:")
         for feature, count in sheet.features.items():
             found = spec.features[feature]
             name = found.name
@@ -3596,15 +3867,30 @@ def describe(spec: CharacterSpec, sheet: Sheet) -> str:
                 name += f" (rank {found.rank})"
             if count != 1:
                 name += f" x{count}"
+            chosen = [
+                value
+                for key, values in sheet.feature_choices.items()
+                if key.startswith(f"{feature}:")
+                for value in values
+            ]
+            if chosen:
+                chosen = [
+                    spec.skills[value].name
+                    if value in spec.skills
+                    else spec.stats[value].name
+                    if value in spec.stats
+                    else value
+                    for value in chosen
+                ]
+                name += f" — {', '.join(chosen)}"
             notes = [
                 str(effect["text"])
                 for effect in found.effects
                 if effect.get("op") == "note" and effect.get("text")
             ]
             if notes:
-                name += f" ({'; '.join(notes)})"
-            parts.append(name)
-        lines.append("Features: " + ", ".join(parts))
+                name += f": {'; '.join(notes)}"
+            lines.append(f"• {name}")
     remembered_picks = _derived_skill_pick_ids(spec.stats)
     skill_pick_labels = {
         pick.id: pick.label

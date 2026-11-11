@@ -64,6 +64,10 @@
           <option value="{{ feature.id }}" data-title="{{ feature.name }}" data-description="{{ feature.description or '' }}" data-rank="{{ feature.rank }}" data-repeatable="{{ 'true' if feature.repeatable else 'false' }}">{{ feature.name }}</option>
           {% endfor %}
         {% endcall %}
+        {% if option.feature_choices %}
+        <p class="panel-hint">A chosen feature may ask for a skill, attribute, or detail. Its choice appears below.</p>
+        {% with feature_choices=option.feature_choices %}{% include "_feature_choice_fields.html" %}{% endwith %}
+        {% endif %}
         {% endif %}
         {% endif %}
       </div>
@@ -138,6 +142,10 @@
             {% endcall %}
           </div>
           {% endfor %}
+          {% if pick.feature_choices %}
+          <p class="panel-hint">A chosen feature may ask for a skill, attribute, or detail. Its choice appears below.</p>
+          {% with feature_choices=pick.feature_choices %}{% include "_feature_choice_fields.html" %}{% endwith %}
+          {% endif %}
         {% else %}
         <p class="muted">No {{ pick.label|lower }} is available to this character.</p>
         {% endif %}

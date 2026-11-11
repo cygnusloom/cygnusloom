@@ -260,24 +260,22 @@
               {% endif %}
             </div>
             <div class="tab-panel" role="tabpanel" id="panel-character" aria-labelledby="tab-character" hidden>
-              {% if scene.pc %}
-              <p><strong>{{ scene.pc.name }}</strong>{% if scene.pc.pronouns %} <span class="muted">Pronouns: {{ scene.pc.pronouns }}.</span>{% endif %}</p>
-              {% if scene.pc.description %}<p>{{ scene.pc.description }}</p>{% endif %}
-              {% endif %}
-              {% for line in scene.sheet %}
-              <p>{{ line | compendium_links(scene.sheet_links) }}</p>
+              {% if scene.pc_sheet %}
+              <p><strong>{{ scene.pc_sheet.name }}</strong></p>
+              {% with sheet_view=scene.pc_sheet %}{% include "_character_sheet.html" %}{% endwith %}
               {% else %}
               <p class="muted">No character sheet yet.</p>
-              {% endfor %}
-              {% if scene.abilities %}
-              <p class="compendium-links"><strong>Abilities:</strong>
-                {% for ability in scene.abilities %}{% if not loop.first %} · {% endif %}{% if ability.entry %}<a href="#{{ ability.entry }}" data-view-link="compendium">{{ ability.name }}</a>{% else %}{{ ability.name }}{% endif %}{% endfor %}
-              </p>
               {% endif %}
-              {% if scene.reactions %}
-              <p class="compendium-links"><strong>Reactions:</strong>
-                {% for reaction in scene.reactions %}{% if not loop.first %} · {% endif %}{{ reaction.text }} ({{ reaction.uses }} per {{ reaction.reset }}, {{ "ready" if reaction.ready else reaction.used ~ "/" ~ reaction.uses ~ " used" }}){% endfor %}
-              </p>
+              {% if scene.hireling_sheets %}
+              <section class="hireling-sheets" aria-labelledby="hireling-sheets-title">
+                <h3 id="hireling-sheets-title">Hirelings you play</h3>
+                {% for hireling in scene.hireling_sheets %}
+                <details class="hireling-sheet"{% if not hireling.dead %} open{% endif %}>
+                  <summary><strong>{{ hireling.name }}</strong>{% if hireling.employer %} <span class="muted">(hired by {{ hireling.employer }})</span>{% endif %}{% if hireling.location %} <span class="muted">· {{ hireling.location }}</span>{% endif %}{% if hireling.dead %} <span class="muted">· dead</span>{% endif %}</summary>
+                  {% with sheet_view=hireling %}{% include "_character_sheet.html" %}{% endwith %}
+                </details>
+                {% endfor %}
+              </section>
               {% endif %}
               {% if advancement_available %}
               <p><a class="button" href="/campaigns/{{ campaign.id }}/advancement">{{ "Level up" if advancement_due else "Advancement" }}</a></p>

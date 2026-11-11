@@ -36,7 +36,7 @@ def armor_after(current: int, listed: int, mode: str, defense: int = 0) -> int:
 
 def equipped_defense(character: Character, spec: CharacterSpec, base: int, modifier: str) -> int:
     """Calculate defense from passive floors, worn armor, a wielded shield, and adjustments."""
-    bonus = spec.modifier(character.stats, modifier) if modifier else 0
+    bonus = character.modifier(spec, modifier) if modifier else 0
     unarmored = base + bonus
     floor = max(base, character.innate_defense)
     for feature_id, count in character.features.items():
@@ -109,7 +109,7 @@ def set_defense_equipment(
     innate = character.innate_defense
     if not character.defense_tracked and character.armor and adjustment is None:
         bonus = (
-            spec.modifier(character.stats, rules.defense_modifier) if rules.defense_modifier else 0
+            character.modifier(spec, rules.defense_modifier) if rules.defense_modifier else 0
         )
         innate = max(0, character.armor - bonus)
     without_shield = equipped_defense(

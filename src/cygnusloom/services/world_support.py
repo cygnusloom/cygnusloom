@@ -550,7 +550,9 @@ def create_player_character(
     # 10 + Dexterity. Focus and other feature effects add to the armor the carried features give.
     armor = defense_base
     if defense_modifier:
-        armor += spec.modifier(sheet.stats, defense_modifier)
+        armor += spec.modifier(sheet.stats, defense_modifier) + sheet.stat_modifiers.get(
+            defense_modifier, 0
+        )
     armor += sheet.armor
     equipped_armor, equipped_shield, item_armor = _carry_starting_items(
         db,
@@ -1068,6 +1070,8 @@ def hire_hireling(
             counters=dict(event.counters),
             armor=event.armor,
             skills=dict(event.skills),
+            feature_choices={key: list(values) for key, values in event.feature_choices.items()},
+            stat_modifiers=dict(event.stat_modifiers),
         ),
     )
     return {
@@ -1141,6 +1145,10 @@ def hire_existing_npc(
             fields=dict(sheet.fields),
             counters=dict(sheet.counters),
             skills=dict(sheet.skills),
+            feature_choices={
+                key: list(values) for key, values in sheet.feature_choices.items()
+            },
+            stat_modifiers=dict(sheet.stat_modifiers),
             armor=sheet.armor,
         ),
     )
@@ -2584,6 +2592,8 @@ def _sheet_fields(sheet: Sheet) -> dict[str, Any]:
         "fields": dict(sheet.fields),
         "counters": dict(sheet.counters),
         "skills": dict(sheet.skills),
+        "feature_choices": {key: list(values) for key, values in sheet.feature_choices.items()},
+        "stat_modifiers": dict(sheet.stat_modifiers),
     }
 
 
