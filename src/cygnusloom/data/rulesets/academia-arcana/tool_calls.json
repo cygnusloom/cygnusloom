@@ -296,6 +296,11 @@
   },
   {
     "type": "tool_call",
+    "id": "set_hireling_wage",
+    "disabled": true
+  },
+  {
+    "type": "tool_call",
     "id": "dismiss_hireling",
     "disabled": true
   },

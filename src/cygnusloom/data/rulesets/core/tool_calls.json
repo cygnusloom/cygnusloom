@@ -2283,6 +2283,27 @@
   },
   {
     "type": "tool_call",
+    "id": "set_hireling_wage",
+    "description": "Change a hireling's daily wage, including to 0 when they now serve without pay. Use this when the employer and hireling agree to new terms or the story changes what is paid. The wage is paid in the rule set's currency from the employer each new day. The character must be a hireling.",
+    "parameters": {
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The hireling's name."
+        },
+        "wage": {
+          "type": "integer",
+          "description": "Money per day, in the rule set's currency, zero or more."
+        }
+      },
+      "required": [
+        "name",
+        "wage"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
     "id": "dismiss_hireling",
     "description": "Remove a hireling from its employer's company. It stays where it is and becomes an ordinary NPC. Use this when the story has the hireling leave, for example when its wage went unpaid and it goes, or when it chooses to go. Give the cause in a few words.",
     "parameters": {

@@ -305,6 +305,29 @@ def test_a_dismissed_hireling_joins_the_people_the_player_knows(
     assert wick.location == "Glowcap Ring"
 
 
+def test_the_wage_tool_changes_a_hirelings_wage_even_to_zero(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    client, campaign_id = _campaign_id(client_factory)
+    _place_pc(client, campaign_id, "Glowcap Ring")
+    _tool(
+        app,
+        campaign_id,
+        "hire_hireling",
+        {"name": "Wick", "employer": PC, "wage": 2, "description": "A lantern-bearer."},
+    )
+
+    result = _tool(app, campaign_id, "set_hireling_wage", {"name": "Wick", "wage": 0})
+
+    assert result == {
+        "updated": "hireling wage",
+        "name": "Wick",
+        "employer": PC,
+        "wage": 0,
+    }
+    assert _state(app, campaign_id).characters[name_key("Wick")].wage == 0
+
+
 def test_characters_page_shows_known_people_and_their_last_known_place(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):

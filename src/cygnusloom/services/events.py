@@ -783,6 +783,25 @@ class NpcHired(GameEvent):
 
 
 @dataclass(frozen=True)
+class HirelingWageChanged(GameEvent):
+    """A hireling's daily wage changes, such as when employer and hireling agree to new terms.
+    A wage of 0 means the hireling serves without pay."""
+
+    kind: ClassVar[str] = "hireling.wage_changed"
+
+    name: str
+    wage: int
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.characters[name_key(self.name)].wage = self.wage
+
+    def render(self) -> str:
+        if self.wage == 0:
+            return f"{self.name} now serves without pay."
+        return f"{self.name}'s wage is now {self.wage} a day."
+
+
+@dataclass(frozen=True)
 class HirelingDismissed(GameEvent):
     """A hireling leaves its employer's company and becomes an ordinary NPC where it stands."""
 

@@ -1695,6 +1695,9 @@ def _campaign_page(
                 place_links=compendium.place_links,
                 sheet_links=compendium.sheet_links,
                 track_inventory=campaign.use_inventory_space,
+                wage_currency=(
+                    rule_set.clock.wage_currency if rule_set is not None and rule_set.clock else ""
+                ),
             ),
             world_map=world_map,
             rule_set=rule_set,
@@ -1804,6 +1807,9 @@ def _campaign_page(
             place_links=compendium.place_links,
             sheet_links=compendium.sheet_links,
             track_inventory=campaign.use_inventory_space,
+            wage_currency=(
+                rule_set.clock.wage_currency if rule_set is not None and rule_set.clock else ""
+            ),
         ),
         "world_map": world_map,
         "time": time_view(world.state, rule_set.clock if rule_set else None),

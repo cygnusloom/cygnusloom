@@ -153,6 +153,8 @@ class CharacterSheetView:
     dead: bool = False
     location: str = ""
     employer: str = ""
+    # How the hireling is paid, such as "3 silver a day". Empty for a player character.
+    wage: str = ""
     sheet_links: Mapping[str, str] = field(default_factory=dict)
 
 
@@ -722,6 +724,7 @@ def scene_view(
     place_links: Mapping[str, str] | None = None,
     sheet_links: Mapping[str, str] | None = None,
     track_inventory: bool = True,
+    wage_currency: str = "",
 ) -> SceneView:
     """The player's view. It shows only what is at the player character's location, including any
     hirelings there, and everyone the player has met. The pack shows the player character's items
@@ -799,7 +802,9 @@ def scene_view(
         for c in state.characters.values()
         if c.hireling and place is not None and c.location == place.name
     )
-    hireling_sheets = _hireling_sheets(state, spec, pc, conditions, ability_entries, sheet_entries)
+    hireling_sheets = _hireling_sheets(
+        state, spec, pc, conditions, ability_entries, sheet_entries, wage_currency=wage_currency
+    )
     currency = ()
     if pc is not None:
         currency = tuple(
@@ -1510,6 +1515,8 @@ def _hireling_sheets(
     conditions: Mapping[str, ConditionRules] | None,
     ability_entries: Mapping[str, str],
     sheet_entries: Mapping[str, str],
+    *,
+    wage_currency: str = "",
 ) -> tuple[CharacterSheetView, ...]:
     """Every hireling the player plays for, wherever it is, with the same detail as the player's
     own sheet. A hireling's employer may be any character the player controls, so a hireling of a
@@ -1540,6 +1547,11 @@ def _hireling_sheets(
                 dead=character.dead,
                 location=character.location or "",
                 employer=character.employer,
+                wage=(
+                    f"{character.wage} {wage_currency} a day"
+                    if wage_currency
+                    else f"{character.wage} a day"
+                ),
                 sheet_links=sheet_entries,
             )
         )
