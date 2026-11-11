@@ -173,6 +173,18 @@ entries:
       user_type: internal
       create_users_group: !KeyOf cygnusloom-players
 
+  # Invitations created for the exempt flow put the new user directly in the credit-exempt
+  # group. Authentik cannot set groups from invitation fixed_data, so this needs its own flow
+  # and user-write stage.
+  - model: authentik_stages_user_write.userwritestage
+    id: cygnusloom-enrollment-user-write-exempt
+    identifiers:
+      name: cygnusloom-enrollment-user-write-exempt
+    attrs:
+      user_creation_mode: always_create
+      user_type: internal
+      create_users_group: !KeyOf cygnusloom-credit-exempt
+
   - model: authentik_stages_user_login.userloginstage
     id: cygnusloom-enrollment-user-login
     identifiers:
@@ -184,6 +196,16 @@ entries:
       slug: cygnusloom-enrollment-invite
     attrs:
       name: Cygnus Loom invitation enrollment
+      title: Create your Cygnus Loom account
+      designation: enrollment
+      authentication: require_unauthenticated
+
+  - model: authentik_flows.flow
+    id: cygnusloom-enrollment-invite-exempt
+    identifiers:
+      slug: cygnusloom-enrollment-invite-exempt
+    attrs:
+      name: Cygnus Loom credit-exempt invitation enrollment
       title: Create your Cygnus Loom account
       designation: enrollment
       authentication: require_unauthenticated
@@ -233,6 +255,43 @@ entries:
     identifiers:
       policy: !KeyOf cygnusloom-enrollment-redirect
       target: !KeyOf cygnusloom-enrollment-user-login-binding
+      order: 0
+
+  - model: authentik_flows.flowstagebinding
+    identifiers:
+      target: !KeyOf cygnusloom-enrollment-invite-exempt
+      stage: !KeyOf cygnusloom-enrollment-invitation
+      order: 5
+
+  - model: authentik_flows.flowstagebinding
+    identifiers:
+      target: !KeyOf cygnusloom-enrollment-invite-exempt
+      stage: !KeyOf cygnusloom-enrollment-prompt-account
+      order: 10
+
+  - model: authentik_flows.flowstagebinding
+    identifiers:
+      target: !KeyOf cygnusloom-enrollment-invite-exempt
+      stage: !KeyOf cygnusloom-enrollment-prompt-profile
+      order: 11
+
+  - model: authentik_flows.flowstagebinding
+    identifiers:
+      target: !KeyOf cygnusloom-enrollment-invite-exempt
+      stage: !KeyOf cygnusloom-enrollment-user-write-exempt
+      order: 20
+
+  - model: authentik_flows.flowstagebinding
+    id: cygnusloom-exempt-user-login-binding
+    identifiers:
+      target: !KeyOf cygnusloom-enrollment-invite-exempt
+      stage: !KeyOf cygnusloom-enrollment-user-login
+      order: 100
+
+  - model: authentik_policies.policybinding
+    identifiers:
+      policy: !KeyOf cygnusloom-enrollment-redirect
+      target: !KeyOf cygnusloom-exempt-user-login-binding
       order: 0
 
   # Remove the earlier flow-level binding so upgrades do not keep a policy that runs before

@@ -124,6 +124,33 @@ def test_the_blueprint_creates_an_invite_only_enrollment_flow() -> None:
     ) in blueprint
 
 
+def test_the_blueprint_offers_a_credit_exempt_invitation_flow() -> None:
+    blueprint = (ROOT / "deploy" / "authentik" / "blueprints" / "cygnusloom.yaml").read_text()
+    assert "id: cygnusloom-enrollment-invite-exempt" in blueprint
+    assert "slug: cygnusloom-enrollment-invite-exempt" in blueprint
+    stage = blueprint.split("id: cygnusloom-enrollment-user-write-exempt", 1)[1].split(
+        "- model:", 1
+    )[0]
+    assert "user_type: internal" in stage
+    assert "create_users_group: !KeyOf cygnusloom-credit-exempt" in stage
+    for stage_id, order in (
+        ("cygnusloom-enrollment-invitation", 5),
+        ("cygnusloom-enrollment-prompt-account", 10),
+        ("cygnusloom-enrollment-prompt-profile", 11),
+        ("cygnusloom-enrollment-user-write-exempt", 20),
+        ("cygnusloom-enrollment-user-login", 100),
+    ):
+        assert (
+            "target: !KeyOf cygnusloom-enrollment-invite-exempt\n"
+            f"      stage: !KeyOf {stage_id}\n"
+            f"      order: {order}"
+        ) in blueprint
+    assert (
+        "policy: !KeyOf cygnusloom-enrollment-redirect\n"
+        "      target: !KeyOf cygnusloom-exempt-user-login-binding"
+    ) in blueprint
+
+
 def test_authentik_waits_for_docker_dns() -> None:
     compose = (ROOT / "compose.yaml").read_text()
     assert compose.count("./deploy/authentik/wait-for-dns.sh:/wait-for-dns.sh:ro") == 2

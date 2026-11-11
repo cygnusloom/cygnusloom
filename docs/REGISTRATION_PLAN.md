@@ -86,7 +86,10 @@ Authentik flow, so an administrator can invite a player with a single-use link.
 - **Invite-only is an Authentik flow.** `cygnusloom-enrollment-invite` starts with an Invitation
   stage whose "Continue flow without invitation" setting is off. The administrator creates
   single-use invitations for that flow and shares the generated `?itoken=` links. Cygnus Loom
-  never sees or stores the token.
+  never sees or stores the token. `cygnusloom-enrollment-invite-exempt` is the same flow but its
+  user-write stage adds the new account to `cygnusloom-credit-exempt`, so an invitation can
+  grant the credit exemption. Authentik cannot set groups from invitation `fixed_data`, so the
+  role choice is the flow choice.
 - **Invited users are internal Authentik users.** The user-write stage sets
   `user_type: internal`, so the Cygnus Loom Account page's link to Authentik's user interface
   works. The account still has no administrator permissions.
@@ -243,6 +246,10 @@ Add to `deploy/authentik/blueprints/cygnusloom.yaml`:
 - **Flow `cygnusloom-enrollment-invite`.** Implemented. Public (no authentication required),
   bound in order: invitation, prompt-account, prompt-profile, user-write, user-login. Add an
   email stage if the deployment wants email verification in addition to the invitation.
+- **Flow `cygnusloom-enrollment-invite-exempt`.** Implemented. The same bindings and shared
+  stages, but its user-write stage sets `create_users_group: cygnusloom-credit-exempt`. A
+  user-write stage assigns one group, so exempt invitees are not added to `cygnusloom-players`;
+  that group is optional and only matters if the application has policy bindings.
 - **Redirect policy `cygnusloom-enrollment-redirect`.** An expression policy bound to the flow
   sets the final redirect to `CYGNUSLOOM_BASE_URL/auth/login`, or to a `next` value that starts
   with the app base URL.
@@ -476,6 +483,8 @@ Automated tests:
   - The blueprint contains `cygnusloom-players`, the invite flow, the invitation stage with
     `continue_flow_without_invitation: false`, and the user-write stage that adds invitees to
     the players group. The open flows are not part of this slice.
+  - The blueprint contains the exempt invite flow and a user-write stage that adds invitees to
+    `cygnusloom-credit-exempt`, with the same stage order and redirect policy.
   - The blueprint does not change the identification stage.
   - `.env.example` documents `CYGNUSLOOM_OIDC_SIGNUP_URL` and the Authentik email keys, and does
     not add a signup enable variable.
