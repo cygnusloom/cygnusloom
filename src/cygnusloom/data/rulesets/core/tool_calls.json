@@ -44,7 +44,10 @@
           "description": "A short paragraph the player sees in the compendium: what this place looks or feels like from what they know, with no GM-only secrets, hidden contents, or plot notes. Required in spirit whenever discovered is true. At most 600 characters."
         }
       },
-      "required": ["name", "description"]
+      "required": [
+        "name",
+        "description"
+      ]
     }
   },
   {
@@ -98,7 +101,11 @@
           "description": "The name shown on the map, when it should differ from the region's name. At most 60 characters."
         }
       },
-      "required": ["name", "terrain", "points"]
+      "required": [
+        "name",
+        "terrain",
+        "points"
+      ]
     }
   },
   {
@@ -152,7 +159,9 @@
           "description": "Set true only to let the new outline overlap another region on purpose."
         }
       },
-      "required": ["name"]
+      "required": [
+        "name"
+      ]
     }
   },
   {
@@ -232,7 +241,11 @@
           "description": "Set true only to create a custom NPC under the name of a published statblock. Without it, such a name is refused if stats are given."
         }
       },
-      "required": ["name", "location", "description"]
+      "required": [
+        "name",
+        "location",
+        "description"
+      ]
     }
   },
   {
@@ -252,7 +265,11 @@
         },
         "mode": {
           "type": "string",
-          "enum": ["overland", "in_settlement", "in_dungeon"],
+          "enum": [
+            "overland",
+            "in_settlement",
+            "in_dungeon"
+          ],
           "description": "How the move is made: overland (a journey across open country, needs a route), in_settlement (a walk within a settlement, takes time at the travel speed), or in_dungeon (no clock time). NPC moves take no clock time whatever the mode."
         },
         "route": {
@@ -278,7 +295,10 @@
           }
         }
       },
-      "required": ["name", "mode"]
+      "required": [
+        "name",
+        "mode"
+      ]
     }
   },
   {
@@ -296,7 +316,9 @@
           "description": "Optional. A location, NPC, or topic name the note is about."
         }
       },
-      "required": ["text"]
+      "required": [
+        "text"
+      ]
     }
   },
   {
@@ -311,7 +333,9 @@
           "description": "Words to look for."
         }
       },
-      "required": ["query"]
+      "required": [
+        "query"
+      ]
     }
   },
   {
@@ -362,7 +386,10 @@
           "description": "Set true to make this the focused storyline, the main plot of the moment. Without it, the first active storyline is focused automatically."
         }
       },
-      "required": ["name", "summary"]
+      "required": [
+        "name",
+        "summary"
+      ]
     }
   },
   {
@@ -417,7 +444,9 @@
           "description": "Set false to deactivate the storyline, or true to reactivate it."
         }
       },
-      "required": ["storyline"]
+      "required": [
+        "storyline"
+      ]
     }
   },
   {
@@ -431,7 +460,9 @@
           "description": "The name or id of the active storyline to focus."
         }
       },
-      "required": ["storyline"]
+      "required": [
+        "storyline"
+      ]
     }
   },
   {
@@ -445,7 +476,9 @@
           "description": "The name or id of the storyline to deactivate."
         }
       },
-      "required": ["storyline"]
+      "required": [
+        "storyline"
+      ]
     }
   },
   {
@@ -463,7 +496,10 @@
           "description": "A short player-facing note on how the storyline ended, with no secrets."
         }
       },
-      "required": ["storyline", "resolution"]
+      "required": [
+        "storyline",
+        "resolution"
+      ]
     }
   },
   {
@@ -478,7 +514,9 @@
           "description": "Words to look for."
         }
       },
-      "required": ["query"]
+      "required": [
+        "query"
+      ]
     }
   },
   {
@@ -493,7 +531,9 @@
           "description": "The text to add, one or more sentences in the past tense. Begin it with the campaign day, as in 'Day 3: ...'."
         }
       },
-      "required": ["text"]
+      "required": [
+        "text"
+      ]
     }
   },
   {
@@ -512,7 +552,10 @@
           "description": "The text that replaces it. Empty to delete the passage."
         }
       },
-      "required": ["old_text", "new_text"]
+      "required": [
+        "old_text",
+        "new_text"
+      ]
     }
   },
   {
@@ -531,7 +574,9 @@
           "description": "Lines to include before and after each match, from 0 to 3. Defaults to 1."
         }
       },
-      "required": ["query"]
+      "required": [
+        "query"
+      ]
     }
   },
   {
@@ -550,7 +595,9 @@
           "description": "The last line to view. Defaults to start_line."
         }
       },
-      "required": ["start_line"]
+      "required": [
+        "start_line"
+      ]
     }
   },
   {
@@ -565,7 +612,9 @@
           "description": "What is wrong with the narration and what the new one must say instead."
         }
       },
-      "required": ["reason"]
+      "required": [
+        "reason"
+      ]
     }
   },
   {
@@ -594,7 +643,9 @@
           "description": "Words to look for."
         }
       },
-      "required": ["query"]
+      "required": [
+        "query"
+      ]
     }
   },
   {
@@ -609,7 +660,9 @@
           "description": "Words to look for."
         }
       },
-      "required": ["query"]
+      "required": [
+        "query"
+      ]
     }
   },
   {
@@ -624,7 +677,9 @@
           "description": "The character's name."
         }
       },
-      "required": ["name"]
+      "required": [
+        "name"
+      ]
     }
   },
   {
@@ -655,7 +710,9 @@
           "description": "The rule's id, as listed in your context."
         }
       },
-      "required": ["rule"]
+      "required": [
+        "rule"
+      ]
     }
   },
   {
@@ -691,7 +748,10 @@
           "description": "Set true to speak an NPC who is not at the player character's location, for example across a wall or by message. The narration will say they are speaking from elsewhere. Without it, an absent NPC gets a warning and no dialogue."
         }
       },
-      "required": ["npc", "intent"]
+      "required": [
+        "npc",
+        "intent"
+      ]
     }
   },
   {
@@ -733,7 +793,9 @@
           "description": "An icon id from map_options' place_icons for the map marker. An empty string goes back to the default marker."
         }
       },
-      "required": ["name"]
+      "required": [
+        "name"
+      ]
     }
   },
   {
@@ -751,7 +813,9 @@
           "description": "A short paragraph the player sees in the compendium, ideally under 300 characters and never more than 600. Write what the player character has heard or can see, with no secrets, hidden contents, or plot notes. Never copy the full description."
         }
       },
-      "required": ["name"]
+      "required": [
+        "name"
+      ]
     }
   },
   {
@@ -765,7 +829,9 @@
           "description": "The name of the location."
         }
       },
-      "required": ["name"]
+      "required": [
+        "name"
+      ]
     }
   },
   {
@@ -787,7 +853,11 @@
           "description": "Why the money changes hands, in a few words."
         }
       },
-      "required": ["name", "amount", "cause"]
+      "required": [
+        "name",
+        "amount",
+        "cause"
+      ]
     }
   },
   {
@@ -833,7 +903,13 @@
           "description": "The size of the item, if one is given. Defaults to normal."
         }
       },
-      "required": ["name", "place", "contents", "hidden", "cause"]
+      "required": [
+        "name",
+        "place",
+        "contents",
+        "hidden",
+        "cause"
+      ]
     }
   },
   {
@@ -855,7 +931,11 @@
           "description": "Why the character takes it, in a few words."
         }
       },
-      "required": ["object_name", "character", "cause"]
+      "required": [
+        "object_name",
+        "character",
+        "cause"
+      ]
     }
   },
   {
@@ -915,11 +995,16 @@
                 "description": "Leave out for a plain attack. The flags the rule set defines for attacks."
               }
             },
-            "required": ["name", "dice"]
+            "required": [
+              "name",
+              "dice"
+            ]
           }
         }
       },
-      "required": ["name"]
+      "required": [
+        "name"
+      ]
     }
   },
   {
@@ -964,7 +1049,9 @@
           "description": "Optional. The name of the place the player now knows the NPC to be. It must already exist. Leave it out to keep the last known place."
         }
       },
-      "required": ["name"]
+      "required": [
+        "name"
+      ]
     }
   },
   {
@@ -982,7 +1069,10 @@
           "description": "A short paragraph the player reads on the Characters page, with no GM-only secrets. At most 600 characters; an empty summary is refused."
         }
       },
-      "required": ["name", "summary"]
+      "required": [
+        "name",
+        "summary"
+      ]
     }
   },
   {
@@ -996,7 +1086,9 @@
           "description": "The NPC's name."
         }
       },
-      "required": ["name"]
+      "required": [
+        "name"
+      ]
     }
   },
   {
@@ -1014,7 +1106,10 @@
           "description": "The corrected fact, written as a complete sentence."
         }
       },
-      "required": ["note_id", "text"]
+      "required": [
+        "note_id",
+        "text"
+      ]
     }
   },
   {
@@ -1028,7 +1123,9 @@
           "description": "The id of the note, as given by add_note or search_notes."
         }
       },
-      "required": ["note_id"]
+      "required": [
+        "note_id"
+      ]
     }
   },
   {
@@ -1049,7 +1146,11 @@
   {
     "type": "tool_call",
     "id": "add_condition",
-    "enabled_by": {"social": ["conditions"]},
+    "enabled_by": {
+      "social": [
+        "conditions"
+      ]
+    },
     "description": "Give a player character a stored condition the story has put on them, such as a fright, a curse, or an injury. Name the condition by its id, and give the cause in the story.",
     "parameters": {
       "properties": {
@@ -1066,13 +1167,21 @@
           "description": "What in the story gave the condition."
         }
       },
-      "required": ["name", "condition", "cause"]
+      "required": [
+        "name",
+        "condition",
+        "cause"
+      ]
     }
   },
   {
     "type": "tool_call",
     "id": "end_condition",
-    "enabled_by": {"social": ["conditions"]},
+    "enabled_by": {
+      "social": [
+        "conditions"
+      ]
+    },
     "description": "End a stored condition a player character has, when its ending happens in the story. Use one of the triggers that condition lists, or gm to end it by your decision.",
     "parameters": {
       "properties": {
@@ -1089,7 +1198,11 @@
           "description": "What ended it: one of the condition's triggers, or gm."
         }
       },
-      "required": ["name", "condition", "how"]
+      "required": [
+        "name",
+        "condition",
+        "how"
+      ]
     }
   },
   {
@@ -1121,13 +1234,19 @@
           "description": "The feature's id or name, such as a spell or Focus."
         }
       },
-      "required": ["feature"]
+      "required": [
+        "feature"
+      ]
     }
   },
   {
     "type": "tool_call",
     "id": "lookup_condition",
-    "enabled_by": {"social": ["conditions"]},
+    "enabled_by": {
+      "social": [
+        "conditions"
+      ]
+    },
     "lookup": true,
     "description": "Read a condition's full text: what it modifies, how it ends, and whether it is dying or fatal. Use it before you apply or end a condition so its rules reach the table.",
     "parameters": {
@@ -1137,7 +1256,9 @@
           "description": "The condition's id or label, such as frail or Frail."
         }
       },
-      "required": ["condition"]
+      "required": [
+        "condition"
+      ]
     }
   },
   {
@@ -1151,7 +1272,9 @@
           "description": "The player-facing overview: two or three sentences, at most 1200 characters, with no GM-only secrets."
         }
       },
-      "required": ["description"]
+      "required": [
+        "description"
+      ]
     }
   },
   {
@@ -1175,11 +1298,16 @@
                 "description": "The fact itself, as one or two sentences the table can use."
               }
             },
-            "required": ["topic", "detail"]
+            "required": [
+              "topic",
+              "detail"
+            ]
           }
         }
       },
-      "required": ["facts"]
+      "required": [
+        "facts"
+      ]
     }
   },
   {
@@ -1197,7 +1325,10 @@
           "description": "The fact itself, as one or two sentences the table can use."
         }
       },
-      "required": ["topic", "detail"]
+      "required": [
+        "topic",
+        "detail"
+      ]
     }
   },
   {
@@ -1209,7 +1340,9 @@
       "properties": {
         "setting": {
           "type": "string",
-          "enum": ["inventory_space"],
+          "enum": [
+            "inventory_space"
+          ],
           "description": "The setting to change. inventory_space turns the rule set's item slots and capacity limits on or off."
         },
         "value": {
@@ -1217,7 +1350,10 @@
           "description": "The setting's new value: true to track inventory space, false to stop tracking it."
         }
       },
-      "required": ["setting", "value"]
+      "required": [
+        "setting",
+        "value"
+      ]
     }
   },
   {
@@ -1228,16 +1364,34 @@
       "properties": {
         "mood": {
           "type": "string",
-          "enum": ["calm", "exploration", "tension", "combat", "victory", "sorrow", "mystery", "horror", "social", "silence"],
+          "enum": [
+            "calm",
+            "exploration",
+            "tension",
+            "combat",
+            "victory",
+            "sorrow",
+            "mystery",
+            "horror",
+            "social",
+            "silence"
+          ],
           "description": "The mood of the current scene: calm, exploration, tension, combat, victory, sorrow, mystery, horror, social, or silence."
         },
         "intensity": {
           "type": "integer",
-          "enum": [1, 2, 3],
+          "enum": [
+            1,
+            2,
+            3
+          ],
           "description": "How strong the mood is: 1 quiet, 2 moderate, 3 intense. Use 3 for a desperate fight, a boss, or a scene at its peak."
         }
       },
-      "required": ["mood", "intensity"]
+      "required": [
+        "mood",
+        "intensity"
+      ]
     }
   },
   {
@@ -1287,7 +1441,12 @@
           "description": "A hex colour for the board's grid lines. Leave it out to use the template's colour."
         }
       },
-      "required": ["name", "location", "description", "template"]
+      "required": [
+        "name",
+        "location",
+        "description",
+        "template"
+      ]
     }
   },
   {
@@ -1313,7 +1472,12 @@
           "description": "The cell's row, from 0 at the top edge."
         }
       },
-      "required": ["map", "name", "column", "row"]
+      "required": [
+        "map",
+        "name",
+        "column",
+        "row"
+      ]
     }
   },
   {
@@ -1331,7 +1495,10 @@
           "description": "The name of the token to remove."
         }
       },
-      "required": ["map", "name"]
+      "required": [
+        "map",
+        "name"
+      ]
     }
   },
   {
@@ -1389,11 +1556,17 @@
                 "description": "A short label for the cell, at most 60 characters, shown in the tooltip. Empty clears it."
               }
             },
-            "required": ["column", "row"]
+            "required": [
+              "column",
+              "row"
+            ]
           }
         }
       },
-      "required": ["map", "cells"]
+      "required": [
+        "map",
+        "cells"
+      ]
     }
   },
   {
@@ -1469,7 +1642,9 @@
           "description": "An ambient id from map_options. Empty clears it."
         }
       },
-      "required": ["map"]
+      "required": [
+        "map"
+      ]
     }
   },
   {
@@ -1521,7 +1696,9 @@
         "mods": {
           "type": "array",
           "description": "The mods applied to the base effect.",
-          "items": {"type": "string"}
+          "items": {
+            "type": "string"
+          }
         },
         "stress": {
           "type": "integer",
@@ -1533,7 +1710,12 @@
           "description": "How it was invented, such as a research project or a class."
         }
       },
-      "required": ["character", "name", "feature_type", "description"]
+      "required": [
+        "character",
+        "name",
+        "feature_type",
+        "description"
+      ]
     }
   },
   {
@@ -1550,19 +1732,40 @@
           "type": "string",
           "description": "The feature's id or name."
         },
-        "name": {"type": "string"},
-        "description": {"type": "string"},
-        "tag": {"type": "string"},
-        "rank": {"type": "integer", "minimum": 0},
-        "subject": {"type": "string"},
-        "base": {"type": "string"},
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "tag": {
+          "type": "string"
+        },
+        "rank": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "subject": {
+          "type": "string"
+        },
+        "base": {
+          "type": "string"
+        },
         "mods": {
           "type": "array",
-          "items": {"type": "string"}
+          "items": {
+            "type": "string"
+          }
         },
-        "stress": {"type": "integer", "minimum": 0}
+        "stress": {
+          "type": "integer",
+          "minimum": 0
+        }
       },
-      "required": ["character", "feature"]
+      "required": [
+        "character",
+        "feature"
+      ]
     }
   },
   {
@@ -1580,7 +1783,10 @@
           "description": "The feature's id or name."
         }
       },
-      "required": ["character", "feature"]
+      "required": [
+        "character",
+        "feature"
+      ]
     }
   },
   {
@@ -1595,13 +1801,19 @@
           "description": "The name of the character."
         }
       },
-      "required": ["character"]
+      "required": [
+        "character"
+      ]
     }
   },
   {
     "type": "tool_call",
     "id": "create_faction",
-    "enabled_by": {"social": ["factions"]},
+    "enabled_by": {
+      "social": [
+        "factions"
+      ]
+    },
     "description": "Create a campaign faction, such as a magic-school college. Give it a name, a description, and a trait that colors its rivalries. Its points are kept in the rule set's dynamic faction tally, such as the College Cup. Create 3 to 5 factions at the campaign's opening, calling the tool for all of them in one reply. Leave tally out to use the rule set's only dynamic tally.",
     "parameters": {
       "properties": {
@@ -1627,13 +1839,21 @@
           "description": "Optional. The id of the dynamic tally that holds faction points."
         }
       },
-      "required": ["name", "description", "trait"]
+      "required": [
+        "name",
+        "description",
+        "trait"
+      ]
     }
   },
   {
     "type": "tool_call",
     "id": "update_faction",
-    "enabled_by": {"social": ["factions"]},
+    "enabled_by": {
+      "social": [
+        "factions"
+      ]
+    },
     "description": "Change a faction's name, description, or trait. Its id and cup entry stay the same. Use it when the story changes what a faction is or stands for.",
     "parameters": {
       "properties": {
@@ -1641,17 +1861,29 @@
           "type": "string",
           "description": "The faction's name or id."
         },
-        "name": {"type": "string"},
-        "description": {"type": "string"},
-        "trait": {"type": "string"}
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "trait": {
+          "type": "string"
+        }
       },
-      "required": ["faction"]
+      "required": [
+        "faction"
+      ]
     }
   },
   {
     "type": "tool_call",
     "id": "remove_faction",
-    "enabled_by": {"social": ["factions"]},
+    "enabled_by": {
+      "social": [
+        "factions"
+      ]
+    },
     "description": "Remove a faction and its cup entry from the campaign.",
     "parameters": {
       "properties": {
@@ -1660,13 +1892,19 @@
           "description": "The faction's name or id."
         }
       },
-      "required": ["faction"]
+      "required": [
+        "faction"
+      ]
     }
   },
   {
     "type": "tool_call",
     "id": "adjust_faction_points",
-    "enabled_by": {"social": ["factions"]},
+    "enabled_by": {
+      "social": [
+        "factions"
+      ]
+    },
     "description": "Add to or deduct from a faction's cup points. Use a negative change to deduct. Give every award a unique key, such as the contest and date; a key already used is refused, so one event is never paid twice.",
     "parameters": {
       "properties": {
@@ -1691,13 +1929,20 @@
           "description": "Set true only when a gain equal to an earlier one is genuinely a new award."
         }
       },
-      "required": ["faction", "change"]
+      "required": [
+        "faction",
+        "change"
+      ]
     }
   },
   {
     "type": "tool_call",
     "id": "list_factions",
-    "enabled_by": {"social": ["factions"]},
+    "enabled_by": {
+      "social": [
+        "factions"
+      ]
+    },
     "lookup": true,
     "description": "List the campaign's factions with their traits, descriptions, and current cup points."
   },
@@ -1752,7 +1997,10 @@
           "description": "What the party was doing."
         }
       },
-      "required": ["length", "reason"]
+      "required": [
+        "length",
+        "reason"
+      ]
     }
   },
   {
@@ -1774,7 +2022,9 @@
           "description": "The ids of the tables to roll on, in order. Each is rolled once."
         }
       },
-      "required": ["tables"]
+      "required": [
+        "tables"
+      ]
     }
   },
   {
@@ -1802,7 +2052,10 @@
           "description": "For a weapon that is not in the catalogue: its damage dice, such as '1d6', '1d6+1d6' (summed), or '1d6+1d6' (two weapons, keep the higher). Leave it out for anything else. A catalogue item takes its damage from the catalogue, so this is refused for one."
         }
       },
-      "required": ["name", "item"]
+      "required": [
+        "name",
+        "item"
+      ]
     }
   },
   {
@@ -1820,7 +2073,10 @@
           "description": "The name of the item to drop."
         }
       },
-      "required": ["name", "item"]
+      "required": [
+        "name",
+        "item"
+      ]
     }
   },
   {
@@ -1842,7 +2098,10 @@
           "description": "Only for a Bandage used on a dying character: that character's name. Leave it out otherwise."
         }
       },
-      "required": ["name", "item"]
+      "required": [
+        "name",
+        "item"
+      ]
     }
   },
   {
@@ -1870,7 +2129,10 @@
           "description": "The size of an item not in the catalogue; required for anything the catalogue does not list. Catalogue items keep their listed size."
         }
       },
-      "required": ["name", "item"]
+      "required": [
+        "name",
+        "item"
+      ]
     }
   },
   {
@@ -1896,7 +2158,10 @@
           "description": "Gold for a service the catalogue does not list. Leave it out for a listed service."
         }
       },
-      "required": ["names", "service"]
+      "required": [
+        "names",
+        "service"
+      ]
     }
   },
   {
@@ -1911,7 +2176,9 @@
           "description": "Words to look for, such as 'rope' or 'armor'."
         }
       },
-      "required": ["query"]
+      "required": [
+        "query"
+      ]
     }
   },
   {
@@ -1957,7 +2224,12 @@
           "description": "Optional. The hireling's pronouns, such as \"she/her\", \"he/him\", or \"they/them\", or another form. Record them whenever the hireling is written in the text, so the GM does not have to guess."
         }
       },
-      "required": ["name", "employer", "wage", "description"]
+      "required": [
+        "name",
+        "employer",
+        "wage",
+        "description"
+      ]
     }
   },
   {
@@ -1975,7 +2247,10 @@
           "description": "Why the hireling leaves, in a few words."
         }
       },
-      "required": ["name", "cause"]
+      "required": [
+        "name",
+        "cause"
+      ]
     }
   },
   {
@@ -1990,7 +2265,9 @@
           "description": "Words to look for, such as 'wolf' or 'giant spider'."
         }
       },
-      "required": ["query"]
+      "required": [
+        "query"
+      ]
     }
   }
 ]

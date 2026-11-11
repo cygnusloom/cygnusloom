@@ -21,7 +21,9 @@
   {
     "type": "prompt",
     "id": "encounter_start",
-    "requires": ["combat"],
+    "requires": [
+      "combat"
+    ],
     "text": "When a fight or other tactical action starts, set it up yourself without asking the player whether to use the encounter system: create or choose a map, start the encounter, add every combatant, then settle initiative. The encounter is how turns, positions, and attacks are tracked. Do not start a later turn on your own: the player presses Start for an NPC's turn, while the player character's own turn starts automatically. An NPC's turn ends automatically when your reply finishes; the player presses End only for their own character's turn. Never take a player character's turn for them."
   },
   {
