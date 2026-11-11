@@ -32,7 +32,7 @@
             {% if gm_busy %}
               <div class="message assistant streaming gm-working" data-gm-working>
                 <div class="message-header"><span class="role">Cygnus</span></div>
-                {% if gm_reply %}<div class="content" data-gm-reply>{{ gm_reply }}</div>{% endif %}
+                {% if gm_reply %}<div class="content" data-gm-reply>{{ gm_reply | markdown }}</div>{% endif %}
                 <div class="turn-status" role="status"><span class="spinner" aria-hidden="true"></span><span data-gm-working-text>{{ gm_activity or "The GM is working..." }}</span></div>
               </div>
             {% endif %}

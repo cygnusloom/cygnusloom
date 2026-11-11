@@ -166,7 +166,8 @@ def test_a_reload_while_the_job_runs_shows_the_live_turn_and_then_the_reply(
     assert 'data-gm-state="busy"' in page.text
     assert "data-gm-working" in page.text
     assert "Narrating..." in page.text
-    assert "The door " in page.text
+    # Markdown rendering trims the trailing space from an in-progress paragraph.
+    assert "The door" in page.text
     composer = page.text.split('id="composer"', 1)[1]
     assert "<textarea" in composer
     assert "disabled" in composer.split("</form>", 1)[0]

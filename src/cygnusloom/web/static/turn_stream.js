@@ -58,6 +58,26 @@
 
   class TurnFailure extends Error {}
 
+  // A reply streams as plain deltas but is shown as the markdown the server saves. Paints are
+  // batched to one per frame: a fast model sends many deltas, and rendering each one would
+  // reflow the transcript just as often. The fallback still escapes the text it shows.
+  const renderMarkdown = (text) =>
+    window.renderMarkdown
+      ? window.renderMarkdown(text)
+      : String(text)
+          .replace(/[&<>"']/g, (ch) => `&#${ch.charCodeAt(0)};`)
+          .replace(/\n/g, "<br>");
+  const paint = (target) => {
+    if (target.frame) return;
+    target.frame = requestAnimationFrame(() => {
+      target.frame = 0;
+      if (target.content.dataset.raw === target.text) return;
+      target.content.dataset.raw = target.text;
+      target.content.innerHTML = renderMarkdown(target.text);
+      scrollDown();
+    });
+  };
+
   const addBubble = (role, label) => {
     for (const placeholder of transcript.querySelectorAll(":scope > p.muted")) {
       placeholder.remove();
@@ -88,7 +108,7 @@
       bubble.append(status);
     }
     transcript.append(bubble);
-    return { bubble, content, status, statusText };
+    return { bubble, content, status, statusText, text: "", frame: 0 };
   };
 
   // Keep the reader at the bottom, unless they scrolled up to read something earlier.
@@ -237,10 +257,18 @@
           break;
         case "delta":
           current.status.hidden = true;
-          current.content.textContent += item.text;
-          scrollDown();
+          current.text += item.text;
+          paint(current);
           break;
         case "retract":
+          // A retracted narration is written again in the same message, so clear both the
+          // raw text and any paint still waiting for the next frame.
+          if (current.frame) {
+            cancelAnimationFrame(current.frame);
+            current.frame = 0;
+          }
+          current.text = "";
+          delete current.content.dataset.raw;
           current.content.textContent = "";
           current.status.hidden = false;
           scrollDown();
@@ -660,8 +688,9 @@
       content.setAttribute("data-gm-reply", "");
       bubble.querySelector(".turn-status")?.before(content);
     }
-    if (content.textContent !== text) {
-      content.textContent = text;
+    if (content.dataset.raw !== text) {
+      content.dataset.raw = text;
+      content.innerHTML = renderMarkdown(text);
       scrollDown();
     }
   };

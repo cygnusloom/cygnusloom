@@ -24,8 +24,11 @@ templates.env.globals.update(
     icon_path=icon_path, place_icon_path=place_icon_path, item_icon_id=item_icon_id
 )
 
-# Raw HTML in messages stays escaped; single newlines become line breaks for chat text.
-_markdown = MarkdownIt("commonmark", {"html": False, "breaks": True})
+# Raw HTML in messages stays escaped; single newlines become line breaks for chat text, and a
+# bare URL, such as a credit's source link, becomes an anchor even without link text. The
+# commonmark preset leaves the linkify rules off even with the option set, so enable them.
+_markdown = MarkdownIt("commonmark", {"html": False, "breaks": True, "linkify": True})
+_markdown.enable("linkify")
 
 
 def render_markdown(text: str) -> Markup:

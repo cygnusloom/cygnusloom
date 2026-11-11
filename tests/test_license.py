@@ -45,6 +45,9 @@ def test_license_page_serves_the_content_credits(client: TestClient):
     assert "Cairn 2e by Yochai Gal" in text
     assert "The Twin Lakes world uses content from the CAS-1 module" in text
     assert "https://creativecommons.org/licenses/by-sa/4.0/" in page.text
+    assert (
+        '<a href="https://cairnrpg.com/second-edition/">https://cairnrpg.com/second-edition/</a>'
+    ) in page.text
     assert "#content-credits" not in page.text
 
 
