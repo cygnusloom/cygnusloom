@@ -5,15 +5,17 @@
 <section class="advancement-page" aria-labelledby="advancement-title">
   <p><a href="/campaigns/{{ campaign.id }}">Back to {{ campaign.name }}</a></p>
   <h1 id="advancement-title">{{ view.label }}: {{ view.character }}</h1>
-  <p class="muted">{{ rule_set.name if rule_set else campaign.rule_set }}{% if world %} · {{ world.name }}{% endif %}</p>
+  <p class="muted">
+    {{ rule_set.name if rule_set else campaign.rule_set }}{% if world %} · {{ world.name }}{% endif %}{% if view.level %} · Level {{ view.level }}{% endif %}{% if view.hireling %} · Hireling{% endif %}
+  </p>
 
   {% if pending and pending|length > 1 %}
   <nav class="advancement-pending" aria-label="Characters with advancement waiting">
-    <span class="muted">Waiting:</span>
+    <span class="muted">Advancement waiting for:</span>
     <ul>
-      {% for name in pending %}
+      {% for page in pending %}
       <li>
-        {% if name == view.character %}<strong>{{ name }}</strong>{% else %}<a href="/campaigns/{{ campaign.id }}/advancement?character={{ name|urlencode }}">{{ name }}</a>{% endif %}
+        {% if page.character == view.character %}<strong>{{ page.character }}</strong> (this page){% else %}<a href="/campaigns/{{ campaign.id }}/advancement?character={{ page.character|urlencode }}">{{ page.character }}</a>{% endif %}{% if page.hireling %} <span class="tag">hireling</span>{% endif %}
       </li>
       {% endfor %}
     </ul>
@@ -27,13 +29,18 @@
     <ul>
       {% for line in view.summary.lines %}<li>{{ line }}</li>{% endfor %}
     </ul>
+    <p class="muted">Taking this level applies these gains. The choices below add what you pick now; any points you leave unspent stay banked, and a <strong>Spend picks</strong> page brings them back when you want them.</p>
   </section>
+  {% elif view.kind == "picks" %}
+  <p class="advancement-lede">These are picks {{ view.character }} saved instead of spending. Spending them does not advance a level, and points you leave unspent stay banked for later.</p>
+  {% elif view.kind == "options" %}
+  <p class="advancement-lede">Choose one {{ view.label|lower }} for {{ view.character }}. Taking it spends one point and cannot be undone.</p>
   {% endif %}
 
   {% if view.kind == "options" and view.options %}
   {% set available_options = view.options | selectattr("available") | list %}
   {% if available_options %}
-  <form method="post" action="/campaigns/{{ campaign.id }}/advancement" class="advancement-form">
+  <form method="post" action="/campaigns/{{ campaign.id }}/advancement" class="advancement-form" data-busy-label="Taking the {{ view.label|lower }}…">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="character" value="{{ view.character }}">
     <fieldset>
@@ -80,7 +87,7 @@
   <p class="muted">No {{ view.label|lower }} option can be taken right now.</p>
   {% endif %}
   {% elif view.picks %}
-  <form method="post" action="/campaigns/{{ campaign.id }}/advancement" class="advancement-form">
+  <form method="post" action="/campaigns/{{ campaign.id }}/advancement" class="advancement-form" data-busy-label="{% if view.kind == 'level' %}Applying level {{ view.summary.new_level }}…{% else %}Spending picks…{% endif %}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="character" value="{{ view.character }}">
     {% for pick in view.picks %}
@@ -94,9 +101,9 @@
           {% for skill in pick.skills %}
             <tr>
               <th scope="row">{{ skill.name }}</th>
-              <td>{{ skill.current }}</td>
-              <td>
-                <select name="skill-{{ pick.id }}-{{ skill.id }}">
+              <td data-label="Now">{{ skill.current }}</td>
+              <td data-label="Raise to">
+                <select name="skill-{{ pick.id }}-{{ skill.id }}" aria-label="Raise {{ skill.name }} to">
                   <option value="">No change</option>
                   {% for target in skill.targets %}
                   <option value="{{ target.level }}" data-cost="{{ target.cost }}">{{ target.level }} ({{ target.cost }} point{{ "" if target.cost == 1 else "s" }}{% if target.minimum_level > 1 %}, needs level {{ target.minimum_level }}{% endif %})</option>
