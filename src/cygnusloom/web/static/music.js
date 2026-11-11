@@ -59,6 +59,7 @@
   let current = null;
   let nowPlaying = null;
   let pendingGesture = false;
+  let gestureSeen = false;
   let fadeToken = 0;
   let recent = [];
   const audios = new Set();
@@ -110,6 +111,27 @@
     }
     audios.delete(audio);
   };
+
+  // Music belongs to the player in front of the window, so it drops to silence while the window
+  // is in the background and comes back when they return. The desktop edition reports its own
+  // window activation through setWindowActive, because QtWebEngine keeps the page focused when
+  // its window is not.
+  let pageVisible = !document.hidden;
+  let windowActive = true;
+  const syncAudible = () => {
+    const audible = pageVisible && windowActive;
+    for (const audio of audios) audio.muted = !audible;
+  };
+  const syncPageVisible = () => {
+    pageVisible = !document.hidden;
+    syncAudible();
+  };
+  document.addEventListener("visibilitychange", syncPageVisible);
+  window.addEventListener("focus", syncPageVisible);
+  window.addEventListener("blur", () => {
+    pageVisible = false;
+    syncAudible();
+  });
 
   const stop = () => {
     fadeToken += 1;
@@ -174,6 +196,7 @@
     next.loop = Boolean(track.loop);
     next.volume = 0;
     audios.add(next);
+    syncAudible();
     const previous = current;
     const previousLevel = previous ? previous.audio.volume : 0;
     const started = performance.now();
@@ -206,10 +229,16 @@
         if (previous && !previous.audio.paused) {
           current = previous;
           pendingGesture = false;
-        } else {
-          pendingGesture = true;
+          syncControls();
+          return;
         }
+        pendingGesture = true;
         syncControls();
+        if (gestureSeen) {
+          // A click landed while this track was still loading. Count it and try once more.
+          gestureSeen = false;
+          unlock();
+        }
       });
 
     next.addEventListener("ended", () => {
@@ -220,6 +249,7 @@
   };
 
   const start = () => {
+    if (pendingGesture) return;
     if (!userEnabled || mood === "silence") {
       stop();
       return;
@@ -258,6 +288,15 @@
     start();
   };
 
+  // Browsers turn down audible autoplay until the page has seen a real user gesture, which a
+  // fresh origin - a new worktree port, a private window - has not had yet. The first click,
+  // tap, or key press anywhere starts the track autoplay refused.
+  const unlock = () => {
+    if (!pendingGesture) return;
+    pendingGesture = false;
+    start();
+  };
+
   const toggle = () => {
     if (pendingGesture) {
       pendingGesture = false;
@@ -290,6 +329,16 @@
     syncControls();
   };
 
+  const onGesture = (event) => {
+    // The music controls handle their own gestures; anything else on the page just unlocks sound.
+    if (event.target.closest?.("[data-music-toggle], [data-music-enabled]")) return;
+    gestureSeen = true;
+    unlock();
+  };
+  for (const type of ["pointerdown", "keydown", "touchstart"]) {
+    document.addEventListener(type, onGesture, { capture: true, passive: true });
+  }
+
   document.addEventListener("click", (event) => {
     const button = event.target.closest("[data-music-toggle]");
     if (!button) return;
@@ -307,6 +356,10 @@
 
   window.applyMusicState = applyState;
   window.syncMusicControls = syncControls;
+  window.setWindowActive = (active) => {
+    windowActive = Boolean(active);
+    syncAudible();
+  };
   window.initMusic = () => {
     syncControls();
     start();

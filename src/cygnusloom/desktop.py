@@ -62,7 +62,7 @@ def save_window_state(settings: Any, window: Any) -> None:
 def run_window(url: str, title: str, data_dir: Path) -> int:
     """Open the game window and block until it closes. Returns the Qt exit code."""
     try:
-        from PySide6.QtCore import QSettings, QUrl
+        from PySide6.QtCore import QEvent, QSettings, QUrl
         from PySide6.QtGui import QDesktopServices, QIcon
         from PySide6.QtWebEngineCore import (
             QWebEnginePage,
@@ -90,6 +90,26 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
                 return False
             return super().acceptNavigationRequest(url, nav_type, is_main_frame)
 
+    class GameWindow(QMainWindow):
+        """Silence the page's music while another window is in front."""
+
+        page: Any = None
+
+        def report_activation(self) -> None:
+            if self.page is None:
+                return
+            active = self.isActiveWindow() and not self.isMinimized()
+            state = "true" if active else "false"
+            self.page.runJavaScript(f"window.setWindowActive?.({state})")
+
+        def changeEvent(self, event: QEvent) -> None:
+            super().changeEvent(event)
+            if event.type() in (
+                QEvent.Type.ActivationChange,
+                QEvent.Type.WindowStateChange,
+            ):
+                self.report_activation()
+
     app = QApplication.instance() or QApplication(sys.argv[:1])
     app.setApplicationName(title)
     app.setApplicationDisplayName(title)
@@ -107,15 +127,17 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
         QWebEngineProfile.PersistentCookiesPolicy.ForcePersistentCookies
     )
 
-    window = QMainWindow()
+    window = GameWindow()
     window.setWindowTitle(title)
     window.setWindowIcon(icon)
     view = QWebEngineView(window)
     view.setPage(LocalPage(profile, view))
+    window.page = view.page()
     # The desktop window may start the player's background music without an extra click. The
     # browser edition still follows the browser's autoplay policy, so its music starts on the
     # player's first interaction.
     view.settings().setAttribute(QWebEngineSettings.WebAttribute.PlaybackRequiresUserGesture, False)
+    view.loadFinished.connect(lambda _ok: window.report_activation())
     view.setUrl(QUrl(url))
     window.setCentralWidget(view)
     settings = QSettings(str(window_state_path(data_dir)), QSettings.Format.IniFormat)
