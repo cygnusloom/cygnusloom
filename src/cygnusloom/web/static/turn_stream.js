@@ -390,6 +390,20 @@
     }
     window.initWorkspace?.(currentPlay);
     window.initMapViews?.(document);
+    // The GM's music cue lives on the play view, which applyLive does not replace. Keep the
+    // existing workspace's data current, then hand the fresh mood to the player, which keeps
+    // the current track when it still fits.
+    if (freshPlay.dataset.musicMood) {
+      currentPlay.dataset.musicMood = freshPlay.dataset.musicMood;
+      currentPlay.dataset.musicIntensity = freshPlay.dataset.musicIntensity;
+      currentPlay.dataset.musicSource = freshPlay.dataset.musicSource;
+      window.applyMusicState?.(
+        freshPlay.dataset.musicMood,
+        Number(freshPlay.dataset.musicIntensity || 1),
+        freshPlay.dataset.musicSource || "auto",
+      );
+    }
+    window.syncMusicControls?.();
 
     for (const id of selectedTabs) window.workspaceSelectTab?.(id);
     for (const [id, top] of scrolls) {

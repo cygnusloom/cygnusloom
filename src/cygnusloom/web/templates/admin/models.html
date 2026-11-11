@@ -304,6 +304,7 @@
       <label>From <input type="date" name="start" value="{{ period.start }}" data-usage-start></label>
       <label>To <input type="date" name="end" value="{{ period.end }}" data-usage-end></label>
       <button type="submit">Apply</button>
+      <a class="button secondary" href="/admin/models?period=all">Reset filters</a>
     </form>
     <p class="muted">
       Showing: {{ period.label }}. Dates are UTC.

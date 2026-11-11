@@ -106,6 +106,7 @@ from cygnusloom.services.membership import (
     merge_debug_member,
     remove_member,
 )
+from cygnusloom.services.music import music_view
 from cygnusloom.services.tools import check_arguments
 from cygnusloom.services.views import map_view, scene_view, story_view, time_view
 from cygnusloom.web.character_form import (
@@ -1651,6 +1652,10 @@ def _campaign_page(
     gm_busy = turn_busy(campaign.id) and world.state.turn is not None
     gm_activity, gm_reply = turn_progress(campaign.id) if gm_busy else ("", "")
     interact = _interaction_state(world.state, user.id, pending, is_owner=is_owner, busy=gm_busy)
+    music = music_view(
+        world.state,
+        clock_rules=rule_set.clock if rule_set is not None else None,
+    )
     values = {
         "campaign": campaign,
         "world": library.world_templates.get(campaign.world_template),
@@ -1709,6 +1714,7 @@ def _campaign_page(
         "is_owner": is_owner,
         "viewer_id": user.id,
         "show_internal_thinking": bool(user.show_internal_thinking),
+        "music": music,
         "members": members,
         "invites": invites,
         "removed_members": removed_members,

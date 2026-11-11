@@ -64,7 +64,11 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
     try:
         from PySide6.QtCore import QSettings, QUrl
         from PySide6.QtGui import QDesktopServices, QIcon
-        from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile
+        from PySide6.QtWebEngineCore import (
+            QWebEnginePage,
+            QWebEngineProfile,
+            QWebEngineSettings,
+        )
         from PySide6.QtWebEngineWidgets import QWebEngineView
         from PySide6.QtWidgets import QApplication, QMainWindow
     except ImportError as exc:  # pragma: no cover - exercised by the packaged build
@@ -108,6 +112,10 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
     window.setWindowIcon(icon)
     view = QWebEngineView(window)
     view.setPage(LocalPage(profile, view))
+    # The desktop window may start the player's background music without an extra click. The
+    # browser edition still follows the browser's autoplay policy, so its music starts on the
+    # player's first interaction.
+    view.settings().setAttribute(QWebEngineSettings.WebAttribute.PlaybackRequiresUserGesture, False)
     view.setUrl(QUrl(url))
     window.setCentralWidget(view)
     settings = QSettings(str(window_state_path(data_dir)), QSettings.Format.IniFormat)

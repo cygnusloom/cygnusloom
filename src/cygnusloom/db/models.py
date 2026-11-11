@@ -30,6 +30,11 @@ class User(SQLModel, table=True):
     # A view preference, not campaign state: whether this account sees the GM's hidden Log lines
     # and can open the Context and Transcript of each reply.
     show_internal_thinking: bool = Field(default=False)
+    # The last measured-usage date filter this account applied on the admin models page. Dates
+    # are ISO calendar days in UTC; the mode is "all", "from", or "between".
+    usage_filter_mode: str = Field(default="all", max_length=8)
+    usage_filter_start: str = Field(default="", max_length=10)
+    usage_filter_end: str = Field(default="", max_length=10)
     roles: str = Field(default="[]", sa_column=Column(Text, nullable=False))
     # Credits a player spends on AI GM replies. Administrators, the single-player account, and
     # credit-exempt accounts are exempt, so the balance is informational for them unless a debug

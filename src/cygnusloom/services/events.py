@@ -45,6 +45,7 @@ from cygnusloom.services.state import (  # noqa: F401
     FactionAsset,
     Item,
     KnownNpc,
+    MusicCue,
     Note,
     Place,
     Position,
@@ -494,6 +495,30 @@ class CampaignOptionsChosen(GameEvent):
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         state.options = dict(self.options)
+
+
+@dataclass(frozen=True)
+class MusicCued(GameEvent):
+    """The GM chose a background-music mood for the current scene. The cue is presentation, not
+    a fact of the world, so it is hidden from the transcript and the Log. `scene` ties it to the
+    encounter, place, and day-part it was chosen for."""
+
+    kind: ClassVar[str] = "music.cued"
+    hidden: ClassVar[bool] = True
+    channel: ClassVar[Channel] = Channel.INTERNAL
+
+    mood: str
+    intensity: int
+    source: str = "gm"
+    scene: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.music = MusicCue(
+            mood=self.mood,
+            intensity=self.intensity,
+            source=self.source,
+            scene=self.scene,
+        )
 
 
 @dataclass(frozen=True)

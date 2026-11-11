@@ -1222,6 +1222,26 @@
   },
   {
     "type": "tool_call",
+    "id": "set_music",
+    "description": "Set the background-music mood for the current scene. Call this only when the scene's mood changes, at most once per turn, and never for an out-of-character message or a rules question. Combat, rest, and travel may already have changed the music; override them only when the fiction calls for a different mood. Use silence for a deliberate dramatic pause. Never mention music, this tool, or its result in the narration.",
+    "parameters": {
+      "properties": {
+        "mood": {
+          "type": "string",
+          "enum": ["calm", "exploration", "tension", "combat", "victory", "sorrow", "mystery", "horror", "social", "silence"],
+          "description": "The mood of the current scene: calm, exploration, tension, combat, victory, sorrow, mystery, horror, social, or silence."
+        },
+        "intensity": {
+          "type": "integer",
+          "enum": [1, 2, 3],
+          "description": "How strong the mood is: 1 quiet, 2 moderate, 3 intense. Use 3 for a desperate fight, a boss, or a scene at its peak."
+        }
+      },
+      "required": ["mood", "intensity"]
+    }
+  },
+  {
+    "type": "tool_call",
     "id": "create_local_map",
     "description": "Create a local map for an indoor or small-scale place, such as a room, tavern, house, temple, crypt, cave, watchtower, market, camp, ship, hall, library, or cellar. A local map is used outside an encounter to show where the player character, NPCs, and props stand; when a fight starts on it, start_encounter on the same map and the tokens already placed carry into the fight. The template supplies the layout, size, and starting terrain. Use map_options to see the templates, and give a palette, ambient, or board colours when the place's mood matters; without them the template's own look is copied.",
     "parameters": {

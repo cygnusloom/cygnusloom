@@ -576,6 +576,13 @@ def test_admin_models_page_filters_usage_by_date(settings: Settings):
     assert "From 2026-02-01 (UTC)" in from_start.text
     assert "222222" in from_start.text
     assert "111111" not in from_start.text
+    assert 'href="/admin/models?period=all"' in from_start.text
+
+    # Applying a filter remembers it for the account, so returning to the page keeps it.
+    saved = client.get("/admin/models")
+    assert "From 2026-02-01 (UTC)" in saved.text
+    assert "222222" in saved.text
+    assert "111111" not in saved.text
 
     between = client.get("/admin/models?period=between&start=2026-01-01&end=2026-01-31")
     assert between.status_code == 200
@@ -586,6 +593,15 @@ def test_admin_models_page_filters_usage_by_date(settings: Settings):
     invalid = client.get("/admin/models?period=between&start=2026-02-01&end=2026-01-01")
     assert invalid.status_code == 200
     assert "start date must not be after" in invalid.text
+    assert "2026-01-01 to 2026-01-31 (UTC)" in client.get("/admin/models").text
+
+    reset = client.get("/admin/models?period=all")
+    assert reset.status_code == 200
+    assert "Showing: All time" in reset.text
+    saved = client.get("/admin/models")
+    assert "Showing: All time" in saved.text
+    # Both calls are counted again: ceil((111111 + 222222) / 2) is the new average.
+    assert "166667" in saved.text
 
 
 def test_admin_model_page_requires_confirmation_to_delete(settings: Settings):

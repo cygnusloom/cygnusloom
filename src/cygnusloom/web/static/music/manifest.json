@@ -1,0 +1,843 @@
+{
+  "version": 1,
+  "pack": "core",
+  "generated": "2026-11-11",
+  "tracks": [
+    {
+      "id": "scott-buckley-terminus",
+      "title": "Terminus",
+      "artist": "Scott Buckley",
+      "file": "scott-buckley-terminus.mp3",
+      "duration": 263.42,
+      "moods": [
+        "combat",
+        "tension"
+      ],
+      "intensity": [
+        2,
+        3
+      ],
+      "tags": [
+        "orchestral",
+        "drums",
+        "driving"
+      ],
+      "loop": false,
+      "license": "CC-BY-4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "source_url": "https://www.scottbuckley.com.au/library/wp-content/uploads/2021/05/sb_terminus.mp3",
+      "artist_url": "https://www.scottbuckley.com.au/library/",
+      "attribution": "Terminus by Scott Buckley - released under CC-BY 4.0. www.scottbuckley.com.au",
+      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+    },
+    {
+      "id": "scott-buckley-nightfall",
+      "title": "Nightfall",
+      "artist": "Scott Buckley",
+      "file": "scott-buckley-nightfall.mp3",
+      "duration": 263.4,
+      "moods": [
+        "horror",
+        "mystery"
+      ],
+      "intensity": [
+        2,
+        3
+      ],
+      "tags": [
+        "dark",
+        "strings",
+        "slow"
+      ],
+      "loop": false,
+      "license": "CC-BY-4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "source_url": "https://www.scottbuckley.com.au/library/wp-content/uploads/2019/05/sb_nightfall.mp3",
+      "artist_url": "https://www.scottbuckley.com.au/library/",
+      "attribution": "Nightfall by Scott Buckley - released under CC-BY 4.0. www.scottbuckley.com.au",
+      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+    },
+    {
+      "id": "scott-buckley-the-summoning",
+      "title": "The Summoning",
+      "artist": "Scott Buckley",
+      "file": "scott-buckley-the-summoning.mp3",
+      "duration": 205.38,
+      "moods": [
+        "mystery",
+        "horror"
+      ],
+      "intensity": [
+        2,
+        3
+      ],
+      "tags": [
+        "arcane",
+        "choir",
+        "dark"
+      ],
+      "loop": false,
+      "license": "CC-BY-4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "source_url": "https://www.scottbuckley.com.au/library/wp-content/uploads/2020/10/sb_thesummoning.mp3",
+      "artist_url": "https://www.scottbuckley.com.au/library/",
+      "attribution": "The Summoning by Scott Buckley - released under CC-BY 4.0. www.scottbuckley.com.au",
+      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+    },
+    {
+      "id": "scott-buckley-reverie",
+      "title": "Reverie",
+      "artist": "Scott Buckley",
+      "file": "scott-buckley-reverie.mp3",
+      "duration": 223.67,
+      "moods": [
+        "calm",
+        "social"
+      ],
+      "intensity": [
+        1,
+        2
+      ],
+      "tags": [
+        "piano",
+        "strings",
+        "gentle"
+      ],
+      "loop": false,
+      "license": "CC-BY-4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "source_url": "https://www.scottbuckley.com.au/library/wp-content/uploads/2020/03/sb_reverie.mp3",
+      "artist_url": "https://www.scottbuckley.com.au/library/",
+      "attribution": "Reverie by Scott Buckley - released under CC-BY 4.0. www.scottbuckley.com.au",
+      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+    },
+    {
+      "id": "scott-buckley-hiraeth",
+      "title": "Hiraeth",
+      "artist": "Scott Buckley",
+      "file": "scott-buckley-hiraeth.mp3",
+      "duration": 346.2,
+      "moods": [
+        "sorrow",
+        "calm"
+      ],
+      "intensity": [
+        1,
+        2
+      ],
+      "tags": [
+        "emotional",
+        "strings",
+        "slow"
+      ],
+      "loop": false,
+      "license": "CC-BY-4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "source_url": "https://www.scottbuckley.com.au/library/wp-content/uploads/2020/06/sb_hiraeth.mp3",
+      "artist_url": "https://www.scottbuckley.com.au/library/",
+      "attribution": "Hiraeth by Scott Buckley - released under CC-BY 4.0. www.scottbuckley.com.au",
+      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+    },
+    {
+      "id": "scott-buckley-rise-above",
+      "title": "Rise Above",
+      "artist": "Scott Buckley",
+      "file": "scott-buckley-rise-above.mp3",
+      "duration": 267.86,
+      "moods": [
+        "victory",
+        "exploration"
+      ],
+      "intensity": [
+        2,
+        3
+      ],
+      "tags": [
+        "epic",
+        "orchestral",
+        "uplifting"
+      ],
+      "loop": false,
+      "license": "CC-BY-4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "source_url": "https://www.scottbuckley.com.au/library/wp-content/uploads/2023/09/RiseAbove.mp3",
+      "artist_url": "https://www.scottbuckley.com.au/library/",
+      "attribution": "Rise Above by Scott Buckley - released under CC-BY 4.0. www.scottbuckley.com.au",
+      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+    },
+    {
+      "id": "scott-buckley-march-of-midnight",
+      "title": "March of Midnight",
+      "artist": "Scott Buckley",
+      "file": "scott-buckley-march-of-midnight.mp3",
+      "duration": 164.75,
+      "moods": [
+        "tension",
+        "combat"
+      ],
+      "intensity": [
+        2,
+        3
+      ],
+      "tags": [
+        "drums",
+        "dark",
+        "marching"
+      ],
+      "loop": false,
+      "license": "CC-BY-4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "source_url": "https://www.scottbuckley.com.au/library/wp-content/uploads/2019/10/sb_marchofmidnight.mp3",
+      "artist_url": "https://www.scottbuckley.com.au/library/",
+      "attribution": "March of Midnight by Scott Buckley - released under CC-BY 4.0. www.scottbuckley.com.au",
+      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+    },
+    {
+      "id": "visager-the-great-forest",
+      "title": "The Great Forest (Loop)",
+      "artist": "Visager (Josie Brechner)",
+      "file": "visager-the-great-forest.mp3",
+      "duration": 225.81,
+      "moods": [
+        "exploration",
+        "calm"
+      ],
+      "intensity": [
+        1,
+        2
+      ],
+      "tags": [
+        "rpg",
+        "forest",
+        "loop"
+      ],
+      "loop": true,
+      "license": "CC-BY-4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "source_url": "https://visager.bandcamp.com/album/songs-from-an-unmade-world",
+      "artist_url": "https://visager.bandcamp.com/",
+      "attribution": "The Great Forest (Loop) by Visager (Josie Brechner) - licensed under CC BY 4.0. https://visager.bandcamp.com/album/songs-from-an-unmade-world",
+      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+    },
+    {
+      "id": "visager-dark-sanctum",
+      "title": "Dark Sanctum (Boss Fight Loop)",
+      "artist": "Visager (Josie Brechner)",
+      "file": "visager-dark-sanctum.mp3",
+      "duration": 162.25,
+      "moods": [
+        "combat",
+        "horror"
+      ],
+      "intensity": [
+        3,
+        3
+      ],
+      "tags": [
+        "boss",
+        "rpg",
+        "loop"
+      ],
+      "loop": true,
+      "license": "CC-BY-4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "source_url": "https://visager.bandcamp.com/album/songs-from-an-unmade-world",
+      "artist_url": "https://visager.bandcamp.com/",
+      "attribution": "Dark Sanctum (Boss Fight Loop) by Visager (Josie Brechner) - licensed under CC BY 4.0. https://visager.bandcamp.com/album/songs-from-an-unmade-world",
+      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+    },
+    {
+      "id": "visager-haunted-forest",
+      "title": "Haunted Forest (Loop)",
+      "artist": "Visager (Josie Brechner)",
+      "file": "visager-haunted-forest.mp3",
+      "duration": 154.29,
+      "moods": [
+        "horror",
+        "mystery"
+      ],
+      "intensity": [
+        2,
+        3
+      ],
+      "tags": [
+        "rpg",
+        "dark",
+        "loop"
+      ],
+      "loop": true,
+      "license": "CC-BY-4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "source_url": "https://visager.bandcamp.com/album/songs-from-an-unmade-world-2",
+      "artist_url": "https://visager.bandcamp.com/",
+      "attribution": "Haunted Forest (Loop) by Visager (Josie Brechner) - licensed under CC BY 4.0. https://visager.bandcamp.com/album/songs-from-an-unmade-world-2",
+      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+    },
+    {
+      "id": "visager-village-dreaming",
+      "title": "Village Dreaming (Loop)",
+      "artist": "Visager (Josie Brechner)",
+      "file": "visager-village-dreaming.mp3",
+      "duration": 61.28,
+      "moods": [
+        "social",
+        "calm"
+      ],
+      "intensity": [
+        1,
+        1
+      ],
+      "tags": [
+        "village",
+        "rpg",
+        "loop"
+      ],
+      "loop": true,
+      "license": "CC-BY-4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "source_url": "https://visager.bandcamp.com/album/songs-from-an-unmade-world",
+      "artist_url": "https://visager.bandcamp.com/",
+      "attribution": "Village Dreaming (Loop) by Visager (Josie Brechner) - licensed under CC BY 4.0. https://visager.bandcamp.com/album/songs-from-an-unmade-world",
+      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+    },
+    {
+      "id": "komiku-cliff-road-chill",
+      "title": "Cliff Road Chill",
+      "artist": "Komiku",
+      "file": "komiku-cliff-road-chill.mp3",
+      "duration": 88.0,
+      "moods": [
+        "calm",
+        "exploration"
+      ],
+      "intensity": [
+        1,
+        1
+      ],
+      "tags": [
+        "rpg",
+        "acoustic",
+        "gentle"
+      ],
+      "loop": false,
+      "license": "CC0-1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://freemusicarchive.org/music/Komiku",
+      "artist_url": "https://freemusicarchive.org/music/Komiku",
+      "attribution": "Cliff Road Chill by Komiku - CC0 1.0. https://freemusicarchive.org/music/Komiku",
+      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+    },
+    {
+      "id": "komiku-fight-for-your-life",
+      "title": "Fight for Your Life",
+      "artist": "Komiku",
+      "file": "komiku-fight-for-your-life.mp3",
+      "duration": 189.47,
+      "moods": [
+        "combat",
+        "tension"
+      ],
+      "intensity": [
+        2,
+        3
+      ],
+      "tags": [
+        "rpg",
+        "drums",
+        "urgent"
+      ],
+      "loop": false,
+      "license": "CC0-1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://freemusicarchive.org/music/Komiku",
+      "artist_url": "https://freemusicarchive.org/music/Komiku",
+      "attribution": "Fight for Your Life by Komiku - CC0 1.0. https://freemusicarchive.org/music/Komiku",
+      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+    },
+    {
+      "id": "vindsvept-night-of-the-fae",
+      "title": "Night of the Fae",
+      "artist": "Vindsvept",
+      "file": "vindsvept-night-of-the-fae.mp3",
+      "duration": 192.93,
+      "moods": [
+        "social",
+        "mystery",
+        "exploration"
+      ],
+      "intensity": [
+        1,
+        2
+      ],
+      "tags": [
+        "fantasy",
+        "folk",
+        "celtic"
+      ],
+      "loop": false,
+      "license": "CC-BY-4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "source_url": "https://vindsvept.se/wp-content/uploads/2021/07/Vindsvept-The-Youtube-Collection-172-Night-of-the-Fae.mp3",
+      "artist_url": "https://vindsvept.se/",
+      "attribution": "Night of the Fae by Vindsvept - licensed under CC BY 4.0. https://vindsvept.se/",
+      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+    },
+    {
+      "id": "scott-buckley-juggernaut",
+      "title": "Juggernaut",
+      "artist": "Scott Buckley",
+      "file": "scott-buckley-juggernaut.mp3",
+      "duration": 222.02,
+      "moods": [
+        "combat",
+        "tension"
+      ],
+      "intensity": [
+        3,
+        3
+      ],
+      "tags": [
+        "orchestral",
+        "drums",
+        "boss"
+      ],
+      "loop": false,
+      "license": "CC-BY-4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "source_url": "https://www.scottbuckley.com.au/library/wp-content/uploads/2022/07/Juggernaut.mp3",
+      "artist_url": "https://www.scottbuckley.com.au/library/",
+      "attribution": "Juggernaut by Scott Buckley - released under CC-BY 4.0. www.scottbuckley.com.au",
+      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+    },
+    {
+      "id": "scott-buckley-vanguard",
+      "title": "Vanguard",
+      "artist": "Scott Buckley",
+      "file": "scott-buckley-vanguard.mp3",
+      "duration": 234.53,
+      "moods": [
+        "combat",
+        "tension"
+      ],
+      "intensity": [
+        2,
+        3
+      ],
+      "tags": [
+        "orchestral",
+        "driving",
+        "battle"
+      ],
+      "loop": false,
+      "license": "CC-BY-4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "source_url": "https://www.scottbuckley.com.au/library/wp-content/uploads/2023/07/Vanguard.mp3",
+      "artist_url": "https://www.scottbuckley.com.au/library/",
+      "attribution": "Vanguard by Scott Buckley - released under CC-BY 4.0. www.scottbuckley.com.au",
+      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+    },
+    {
+      "id": "scott-buckley-castles-in-the-sky",
+      "title": "Castles in the Sky",
+      "artist": "Scott Buckley",
+      "file": "scott-buckley-castles-in-the-sky.mp3",
+      "duration": 226.61,
+      "moods": [
+        "exploration",
+        "calm"
+      ],
+      "intensity": [
+        1,
+        2
+      ],
+      "tags": [
+        "wonder",
+        "strings",
+        "flight"
+      ],
+      "loop": false,
+      "license": "CC-BY-4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "source_url": "https://www.scottbuckley.com.au/library/wp-content/uploads/2021/11/sb_castlesinthesky.mp3",
+      "artist_url": "https://www.scottbuckley.com.au/library/",
+      "attribution": "Castles in the Sky by Scott Buckley - released under CC-BY 4.0. www.scottbuckley.com.au",
+      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+    },
+    {
+      "id": "visager-miniboss-fight",
+      "title": "Miniboss Fight (Loop)",
+      "artist": "Visager (Josie Brechner)",
+      "file": "visager-miniboss-fight.mp3",
+      "duration": 179.02,
+      "moods": [
+        "combat"
+      ],
+      "intensity": [
+        2,
+        3
+      ],
+      "tags": [
+        "boss",
+        "rpg",
+        "loop"
+      ],
+      "loop": true,
+      "license": "CC-BY-4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "source_url": "https://visager.bandcamp.com/album/songs-from-an-unmade-world-2",
+      "artist_url": "https://visager.bandcamp.com/",
+      "attribution": "Miniboss Fight (Loop) by Visager (Josie Brechner) - licensed under CC BY 4.0. https://visager.bandcamp.com/album/songs-from-an-unmade-world-2",
+      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+    },
+    {
+      "id": "visager-battle",
+      "title": "Battle (Loop)",
+      "artist": "Visager (Josie Brechner)",
+      "file": "visager-battle.mp3",
+      "duration": 120.63,
+      "moods": [
+        "combat",
+        "tension"
+      ],
+      "intensity": [
+        2,
+        3
+      ],
+      "tags": [
+        "rpg",
+        "drums",
+        "loop"
+      ],
+      "loop": true,
+      "license": "CC-BY-4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "source_url": "https://visager.bandcamp.com/album/songs-from-an-unmade-world-2",
+      "artist_url": "https://visager.bandcamp.com/",
+      "attribution": "Battle (Loop) by Visager (Josie Brechner) - licensed under CC BY 4.0. https://visager.bandcamp.com/album/songs-from-an-unmade-world-2",
+      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+    },
+    {
+      "id": "visager-windy-bluffs",
+      "title": "Windy Bluffs (Loop)",
+      "artist": "Visager (Josie Brechner)",
+      "file": "visager-windy-bluffs.mp3",
+      "duration": 113.33,
+      "moods": [
+        "exploration"
+      ],
+      "intensity": [
+        1,
+        2
+      ],
+      "tags": [
+        "rpg",
+        "wind",
+        "loop"
+      ],
+      "loop": true,
+      "license": "CC-BY-4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "source_url": "https://visager.bandcamp.com/album/songs-from-an-unmade-world",
+      "artist_url": "https://visager.bandcamp.com/",
+      "attribution": "Windy Bluffs (Loop) by Visager (Josie Brechner) - licensed under CC BY 4.0. https://visager.bandcamp.com/album/songs-from-an-unmade-world",
+      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+    },
+    {
+      "id": "visager-ice-cave",
+      "title": "Ice Cave (Loop)",
+      "artist": "Visager (Josie Brechner)",
+      "file": "visager-ice-cave.mp3",
+      "duration": 94.29,
+      "moods": [
+        "exploration",
+        "mystery"
+      ],
+      "intensity": [
+        1,
+        2
+      ],
+      "tags": [
+        "rpg",
+        "cold",
+        "loop"
+      ],
+      "loop": true,
+      "license": "CC-BY-4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "source_url": "https://visager.bandcamp.com/album/songs-from-an-unmade-world",
+      "artist_url": "https://visager.bandcamp.com/",
+      "attribution": "Ice Cave (Loop) by Visager (Josie Brechner) - licensed under CC BY 4.0. https://visager.bandcamp.com/album/songs-from-an-unmade-world",
+      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+    },
+    {
+      "id": "visager-the-final-road",
+      "title": "The Final Road (Loop)",
+      "artist": "Visager (Josie Brechner)",
+      "file": "visager-the-final-road.mp3",
+      "duration": 125.22,
+      "moods": [
+        "exploration",
+        "victory"
+      ],
+      "intensity": [
+        2,
+        2
+      ],
+      "tags": [
+        "rpg",
+        "journey",
+        "loop"
+      ],
+      "loop": true,
+      "license": "CC-BY-4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "source_url": "https://visager.bandcamp.com/album/songs-from-an-unmade-world",
+      "artist_url": "https://visager.bandcamp.com/",
+      "attribution": "The Final Road (Loop) by Visager (Josie Brechner) - licensed under CC BY 4.0. https://visager.bandcamp.com/album/songs-from-an-unmade-world",
+      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+    },
+    {
+      "id": "visager-the-plateau-at-night",
+      "title": "The Plateau at Night (Loop)",
+      "artist": "Visager (Josie Brechner)",
+      "file": "visager-the-plateau-at-night.mp3",
+      "duration": 189.3,
+      "moods": [
+        "mystery",
+        "tension"
+      ],
+      "intensity": [
+        1,
+        2
+      ],
+      "tags": [
+        "rpg",
+        "night",
+        "loop"
+      ],
+      "loop": true,
+      "license": "CC-BY-4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "source_url": "https://visager.bandcamp.com/album/songs-from-an-unmade-world-2",
+      "artist_url": "https://visager.bandcamp.com/",
+      "attribution": "The Plateau at Night (Loop) by Visager (Josie Brechner) - licensed under CC BY 4.0. https://visager.bandcamp.com/album/songs-from-an-unmade-world-2",
+      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+    },
+    {
+      "id": "visager-eerie-mausoleum",
+      "title": "Eerie Mausoleum (Loop)",
+      "artist": "Visager (Josie Brechner)",
+      "file": "visager-eerie-mausoleum.mp3",
+      "duration": 100.0,
+      "moods": [
+        "horror",
+        "mystery"
+      ],
+      "intensity": [
+        2,
+        3
+      ],
+      "tags": [
+        "rpg",
+        "undead",
+        "loop"
+      ],
+      "loop": true,
+      "license": "CC-BY-4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "source_url": "https://visager.bandcamp.com/album/songs-from-an-unmade-world-2",
+      "artist_url": "https://visager.bandcamp.com/",
+      "attribution": "Eerie Mausoleum (Loop) by Visager (Josie Brechner) - licensed under CC BY 4.0. https://visager.bandcamp.com/album/songs-from-an-unmade-world-2",
+      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+    },
+    {
+      "id": "komiku-the-calling",
+      "title": "The Calling",
+      "artist": "Komiku",
+      "file": "komiku-the-calling.mp3",
+      "duration": 180.0,
+      "moods": [
+        "exploration",
+        "calm"
+      ],
+      "intensity": [
+        1,
+        2
+      ],
+      "tags": [
+        "rpg",
+        "adventure",
+        "acoustic"
+      ],
+      "loop": false,
+      "license": "CC0-1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://freemusicarchive.org/music/Komiku",
+      "artist_url": "https://freemusicarchive.org/music/Komiku",
+      "attribution": "The Calling by Komiku - CC0 1.0. https://freemusicarchive.org/music/Komiku",
+      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+    },
+    {
+      "id": "komiku-on-the-tracks-of-the-elders",
+      "title": "On the Tracks of the Elders",
+      "artist": "Komiku",
+      "file": "komiku-on-the-tracks-of-the-elders.mp3",
+      "duration": 210.29,
+      "moods": [
+        "exploration",
+        "mystery"
+      ],
+      "intensity": [
+        1,
+        2
+      ],
+      "tags": [
+        "rpg",
+        "adventure",
+        "mysterious"
+      ],
+      "loop": false,
+      "license": "CC0-1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://freemusicarchive.org/music/Komiku",
+      "artist_url": "https://freemusicarchive.org/music/Komiku",
+      "attribution": "On the Tracks of the Elders by Komiku - CC0 1.0. https://freemusicarchive.org/music/Komiku",
+      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+    },
+    {
+      "id": "komiku-dont-flinch",
+      "title": "Don't Flinch",
+      "artist": "Komiku",
+      "file": "komiku-dont-flinch.mp3",
+      "duration": 220.54,
+      "moods": [
+        "combat",
+        "tension"
+      ],
+      "intensity": [
+        2,
+        3
+      ],
+      "tags": [
+        "rpg",
+        "drums",
+        "urgent"
+      ],
+      "loop": false,
+      "license": "CC0-1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://freemusicarchive.org/music/Komiku",
+      "artist_url": "https://freemusicarchive.org/music/Komiku",
+      "attribution": "Don't Flinch by Komiku - CC0 1.0. https://freemusicarchive.org/music/Komiku",
+      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+    },
+    {
+      "id": "komiku-not-welcome",
+      "title": "We Are Not Welcome in This Territory",
+      "artist": "Komiku",
+      "file": "komiku-not-welcome.mp3",
+      "duration": 216.0,
+      "moods": [
+        "tension",
+        "combat"
+      ],
+      "intensity": [
+        2,
+        3
+      ],
+      "tags": [
+        "rpg",
+        "dark",
+        "urgent"
+      ],
+      "loop": false,
+      "license": "CC0-1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://freemusicarchive.org/music/Komiku",
+      "artist_url": "https://freemusicarchive.org/music/Komiku",
+      "attribution": "We Are Not Welcome in This Territory by Komiku - CC0 1.0. https://freemusicarchive.org/music/Komiku",
+      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+    },
+    {
+      "id": "komiku-sweet-night-and-friends",
+      "title": "Sweet Night and Friends",
+      "artist": "Komiku",
+      "file": "komiku-sweet-night-and-friends.mp3",
+      "duration": 256.63,
+      "moods": [
+        "social",
+        "calm"
+      ],
+      "intensity": [
+        1,
+        1
+      ],
+      "tags": [
+        "rpg",
+        "warm",
+        "acoustic"
+      ],
+      "loop": false,
+      "license": "CC0-1.0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "source_url": "https://freemusicarchive.org/music/Komiku",
+      "artist_url": "https://freemusicarchive.org/music/Komiku",
+      "attribution": "Sweet Night and Friends by Komiku - CC0 1.0. https://freemusicarchive.org/music/Komiku",
+      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+    },
+    {
+      "id": "vindsvept-enigma",
+      "title": "Enigma",
+      "artist": "Vindsvept",
+      "file": "vindsvept-enigma.mp3",
+      "duration": 227.73,
+      "moods": [
+        "mystery",
+        "tension"
+      ],
+      "intensity": [
+        1,
+        2
+      ],
+      "tags": [
+        "fantasy",
+        "folk",
+        "mysterious"
+      ],
+      "loop": false,
+      "license": "CC-BY-4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "source_url": "https://vindsvept.se/wp-content/uploads/2021/07/Vindsvept-The-Youtube-Collection-178-Enigma.mp3",
+      "artist_url": "https://vindsvept.se/",
+      "attribution": "Enigma by Vindsvept - licensed under CC BY 4.0. https://vindsvept.se/",
+      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+    },
+    {
+      "id": "vindsvept-onward",
+      "title": "Onward",
+      "artist": "Vindsvept",
+      "file": "vindsvept-onward.mp3",
+      "duration": 196.1,
+      "moods": [
+        "exploration",
+        "victory"
+      ],
+      "intensity": [
+        2,
+        2
+      ],
+      "tags": [
+        "fantasy",
+        "folk",
+        "journey"
+      ],
+      "loop": false,
+      "license": "CC-BY-4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "source_url": "https://vindsvept.se/wp-content/uploads/2021/07/Vindsvept-The-Youtube-Collection-181-Onward.mp3",
+      "artist_url": "https://vindsvept.se/",
+      "attribution": "Onward by Vindsvept - licensed under CC BY 4.0. https://vindsvept.se/",
+      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+    }
+  ]
+}

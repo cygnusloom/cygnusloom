@@ -1,7 +1,17 @@
-    <div class="workspace" data-view="play" data-live-url="/campaigns/{{ campaign.id }}/live" data-status-url="/campaigns/{{ campaign.id }}/turn-status" data-events-url="/campaigns/{{ campaign.id }}/events" data-map-url="/campaigns/{{ campaign.id }}/map">
+    <div class="workspace" data-view="play" data-live-url="/campaigns/{{ campaign.id }}/live" data-status-url="/campaigns/{{ campaign.id }}/turn-status" data-events-url="/campaigns/{{ campaign.id }}/events" data-map-url="/campaigns/{{ campaign.id }}/map" data-music-mood="{{ music.mood }}" data-music-intensity="{{ music.intensity }}" data-music-source="{{ music.source }}" data-music-manifest="/static/music/manifest.json">
       <section class="chat" aria-label="Chat">
-          <h1 class="chat-title">{{ campaign.name }}</h1>
-          <p class="muted">{{ world.name if world else campaign.world_template }} · {{ rule_set.name if rule_set else campaign.rule_set }} · {{ campaign.model }}</p>
+          <div class="chat-heading">
+            <div class="chat-heading-text">
+              <h1 class="chat-title">{{ campaign.name }}</h1>
+              <p class="muted">{{ world.name if world else campaign.world_template }} · {{ rule_set.name if rule_set else campaign.rule_set }} · {{ campaign.model }}</p>
+            </div>
+            <div class="music-widget" data-music-widget>
+              <button type="button" class="music-toggle" data-music-toggle aria-pressed="true" aria-label="Mute music" title="Mute music">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
+              </button>
+              <input type="range" class="music-volume" min="0" max="100" step="1" value="35" data-music-volume aria-label="Music volume">
+            </div>
+          </div>
           <div class="transcript-wrap">
           <div class="transcript{% if show_internal_thinking %} show-hidden{% endif %}" data-show-thinking="{{ '1' if show_internal_thinking else '0' }}" data-transcript data-gm-state="{{ 'busy' if gm_busy or (pending and pending.auto_continue and auto_start) else 'waiting' }}" data-last-event="{{ last_event }}" data-turn-status="{{ turn_status }}">
             {% for message in transcript %}

@@ -383,6 +383,33 @@ def campaign_detail(engine: Engine, campaign_id: int) -> CampaignDetail:
     )
 
 
+def set_usage_filter(
+    engine: Engine,
+    user_id: int,
+    *,
+    mode: str,
+    start: str = "",
+    end: str = "",
+) -> None:
+    """Remember the measured-usage date filter one administrator applied. This is a view
+    preference, so it is stored per account and is not audited."""
+    with session_scope(engine) as db:
+        user = db.get(User, user_id)
+        if user is None:
+            return
+        if (user.usage_filter_mode, user.usage_filter_start, user.usage_filter_end) == (
+            mode,
+            start,
+            end,
+        ):
+            return
+        user.usage_filter_mode = mode
+        user.usage_filter_start = start
+        user.usage_filter_end = end
+        db.add(user)
+        db.commit()
+
+
 def record_audit(
     engine: Engine,
     *,

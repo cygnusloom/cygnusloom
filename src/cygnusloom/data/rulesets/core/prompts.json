@@ -29,5 +29,11 @@
     "id": "scene_housekeeping",
     "step": "state",
     "text": "The Housekeeping block suggests what earlier scenes may have left behind at the place the player is in. It is a prompt for continuity, not a command: use it when it helps set the scene, and leave it alone when the story is better served by the place looking unchanged. When you use it, you might say in the location's description what the place looks like now, such as buried, burned, dragged off, rotted, or repaired, and move or remove bodies that are gone. Never invent a body or a fight the record does not list."
+  },
+  {
+    "type": "prompt",
+    "id": "music",
+    "step": "state",
+    "text": "Background music follows the mood of the scene. Use set_music when the mood changes, at most once per turn, with the closest mood and an intensity from 1 to 3. Use silence for a deliberate pause. Do not call it every turn, do not call it for an out-of-character message or a rules question, and never mention music, the tool, or its result in the narration. Combat changes the music automatically; when the party camps, journeys, or settles into a town, cue the new mood. The same mood may last many turns without another call."
   }
 ]

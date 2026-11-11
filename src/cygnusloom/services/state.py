@@ -617,6 +617,17 @@ class RestRecord:
 
 
 @dataclass(frozen=True)
+class MusicCue:
+    """The GM's latest background-music choice. `scene` ties the cue to the encounter, place, and
+    day-part it was chosen for, so a cue expires when the scene moves on."""
+
+    mood: str
+    intensity: int
+    source: str = "gm"
+    scene: str = ""
+
+
+@dataclass(frozen=True)
 class WorldObject:
     """Something a place holds, such as currency, an item, or anything the GM describes. It is not
     an actor. A hidden object is neither listed nor takeable."""
@@ -690,6 +701,8 @@ class CampaignState:
     maps: dict[str, EncounterMap] = field(default_factory=dict)
     encounter: Encounter | None = None
     clock: Clock = field(default_factory=Clock)
+    # The GM's latest background-music cue, if any. A cue belongs to the scene it was chosen in.
+    music: MusicCue | None = None
     rests: list[RestRecord] = field(default_factory=list)
     # Travel minutes not yet a whole hour on the clock. They carry over to the next move.
     travel_minutes: int = 0

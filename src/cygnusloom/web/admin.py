@@ -16,6 +16,7 @@ from cygnusloom.auth.deps import (
     verify_csrf,
 )
 from cygnusloom.config import DEFAULT_MODEL_CONTEXT_TOKENS
+from cygnusloom.db.models import User
 from cygnusloom.llm.catalog import CALCULATOR_FIELDS
 from cygnusloom.services import admin as service
 from cygnusloom.services import credits as credit_service
@@ -57,10 +58,10 @@ def _parse_clock(value: str) -> time | None:
         raise InvalidInput("peak hours must use HH:MM")
 
 
-def _usage_period(request: Request) -> UsagePeriod:
-    mode = request.query_params.get("period", "all").strip().lower()
-    start_raw = request.query_params.get("start", "").strip()
-    end_raw = request.query_params.get("end", "").strip()
+def _parse_usage_period(mode_raw: str, start_raw: str, end_raw: str) -> UsagePeriod:
+    mode = mode_raw.strip().lower()
+    start_raw = start_raw.strip()
+    end_raw = end_raw.strip()
     if mode not in {"all", "from", "between"}:
         mode = "all"
     if mode == "from":
@@ -109,6 +110,30 @@ def _usage_period(request: Request) -> UsagePeriod:
             f"{start.isoformat()} to {end.isoformat()} (UTC)",
         )
     return UsagePeriod("all", start_raw, end_raw, None, None, "All time")
+
+
+def _usage_period(request: Request, user: User, *, save: bool = False) -> UsagePeriod:
+    """The measured-usage date filter. An explicit filter in the query string wins and, when
+    applied from the page, is saved for the account; otherwise the last saved filter is used."""
+    params = request.query_params
+    if any(name in params for name in ("period", "start", "end")):
+        period = _parse_usage_period(
+            params.get("period", "all"),
+            params.get("start", ""),
+            params.get("end", ""),
+        )
+        if save and not period.error:
+            service.set_usage_filter(
+                request.app.state.engine,
+                user.id,
+                mode=period.mode,
+                start=period.start if period.mode != "all" else "",
+                end=period.end if period.mode == "between" else "",
+            )
+        return period
+    return _parse_usage_period(
+        user.usage_filter_mode, user.usage_filter_start, user.usage_filter_end
+    )
 
 
 def _page(request: Request) -> int:
@@ -400,7 +425,7 @@ async def delete_campaign(request: Request, campaign_id: int) -> Response:
 def models_page(request: Request) -> Response:
     admin = admin_user(request)
     catalog = request.app.state.catalog
-    period = _usage_period(request)
+    period = _usage_period(request, admin, save=True)
     rows = catalog.all_specs()
     usage = credit_service.usage_by_model(
         request.app.state.engine, since=period.since, until=period.until
@@ -426,11 +451,11 @@ def models_page(request: Request) -> Response:
 def model_usage_breakdown(request: Request) -> Response:
     """Exact reported usage for one model, optionally split by UTC peak hours. The calculator
     uses these totals so its cost figures are based on real calls, not a guessed share."""
-    admin_user(request)
+    admin = admin_user(request)
     model = request.query_params.get("model", "").strip()
     if not model:
         return JSONResponse({"error": "model is required"}, status_code=400)
-    period = _usage_period(request)
+    period = _usage_period(request, admin)
     try:
         peak_start = _parse_clock(request.query_params.get("peak_start", ""))
         peak_end = _parse_clock(request.query_params.get("peak_end", ""))

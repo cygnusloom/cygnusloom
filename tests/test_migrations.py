@@ -42,6 +42,9 @@ def test_migrations_create_the_full_schema(tmp_path, monkeypatch):
     user_columns = {column["name"] for column in inspect(make_engine(url)).get_columns("user")}
     assert "credit_balance" in user_columns
     assert "show_internal_thinking" in user_columns
+    assert "usage_filter_mode" in user_columns
+    assert "usage_filter_start" in user_columns
+    assert "usage_filter_end" in user_columns
     model_columns = {
         column["name"] for column in inspect(make_engine(url)).get_columns("llm_model")
     }
@@ -194,7 +197,7 @@ def test_a_legacy_long_revision_id_is_rewritten(tmp_path, monkeypatch):
         version = connection.execute(
             sa.text("SELECT version_num FROM alembic_version")
         ).scalar_one()
-    assert version == "0015_llm_model_context_tokens"
+    assert version == "0016_user_usage_filter"
     campaign_columns = {
         column["name"] for column in inspect(make_engine(url)).get_columns("campaign")
     }

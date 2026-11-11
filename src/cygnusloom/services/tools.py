@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 _PYTHON_TYPES: dict[str, type] = {"string": str, "array": list, "object": dict}
 # The turn review must not speak for an NPC or restart the out-of-character step. Those tools
 # stay in the state step's list, but are left out of the review's.
-_REVIEW_STEP_EXCLUDED = frozenset({"speak", "ooc"})
+_REVIEW_STEP_EXCLUDED = frozenset({"speak", "ooc", "set_music"})
 # The review may read these to check the record, even though they cannot change it.
 _REVIEW_LOOKUPS = frozenset(
     {"all_at_location", "get_statblock", "lookup_condition", "lookup_feature", "lookup_rule"}
