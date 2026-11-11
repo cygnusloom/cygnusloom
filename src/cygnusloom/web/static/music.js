@@ -60,6 +60,8 @@
   let nowPlaying = null;
   let pendingGesture = false;
   let gestureSeen = false;
+  let starting = false;
+  let refusals = 0;
   let fadeToken = 0;
   let recent = [];
   const audios = new Set();
@@ -102,6 +104,8 @@
 
   const cleanup = (audio) => {
     if (!audio) return;
+    // Stopping is ours, so the autoplay watchdog must ignore the pause that follows.
+    audio.cygnusPausing = true;
     try {
       audio.pause();
       audio.removeAttribute("src");
@@ -119,7 +123,7 @@
   let pageVisible = !document.hidden;
   let windowActive = true;
   const syncAudible = () => {
-    const audible = pageVisible && windowActive;
+    const audible = pageVisible && windowActive && !pendingGesture;
     for (const audio of audios) audio.muted = !audible;
   };
   const syncPageVisible = () => {
@@ -133,12 +137,49 @@
     syncAudible();
   });
 
+  // Some browsers turn autoplay down by refusing play(), and some start the track and pause it
+  // again. Either way the chosen track is kept running silently, so the player's next gesture
+  // only has to unmute it.
+  const keepSilent = (audio, track) => {
+    if (!userEnabled || mood === "silence") {
+      cleanup(audio);
+      syncControls();
+      return;
+    }
+    pendingGesture = true;
+    audio.volume = volume;
+    audio.muted = true;
+    Promise.resolve(audio.play())
+      .then(() => {
+        if (!audios.has(audio)) return;
+        if (current && current.audio !== audio && !current.audio.paused) {
+          // A newer attempt is already playing, so this one is only a silent spare.
+          cleanup(audio);
+          return;
+        }
+        current = { audio, track };
+        nowPlaying = track;
+        syncControls();
+      })
+      .catch(() => {
+        cleanup(audio);
+        if (current?.audio === audio) {
+          current = null;
+          nowPlaying = null;
+        }
+        syncControls();
+      });
+  };
+
   const stop = () => {
     fadeToken += 1;
     for (const audio of audios) cleanup(audio);
     audios.clear();
     current = null;
     nowPlaying = null;
+    pendingGesture = false;
+    starting = false;
+    refusals = 0;
     syncControls();
   };
 
@@ -201,12 +242,28 @@
     const previousLevel = previous ? previous.audio.volume : 0;
     const started = performance.now();
 
+    // A browser that refuses audible playback may accept play() and then pause the track a
+    // moment later without rejecting anything, so an immediate pause means "not allowed".
+    next.addEventListener("pause", () => {
+      if (next.cygnusPausing || next.ended || next.error) return;
+      if (current?.audio !== next || next.currentTime > 0.5) return;
+      if (!userEnabled || mood === "silence" || pendingGesture) return;
+      keepSilent(next, track);
+      syncControls();
+    });
+
     Promise.resolve(next.play())
       .then(() => {
         if (token !== fadeToken) {
           cleanup(next);
           return;
         }
+        if (next.paused) {
+          keepSilent(next, track);
+          syncControls();
+          return;
+        }
+        refusals = 0;
         pendingGesture = false;
         current = { audio: next, track };
         nowPlaying = track;
@@ -225,20 +282,23 @@
         requestAnimationFrame(step);
       })
       .catch(() => {
-        cleanup(next);
+        if (token !== fadeToken) return;
         if (previous && !previous.audio.paused) {
+          cleanup(next);
           current = previous;
           pendingGesture = false;
           syncControls();
+          syncAudible();
           return;
         }
-        pendingGesture = true;
-        syncControls();
-        if (gestureSeen) {
-          // A click landed while this track was still loading. Count it and try once more.
-          gestureSeen = false;
+        refusals += 1;
+        if (gestureSeen && refusals === 1) {
+          // The page has been interacted with since this attempt began, so try audibly again.
           unlock();
+          return;
         }
+        keepSilent(next, track);
+        syncControls();
       });
 
     next.addEventListener("ended", () => {
@@ -249,16 +309,26 @@
   };
 
   const start = () => {
-    if (pendingGesture) return;
+    if (pendingGesture || starting) return;
     if (!userEnabled || mood === "silence") {
       stop();
       return;
     }
     if (current && trackFits(current.track, mood, intensity) && !current.audio.paused) {
+      syncAudible();
       syncControls();
       return;
     }
+    // Start in the caller's gesture when the pack is already loaded: some browsers only allow
+    // audible playback from the event handler itself.
+    if (manifest) {
+      const track = pickTrack(mood, intensity);
+      if (track) fadeTo(track);
+      return;
+    }
+    starting = true;
     loadManifest().then((data) => {
+      starting = false;
       if (!data || !userEnabled || mood === "silence") return;
       const track = pickTrack(mood, intensity);
       if (track) fadeTo(track);
@@ -289,12 +359,14 @@
   };
 
   // Browsers turn down audible autoplay until the page has seen a real user gesture, which a
-  // fresh origin - a new worktree port, a private window - has not had yet. The first click,
-  // tap, or key press anywhere starts the track autoplay refused.
+  // fresh origin - a new worktree port, a private window - has not had yet. Every click, tap,
+  // and key press retries, whether or not the browser reported the refusal.
   const unlock = () => {
-    if (!pendingGesture) return;
+    // A real gesture proves the player is in front of the window even if focus events lie.
+    if (!document.hidden) pageVisible = true;
     pendingGesture = false;
     start();
+    syncAudible();
   };
 
   const toggle = () => {
