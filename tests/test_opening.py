@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ssl
 from collections.abc import Callable
 
 from fastapi import FastAPI
@@ -8,6 +9,7 @@ from sqlmodel import Session
 
 from cygnusloom.llm.base import LLMError
 from cygnusloom.llm.fake import FakeProvider
+from cygnusloom.llm.registry import ProviderFactory
 from cygnusloom.services.events import load_state
 from cygnusloom.services.prompts import OPENING_PROMPT, opening_prompt
 from tests.conftest import bundled_library, csrf_token
@@ -151,3 +153,25 @@ def test_transcript_reports_busy_while_the_opening_runs_and_waiting_when_it_stop
     app.state.providers = lambda model_id: (Broken(), "model")
     _answer(client, campaign_id, "continue")
     assert 'data-gm-state="waiting"' in client.get(f"/campaigns/{campaign_id}").text
+
+
+def test_an_opening_whose_provider_cannot_start_reports_the_reason(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    """A provider that fails while it is built marks the reply failed, with the reason."""
+
+    class FailingFactory(ProviderFactory):
+        def _build(self, *_args):
+            raise ssl.SSLError("unknown error")
+
+    client, campaign_id = _created_campaign(client_factory)
+    app.state.providers = FailingFactory(app.state.settings, catalog=app.state.catalog)
+    events = _answer(client, campaign_id, "continue")
+    assert events[-1]["type"] == "error"
+    assert events[-1]["status"] == 502
+    assert "could not start" in events[-1]["message"]
+    turn = _pending(app, campaign_id)
+    assert turn is not None and turn.failed and "could not start" in turn.failed
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert "could not start" in page
+    assert "data-auto-start" not in page

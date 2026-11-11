@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import ssl
 from collections.abc import Callable
 from typing import Any
 
@@ -12,6 +13,7 @@ from cygnusloom.config import Settings
 from cygnusloom.db.models import Campaign
 from cygnusloom.llm.base import ChatReply, LLMError, ToolRequest
 from cygnusloom.llm.fake import FakeProvider
+from cygnusloom.llm.registry import ProviderFactory
 from cygnusloom.services.campaigns import list_messages
 from tests.conftest import NARRATE_TEXT, csrf_token
 from tests.test_campaigns import _answer, _campaign_id
@@ -159,6 +161,28 @@ def test_provider_failure_is_reported_and_keeps_the_message(
     assert _saved_message_count(app) == 2
     turn = _state(app, campaign_id).turn
     assert turn is not None and turn.failed
+
+
+def test_a_provider_that_cannot_start_reports_the_reason(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    class FailingFactory(ProviderFactory):
+        def _build(self, *_args):
+            raise ssl.SSLError("unknown error")
+
+    client, campaign_id = _campaign_id(client_factory)
+    saved_before = _saved_message_count(app)
+    app.state.providers = FailingFactory(app.state.settings, catalog=app.state.catalog)
+
+    events = _stream(client, campaign_id, "are you there?")
+
+    assert events[-1]["type"] == "error"
+    assert events[-1]["status"] == 502
+    assert "could not start" in events[-1]["message"]
+    # The provider is built before the message is recorded, so a reply that cannot start
+    # leaves the transcript alone.
+    assert _saved_message_count(app) == saved_before
+    assert _state(app, campaign_id).turn is None
 
 
 def test_a_recording_provider_sees_the_streamed_turn(

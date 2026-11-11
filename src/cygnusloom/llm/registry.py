@@ -36,7 +36,16 @@ class ProviderFactory:
         stream_usage = self._catalog.stream_usage(model_id) if self._catalog else True
         cache_key = (name, base_url, api_key, stream_usage)
         if cache_key not in self._cache:
-            self._cache[cache_key] = self._build(name, base_url, api_key, stream_usage)
+            try:
+                self._cache[cache_key] = self._build(name, base_url, api_key, stream_usage)
+            except LLMError:
+                raise
+            except Exception as exc:
+                # Building the client can fail before any request, such as when the machine
+                # cannot create a TLS context. Report it as a provider error so the turn
+                # records the reason instead of an unexpected 500.
+                detail = f"{type(exc).__name__}: {exc}" if str(exc) else type(exc).__name__
+                raise LLMError(f"provider {name!r} could not start: {detail}") from exc
         return self._cache[cache_key], model
 
     def _config(self, name: str) -> tuple[str | None, str | None]:

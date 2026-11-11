@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ssl
 from dataclasses import replace
 
 import pytest
@@ -8,7 +9,9 @@ from sqlmodel import Session, select
 from cygnusloom.config import Settings
 from cygnusloom.db.models import LlmModel
 from cygnusloom.db.session import create_schema, make_engine
+from cygnusloom.llm.base import LLMError
 from cygnusloom.llm.catalog import ModelCatalog, decrypt_api_key
+from cygnusloom.llm.registry import ProviderFactory
 from cygnusloom.services.common import Conflict, InvalidInput
 
 
@@ -16,6 +19,20 @@ def _catalog(settings: Settings) -> tuple[ModelCatalog, object]:
     engine = make_engine(settings.database_url)
     create_schema(engine)
     return ModelCatalog(engine, settings), engine
+
+
+def test_a_provider_that_cannot_be_built_is_reported_as_an_llm_error(settings: Settings):
+    """A client that cannot even be constructed must not escape as an unexpected 500."""
+
+    class FailingFactory(ProviderFactory):
+        def _build(self, *_args):
+            raise ssl.SSLError("unknown error")
+
+    with pytest.raises(LLMError) as found:
+        FailingFactory(settings)("ollama/test-model")
+
+    assert "provider 'ollama' could not start" in str(found.value)
+    assert "SSLError" in str(found.value)
 
 
 def test_environment_models_seed_the_catalog_once(settings: Settings):

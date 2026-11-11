@@ -5,7 +5,7 @@ import json
 import logging
 import random
 import re
-from collections.abc import AsyncIterator, Awaitable, Iterable, Mapping, Sequence
+from collections.abc import AsyncIterator, Awaitable, Callable, Iterable, Mapping, Sequence
 from dataclasses import asdict, dataclass, field
 from typing import TYPE_CHECKING, Any
 
@@ -33,7 +33,7 @@ from cygnusloom.llm.registry import ProviderFactory
 from cygnusloom.rules.context import ToolContext, brief
 from cygnusloom.rules.dice import roll_total
 from cygnusloom.services import encounters
-from cygnusloom.services.common import InvalidInput, NotFound, session_scope
+from cygnusloom.services.common import Conflict, InvalidInput, NotFound, session_scope
 from cygnusloom.services.credits import (
     CreditPolicy,
     MeteredProvider,
@@ -1745,6 +1745,25 @@ async def _guarded(run: _Run, steps: AsyncIterator[TurnEvent]) -> AsyncIterator[
         raise
 
 
+def _guarded_start(engine: Engine, campaign_id: int, build: Callable[[], _Run]) -> _Run:
+    """Build a run, recording a failed reply when it cannot start.
+
+    `_guarded` protects the steps after the run exists. Starting one can fail as well: the
+    provider may have no configuration, an address this machine cannot reach, or a TLS setup
+    it cannot create. Recording that as the open reply's failure lets the page show the reason
+    and a Continue button, exactly like a failure inside the reply."""
+    try:
+        return build()
+    except (Conflict, InvalidInput, NotFound):
+        # A refusal, such as a credit shortfall, records nothing: the caller reports it and
+        # the player fixes the cause before trying again.
+        raise
+    except Exception as exc:
+        message = str(exc) if isinstance(exc, LLMError) else "an unexpected error"
+        _record(engine, campaign_id, TurnFailed(error=message))
+        raise
+
+
 def _character_to_play(state: CampaignState, user_id: int) -> Character:
     """The character this account plays, checked for playability. Raises InvalidInput with the
     reason when the player cannot act, so the page and the turn endpoint give the same answer."""
@@ -1816,16 +1835,21 @@ async def stream_message(
         _check_encounter_turn(current, owner_id)
         if advancement_due(current, rule_set, player):
             raise InvalidInput("level up or choose your Advancement before sending another message")
-        run = _start_run(
-            engine,
-            providers,
-            library,
-            rule_set,
-            campaign,
-            context_tokens,
-            rng,
-        )
-        run.credits.require()
+
+        def build_run() -> _Run:
+            run = _start_run(
+                engine,
+                providers,
+                library,
+                rule_set,
+                campaign,
+                context_tokens,
+                rng,
+            )
+            run.credits.require()
+            return run
+
+        run = _guarded_start(engine, campaign.id, build_run)
         speaker = speaker_name(current, owner_id)
         _record(
             engine,
@@ -1905,20 +1929,26 @@ async def resume_turn(
             answer = TextAnswer(clean)
         else:
             raise InvalidInput("that action is not available")
-        run = _start_run(
-            engine,
-            providers,
-            library,
-            rule_set,
-            campaign,
-            context_tokens,
-            rng,
-            player_id=owner_id,
-        )
-        # An opening has not made any model calls yet, so it is a new reply and needs credit. A
-        # turn that already started is allowed to finish even if the balance has since fallen.
-        if not turn.begun:
-            run.credits.require()
+
+        def build_run() -> _Run:
+            run = _start_run(
+                engine,
+                providers,
+                library,
+                rule_set,
+                campaign,
+                context_tokens,
+                rng,
+                player_id=owner_id,
+            )
+            # An opening has not made any model calls yet, so it is a new reply and needs
+            # credit. A turn that already started is allowed to finish even if the balance
+            # has since fallen.
+            if not turn.begun:
+                run.credits.require()
+            return run
+
+        run = _guarded_start(engine, campaign.id, build_run)
         async for event in _guarded(run, _answer(run, answer)):
             yield event
 
@@ -1947,8 +1977,13 @@ async def start_encounter_turn(
         current = _state(engine, campaign.id)
         if advancement_due(current, rule_set, current.player_character(owner_id)):
             raise InvalidInput("level up or choose your Advancement before starting a turn")
-        run = _start_run(engine, providers, library, rule_set, campaign, context_tokens, rng)
-        run.credits.require()
+
+        def build_run() -> _Run:
+            run = _start_run(engine, providers, library, rule_set, campaign, context_tokens, rng)
+            run.credits.require()
+            return run
+
+        run = _guarded_start(engine, campaign.id, build_run)
         with session_scope(engine) as db:
             character = encounters.begin_turn(db, campaign.id, name)
         if character.kind == PC_KIND:
