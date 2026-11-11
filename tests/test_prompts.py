@@ -5,6 +5,7 @@ from cygnusloom.services.prompts import (
     OOC_INSTRUCTION,
     OPENING_PROMPT,
     STATE_INSTRUCTION,
+    SYSTEM_PROMPT,
     TURN_REVIEW_INSTRUCTION,
     journal_instruction,
     journal_review_instruction,
@@ -109,6 +110,12 @@ def test_speech_instruction_asks_for_plain_modern_speech():
     assert "Ignore the style of the narration" in text
 
 
+def test_speech_instruction_asks_for_one_quoted_line_only():
+    text = speech_instruction(None)
+    assert "inside double quotation marks" in text
+    assert "no name, action, or stage direction outside them" in text
+
+
 def test_state_prompt_keeps_dialogue_for_moments_that_turn_on_speech():
     text = state_instruction(rules_for())
     assert "Call speak only when the moment turns on what is said" in text
@@ -116,6 +123,46 @@ def test_state_prompt_keeps_dialogue_for_moments_that_turn_on_speech():
     assert "An NPC the player has not addressed" in text
     assert "personality makes it likely" in text
     assert "when in doubt, keep them silent" in text
+
+
+def test_state_prompt_acts_only_on_the_current_player_message():
+    text = state_instruction(rules_for())
+    assert "The player alone initiates the player character's actions" in text
+    assert "Put no deliberate action, words, or choice on the player character" in text
+    assert "unless the player's current message states it or clearly implies it" in text
+    assert "A plan from an earlier turn, an NPC's urging" in text
+    assert "a scene that is ready to move on are not their choice now" in text
+    assert "A social beat such as thanks, a greeting, a nod, or a goodbye" in text
+    assert "do not resolve a plan the player meant to act on later" in text
+    assert "when this action or its events take them" not in text
+
+
+def test_state_prompt_covers_every_kind_of_player_choice():
+    text = state_instruction(rules_for())
+    assert "what they say, where they go, what they attack" in text
+    assert "what they take, use, buy, give, or spend" in text
+    assert "whether they sleep, and what they decide" in text
+
+
+def test_state_prompt_still_allows_an_action_the_message_clearly_implies():
+    text = state_instruction(rules_for())
+    assert "accepting an offer or following someone who leaves" in text
+    assert "when the player's message says or clearly implies that they go" in text
+
+
+def test_narration_keeps_player_choices_to_the_message_or_its_clear_implication():
+    text = narrate_instruction(CAIRN)
+    assert "The player alone initiates the player character's actions" in text
+    assert "states or clearly implies them" in text
+    assert "An NPC's words or actions do not choose for them" in text
+
+
+def test_the_state_and_narration_share_the_player_agency_rule():
+    state = state_instruction(rules_for())
+    told = narrate_instruction(CAIRN)
+    assert "plan from an earlier turn" in state
+    assert "a plan from an earlier turn" in SYSTEM_PROMPT
+    assert "clearly implies" in told
 
 
 def test_state_prompt_keeps_the_active_storylines_current():
