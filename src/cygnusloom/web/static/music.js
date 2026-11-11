@@ -82,6 +82,41 @@
     nextIntensity >= track.intensity[0] &&
     nextIntensity <= track.intensity[1];
 
+  // The widget shows what is playing under its controls. The text scrolls when it does not fit;
+  // the second copy in the markup makes the loop seamless.
+  const measureTicker = (ticker) => {
+    const track = ticker.querySelector(".music-ticker-track");
+    const item = track?.firstElementChild;
+    const width = item ? item.getBoundingClientRect().width : 0;
+    const overflows = width > ticker.clientWidth + 1;
+    ticker.dataset.scrolling = overflows ? "true" : "false";
+    if (overflows) {
+      const seconds = Math.max(8, Math.round((width / 25) * 10) / 10);
+      ticker.style.setProperty("--music-ticker-duration", `${seconds}s`);
+    }
+  };
+  const syncTicker = () => {
+    const text = userEnabled && nowPlaying ? `${nowPlaying.title} · ${nowPlaying.artist}` : "";
+    for (const ticker of document.querySelectorAll("[data-music-ticker]")) {
+      if (ticker.dataset.text !== text) {
+        ticker.dataset.text = text;
+        for (const item of ticker.querySelectorAll("[data-music-ticker-text]")) {
+          item.textContent = text;
+        }
+        ticker.hidden = !text;
+      }
+      if (text) measureTicker(ticker);
+    }
+  };
+  // Widths change with the window and the panel, so re-measure instead of trusting the first pass.
+  let tickerFrame = 0;
+  const remeasureTicker = () => {
+    cancelAnimationFrame(tickerFrame);
+    tickerFrame = requestAnimationFrame(syncTicker);
+  };
+  window.addEventListener("resize", remeasureTicker);
+  document.fonts?.ready.then(() => syncTicker());
+
   const syncControls = () => {
     const playing = userEnabled && !pendingGesture;
     for (const button of document.querySelectorAll("[data-music-toggle]")) {
@@ -94,12 +129,18 @@
       button.setAttribute("aria-label", label);
       button.title = label;
     }
+    for (const button of document.querySelectorAll("[data-music-menu-toggle]")) {
+      const label = nowPlaying ? `Music - ${nowPlaying.title} by ${nowPlaying.artist}` : "Music";
+      button.setAttribute("aria-label", label);
+      button.title = label;
+    }
     for (const input of document.querySelectorAll("[data-music-volume]")) {
       input.value = String(Math.round(volume * 100));
     }
     for (const checkbox of document.querySelectorAll("[data-music-enabled]")) {
       checkbox.checked = userEnabled;
     }
+    syncTicker();
   };
 
   const cleanup = (audio) => {
@@ -410,6 +451,31 @@
   for (const type of ["pointerdown", "keydown", "touchstart"]) {
     document.addEventListener(type, onGesture, { capture: true, passive: true });
   }
+
+  // Phones fold the widget into one small button that opens the whole panel.
+  const musicWidget = document.querySelector("[data-music-widget]");
+  const setMusicMenu = (open) => {
+    if (!musicWidget) return;
+    musicWidget.dataset.musicMenuOpen = open ? "true" : "false";
+    for (const button of document.querySelectorAll("[data-music-menu-toggle]")) {
+      button.setAttribute("aria-expanded", String(open));
+    }
+    // The panel has no width while it is closed, so measure the ticker again once it opens.
+    if (open) syncTicker();
+  };
+  document.addEventListener("click", (event) => {
+    if (!event.target.closest("[data-music-menu-toggle]")) return;
+    event.preventDefault();
+    setMusicMenu(musicWidget?.dataset.musicMenuOpen !== "true");
+  });
+  document.addEventListener("pointerdown", (event) => {
+    if (musicWidget?.dataset.musicMenuOpen !== "true") return;
+    if (event.target.closest?.("[data-music-widget]")) return;
+    setMusicMenu(false);
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") setMusicMenu(false);
+  });
 
   document.addEventListener("click", (event) => {
     const button = event.target.closest("[data-music-toggle]");

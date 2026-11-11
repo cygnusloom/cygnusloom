@@ -232,6 +232,8 @@ def test_the_page_has_player_controls_and_the_license_page_has_music_credits(
     page = client.get(f"/campaigns/{campaign_id}").text
     assert "data-music-toggle" in page
     assert "data-music-volume" in page
+    assert "data-music-ticker" in page
+    assert "data-music-menu-toggle" in page
     assert 'id="settings-music-title"' in page
     assert "Play background music" in page
 
