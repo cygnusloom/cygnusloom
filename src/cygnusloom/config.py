@@ -56,6 +56,9 @@ class Settings:
     auto_create_schema: bool = True
     test_login_admin: bool = False
     single_player: bool = False
+    # The Qt desktop app, which adds the local server list and remote-server login. It is a
+    # single-player server too: the local account and campaigns stay available.
+    desktop: bool = False
     data_dir: str = ""
 
 
@@ -142,6 +145,9 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
     if test_login_admin and not test_login:
         raise RuntimeError("CYGNUSLOOM_TEST_LOGIN_ADMIN requires CYGNUSLOOM_TEST_LOGIN")
     single_player = _bool(env.get("CYGNUSLOOM_SINGLE_PLAYER"))
+    desktop = _bool(env.get("CYGNUSLOOM_DESKTOP"))
+    if desktop and not single_player:
+        raise RuntimeError("CYGNUSLOOM_DESKTOP requires CYGNUSLOOM_SINGLE_PLAYER")
     if single_player:
         if environment == "production":
             raise RuntimeError("CYGNUSLOOM_SINGLE_PLAYER cannot run in production")
@@ -197,5 +203,6 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         auto_create_schema=_bool(auto_create),
         test_login_admin=test_login_admin,
         single_player=single_player,
+        desktop=desktop,
         data_dir=env.get("CYGNUSLOOM_DATA_DIR", "").strip(),
     )

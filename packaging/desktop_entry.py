@@ -1,4 +1,4 @@
-"""Entry point for the packaged single-player build."""
+"""Entry point for the packaged desktop app."""
 
 from cygnusloom.cli import main
 

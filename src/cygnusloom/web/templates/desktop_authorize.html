@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Allow desktop sign-in{% endblock %}
+{% block content %}
+  <section class="card narrow">
+    <h1>Allow the desktop app to sign in?</h1>
+    <p>
+      Cygnus Loom on this computer wants to sign in to <strong>{{ server_url }}</strong> as
+      <strong>{{ display_name }}</strong>.
+    </p>
+    <p class="muted">
+      The app receives its own session. It never receives your password. You can sign it out
+      later from the Account page, together with any other signed-in device.
+    </p>
+    <form method="post" action="/desktop/approve?flow={{ flow }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button type="submit" name="allow" value="1">Allow sign-in</button>
+      <button type="submit" name="deny" value="1" class="secondary">Cancel</button>
+    </form>
+  </section>
+{% endblock %}

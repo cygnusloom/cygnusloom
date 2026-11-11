@@ -19,6 +19,7 @@ from cygnusloom.auth.ratelimit import RateLimiter
 from cygnusloom.config import Settings, load_settings
 from cygnusloom.content.library import ContentLibrary
 from cygnusloom.db.session import create_schema, make_engine
+from cygnusloom.desktop_credentials import CredentialStore
 from cygnusloom.llm.catalog import ModelCatalog
 from cygnusloom.llm.fake import FakeProvider
 from cygnusloom.llm.registry import ProviderFactory
@@ -27,6 +28,7 @@ from cygnusloom.web.accounts import router as accounts_router
 from cygnusloom.web.admin import router as admin_router
 from cygnusloom.web.campaigns import router as campaigns_router
 from cygnusloom.web.compendium import router as compendium_router
+from cygnusloom.web.desktop import router as desktop_router
 from cygnusloom.web.rendering import render
 from cygnusloom.web.setup import router as setup_router
 from cygnusloom.web.sharing import router as sharing_router
@@ -67,6 +69,9 @@ def create_app(
     app.state.limiter = RateLimiter()
     app.state.typing = TypingRegistry()
     app.state.turn_jobs = TurnJobRegistry()
+    # The desktop app's saved server logins. Reading the keyring is lazy, so a normal server
+    # never needs the desktop extra.
+    app.state.credentials = CredentialStore()
     app.state.oidc = (
         None
         if settings.single_player
@@ -119,6 +124,7 @@ def create_app(
     app.add_exception_handler(StepUpRequired, _step_up_redirect)
     app.add_exception_handler(NotFound, _not_found)
     app.mount("/static", RevalidatingStaticFiles(directory=STATIC_DIR), name="static")
+    app.include_router(desktop_router)
     app.include_router(accounts_router)
     app.include_router(setup_router)
     app.include_router(sharing_router)

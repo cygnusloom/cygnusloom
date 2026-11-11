@@ -7,7 +7,7 @@ implementation plan for selling credits.
 
 Cygnus Loom already has a credit system: `User.credit_balance`, a flat
 `LlmModel.credits_per_turn` price per completed AI GM reply, and the append-only `CreditEntry`
-ledger. The campaign owner pays, administrators and single-player accounts are exempt, and an
+ledger. The campaign owner pays, administrators and the desktop app's local accounts are exempt, and an
 administrator grants credits manually. Payment is not integrated (`README.md`,
 `src/cygnusloom/services/credits.py`).
 
@@ -49,7 +49,7 @@ administrator grants credits manually. Payment is not integrated (`README.md`,
   terms acceptance, delivery, and every charged turn after the purchase. The pack is archived so
   later account or campaign deletion cannot erase the evidence.
 - Purchased credits never expire.
-- Exempt accounts (administrators, single-player) see no purchase or auto top-up controls.
+- Exempt accounts (administrators, the desktop app's local account) see no purchase or auto top-up controls.
 - Payments are optional. With no provider configured, `/credits` keeps today's "ask an
   administrator" message and the admin page explains how to set payments up.
 

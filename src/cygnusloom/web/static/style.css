@@ -33,6 +33,17 @@ nav a, .brand { color: var(--text); text-decoration: none; }
   border-bottom: 1px solid var(--border);
 }
 
+.topbar-left { display: flex; align-items: center; gap: 1rem; min-width: 0; }
+.desktop-slot, .desktop-slot-sidebar { display: contents; }
+.desktop-slot[hidden], .desktop-slot-sidebar[hidden] { display: none; }
+.desktop-home {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  padding: 0.25rem 0.65rem; border: 1px solid var(--border); border-radius: 999px;
+  color: var(--muted); text-decoration: none; font-size: 0.9rem; white-space: nowrap;
+}
+.desktop-home:hover, .desktop-home:focus-visible { color: var(--accent); border-color: var(--accent); }
+a.sidebar-item { text-decoration: none; }
+
 nav { display: flex; gap: 1rem; align-items: center; }
 .inline { display: inline; }
 
@@ -133,6 +144,25 @@ button.secondary:hover, button.secondary:focus-visible,
 .campaign-import label { flex: 1 1 240px; margin: 0; }
 .campaign-import input[type="file"] { padding: 0.45rem; }
 .campaign-import button { flex: none; }
+
+/* Remote servers on the desktop main menu. */
+.servers { list-style: none; padding: 0; margin: 1rem 0; }
+.servers li { padding: 0.75rem 0; border-bottom: 1px solid var(--border); }
+.server-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.9rem; }
+.server-name { flex: 1 1 auto; font-weight: 600; }
+.server-url { color: var(--muted); font-size: 0.9rem; overflow-wrap: anywhere; }
+.server-actions { display: flex; flex-wrap: wrap; gap: 0.4rem; flex: none; }
+.server-settings { margin-top: 0.5rem; }
+.server-settings > summary { cursor: pointer; color: var(--muted); font-size: 0.9rem; }
+.server-login-form { max-width: 32rem; margin-top: 0.5rem; }
+.server-inline-form { display: flex; align-items: flex-end; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; }
+.server-inline-form label { flex: 1 1 14rem; margin: 0; }
+.server-add { display: flex; flex-wrap: wrap; gap: 1.5rem; margin-top: 1rem; }
+.server-add details { flex: 1 1 20rem; }
+.server-add form { margin-top: 0.5rem; }
+label.check { display: flex; align-items: center; gap: 0.5rem; }
+label.check input { width: auto; margin: 0; }
+@media (max-width: 720px) { .server-actions { width: 100%; } }
 
 .transcript { display: flex; flex-direction: column; gap: 0.75rem; margin: 1rem 0; }
 .message { padding: 0.75rem 1rem; border: 1px solid var(--border); border-radius: 8px; background: var(--field); }

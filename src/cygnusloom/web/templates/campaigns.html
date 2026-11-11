@@ -46,6 +46,103 @@
     {% endif %}
   </section>
 
+  {% if desktop %}
+  <section class="card" id="servers">
+    <div class="heading">
+      <h2>Servers</h2>
+    </div>
+    <p class="muted">
+      Play on another Cygnus Loom server. Your campaigns above stay on this device; a server
+      keeps its own campaigns and accounts.
+    </p>
+    {% if servers %}
+      <ul class="servers">
+        {% for server in servers %}
+          <li>
+            <div class="server-row">
+              <span class="server-name">{{ server.name }}</span>
+              <span class="server-url">{{ server.url }}</span>
+              {% if server.account %}<span class="tag">saved login: {{ server.account }}</span>{% endif %}
+              <span class="server-actions">
+                <button type="button" class="secondary" data-desktop-connect="{{ server.id }}">Connect</button>
+                <button type="button" class="secondary" data-desktop-login="{{ server.id }}">Log in</button>
+                <button type="button" class="secondary" data-desktop-browser="{{ server.id }}">Log in with browser</button>
+              </span>
+            </div>
+            <details class="server-settings">
+              <summary>Login and server settings</summary>
+              <form method="post" action="/desktop/servers/{{ server.id }}/login" class="server-login-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <p class="muted">
+                  Saving a password keeps it in this computer's credential store. Cygnus Loom
+                  fills it into the identity provider's login page; the game server never
+                  receives it.
+                </p>
+                <label>Username <input name="username" value="{{ server.account }}" autocomplete="username" required maxlength="120"></label>
+                <label>Password <input type="password" name="password" autocomplete="current-password" required></label>
+                <label class="check">
+                  <input type="checkbox" name="remember" value="1"{% if credentials_available %} checked{% endif %}>
+                  Save the password for this server
+                </label>
+                {% if not credentials_available %}
+                <p class="muted">
+                  This computer has no password store. Uncheck the box and type the password on
+                  the identity provider's page instead.
+                </p>
+                {% endif %}
+                <button type="submit">Save and log in</button>
+              </form>
+              {% if server.account %}
+              <form method="post" action="/desktop/servers/{{ server.id }}/forget" class="server-inline-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button type="submit" class="secondary">Forget saved password</button>
+              </form>
+              {% endif %}
+              <form method="post" action="/desktop/servers/{{ server.id }}/rename" class="server-inline-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <label>Name <input name="name" value="{{ server.name }}" required maxlength="120"></label>
+                <button type="submit" class="secondary">Rename</button>
+              </form>
+              <form method="post" action="/desktop/servers/{{ server.id }}/remove" class="server-inline-form" data-confirm="Remove {{ server.name }} from this computer?">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button type="submit" class="danger">Remove server</button>
+              </form>
+            </details>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted">No servers added yet.</p>
+    {% endif %}
+    <div class="server-add">
+      <details>
+        <summary>Add a server</summary>
+        <form method="post" action="/desktop/servers">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <label>Server address <input name="url" placeholder="https://table.example.com" required autocomplete="url"></label>
+          <label>Name (optional) <input name="name" maxlength="120" placeholder="Example table"></label>
+          <button type="submit">Add server</button>
+        </form>
+      </details>
+      <details>
+        <summary>Add by invitation link</summary>
+        <form method="post" action="/desktop/servers/invite">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <label>Invitation link <input name="url" placeholder="https://idp.example.com/if/flow/..." required></label>
+          <p class="muted">
+            Use the invitation link from the server. The account is created with that server's
+            identity provider, and the server is added when the flow returns to it.
+          </p>
+          <button type="submit">Open invitation</button>
+        </form>
+      </details>
+    </div>
+    <p class="muted desktop-note" id="desktop-note" hidden>
+      Connect and log in need the Cygnus Loom desktop app.
+    </p>
+  </section>
+  {% endif %}
+
   <section class="card">
     <h2>Import a campaign</h2>
     <p class="muted">
@@ -61,4 +158,7 @@
       <button type="submit">Import campaign</button>
     </form>
   </section>
+{% endblock %}
+{% block scripts %}
+  {% if desktop %}<script src="/static/desktop.js"></script>{% endif %}
 {% endblock %}
