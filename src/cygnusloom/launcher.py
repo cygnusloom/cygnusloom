@@ -1,4 +1,4 @@
-"""The single-player edition: a local server and a QtWebEngine window."""
+"""The desktop app: a local server and a QtWebEngine window."""
 
 from __future__ import annotations
 
@@ -34,7 +34,7 @@ REQUIRED_GLIBCXX = b"GLIBCXX_3.4.29"
 
 
 def data_dir(override: str | None = None) -> Path:
-    """Where the single-player edition keeps its database, secret key, logs, and web cache."""
+    """Where the desktop app keeps its database, secret key, logs, and web cache."""
     if override:
         return Path(override).expanduser().resolve()
     configured = os.environ.get("CYGNUSLOOM_DATA_DIR", "").strip()
@@ -100,6 +100,26 @@ def _ignore_model_environment(env: MutableMapping[str, str]) -> None:
             key.startswith("CYGNUSLOOM_LLM_") and key.endswith(("_API_KEY", "_BASE_URL"))
         ):
             del env[key]
+
+
+def _environment(root: Path, base_url: str, level: str, *, headless: bool) -> dict[str, str]:
+    """The settings of the local server the desktop app runs."""
+    return {
+        "CYGNUSLOOM_SINGLE_PLAYER": "1",
+        # The window adds the local server list and remote-server login. A headless
+        # diagnostic server has no window to open them from.
+        "CYGNUSLOOM_DESKTOP": "0" if headless else "1",
+        "CYGNUSLOOM_DATA_DIR": str(root),
+        "CYGNUSLOOM_DATABASE_URL": database_url(root),
+        "CYGNUSLOOM_SECRET_KEY": _secret_key(root),
+        "CYGNUSLOOM_BASE_URL": base_url,
+        "CYGNUSLOOM_ENVIRONMENT": "development",
+        "CYGNUSLOOM_AUTO_CREATE_SCHEMA": "0",
+        "CYGNUSLOOM_SECURE_COOKIES": "0",
+        "CYGNUSLOOM_TEST_LOGIN": "0",
+        "CYGNUSLOOM_TEST_LOGIN_ADMIN": "0",
+        "CYGNUSLOOM_LOG_LEVEL": level,
+    }
 
 
 def _loaded_library_path(soname: str) -> Path | None:
@@ -294,19 +314,7 @@ def play(
         actual_port = port or _free_port(host)
         base_url = f"http://127.0.0.1:{actual_port}"
         _ignore_model_environment(os.environ)
-        os.environ.update(
-            CYGNUSLOOM_SINGLE_PLAYER="1",
-            CYGNUSLOOM_DATA_DIR=str(root),
-            CYGNUSLOOM_DATABASE_URL=database_url(root),
-            CYGNUSLOOM_SECRET_KEY=_secret_key(root),
-            CYGNUSLOOM_BASE_URL=base_url,
-            CYGNUSLOOM_ENVIRONMENT="development",
-            CYGNUSLOOM_AUTO_CREATE_SCHEMA="0",
-            CYGNUSLOOM_SECURE_COOKIES="0",
-            CYGNUSLOOM_TEST_LOGIN="0",
-            CYGNUSLOOM_TEST_LOGIN_ADMIN="0",
-            CYGNUSLOOM_LOG_LEVEL=level,
-        )
+        os.environ.update(_environment(root, base_url, level, headless=headless))
         alembic_command.upgrade(migration_config(os.environ["CYGNUSLOOM_DATABASE_URL"]), "head")
         config = uvicorn.Config(
             "cygnusloom.web.app:app_from_env",

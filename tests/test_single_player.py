@@ -72,7 +72,7 @@ def test_single_player_signs_in_and_is_an_administrator(tmp_path):
     page = client.get("/campaigns")
 
     assert page.status_code == 200
-    assert "single-player" in page.text
+    assert "this device" in page.text
     assert ">Admin<" in page.text
     assert "Log out" not in page.text
     users = _users(settings)
@@ -98,7 +98,7 @@ def test_single_player_account_page_describes_the_local_player(tmp_path):
     page = client.get("/account")
 
     assert page.status_code == 200
-    assert "local single-player account" in page.text
+    assert "this device's local account" in page.text
     assert "Data folder" in page.text
     assert "Sign out everywhere" not in page.text
 

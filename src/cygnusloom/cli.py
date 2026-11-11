@@ -1,4 +1,4 @@
-"""Operator commands: the single-player launcher, migrations, and account inspection."""
+"""Operator commands: the desktop launcher, migrations, and account inspection."""
 
 from __future__ import annotations
 
@@ -102,7 +102,7 @@ def main(argv: list[str] | None = None) -> int:
         argv = ["play", *argv]
     parser = argparse.ArgumentParser(prog="cygnusloom")
     sub = parser.add_subparsers(dest="command", required=True)
-    play_parser = sub.add_parser("play", help="start the single-player game")
+    play_parser = sub.add_parser("play", help="start the desktop app")
     play_parser.add_argument(
         "--data-dir",
         default=None,
@@ -124,7 +124,7 @@ def main(argv: list[str] | None = None) -> int:
     play_parser.add_argument("--log-level", default=None, help="DEBUG, INFO, WARNING, or ERROR")
     sub.add_parser("migrate", help="apply database migrations")
     sub.add_parser("list-users", help="print accounts without changing them")
-    sub.add_parser("where", help="print the single-player data folder")
+    sub.add_parser("where", help="print the desktop app's data folder")
     content_parser = sub.add_parser("content", help="inspect and validate content")
     content_sub = content_parser.add_subparsers(dest="content_command", required=True)
     validate_parser = content_sub.add_parser("validate", help="check worlds against rule sets")

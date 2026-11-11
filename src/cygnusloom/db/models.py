@@ -134,6 +134,30 @@ class UserSession(SQLModel, table=True):
     oidc_id_token: str | None = Field(default=None, sa_column=Column(Text, nullable=True))
 
 
+class DesktopLogin(SQLModel, table=True):
+    """A one-time sign-in handed from a browser to the desktop app.
+
+    ``flow`` identifies the approval page. Once the player approves, ``code_hash`` holds a
+    hash of the one-time code sent to the app's loopback listener, and ``user_id`` names the
+    account the app should sign in as. Nothing in this row is a credential: the code is used
+    once, expires within minutes, and only ever reaches the app's own loopback address.
+    """
+
+    __tablename__ = "desktop_login"
+
+    id: int | None = Field(default=None, primary_key=True)
+    flow: str = Field(index=True, unique=True, max_length=64)
+    redirect_uri: str = Field(max_length=500)
+    state: str = Field(max_length=200)
+    next_path: str = Field(default="/campaigns", max_length=500)
+    user_id: int | None = Field(default=None, index=True)
+    auth_time: datetime | None = Field(default=None)
+    code_hash: str | None = Field(default=None, index=True, unique=True, max_length=64)
+    created_at: datetime = Field(default_factory=utcnow)
+    expires_at: datetime
+    used_at: datetime | None = Field(default=None)
+
+
 class AdminAudit(SQLModel, table=True):
     """One administrator action. Actor and target are snapshots, so the record survives a
     deleted account. This table is append-only: there is no update or delete route."""

@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Open invitation{% endblock %}
+{% block content %}
+  <section class="card narrow" data-desktop-invite="{{ invite_url }}">
+    <h1>Open invitation</h1>
+    <p>
+      The Cygnus Loom desktop app is opening this invitation. Complete the flow with the
+      server's identity provider; the server is added when the flow returns to it.
+    </p>
+    <p id="desktop-invite-status" class="muted">Opening the invitation…</p>
+    <p><a class="button" id="desktop-invite-link" href="{{ invite_url }}">Open the invitation</a></p>
+    <p class="muted">
+      If the app does not open it, use the button above. The invitation belongs to the identity
+      provider, not to this device.
+    </p>
+  </section>
+{% endblock %}
+{% block scripts %}
+  <script src="/static/desktop.js"></script>
+{% endblock %}

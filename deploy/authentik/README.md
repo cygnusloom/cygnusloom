@@ -89,7 +89,10 @@ with the intended group.
 4. Share the link privately. The player chooses a username, password, name, and email, is added
    to the flow's group (`cygnusloom-players`, or `cygnusloom-credit-exempt` for the exempt
    flow), and is returned to Cygnus Loom. Reusing the link fails.
-5. The player can change their email, password, and MFA from the Account page; it links to
+5. A player using the desktop app can paste this link under **Servers → Add by invitation
+   link**. The app opens the flow, completes it, and adds the server automatically when the flow
+   returns to `CYGNUSLOOM_BASE_URL`.
+6. The player can change their email, password, and MFA from the Account page; it links to
    Authentik's user interface. Invited accounts are created as internal Authentik users so that
    page works.
 

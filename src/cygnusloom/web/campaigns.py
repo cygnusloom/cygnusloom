@@ -116,6 +116,7 @@ from cygnusloom.web.character_form import (
     pronouns_from_form,
     submission_from_form,
 )
+from cygnusloom.web.desktop import optional_server_store
 from cygnusloom.web.forms import form_text
 from cygnusloom.web.rendering import render, render_fragment
 from cygnusloom.web.turn_jobs import TurnJob, TurnJobRegistry
@@ -148,7 +149,16 @@ def campaigns_page(request: Request) -> Response:
     if setup is not None:
         return setup
     campaigns = visible_campaigns(request.app.state.engine, user.id)
-    return render(request, "campaigns.html", campaigns=campaigns)
+    store = optional_server_store(request.app.state.settings)
+    servers = store.list() if store is not None else []
+    credentials_available = request.app.state.credentials.available() if store is not None else True
+    return render(
+        request,
+        "campaigns.html",
+        campaigns=campaigns,
+        servers=servers,
+        credentials_available=credentials_available,
+    )
 
 
 @router.get("/new")

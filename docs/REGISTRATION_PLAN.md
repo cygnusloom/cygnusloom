@@ -30,7 +30,7 @@ Authentik flow, so an administrator can invite a player with a single-use link.
 - `User.credit_balance` defaults to 0. New accounts can join somebody else's campaign for free;
   owning a campaign needs credits because the owner pays for AI GM replies.
 - The compose stack has no SMTP settings, so email verification cannot work out of the box.
-- The single-player edition uses a local account and is unaffected.
+- The desktop app's local account is unaffected.
 
 ## Goals
 
@@ -55,7 +55,9 @@ Authentik flow, so an administrator can invite a player with a single-use link.
 
 ## Non-goals
 
-- Local email/password registration or password storage in Cygnus Loom.
+- Local email/password registration or password storage on a Cygnus Loom server. The desktop app
+  may keep the identity provider's own username and password in the operating system's credential
+  store to fill the provider's login page; the server still receives no password.
 - A signup mode toggle in Cygnus Loom. Open vs invite-only is an Authentik flow decision;
   Cygnus Loom only checks `CYGNUSLOOM_OIDC_SIGNUP_URL`. The Cygnus toggle is about new user
   logins, not account creation in Authentik.

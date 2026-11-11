@@ -32,7 +32,7 @@
         {% if credit_price <= 0 %}
           <p class="muted">This model is free.</p>
         {% elif credits_exempt %}
-          <p class="muted">Administrators, the single-player account, and credit-exempt accounts are not charged for replies.</p>
+          <p class="muted">Administrators, the desktop app's local account, and credit-exempt accounts are not charged for replies.</p>
         {% else %}
           <p class="muted">The campaign owner's balance is <strong>{{ credit_balance }}</strong> credits. The current model costs {{ credit_price }} credits per reply.</p>
           {% if credits_blocked %}<p role="alert">{{ credit_message }} <a href="/credits">Get more credits</a></p>{% endif %}

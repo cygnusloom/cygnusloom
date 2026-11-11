@@ -90,6 +90,7 @@ def render(request: Request, name: str, status_code: int = 200, **context: Any) 
         or account_management_url(settings.oidc_issuer),
         "single_player": settings.single_player,
         "music_default_enabled": not settings.disable_music,
+        "desktop": settings.desktop,
         "data_dir": settings.data_dir,
         "app_version": __version__,
         "website_url": WEBSITE_URL,
