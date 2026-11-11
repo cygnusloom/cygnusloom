@@ -224,3 +224,6 @@ def test_the_live_fragment_is_refused_while_the_campaign_is_still_being_created(
     campaign_id = factories.create_campaign(client)
 
     assert client.get(f"/campaigns/{campaign_id}/live").status_code == 409
+    script = client.get("/static/turn_stream.js").text
+    assert "response.status === 409" in script
+    assert "window.location.reload()" in script

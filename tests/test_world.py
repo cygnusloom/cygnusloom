@@ -792,13 +792,13 @@ def test_the_gm_state_and_statblock_include_the_currency_count(
     assert f"Currency: 22 {currency}" in statblock["statblock"]
 
 
-def test_note_subject_must_exist_and_text_must_not_be_blank(
+def test_a_note_subject_may_be_a_topic_and_text_must_not_be_blank(
     client_factory: Callable[[], TestClient], app
 ):
     _, campaign_id = _campaign_id(client_factory)
     with _db(app) as db:
-        with pytest.raises(InvalidInput):
-            world.add_note(db, campaign_id, "Hello.", subject="Nobody")
+        added = world.add_note(db, campaign_id, "Hello.", subject="Nobody")
+        assert added["subject"] == "Nobody"
         with pytest.raises(InvalidInput):
             world.add_note(db, campaign_id, "   ")
 

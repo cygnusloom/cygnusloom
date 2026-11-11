@@ -227,28 +227,31 @@ def _seed_local_maps(db: Any, campaign_id: int, template: Any, rule_set: RuleSet
             if character.location is not None
             and name_key(character.location) == name_key(spot.name)
         ]
-        for character in characters:
-            for row in range(entry.rows):
-                for column in range(entry.columns):
-                    if (column, row) in occupants:
-                        continue
-                    try:
-                        encounters.place_map_token(
-                            db,
-                            campaign_id,
-                            name,
-                            character.name,
-                            column,
-                            row,
-                            rule_set.encounter_objects,
-                            state=state,
-                        )
-                    except InvalidInput:
-                        continue
-                    occupants.add((column, row))
-                    break
-                else:
+        if not characters:
+            continue
+        # Spread the NPCs across the map instead of filling the first row. Each character gets
+        # its own slice of the row-major cell order, starting in the middle of that slice.
+        cells = [(column, row) for row in range(entry.rows) for column in range(entry.columns)]
+        for index, character in enumerate(characters):
+            start = (2 * index + 1) * len(cells) // (2 * len(characters))
+            for offset in range(len(cells)):
+                column, row = cells[(start + offset) % len(cells)]
+                if (column, row) in occupants:
                     continue
+                try:
+                    encounters.place_map_token(
+                        db,
+                        campaign_id,
+                        name,
+                        character.name,
+                        column,
+                        row,
+                        rule_set.encounter_objects,
+                        state=state,
+                    )
+                except InvalidInput:
+                    continue
+                occupants.add((column, row))
                 break
 
 

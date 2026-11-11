@@ -1,8 +1,7 @@
 # Authoring Rulesets and Worlds
 
 This is a practical guide to the content format as it exists on the 4.0 branch. It
-documents the supported authoring surface, not a future design. For the audit and
-remaining simplification ideas see [RULESET_REFACTORING_REPORT.md](RULESET_REFACTORING_REPORT.md).
+documents the supported authoring surface, not a future design.
 
 ## Directory layout
 

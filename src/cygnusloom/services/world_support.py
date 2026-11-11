@@ -34,6 +34,7 @@ from cygnusloom.content.library import (
     TERRAIN_PATTERNS,
     ClockRules,
     CombatRules,
+    EncounterObject,
     Hooks,
     InventoryRules,
     MagicRules,
@@ -47,7 +48,7 @@ from cygnusloom.content.library import (
 from cygnusloom.rules.context import brief
 from cygnusloom.rules.dice import is_formula, roll_total
 from cygnusloom.services import clock as clock_service
-from cygnusloom.services import combat
+from cygnusloom.services import combat, encounters
 from cygnusloom.services import inventory as inventory_service
 from cygnusloom.services import market as market_service
 from cygnusloom.services import wilderness as wilderness_service
@@ -1666,12 +1667,15 @@ def move_actor(
     clock_rules: ClockRules | None = None,
     hooks: Hooks | None = None,
     inventory: InventoryRules | None = None,
+    encounter_objects: Mapping[str, EncounterObject] | None = None,
 ) -> dict[str, Any]:
     """Move a character to a place. With no place, an NPC goes into the wind: it is nowhere
     in particular until a later move brings it back. A player character's move in a settlement
     takes time from the travel table at the given speed, when the rule set has one. Moves in a
     dungeon, and overland moves placed after their watches, take no clock time here. The clock
-    advances by whole hours; the rest of the minutes carry to the next move."""
+    advances by whole hours; the rest of the minutes carry to the next move. When the caller
+    supplies the rule set's encounter objects, the mover and any traveling hirelings are put on
+    the destination's local map if it has one."""
     state = load_state(db, campaign_id)
     actor = _character_named(state, name)
     if location is None:
@@ -1698,11 +1702,17 @@ def move_actor(
             if not place.discovered:
                 record(db, campaign_id, LocationDiscovered(name=place.name))
     # Hirelings travel with the player character who employs them.
+    travelers = [actor.name]
     if actor.kind == PC_KIND and not actor.hireling:
         for hireling in state.characters.values():
             if hireling.hireling and hireling.employer == actor.name:
                 record(db, campaign_id, ActorMoved(name=hireling.name, location=where.name))
+                travelers.append(hireling.name)
     result: dict[str, Any] = {"moved": actor.name, "location": where.name}
+    if encounter_objects is not None:
+        placed = encounters.place_arrivals(db, campaign_id, travelers, encounter_objects)
+        if placed:
+            result["map_positions"] = placed
     if minutes is not None and clock_rules is not None:
         result.update(
             _charge_travel(db, campaign_id, state, minutes, clock_rules, hooks, inventory, speed)
@@ -1817,9 +1827,9 @@ def add_note(
     label = _optional_text(subject, "subject")
     if label is not None and label.casefold() != CAMPAIGN_WIDE:
         entry = state.named(label)
-        if entry is None:
-            raise InvalidInput(f"there is no location or character named {label!r}")
-        subject_name = entry.name
+        # A note may label a topic that is not yet a place or character. Keep the written label
+        # rather than throwing the fact away; page links only appear when the name matches later.
+        subject_name = entry.name if entry is not None else label
     note_id = record(db, campaign_id, NoteAdded(text=text, subject=subject_name))
     db.commit()
     return {

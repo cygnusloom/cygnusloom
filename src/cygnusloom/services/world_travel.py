@@ -140,6 +140,7 @@ class TravelMixin:
                             clock_rules=self.clock_rules,
                             hooks=self.hooks,
                             inventory=self.inventory,
+                            encounter_objects=self.encounter_objects,
                         )
                     result["note"] = (
                         "This rule set does not track wilderness; the GM narrates the journey."
@@ -158,6 +159,7 @@ class TravelMixin:
                 clock_rules=self.clock_rules,
                 hooks=self.hooks,
                 inventory=self.inventory,
+                encounter_objects=self.encounter_objects,
             )
 
     def _overland_move(
@@ -283,6 +285,7 @@ class TravelMixin:
                 clock_rules=self.clock_rules,
                 hooks=self.hooks,
                 inventory=self.inventory,
+                encounter_objects=self.encounter_objects,
             )
         result.update(
             {

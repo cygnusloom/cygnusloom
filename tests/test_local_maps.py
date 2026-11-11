@@ -106,6 +106,37 @@ def test_a_token_marks_where_an_npc_stands_and_carries_into_the_encounter(
     assert state.encounter.cells[name_key("Pip")] == (3, 4)
 
 
+def test_a_local_map_can_be_named_by_its_place_without_the_suffix(
+    client_factory: Callable[[], TestClient],
+):
+    """A GM naming the place rather than the map should still find the local map."""
+    client, campaign_id = _campaign_id(client_factory)
+    _place_pc(client, campaign_id, TOWN)
+    map_name = f"{MAP} local map"
+    _call(
+        client.app,
+        campaign_id,
+        "create_local_map",
+        {
+            "name": map_name,
+            "location": TOWN,
+            "description": "A room with a map named with its suffix.",
+            "template": "tavern",
+        },
+    )
+
+    placed = _call(
+        client.app,
+        campaign_id,
+        "place_map_token",
+        {"map": MAP, "name": "A token", "column": 3, "row": 4},
+    )
+
+    assert placed["map"] == map_name
+    state = open_campaign(client.app, campaign_id)
+    assert state.maps[name_key(map_name)].tokens[name_key("A token")] == (3, 4)
+
+
 def test_a_map_token_can_be_removed(client_factory: Callable[[], TestClient]):
     client, campaign_id = _campaign_id(client_factory)
     _place_pc(client, campaign_id, TOWN)
@@ -278,6 +309,99 @@ def test_a_character_inside_a_place_can_be_placed_on_its_map(
     assert by_name["Pip"]["cell"] == (4, 4)
 
 
+def test_moving_to_a_place_with_a_local_map_places_the_character(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _campaign_id(client_factory)
+    _create_local_map(client, campaign_id)
+    moved = _call(
+        client.app,
+        campaign_id,
+        "move_actor",
+        {"name": "Ada", "location": TOWN, "mode": "in_settlement"},
+    )
+    assert "error" not in moved, moved
+    assert moved["map_positions"][0]["name"] == "Ada"
+    assert moved["map_positions"][0]["map"] == MAP
+    state = open_campaign(client.app, campaign_id)
+    token = state.maps[name_key(MAP)].tokens[name_key("Ada")]
+    assert 0 <= token[0] < state.maps[name_key(MAP)].columns
+    assert 0 <= token[1] < state.maps[name_key(MAP)].rows
+    player = state.pc()
+    assert player is not None
+    view = encounters.local_map_view(
+        state,
+        LIBRARY.rule_sets["cairn2e"].grid,
+        LIBRARY.rule_sets["cairn2e"].terrain,
+        LIBRARY.rule_sets["cairn2e"].encounter_objects,
+        state.characters,
+        player.location,
+    )
+    assert view is not None
+    by_name = {participant["name"]: participant for participant in view["participants"]}
+    assert by_name["Ada"]["cell"] == token
+    assert by_name["Ada"]["placed"] is True
+
+
+def test_a_parent_map_does_not_list_people_from_a_child_places_map(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _campaign_id(client_factory)
+    _place_pc(client, campaign_id, TOWN)
+    _create_local_map(client, campaign_id)
+    _call(
+        client.app,
+        campaign_id,
+        "create_location",
+        {"name": "The Drowsy Cap", "description": "A tavern under the oak.", "parent": TOWN},
+    )
+    _call(
+        client.app,
+        campaign_id,
+        "create_local_map",
+        {
+            "name": "The Drowsy Cap local map",
+            "location": "The Drowsy Cap",
+            "description": "The tavern's common room.",
+            "template": "tavern",
+        },
+    )
+    _call(
+        client.app,
+        campaign_id,
+        "create_location",
+        {"name": "The Cold Hearth", "description": "A cold, empty room.", "parent": TOWN},
+    )
+    _call(
+        client.app,
+        campaign_id,
+        "create_npc",
+        {"name": "Pip", "location": "The Drowsy Cap", "description": "A scruffy courier."},
+    )
+    _call(
+        client.app,
+        campaign_id,
+        "create_npc",
+        {"name": "Tam", "location": "The Cold Hearth", "description": "A quiet resident."},
+    )
+    state = open_campaign(client.app, campaign_id)
+    player = state.pc()
+    assert player is not None
+    view = encounters.local_map_view(
+        state,
+        LIBRARY.rule_sets["cairn2e"].grid,
+        LIBRARY.rule_sets["cairn2e"].terrain,
+        LIBRARY.rule_sets["cairn2e"].encounter_objects,
+        state.characters,
+        player.location,
+    )
+    assert view is not None
+    by_name = {participant["name"]: participant for participant in view["participants"]}
+    # Pip belongs to the tavern's own map, while Tam's room has none and falls back to the town.
+    assert "Pip" not in by_name
+    assert by_name["Tam"]["cell"] is None
+
+
 def test_a_prop_token_keeps_its_cell_without_a_character(
     client_factory: Callable[[], TestClient],
 ):
@@ -418,6 +542,8 @@ def test_a_bundled_world_seeds_its_authored_local_maps(
     assert inn.location == "The Stuffed Inn"
     # The inn's NPCs are already standing somewhere on its map.
     assert inn.tokens
+    town = next(entry for entry in state.maps.values() if entry.name == "Isthmus Town local map")
+    assert len({row for _, row in town.tokens.values()}) > 1
 
 
 def test_a_local_map_copies_its_template_style_and_can_override_it(

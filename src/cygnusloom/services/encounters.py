@@ -122,6 +122,9 @@ def _is_int(value: object) -> bool:
 
 def _map_named(state: CampaignState, name: str) -> EncounterMap:
     entry = state.maps.get(name_key(name))
+    if entry is None and not name_key(name).endswith(" local map"):
+        # Local maps are commonly authored with a suffix, while the GM often names the place.
+        entry = state.maps.get(name_key(f"{name} local map"))
     if entry is None:
         names = [encounter_map.name for encounter_map in state.maps.values()]
         hint = get_close_matches(name, names, n=3, cutoff=0.6)
@@ -662,6 +665,77 @@ def _token_name(key: str) -> str:
 def _in_encounter_on(state: CampaignState, entry: EncounterMap) -> bool:
     """Whether the encounter in progress is using this map, so its cells are the only positions."""
     return state.encounter is not None and name_key(state.encounter.map) == name_key(entry.name)
+
+
+def _arrival_cell(
+    entry: EncounterMap,
+    objects: Mapping[str, EncounterObject],
+    occupied: set[tuple[int, int]],
+) -> tuple[int, int] | None:
+    """A free, enterable cell near the middle of the map, so an arrival starts in the room."""
+    candidates = [
+        (column, row)
+        for row in range(entry.rows)
+        for column in range(entry.columns)
+        if (column, row) not in occupied and not _blocks(entry, (column, row), objects)
+    ]
+    if not candidates:
+        return None
+    center_column = (entry.columns - 1) / 2
+    center_row = (entry.rows - 1) / 2
+    return min(
+        candidates,
+        key=lambda cell: (
+            (cell[0] - center_column) ** 2 + (cell[1] - center_row) ** 2,
+            cell[1],
+            cell[0],
+        ),
+    )
+
+
+def place_arrivals(
+    db: Session,
+    campaign_id: int,
+    names: Sequence[str],
+    encounter_objects: Mapping[str, EncounterObject],
+) -> list[dict[str, Any]]:
+    """Give characters who just moved somewhere a cell on their new place's local map.
+
+    The move tools already know where a character went. Requiring a second tool call to place
+    the token let an arrival stay "not yet placed" even though the engine knew the destination.
+    An existing token is left alone, and an encounter keeps its own participant cells.
+    """
+    state = load_state(db, campaign_id)
+    placed: list[dict[str, Any]] = []
+    for name in names:
+        character = state.characters.get(name_key(name))
+        if character is None or character.location is None:
+            continue
+        entry = _local_map_for(state, character.location)
+        if entry is None or _in_encounter_on(state, entry):
+            continue
+        key = name_key(character.name)
+        if key in entry.tokens:
+            continue
+        cell = _arrival_cell(entry, encounter_objects, set(entry.tokens.values()))
+        if cell is None:
+            continue
+        event = MapTokenPlaced(
+            map=entry.name,
+            name=character.name,
+            column=cell[0],
+            row=cell[1],
+        )
+        event.apply(state, record(db, campaign_id, event))
+        placed.append(
+            {
+                "name": character.name,
+                "map": entry.name,
+                "column": cell[0],
+                "row": cell[1],
+            }
+        )
+    return placed
 
 
 def place_map_token(
@@ -1324,6 +1398,15 @@ def _inside_place(state: CampaignState, location: str | None, ancestor: str) -> 
     return False
 
 
+def _uses_local_map(state: CampaignState, entry: EncounterMap, location: str | None) -> bool:
+    """Whether this is the map a character's own place resolves to.
+
+    A character in a room with its own map belongs there, not on the settlement map that contains
+    the room. A room without a map falls back to its parent's map, so its characters still use it.
+    """
+    return _local_map_for(state, location) is entry
+
+
 def local_map_view(
     state: CampaignState,
     grid: EncounterGrid | None,
@@ -1358,7 +1441,7 @@ def local_map_view(
                 "status": "",
                 "defeated": False,
             }
-        elif _inside_place(state, character.location, entry.location):
+        elif _uses_local_map(state, entry, character.location):
             found[key] = {
                 "name": character.name,
                 "cell": cell,
@@ -1374,7 +1457,7 @@ def local_map_view(
     for key, character in characters.items():
         if key in found:
             continue
-        if not _inside_place(state, character.location, entry.location):
+        if not _uses_local_map(state, entry, character.location):
             continue
         # Only a token gives a character a position. An unplaced character is listed, but no
         # cell is invented for them.

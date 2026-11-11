@@ -85,6 +85,20 @@ def test_wire_modes_meet_a_minimum_budget(rule_set_id: str):
     assert brief <= full * 0.4
 
 
+@pytest.mark.parametrize("rule_set_id", RULE_SETS)
+def test_brief_schema_keeps_small_choice_lists(rule_set_id: str):
+    """A short choice list is cheaper than a guessed argument and a repeated tool round."""
+    calls = content_library().rule_sets[rule_set_id].tool_calls
+    by_name = {
+        spec["function"]["name"]: spec["function"]["parameters"]
+        for spec in wire_tool_specs(calls, mode="brief") or []
+    }
+
+    mode = by_name["move_actor"]["properties"]["mode"]
+    assert mode["enum"] == ["overland", "in_settlement", "in_dungeon"]
+    assert "in_settlement" not in mode.get("description", "")
+
+
 def test_rule_index_mode_lists_ids_without_rule_text():
     rules = {
         "attribute-swap": "Swap two attributes. The full text should not be in the index.",

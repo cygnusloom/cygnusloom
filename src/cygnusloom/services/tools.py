@@ -172,6 +172,8 @@ _CHARACTER_OPTIONS_SCHEMA = {
     ),
     "additionalProperties": True,
 }
+# Short choice lists are cheaper to keep than to have the model guess and retry a tool round.
+_WIRE_SMALL_ENUM = 20
 
 
 @dataclass(frozen=True)
@@ -460,7 +462,9 @@ def _wire_schema(
         enum_type = _wire_enum_type(schema["enum"])
         if "type" not in out and enum_type is not None:
             out["type"] = enum_type
-        if "description" not in out and depth <= description_depth:
+        if len(schema["enum"]) <= _WIRE_SMALL_ENUM:
+            out["enum"] = schema["enum"]
+        elif "description" not in out and depth <= description_depth:
             out["description"] = "A valid id from the campaign content; use its lookup tool."
     return out
 

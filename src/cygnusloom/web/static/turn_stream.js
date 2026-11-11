@@ -385,6 +385,12 @@
         credentials: "same-origin",
         headers: { Accept: "text/html" },
       });
+      if (response.status === 409) {
+        // The campaign moved to the setup or death screen, which has no live region. A normal
+        // reload shows that screen and stops the stream from asking for a fragment again.
+        window.location.reload();
+        return false;
+      }
       if (!response.ok || response.redirected) return false;
       if (!applyLive(await response.text())) return false;
     } catch {
