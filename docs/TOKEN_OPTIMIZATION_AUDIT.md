@@ -475,6 +475,13 @@ wilderness cycles, journal updates, storylines, notes, and speaking with NPCs.
   those remain covered by the automated suite and the earlier browser combat
   test rather than this single playthrough.
 
+The same browser pass then opened a Worlds Without Number campaign (meter
+22,172/32,768) and played a Notice skill check: the engine rolled 8-1 against
+difficulty 8 and the narration respected the failure. The world map, regions,
+town, and NPCs were created correctly. An Academia Arcana campaign opened at
+16,137/32,768 with its invented academy, college factions, and first-year
+character intact.
+
 The 103 calls for ten turns show why schema compaction alone is not enough.
 State rounds and review rounds still repeat the tool list; phase-gated toolsets
 and a narrower correction review remain the next high-value change.
