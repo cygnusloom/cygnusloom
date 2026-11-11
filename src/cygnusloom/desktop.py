@@ -227,6 +227,18 @@ def needs_device_bar(page_origin: str, local_origin: str, has_desktop_controls: 
     return not has_desktop_controls
 
 
+def loading_message(url: str, local_origin: str, server_name: str = "") -> str:
+    """What the window says while a page loads: the destination's name, or its address."""
+    page_origin = origin_of(url)
+    if not page_origin:
+        return "Loading…"
+    if page_origin == local_origin:
+        return "Loading Cygnus Loom…"
+    if server_name:
+        return f"Loading {server_name}…"
+    return f"Loading {urlsplit(page_origin).netloc}…"
+
+
 def parse_add_action(payload: object) -> tuple[str, str] | None:
     """Validate an add-server action from the local menu: ``(url, name)``."""
     if not isinstance(payload, dict) or payload.get("action") != "add":
@@ -338,7 +350,7 @@ class LoopbackReceiver:
 def run_window(url: str, title: str, data_dir: Path) -> int:
     """Open the game window and block until it closes. Returns the Qt exit code."""
     try:
-        from PySide6.QtCore import QEvent, QSettings, QTimer, QUrl, Signal
+        from PySide6.QtCore import QEvent, QSettings, Qt, QTimer, QUrl, Signal
         from PySide6.QtGui import QDesktopServices, QIcon
         from PySide6.QtNetwork import QNetworkAccessManager, QNetworkRequest
         from PySide6.QtWebEngineCore import (
@@ -355,6 +367,7 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
             QLabel,
             QMainWindow,
             QMessageBox,
+            QProgressBar,
             QPushButton,
             QVBoxLayout,
             QWidget,
@@ -420,6 +433,7 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
             self.invite_replies: set[Any] = set()
             self.add_replies: set[Any] = set()
             self.loopback: LoopbackReceiver | None = None
+            self.loading_active = False
             self.setWindowTitle(title)
             self.setWindowIcon(icon)
             self.view = QWebEngineView(self)
@@ -454,6 +468,32 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
             shell_layout.setSpacing(0)
             shell_layout.addWidget(self.escape_bar)
             shell_layout.addWidget(self.view, 1)
+            # A slim bar over the bottom of the page, so a slow page never looks frozen.
+            self.loading_bar = QFrame(self.view)
+            self.loading_bar.setObjectName("loading-bar")
+            self.loading_bar.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+            loading_layout = QVBoxLayout(self.loading_bar)
+            loading_layout.setContentsMargins(0, 0, 0, 0)
+            loading_layout.setSpacing(0)
+            self.loading_progress = QProgressBar(self.loading_bar)
+            self.loading_progress.setObjectName("loading-progress")
+            self.loading_progress.setRange(0, 100)
+            self.loading_progress.setValue(0)
+            self.loading_progress.setTextVisible(False)
+            self.loading_progress.setFixedHeight(3)
+            self.loading_label = QLabel("", self.loading_bar)
+            self.loading_label.setObjectName("loading-label")
+            loading_layout.addWidget(self.loading_progress)
+            loading_layout.addWidget(self.loading_label)
+            self.loading_bar.setStyleSheet(
+                "QFrame#loading-bar { background: #1a1d25;"
+                " border-top: 1px solid #2d3242; }"
+                "QLabel#loading-label { color: #c7ccda; padding: 5px 12px 6px 12px; }"
+                "QProgressBar#loading-progress { background: #2d3242; border: none; }"
+                "QProgressBar#loading-progress::chunk { background: #7f8ee8; }"
+            )
+            self.loading_bar.hide()
+            self.view.installEventFilter(self)
             self.setCentralWidget(self.shell)
             self.view.settings().setAttribute(
                 QWebEngineSettings.WebAttribute.PlaybackRequiresUserGesture, False
@@ -469,6 +509,9 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
                 QWebEngineScript.InjectionPoint.DocumentCreation,
             )
             self.network = QNetworkAccessManager(self)
+            self.view.loadStarted.connect(self._loading_started)
+            self.view.loadProgress.connect(self._loading_progress_changed)
+            self.view.urlChanged.connect(self._loading_url_changed)
             self.view.loadFinished.connect(self._page_loaded)
             self.view.loadFinished.connect(lambda _ok: self.report_activation())
             self.page.titleChanged.connect(self._title_changed)
@@ -489,6 +532,47 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
                 QEvent.Type.WindowStateChange,
             ):
                 self.report_activation()
+
+        def eventFilter(self, watched, event):
+            if watched is self.view and event.type() in (
+                QEvent.Type.Resize,
+                QEvent.Type.Show,
+            ):
+                self._place_loading_bar()
+            return super().eventFilter(watched, event)
+
+        def _place_loading_bar(self) -> None:
+            """Keep the loading bar against the bottom edge of the page."""
+            height = self.loading_bar.sizeHint().height()
+            self.loading_bar.setGeometry(
+                0, max(0, self.view.height() - height), self.view.width(), height
+            )
+            self.loading_bar.raise_()
+
+        def _loading_started(self) -> None:
+            self.loading_active = True
+            # Busy until the page reports progress, so a stalled request still animates.
+            self.loading_progress.setRange(0, 0)
+            self._loading_url_changed(self.view.url())
+            self._place_loading_bar()
+            self.loading_bar.show()
+            self.loading_bar.raise_()
+
+        def _loading_progress_changed(self, progress: int) -> None:
+            if not self.loading_active or progress <= 0:
+                return
+            self.loading_progress.setRange(0, 100)
+            self.loading_progress.setValue(min(100, progress))
+
+        def _loading_url_changed(self, page_url: QUrl) -> None:
+            if not self.loading_active:
+                return
+            server = self._server_at(origin_of(page_url.toString()))
+            self.loading_label.setText(
+                loading_message(
+                    page_url.toString(), self.local_origin, server.name if server else ""
+                )
+            )
 
         def go_home(self) -> None:
             self.stop_browser_login()
@@ -743,6 +827,8 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
             self.view.setUrl(QUrl(value))
 
         def _page_loaded(self, ok: bool) -> None:
+            self.loading_active = False
+            self.loading_bar.hide()
             page_origin = origin_of(self.view.url().toString())
             if not ok:
                 # Rejecting an external link emits loadFinished(False) while the current page

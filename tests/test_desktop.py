@@ -174,6 +174,21 @@ def test_the_device_bar_is_needed_outside_the_local_controls():
     assert desktop.needs_device_bar("", "http://127.0.0.1:8123", False)
 
 
+def test_the_loading_message_names_the_destination():
+    local = "http://127.0.0.1:8123"
+
+    assert desktop.loading_message(f"{local}/campaigns", local) == "Loading Cygnus Loom…"
+    assert (
+        desktop.loading_message("https://table.example.com/login", local)
+        == "Loading table.example.com…"
+    )
+    assert (
+        desktop.loading_message("https://table.example.com/login", local, "Tuesday table")
+        == "Loading Tuesday table…"
+    )
+    assert desktop.loading_message("about:blank", local) == "Loading…"
+
+
 def test_the_desktop_sentinel_is_limited_to_the_local_app():
     script = desktop.desktop_sentinel_script("http://127.0.0.1:8123")
 
