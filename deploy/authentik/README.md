@@ -39,12 +39,13 @@ dashboard tile uses the Cygnus Loom mark. Check `docker compose logs authentik-w
 not apply; the blueprint schema can differ between Authentik releases. The manual equivalent is
 below.
 
-The blueprint also brands Authentik's default brand, so the sign-in page shows the Cygnus Loom
-lockup above the form over a starry night sky instead of the stock Authentik logo and
-background. The logo, favicon, and background are served by the app from
-`/static/brand/`, and the lockup follows Authentik's light or dark theme. The browser loads
-those images directly, so they appear only while the app is reachable. Re-apply the blueprint
-after upgrading to pick up branding changes on an existing install.
+The blueprint also brands Authentik's default brand and authentication flow, so the sign-in
+page shows the Cygnus Loom lockup above the form over a starry night sky, headed “Welcome to
+Cygnus Loom!”, instead of the stock Authentik logo and background. The logo, favicon, and
+background are served by the app from `/static/brand/`, and the lockup follows Authentik's
+light or dark theme. The browser loads those images directly, so they appear only while the app
+is reachable. Re-apply the blueprint after upgrading to pick up branding changes on an existing
+install.
 
 `scripts/update.sh` re-applies the blueprint after `docker compose up` and retries briefly while
 Authentik starts, so an existing installation gains groups and flows added to the blueprint,

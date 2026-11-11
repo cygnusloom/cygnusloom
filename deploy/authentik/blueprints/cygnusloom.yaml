@@ -73,6 +73,30 @@ entries:
       meta_launch_url: !Env CYGNUSLOOM_BASE_URL
       meta_icon: !Format ["%s/static/brand/cygnus-loom.svg", !Env CYGNUSLOOM_BASE_URL]
 
+  # The sign-in page heading comes from the flow title, not the brand title. Only update the
+  # built-in flow; if it is missing, let Authentik create it with its own blueprint.
+  - model: authentik_flows.flow
+    identifiers:
+      slug: default-authentication-flow
+    conditions:
+      - !Condition [AND, !Find [authentik_flows.flow, [slug, default-authentication-flow]]]
+    attrs:
+      name: Welcome to Cygnus Loom!
+      title: Welcome to Cygnus Loom!
+
+  # Sign-in page branding. The flow card shows the lockup above the form, the browser tab uses
+  # the Cygnus Loom mark, and the stock Authentik background is replaced by the starry field.
+  # The assets come from the app; %%(theme)s asks Authentik for the light or dark lockup.
+  - model: authentik_brands.brand
+    identifiers:
+      domain: authentik-default
+    attrs:
+      default: true
+      branding_title: Cygnus Loom
+      branding_logo: !Format ["%s/static/brand/cygnus-loom-lockup-%%(theme)s.svg", !Env CYGNUSLOOM_BASE_URL]
+      branding_favicon: !Format ["%s/static/brand/cygnus-loom-32.png", !Env CYGNUSLOOM_BASE_URL]
+      branding_default_flow_background: !Format ["%s/static/brand/starry-night.svg", !Env CYGNUSLOOM_BASE_URL]
+
   - model: authentik_stages_prompt.prompt
     id: cygnusloom-enrollment-field-username
     identifiers:
