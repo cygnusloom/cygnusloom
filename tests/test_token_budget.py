@@ -14,7 +14,12 @@ from cygnusloom.db.models import Campaign
 from cygnusloom.services.campaigns import context_usage
 from cygnusloom.services.events import CampaignState
 from cygnusloom.services.prompts import system_parts
-from cygnusloom.services.tools import tool_specs, wire_tool_specs
+from cygnusloom.services.tools import (
+    LOAD_TOOL,
+    state_tool_groups,
+    tool_specs,
+    wire_tool_specs,
+)
 from tests.conftest import content_library
 
 RULE_SETS = ("academia-arcana", "cairn2e", "worldswithoutnumber")
@@ -114,6 +119,25 @@ def test_full_rule_mode_includes_every_rule_in_full():
     text = "\n\n".join(part.content for part in parts)
 
     assert "- attribute-swap: Swap two attributes. Then write them down." in text
+
+
+def test_state_tools_offer_load_tool_and_gate_combat():
+    calls = content_library().rule_sets["cairn2e"].tool_calls
+    core = {
+        spec["function"]["name"]
+        for spec in wire_tool_specs(calls, mode="brief", include_groups=set(), load_tools=True)
+        or []
+    }
+    combat = {
+        spec["function"]["name"]
+        for spec in wire_tool_specs(calls, mode="brief", include_groups={"combat"}, load_tools=True)
+        or []
+    }
+
+    assert LOAD_TOOL in core
+    assert "start_encounter" not in core
+    assert "start_encounter" in combat
+    assert state_tool_groups(CampaignState(), "I swing my sword at the wolf") == {"combat"}
 
 
 def test_context_usage_counts_tools_and_the_state_instruction():

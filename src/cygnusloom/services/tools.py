@@ -55,6 +55,115 @@ _WIRE_STRUCTURAL_KEYS = (
     "default",
 )
 _CHARACTER_SCHEMA_BYTES = 500
+LOAD_TOOL = "load_tool"
+# Optional tool groups are data-like policy, not state. A tool not named here is always
+# available. New ruleset tools therefore stay available until deliberately gated.
+TOOL_GROUPS: dict[str, frozenset[str]] = {
+    "combat": frozenset(
+        {
+            "attack",
+            "player_attack",
+            "resolve_attacks",
+            "player_save",
+            "roll_save",
+            "player_initiative",
+            "start_encounter",
+            "end_encounter",
+            "add_participant",
+            "remove_participant",
+            "roll_initiative",
+            "check_morale",
+            "surrender",
+            "retreat",
+            "player_retreat",
+            "resolve_group_break",
+            "grapple",
+            "break_grapple",
+            "execute",
+            "prepare_execution",
+            "surprise",
+            "stabilize",
+            "harm_character",
+            "heal_character",
+            "add_condition",
+            "end_condition",
+            "add_penalty",
+            "set_condition",
+            "recover_character",
+            "add_strain",
+            "heal_strain",
+            "total_defense",
+        }
+    ),
+    "maps": frozenset(
+        {
+            "map_options",
+            "create_local_map",
+            "update_local_map",
+            "set_map_cells",
+            "place_map_token",
+            "remove_map_token",
+            "create_encounter_map",
+            "update_encounter_map",
+            "delete_encounter_map",
+            "create_region",
+            "update_region",
+            "update_world_map",
+            "travel",
+            "wilderness_action",
+            "dungeon_cycle",
+        }
+    ),
+    "magic": frozenset(
+        {
+            "cast_spell",
+            "prepare_spells",
+            "learn_spell",
+            "learn_focus",
+            "learn_art",
+            "commit_effort",
+            "recover_effort",
+            "create_magic_item",
+            "give_spellbook",
+            "give_scroll",
+            "use_charge",
+            "recharge_charged_item",
+        }
+    ),
+    "advancement": frozenset(
+        {
+            "take_advancement",
+            "level_up",
+            "gain_xp",
+            "spend_skill_point",
+            "improve_attribute",
+            "gain_growth",
+            "choose_feature_choice",
+            "start_project",
+            "advance_project",
+            "abandon_project",
+            "list_projects",
+            "end_period",
+        }
+    ),
+    "factions": frozenset(
+        {
+            "create_faction",
+            "update_faction",
+            "remove_faction",
+            "adjust_faction_points",
+            "add_faction_asset",
+            "update_faction_asset",
+            "remove_faction_asset",
+            "damage_faction_asset",
+            "repair_faction_asset",
+            "faction_asset_acted",
+            "take_faction_turn",
+            "list_factions",
+        }
+    ),
+    "market": frozenset({"buy_item", "buy_service", "search_marketplace", "change_currency"}),
+}
 _CHARACTER_OPTIONS_SCHEMA = {
     "type": "object",
     "description": (
@@ -143,11 +252,133 @@ def tool_specs(
     ]
 
 
+def tool_groups(name: str) -> set[str]:
+    """The optional groups a tool belongs to. Tools not named in TOOL_GROUPS are core."""
+    return {group for group, names in TOOL_GROUPS.items() if name in names}
+
+
+def state_tool_groups(
+    state: Any,
+    text: str,
+) -> set[str]:
+    """The optional groups a state action needs. The model can load another group with
+    `load_tool`; keeping the default small is what makes a long tool round cheaper."""
+    groups: set[str] = set()
+    lower = text.casefold()
+    if getattr(state, "encounter", None) is not None or _mentions(
+        lower,
+        (
+            "attack",
+            "fight",
+            "swing",
+            "strike",
+            "shoot",
+            "defend",
+            "weapon",
+            "sword",
+            "kill",
+            "grapple",
+            "surrender",
+            "flee",
+            "hostile",
+            "encounter",
+        ),
+    ):
+        groups.add("combat")
+    if getattr(state, "maps", None) or _mentions(
+        lower,
+        (
+            "map",
+            "room",
+            "search",
+            "explore",
+            "dungeon",
+            "cave",
+            "mill",
+            "camp",
+            "travel",
+            "journey",
+            "road",
+            "shore",
+            "climb",
+            "enter",
+        ),
+    ):
+        groups.add("maps")
+    if _mentions(
+        lower, ("spell", "cast", "magic", "enchant", "potion", "effort", "ritual", "art", "focus")
+    ):
+        groups.add("magic")
+    if _mentions(
+        lower,
+        (
+            "level",
+            "advance",
+            "experience",
+            "train",
+            "project",
+            "skill",
+            "attribute",
+            "growth",
+            "study",
+            "xp",
+        ),
+    ):
+        groups.add("advancement")
+    if _mentions(lower, ("faction", "college", "house", "cup", "guild", "council", "factional")):
+        groups.add("factions")
+    if _mentions(
+        lower,
+        (
+            "buy",
+            "sell",
+            "price",
+            "shop",
+            "market",
+            "trade",
+            "pay",
+            "coin",
+            "silver",
+            "gold",
+            "purchase",
+        ),
+    ):
+        groups.add("market")
+    return groups
+
+
+def _mentions(text: str, words: tuple[str, ...]) -> bool:
+    return any(word in text for word in words)
+
+
+def _load_tool_spec() -> dict[str, Any]:
+    return {
+        "type": "function",
+        "function": {
+            "name": LOAD_TOOL,
+            "description": "Load another tool group when the action needs a tool that is not offered yet. Call it, then use the loaded tools in the next round.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "group": {
+                        "type": "string",
+                        "enum": sorted(TOOL_GROUPS),
+                        "description": "The group to load.",
+                    }
+                },
+                "required": ["group"],
+            },
+        },
+    }
+
+
 def wire_tool_specs(
     tool_calls: Mapping[str, ToolCall],
     journal_step: bool = False,
     review_step: bool = False,
     mode: str = "compact",
+    include_groups: set[str] | None = None,
+    load_tools: bool = False,
 ) -> list[dict[str, Any]] | None:
     """The tool list sent to a provider. `mode` controls how much of the authored schema reaches
     the wire; the engine always validates against the full schema in `tool_specs`. `brief` also
@@ -155,6 +386,15 @@ def wire_tool_specs(
     if mode not in WIRE_TOOL_SCHEMA_MODES:
         raise ValueError(f"unknown tool schema mode {mode!r}")
     specs = tool_specs(tool_calls, journal_step=journal_step, review_step=review_step)
+    if include_groups is not None:
+        specs = [
+            spec
+            for spec in specs or []
+            if not tool_groups(spec["function"]["name"])
+            or tool_groups(spec["function"]["name"]) & include_groups
+        ]
+    if load_tools:
+        specs = [*(specs or []), _load_tool_spec()]
     if not specs or mode == "full":
         return specs
     return [

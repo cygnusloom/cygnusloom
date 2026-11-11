@@ -456,6 +456,15 @@ creating maps and placed the review's read-only lookup catalog behind a small
 verification set. The Cairn review tools fell from 104 to 85, with about 1.3k
 fewer tool tokens per review call.
 
+A third pass groups the optional state tools. Core exploration, social,
+locations, NPCs, objects, notes, storylines, and lookups are always offered;
+combat, maps/travel, magic, advancement, factions, and market tools load from
+the action text or with the small `load_tool` fallback. Unknown ruleset tools
+remain core by default, so adding a tool never silently disappears. A live
+browser opening with this grouping read **14,439 / 32,768**, down from 16,717
+before grouping. The model used map tools when the scene called for them and
+completed a four-turn live session without a failed turn.
+
 ### Natural-play browser audit
 
 A real DeepSeek Cairn/Twin Lakes campaign was played through the browser for

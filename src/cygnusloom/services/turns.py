@@ -92,12 +92,15 @@ from cygnusloom.services.prompts import (
     system_parts,
 )
 from cygnusloom.services.tools import (
+    LOAD_TOOL,
+    TOOL_GROUPS,
     Ask,
     ChoiceAnswer,
     RollAnswer,
     TextAnswer,
     ToolRun,
     run_tool,
+    state_tool_groups,
     wire_tool_specs,
 )
 from cygnusloom.services.views import present_rules_text, world_state_text
@@ -312,6 +315,15 @@ def _dicts(parts: Sequence[ContextPart]) -> list[dict[str, str]]:
     return [part.to_dict() for part in parts]
 
 
+def _loaded_group(request: ToolRequest) -> str:
+    try:
+        arguments = json.loads(request.arguments or "{}")
+    except ValueError:
+        return ""
+    group = arguments.get("group") if isinstance(arguments, dict) else None
+    return group.strip().casefold() if isinstance(group, str) else ""
+
+
 def _status_for(request: ToolRequest) -> str:
     if request.name != "speak":
         return f"Running {request.name}..."
@@ -443,6 +455,8 @@ class _Run:
     # authored schema for validation; these modes only change the wire prompt.
     tool_schema_mode: str = "brief"
     rule_info_mode: str = "brief"
+    # Groups the model asked for with load_tool during this turn.
+    extra_groups: set[str] = field(default_factory=set)
 
     @property
     def tool_calls(self) -> Mapping[str, ToolCall]:
@@ -866,7 +880,10 @@ async def _begin(run: _Run, turn: Turn) -> AsyncIterator[TurnEvent]:
     ]
     present_text = present_rules_text(state, run.ctx.rules)
     state_text = state_instruction(run.rule_set, run.world)
-    tool_parts = _campaigns().tool_definition_parts(rule_set, run.tool_schema_mode)
+    groups = state_tool_groups(state, message) | run.extra_groups
+    tool_parts = _campaigns().tool_definition_parts(
+        rule_set, run.tool_schema_mode, include_groups=groups, load_tools=True
+    )
     prompt_tokens = sum(
         p.tokens
         for p in system_parts(
@@ -1428,19 +1445,43 @@ async def _review_narration(
 async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
     """Run the reply until it is recorded or paused. Log entries are yielded as the steps that
     recorded them finish. A pause is recorded before the player hears of it."""
-    tools = wire_tool_specs(run.tool_calls, mode=run.tool_schema_mode)
-    ooc_tools = (
-        [spec for spec in tools if spec["function"]["name"] != OOC_TOOL]
-        if tools is not None
-        else None
-    )
-    state = {"role": "system", "content": state_instruction(run.rule_set, run.world)}
+    state_message = {"role": "system", "content": state_instruction(run.rule_set, run.world)}
     while True:
-        turn = _turn(_state(run.engine, run.campaign_id))
+        state = _state(run.engine, run.campaign_id)
+        turn = _turn(state)
+        text = run.opening if turn.opening else turn.text
+        groups = state_tool_groups(state, text) | run.extra_groups
+        tools = wire_tool_specs(
+            run.tool_calls,
+            mode=run.tool_schema_mode,
+            include_groups=groups,
+            load_tools=True,
+        )
+        ooc_tools = (
+            [spec for spec in tools if spec["function"]["name"] != OOC_TOOL]
+            if tools is not None
+            else None
+        )
         if turn.queue:
             request = turn.queue[0]
             yield Status(_status_for(request))
-            result = await run_tool(run.tool_calls, request, ctx=run.ctx)
+            if request.name == LOAD_TOOL:
+                group = _loaded_group(request)
+                if group in TOOL_GROUPS:
+                    run.extra_groups.add(group)
+                    result = ToolRun(f"Loaded the {group} tools.", None)
+                else:
+                    result = ToolRun(
+                        json.dumps(
+                            {
+                                "error": "unknown tool group",
+                                "groups": sorted(TOOL_GROUPS),
+                            }
+                        ),
+                        None,
+                    )
+            else:
+                result = await run_tool(run.tool_calls, request, ctx=run.ctx)
             if isinstance(result, Ask):
                 _record(
                     run.engine,
@@ -1547,7 +1588,7 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
             return
         yield Status("Managing state...")
         round_no = turn.rounds + 1
-        view = [*turn.messages, state]
+        view = [*turn.messages, state_message]
         if turn.speech:
             view.append(_queued_dialogue_note(turn.speech))
         replied: list[ChatReply] = []

@@ -60,6 +60,7 @@ from cygnusloom.services.prompts import (
     system_parts,
 )
 from cygnusloom.services.tools import (
+    state_tool_groups,
     wire_tool_specs,
 )
 from cygnusloom.services.views import present_rules_text, world_state_text
@@ -968,10 +969,23 @@ def _chat_message(row: Event, names: dict[int, str], owner_name: str) -> ChatMes
     raise TypeError(f"{row.kind} is not a chat event")
 
 
-def tool_definition_parts(rule_set: RuleSet, mode: str = "brief") -> list[ContextPart]:
+def tool_definition_parts(
+    rule_set: RuleSet,
+    mode: str = "brief",
+    include_groups: set[str] | None = None,
+    load_tools: bool = False,
+) -> list[ContextPart]:
     """Tool definitions are sent beside the messages, so they are recorded as their own parts.
     The parts use the same wire projection the provider receives."""
-    specs = wire_tool_specs(rule_set.tool_calls, mode=mode) or []
+    specs = (
+        wire_tool_specs(
+            rule_set.tool_calls,
+            mode=mode,
+            include_groups=include_groups,
+            load_tools=load_tools,
+        )
+        or []
+    )
     return [
         ContextPart(
             "tool definition",
@@ -1052,10 +1066,17 @@ def context_usage(
     instruction_tokens = (
         estimate_tokens(state_instruction(rule_set, world)) if rule_set is not None else 0
     )
+    groups = state_tool_groups(state, "") if rule_set is not None else set()
     tool_tokens = (
         sum(
             estimate_tokens(json.dumps(spec, separators=(",", ":")))
-            for spec in wire_tool_specs(rule_set.tool_calls, mode=tool_schema_mode) or []
+            for spec in wire_tool_specs(
+                rule_set.tool_calls,
+                mode=tool_schema_mode,
+                include_groups=groups,
+                load_tools=True,
+            )
+            or []
         )
         if rule_set is not None
         else 0
