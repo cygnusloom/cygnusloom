@@ -451,8 +451,36 @@ Done: honest accounting, the wire-schema projection with four modes, the rule
 detail modes, brief defaults, and browser validation of a fresh campaign, a
 long-context campaign, rules lookup, and combat.
 
-Next, in order: gate the state and review tool surfaces, then gate ruleset
-fragments, then pilot conditional review and a structured summary. The current
-default already fits a fresh Cairn campaign comfortably; the remaining work is
-what keeps Worlds Without Number and long campaigns comfortably inside the
-window as history and rules grow.
+A second pass trimmed the map prompt to stop ordinary conversations from
+creating maps and placed the review's read-only lookup catalog behind a small
+verification set. The Cairn review tools fell from 104 to 85, with about 1.3k
+fewer tool tokens per review call.
+
+### Natural-play browser audit
+
+A real DeepSeek Cairn/Twin Lakes campaign was played through the browser for
+ten natural turns covering the market, the Butcher Shop, the Stuffed Inn, a
+rest, an overland journey, the Deadmill, saves, monster creation, dungeon and
+wilderness cycles, journal updates, storylines, notes, and speaking with NPCs.
+
+- **Distinct state tools exercised:** 34 of the 104 Cairn tools.
+- **Provider calls:** 103 (including state rounds, narration, journal, and
+  review); **2.2M input tokens**, of which 1.51M were cached; 55.6k output.
+- **Observed behavior:** locations and NPCs moved correctly, the tally slip and
+  debt facts persisted, services charged currency, rest and weather advanced
+  the clock, saves resolved, and the journal and storylines updated.
+- **Observed gap:** a simple social turn no longer created a map, while a
+  room search still made one, as intended. The session did not naturally reach
+  an attack encounter, advancement, factions, or every ruleset-specific tool;
+  those remain covered by the automated suite and the earlier browser combat
+  test rather than this single playthrough.
+
+The 103 calls for ten turns show why schema compaction alone is not enough.
+State rounds and review rounds still repeat the tool list; phase-gated toolsets
+and a narrower correction review remain the next high-value change.
+
+Next, in order: gate the state tool surface, then gate ruleset fragments, then
+pilot conditional review and a structured summary. The current default already
+fits a fresh Cairn campaign comfortably; the remaining work is what keeps
+Worlds Without Number and long campaigns comfortably inside the window as
+history and rules grow.

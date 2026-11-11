@@ -30,6 +30,10 @@ _PYTHON_TYPES: dict[str, type] = {"string": str, "array": list, "object": dict}
 # The turn review must not speak for an NPC or restart the out-of-character step. Those tools
 # stay in the state step's list, but are left out of the review's.
 _REVIEW_STEP_EXCLUDED = frozenset({"speak", "ooc"})
+# The review may read these to check the record, even though they cannot change it.
+_REVIEW_LOOKUPS = frozenset(
+    {"all_at_location", "get_statblock", "lookup_condition", "lookup_feature", "lookup_rule"}
+)
 # Tool-schema bytes are sent on every tool-bearing round. The authored schema stays the source
 # of truth for the engine; the wire copy may omit documentation and long choice lists, which the
 # engine still validates. `full` keeps the authored schema for an A/B comparison.
@@ -115,7 +119,10 @@ def tool_specs(
         selected = [
             tool
             for tool in tool_calls.values()
-            if not tool.journal_step and tool.name not in _REVIEW_STEP_EXCLUDED
+            if not tool.journal_step
+            and tool.name not in _REVIEW_STEP_EXCLUDED
+            and (not tool.lookup or tool.name in _REVIEW_LOOKUPS)
+            and tool.player_input is None
         ]
     else:
         selected = [

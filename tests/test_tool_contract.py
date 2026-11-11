@@ -154,7 +154,22 @@ def test_tool_specs_match_the_enabled_catalog_for_each_step(rule_set_id: str) ->
     regular = {c.name for c in calls.values() if not c.journal_step and not c.review_step}
     journal = {c.name for c in calls.values() if c.journal_step}
     review = {
-        c.name for c in calls.values() if not c.journal_step and c.name not in {"speak", "ooc"}
+        c.name
+        for c in calls.values()
+        if not c.journal_step
+        and c.name not in {"speak", "ooc"}
+        and (
+            not c.lookup
+            or c.name
+            in {
+                "all_at_location",
+                "get_statblock",
+                "lookup_condition",
+                "lookup_feature",
+                "lookup_rule",
+            }
+        )
+        and c.player_input is None
     }
 
     assert offered() == regular
