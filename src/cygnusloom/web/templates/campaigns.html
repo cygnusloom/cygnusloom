@@ -117,7 +117,7 @@
     <div class="server-add">
       <details>
         <summary>Add a server</summary>
-        <form method="post" action="/desktop/servers">
+        <form method="post" action="/desktop/servers" data-desktop-add>
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
           <label>Server address <input name="url" placeholder="https://table.example.com" required autocomplete="url"></label>
           <label>Name (optional) <input name="name" maxlength="120" placeholder="Example table"></label>

@@ -286,6 +286,21 @@ def test_clicked_links_stay_in_the_app_during_an_invite():
     )
 
 
+def test_add_actions_are_parsed_and_validated():
+    assert desktop.parse_add_action(
+        {"action": "add", "url": "https://table.example.com", "name": "Table"}
+    ) == ("https://table.example.com", "Table")
+    assert desktop.parse_add_action({"action": "add", "url": "https://table.example.com"}) == (
+        "https://table.example.com",
+        "",
+    )
+    assert desktop.parse_add_action({"action": "add"}) is None
+    assert desktop.parse_add_action({"action": "add", "url": 7}) is None
+    assert (
+        desktop.parse_add_action({"action": "connect", "url": "https://table.example.com"}) is None
+    )
+
+
 def test_desktop_actions_are_parsed_and_validated():
     assert desktop.parse_desktop_action({"action": "connect", "server": "abc"}) == (
         "connect",
@@ -363,6 +378,7 @@ def test_desktop_mode_adds_the_server_list_to_the_main_menu(tmp_path, monkeypatc
     page = client.get("/campaigns")
     assert "Servers" in page.text
     assert "Add by invitation link" in page.text
+    assert "data-desktop-add" in page.text
     assert "/static/desktop.js" in page.text
 
     token = csrf_token(client, "/campaigns")

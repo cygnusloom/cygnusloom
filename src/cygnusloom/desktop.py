@@ -25,6 +25,7 @@ from cygnusloom.desktop_servers import (
     ServerError,
     ServerStore,
     normalize_invite_url,
+    normalize_server_url,
     origin_of,
 )
 
@@ -238,6 +239,17 @@ def parse_desktop_action(payload: object) -> tuple[str, str, bool] | None:
     return None
 
 
+def parse_add_action(payload: object) -> tuple[str, str] | None:
+    """Validate an add-server action from the local menu: ``(url, name)``."""
+    if not isinstance(payload, dict) or payload.get("action") != "add":
+        return None
+    url = payload.get("url")
+    if not isinstance(url, str) or not url:
+        return None
+    name = payload.get("name")
+    return (url, name if isinstance(name, str) else "")
+
+
 def should_hand_to_browser(
     scheme: str, target: str, allowed: set[str], *, invite_pending: bool
 ) -> bool:
@@ -406,6 +418,7 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
             self.invite_origin = ""
             self.invite_probed: set[str] = set()
             self.invite_replies: set[Any] = set()
+            self.add_replies: set[Any] = set()
             self.loopback: LoopbackReceiver | None = None
             self._credential_warning_shown = False
             self.setWindowTitle(title)
@@ -462,6 +475,10 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
 
         def _desktop_action(self, payload: object) -> None:
             if origin_of(self.page.url().toString()) != self.local_origin:
+                return
+            add = parse_add_action(payload)
+            if add is not None:
+                self.add_server(*add)
                 return
             action = parse_desktop_action(payload)
             if action is None:
@@ -526,6 +543,63 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
                 servers.touch(server_id)
             except ServerError:
                 pass
+
+        def add_server(self, url: str, name: str) -> None:
+            try:
+                value = normalize_server_url(url)
+            except ServerError as exc:
+                QMessageBox.warning(self, title, str(exc))
+                return
+            try:
+                existing = servers.find_by_url(value)
+            except ServerError:
+                existing = None
+            if existing is not None:
+                self.statusBar().showMessage(f"{value} is already in the server list.", 8000)
+                return
+            request = QNetworkRequest(QUrl(f"{value}/desktop/info"))
+            request.setRawHeader(b"Accept", b"application/json")
+            request.setRawHeader(b"User-Agent", b"CygnusLoom-desktop")
+            if hasattr(request, "setTransferTimeout"):
+                request.setTransferTimeout(15000)
+            reply = self.network.get(request)
+            self.add_replies.add(reply)
+            reply.finished.connect(lambda: self._add_probe_done(reply, value, name))
+
+        def _add_probe_done(self, reply, url: str, name: str) -> None:
+            self.add_replies.discard(reply)
+            try:
+                status = reply.attribute(QNetworkRequest.Attribute.HttpStatusCodeAttribute)
+                error = reply.errorString()
+                body = bytes(reply.readAll().data())
+            finally:
+                reply.deleteLater()
+            if status != 200:
+                detail = error if error and error != "Unknown error" else f"HTTP {status}"
+                QMessageBox.warning(self, title, f"Could not reach {url}.\n\n{detail}")
+                return
+            try:
+                payload = json.loads(body)
+            except ValueError:
+                QMessageBox.warning(
+                    self, title, f"{url} did not answer with Cygnus Loom server information."
+                )
+                return
+            if not isinstance(payload, dict) or payload.get("app") != "cygnusloom":
+                QMessageBox.warning(self, title, f"{url} is not a Cygnus Loom server.")
+                return
+            issuer = payload.get("oidc_issuer")
+            issuer = issuer if isinstance(issuer, str) else ""
+            try:
+                server = servers.add(url, name, oidc_issuer=issuer)
+            except ServerError as exc:
+                QMessageBox.warning(self, title, str(exc))
+                return
+            self.current_server_id = server.id
+            self.pending_login_id = ""
+            self.fill_saved = True
+            self.statusBar().showMessage(f"Added {server.name}.", 8000)
+            self.view.setUrl(QUrl(f"{self.local_origin}/campaigns"))
 
         def login_with_browser(self, server_id: str) -> None:
             server = self._server(server_id)

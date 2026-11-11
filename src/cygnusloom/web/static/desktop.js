@@ -31,6 +31,15 @@
     button.addEventListener("click", () => send("browser", { server: button.dataset.desktopBrowser }));
   });
 
+  const addForm = document.querySelector("form[data-desktop-add]");
+  if (addForm) {
+    addForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const data = new FormData(addForm);
+      send("add", { url: data.get("url"), name: data.get("name") });
+    });
+  }
+
   const params = new URLSearchParams(window.location.search);
   const loginServer = params.get("desktop_login");
   if (loginServer) {
