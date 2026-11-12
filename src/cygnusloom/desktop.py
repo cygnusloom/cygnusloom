@@ -559,6 +559,22 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
         def _title_changed(self, text: str) -> None:
             self.setWindowTitle(text or title)
 
+        def hand_download_to_browser(self, download: Any) -> None:
+            """Send a download link to the system browser.
+
+            QtWebEngine cancels downloads it is not told to save, and the app has no save flow.
+            The system browser already has a download folder and the player's web sessions, so
+            campaign exports work for the local game and for a server alike.
+            """
+            url = download.url()
+            download.cancel()
+            if not self._is_trusted_page():
+                return
+            if not QDesktopServices.openUrl(url):
+                self.statusBar().showMessage(
+                    "Could not open the download in your web browser.", 8000
+                )
+
         def allowed_origins(self) -> set[str]:
             allowed = {self.local_origin, origin_of(self.view.url().toString())}
             try:
@@ -830,6 +846,8 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
     )
 
     window = DesktopWindow()
+    # Downloads cannot be saved in the window; the host browser downloads them instead.
+    profile.downloadRequested.connect(window.hand_download_to_browser)
     settings = QSettings(str(window_state_path(data_dir)), QSettings.Format.IniFormat)
     restore_window_state(settings, window)
     app.aboutToQuit.connect(window.stop_browser_login)
