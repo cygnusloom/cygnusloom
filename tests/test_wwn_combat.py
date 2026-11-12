@@ -48,7 +48,7 @@ from tests.test_campaigns import _create_character, _new_campaign, _signed_in
 from tests.test_character_creation import _choices, _named_picks, _picks, _rolled_stats
 from tests.test_combat import Rolls, _character
 from tests.test_world import _db
-from tests.turns import take_turn
+from tests.turns import next_turn, take_turn
 
 LIBRARY: ContentLibrary = content_library()
 WWN = LIBRARY.rule_sets["worldswithoutnumber"]
@@ -297,6 +297,7 @@ def test_an_attack_below_ac_misses_and_one_at_ac_hits(client_factory):
     assert missed["armor"] == 0
     assert _character(app, campaign_id, FOE).harm == {}
 
+    next_turn(tools, PC)
     hit = replace(tools, rng=Rolls(4, _roll_for_total(13, bonus))).player_attack(FOE, BOW)
     assert hit["armor"] == 0
     assert hit["harm"] == {"hp": 4 + _modifier(pc, "dex") + 1}
@@ -623,6 +624,7 @@ def test_a_natural_one_always_misses_and_a_natural_twenty_always_hits(client_fac
     assert missed["harm"] == {}
 
     tools.set_armor(FOE, 30)
+    next_turn(tools, PC)
     hit = replace(tools, rng=Rolls(1, 20)).player_attack(FOE, UNARMED)
     pc = _pc(app, campaign_id)
     punch = max(0, WWN.character.skill_level(pc.skills, "punch"))
@@ -1160,12 +1162,24 @@ def test_a_statblocks_attack_count_is_resolved_in_one_action(client_factory):
     _foe(tools, hp=30)
     tools.create_monster("Ember Hound", YARD, template="ember_hound")
     tools.add_participant("Ember Hound")
-    tools.set_stat_max(PC, "hp", 30, "for a long test fight")
+    tools.set_stat_max(PC, "hp", 200, "for a long test fight")
+    tools.set_debug_stat(PC, "hp", 200)
+    lines = tools.get_statblock("Ember Hound")["statblock"]
+    assert "Attacks per action: 2" in lines
 
     before = len(_struck(app, campaign_id))
     take_turn(tools, "Ember Hound")
     tools.attack("Ember Hound", "bite", PC)
     assert len(_struck(app, campaign_id)) - before == 2
+
+    # The two bites were the hound's one attack action, so a second attack action this turn is
+    # refused; its next turn restores the budget.
+    with pytest.raises(InvalidInput, match="already attacked this turn"):
+        tools.attack("Ember Hound", "bite", PC)
+    assert len(_struck(app, campaign_id)) - before == 2
+    next_turn(tools, "Ember Hound")
+    tools.attack("Ember Hound", "bite", PC)
+    assert len(_struck(app, campaign_id)) - before == 4
 
 
 def test_a_single_attack_statblock_resolves_one_attack(client_factory):
@@ -1234,6 +1248,7 @@ def test_a_shield_turns_aside_only_the_first_shock_in_a_round(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     tools = replace(tools, marketplace=WWN.marketplace)
     _foe(tools, hp=20, shock=2, shock_ac=20, attack_bonus=0)
+    _foe(tools, "Bo", hp=20, shock=2, shock_ac=20, attack_bonus=0)
     pc = _pc(app, campaign_id)
     assert any("shield" in item.flags for item in pc.items)
     _ready_shield(tools)
@@ -1244,7 +1259,8 @@ def test_a_shield_turns_aside_only_the_first_shock_in_a_round(client_factory):
     first = _struck(app, campaign_id)[-1]
     assert (first.hit, first.shock, first.shield_round) == (False, 0, 1)
 
-    replace(tools, rng=Rolls(1, 1, 1, 1, 1, 1)).attack(FOE, "Claw", PC)
+    take_turn(tools, "Bo")
+    replace(tools, rng=Rolls(1, 1, 1, 1, 1, 1)).attack("Bo", "Claw", PC)
     second = _struck(app, campaign_id)[-1]
     assert (second.hit, second.shock, second.shield_round) == (False, 2, 0)
 
@@ -1253,6 +1269,7 @@ def test_a_carried_shield_only_blocks_shock_when_wielded(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     tools = replace(tools, marketplace=WWN.marketplace)
     _foe(tools, hp=20, shock=2, shock_ac=20, attack_bonus=0)
+    _foe(tools, "Bo", hp=20, shock=2, shock_ac=20, attack_bonus=0)
     tools.set_stat_max(PC, "hp", 20, cause="a test")
     _ready_shield(tools)
     tools.equip_armor(PC, "Large Shield", equipped=False)
@@ -1264,7 +1281,8 @@ def test_a_carried_shield_only_blocks_shock_when_wielded(client_factory):
     assert (carried.hit, carried.shock, carried.shield_round) == (False, 2, 0)
 
     tools.equip_armor(PC, "Large Shield")
-    replace(tools, rng=Rolls(1, 1, 1, 1, 1, 1)).attack(FOE, "Claw", PC)
+    take_turn(tools, "Bo")
+    replace(tools, rng=Rolls(1, 1, 1, 1, 1, 1)).attack("Bo", "Claw", PC)
     wielded = _struck(app, campaign_id)[-1]
     assert (wielded.hit, wielded.shock, wielded.shield_round) == (False, 0, 1)
 
@@ -1446,6 +1464,7 @@ def test_long_range_takes_the_configured_penalty(client_factory):
 
     short = tools.player_attack(FOE, BOW, range_band="short", attack_roll=10, damage_roll=2)
     short_hit = _struck(app, campaign_id)[-1]
+    next_turn(tools, PC)
     long = tools.player_attack(FOE, BOW, range_band="long", attack_roll=10, damage_roll=2)
     long_hit = _struck(app, campaign_id)[-1]
 
@@ -1463,6 +1482,7 @@ def test_dual_wielding_applies_its_hit_penalty_and_damage_bonus(client_factory):
 
     tools.player_attack(FOE, LONG_SWORD, attack_roll=10, damage_roll=2)
     single = _struck(app, campaign_id)[-1]
+    next_turn(tools, PC)
     tools.player_attack(FOE, LONG_SWORD, attack_roll=10, damage_roll=2, dual_wield=True)
     paired = _struck(app, campaign_id)[-1]
 

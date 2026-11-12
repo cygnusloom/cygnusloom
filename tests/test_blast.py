@@ -91,7 +91,9 @@ def test_a_blast_refuses_a_target_owing_a_save(client_factory):
     assert result["targets"][0]["save_due"] == "str"
     _ally(tools, "Tam")
     with pytest.raises(InvalidInput, match="must make their save first"):
-        replace(tools, rng=Rolls(1, 1)).attack("Gorm", "Claw", "Tam", targets=["Tam", PC])
+        replace(tools, rng=Rolls(1, 1)).attack(
+            "Gorm", "Claw", "Tam", targets=["Tam", PC], force=True
+        )
 
 
 def test_targets_are_refused_on_an_attack_without_blast(client_factory):

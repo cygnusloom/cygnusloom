@@ -98,6 +98,11 @@
     "text": "The campaign has one omen, chosen from the Omens table when the campaign is created rather than rolled by the youngest character. Every character shares it. It should be read aloud to the players when the campaign begins."
   },
   {
+    "type": "rule",
+    "id": "combat-actions",
+    "text": "On their turn, a character may move up to 40ft and take up to one action. This may be casting a spell, attacking, moving for a second time, or some other reasonable action. An attack is one roll against one target, so a character makes at most one attack on their turn."
+  },
+  {
     "type": "encounter_grid",
     "id": "cairn",
     "cell_feet": 5,

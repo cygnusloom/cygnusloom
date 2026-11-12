@@ -29,6 +29,23 @@ def close_reply(db: Session, campaign_id: int) -> None:
         db.commit()
 
 
+def next_turn(tools: WorldTools, name: str) -> None:
+    """End whatever turn is running and come back round to `name`'s next turn. A test that makes
+    more than one attack by the same character uses this, because a turn allows only the rule
+    set's attack actions; two attacks need two turns."""
+    with Session(tools.engine) as db:
+        close_reply(db, tools.campaign_id)
+        state = load_state(db, tools.campaign_id)
+        encounter = state.encounter
+        assert encounter is not None, "there is no encounter to take a turn in"
+        if encounter.acting is not None:
+            acting = state.characters[name_key(encounter.acting)]
+            encounters.end_turn(
+                db, tools.campaign_id, acting.name, by_player=acting.kind == PC_KIND
+            )
+    take_turn(tools, name)
+
+
 def take_turn(tools: WorldTools, name: str) -> None:
     """Put the encounter's turn on `name`, ending the turns in between and closing each GM reply
     the way the table would by pressing Start and End your turn. The name must be in the order."""

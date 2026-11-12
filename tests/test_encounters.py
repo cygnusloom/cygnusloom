@@ -293,6 +293,15 @@ def test_placement_is_bounded_occupied_and_movement_limited(
     moved = _place(app, campaign_id, "Pip", 8, 0)
     assert moved["moves_left"] == 0
     assert "can move 0 more cells" in _place(app, campaign_id, "Pip", 9, 0)["error"]
+    forced = _call(
+        app,
+        campaign_id,
+        "place_participant",
+        {"name": "Pip", "column": 9, "row": 0, "force": True},
+        CAIRN_GRID,
+    )
+    assert forced["placed"] == "Pip"
+    assert forced["moves_left"] == 0
 
 
 def test_turns_follow_join_order_and_wrap_into_a_new_round(
@@ -454,6 +463,23 @@ def test_npc_turn_is_played_out_and_ends_automatically(
     assert "End Pip&#39;s turn" not in page
     assert "Start Ada's turn" not in page
     assert "End your turn" in page
+    assert "Attacks left: 1 of 1." in page
+    assert "Movement left:" in page
+
+
+def test_the_encounter_view_reports_the_turns_remaining_resources(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _encounter_with(client_factory)
+    app = client.app
+    _begin(app, campaign_id, "Pip")
+    state = _encounter(app, campaign_id)
+    combat = LIBRARY.rule_sets["cairn2e"].combat
+    view = encounters.encounter_view(state, CAIRN_GRID, combat)
+    assert view is not None
+    assert view["acting"] == "Pip"
+    assert (view["attacks_left"], view["attacks_per_turn"]) == (1, 1)
+    assert view["moves_left"] == CAIRN_GRID.move_cells
 
 
 def test_an_out_of_character_npc_turn_still_ends_when_the_reply_finishes(

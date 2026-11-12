@@ -73,7 +73,7 @@
   {
     "type": "prompt",
     "id": "player_rolls",
-    "text": "The player rolls their own character's attacks and owed saves. Call player_attack for an attack so the player rolls the weapon's damage dice, and player_save for a save so the player rolls the d20; player_save also works for hazard saves when you give it a stat. Never call attack for the player character. Use these tools in and out of an encounter."
+    "text": "The player rolls their own character's attacks and owed saves. Call player_attack for an attack so the player rolls the weapon's damage dice, and player_save for a save so the player rolls the d20; player_save also works for hazard saves when you give it a stat. Never call attack for the player character. When another player character or a controlled hireling is attacking, pass their name as player_attack's character. Use these tools in and out of an encounter."
   },
   {
     "type": "prompt",

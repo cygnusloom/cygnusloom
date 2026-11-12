@@ -20,7 +20,7 @@ from cygnusloom.services.injuries import EffectContext, run_effects
 from tests import factories
 from tests.conftest import content_library
 from tests.support import DEFAULT_RULE_SET, content_tree
-from tests.turns import take_turn
+from tests.turns import next_turn, take_turn
 
 CAIRN = content_library().rule_sets["cairn2e"]
 PC = "Mara"
@@ -159,7 +159,7 @@ def test_a_hit_to_exactly_zero_hp_gives_the_scar_for_the_harm_taken(client_facto
     _set_max(app, campaign_id, "hp", 10)
     take_turn(tools, "Grave Thing")
     _hit(tools, "Grave Thing", PC, 7)
-    take_turn(tools, "Grave Thing")
+    next_turn(tools, "Grave Thing")
     result = _hit(tools, "Grave Thing", PC, 3)
 
     assert result["injury"] == "Walloped"
@@ -251,7 +251,7 @@ def test_the_statblock_names_the_conditions_and_scars_a_character_has(client_fac
     _set_max(app, campaign_id, "hp", 10)
     take_turn(tools, "Grave Thing")
     _hit(tools, "Grave Thing", PC, 7)
-    take_turn(tools, "Grave Thing")
+    next_turn(tools, "Grave Thing")
     _hit(tools, "Grave Thing", PC, 3)
 
     lines = tools.get_statblock(PC)["statblock"]

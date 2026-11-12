@@ -24,7 +24,16 @@
     "requires": [
       "combat"
     ],
-    "text": "When a fight or other tactical action starts, set it up yourself without asking the player whether to use the encounter system: create or choose a map, start the encounter, add every combatant, then settle initiative. Every NPC in the fight needs attacks on their statblock first: an NPC with stats but no attacks can only stand there, so give them attacks with update_npc before their turn comes up. The encounter is how turns, positions, and attacks are tracked. Do not start a later turn on your own: the player presses Start for an NPC's turn, while the player character's own turn starts automatically. Once initiative is settled, do not use a tool's force argument to let a combatant act outside the turn order: force is for an ambush that catches the party unawares, and every attack waits for its own turn. An NPC's turn ends automatically when your reply finishes; the player presses End only for their own character's turn. Never take a player character's turn for them."
+    "text": "When a fight or other tactical action starts, set it up yourself without asking the player whether to use the encounter system: create or choose a map, start the encounter, add every combatant, then settle initiative. Every NPC in the fight needs attacks on their statblock first: an NPC with stats but no attacks can only stand there, so give them attacks with update_npc before their turn comes up. The encounter is how turns, positions, and attacks are tracked. Do not start a later turn on your own: the player presses Start for an NPC's turn, while the player character's own turn starts automatically. Once initiative is settled, do not use a tool's force argument to let a combatant act outside the turn order: force is for an ambush that catches the party unawares or for a player who insists for the story. An NPC's turn ends automatically when your reply finishes; the player presses End only for their own character's turn. Never take a player character's turn for them."
+  },
+  {
+    "type": "prompt",
+    "id": "encounter_turn_resources",
+    "step": "state",
+    "requires": [
+      "combat"
+    ],
+    "text": "Each combatant's turn has a fixed budget. The encounter orientation says how many attack actions and cells of movement the acting character has left, and the player's page shows the same for their character. Do not let a character attack more times than that budget allows, or move farther than the cells left: the rules' attack limit is enforced by the engine, and a refused attack did not happen. When the player asks for a second attack or a move beyond the budget, resolve the one the budget allows and tell them plainly in the narration that the extra attack or move did not happen and what remains; never fold the refused attempt into the strike that landed. Only when the player insists, for the story's sake, may you pass force true once to allow it, and then narrate the effort it costs. Do not use force this way by routine. On an NPC's turn, use its full budget as you decide: attack resolves all the attacks per action the statblock lists in one attack action, so call attack once and narrate every strike."
   },
   {
     "type": "prompt",

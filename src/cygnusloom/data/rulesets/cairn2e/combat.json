@@ -44,6 +44,7 @@
     "aid_items": ["Bandages"],
     "hit_mode": "auto",
     "multi_attack": "highest",
+    "attacks_per_turn": 1,
     "save": {"mode": "roll_under", "auto_success": 1, "auto_fail": 20},
     "initiative_mode": "pass_npcs_fail",
     "groups": {

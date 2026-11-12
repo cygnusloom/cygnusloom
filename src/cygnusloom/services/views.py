@@ -30,6 +30,7 @@ from cygnusloom.content.library import (
     Hooks,
     HousekeepingRules,
     InventoryRules,
+    MonsterTemplate,
     RelationRules,
     TallyRules,
     WorldTerrain,
@@ -334,18 +335,20 @@ def get_statblock(
     counters: Mapping[str, CounterRules] | None = None,
     track_inventory: bool = True,
     currency: str = "",
+    monsters: Mapping[str, MonsterTemplate] | None = None,
 ) -> dict[str, Any]:
     """A character's stats, template, features, and fields, one line each. Works for the player
-    character and for NPCs. With a rule set's `combat`, the armor, attacks, harm, and status follow.
-    With its `conditions`, `inventory`, `hooks`, and `counters`, the conditions, injuries,
-    hooks-driven holds, items, and counter values follow."""
+    character and for NPCs. With a rule set's `combat`, the armor, attacks, harm, and status follow;
+    `monsters` adds how many attacks a matching statblock makes in one attack action. With its
+    `conditions`, `inventory`, `hooks`, and `counters`, the conditions, injuries, hooks-driven
+    holds, items, and counter values follow."""
     character = _character_named(state, name)
     kind = "player character" if character.kind == PC_KIND else "npc"
     lines = _sheet_text(spec, character).splitlines()
     if character.description:
         lines.insert(0, f"Description: {character.description}")
     if combat is not None:
-        lines += _combat_lines(character, spec, combat)
+        lines += _combat_lines(character, spec, combat, monsters)
     lines += _status_lines(
         character, conditions, inventory, hooks, counters, track_inventory, currency
     )
@@ -363,7 +366,12 @@ def get_statblock(
     return result
 
 
-def _combat_lines(character: Character, spec: CharacterSpec, combat: CombatRules) -> list[str]:
+def _combat_lines(
+    character: Character,
+    spec: CharacterSpec,
+    combat: CombatRules,
+    monsters: Mapping[str, MonsterTemplate] | None = None,
+) -> list[str]:
     lines = [f"Armor: {character.armor}"]
     if character.defense_tracked:
         lines.append(
@@ -384,6 +392,9 @@ def _combat_lines(character: Character, spec: CharacterSpec, combat: CombatRules
             for name, formula in character.attacks.items()
         )
         lines.append(f"Attacks: {attacks}")
+        template = _monster_template(character, monsters)
+        if template is not None and template.attacks_per_action > 1:
+            lines.append(f"Attacks per action: {template.attacks_per_action}")
     if any(character.harm.values()):
         harm = ", ".join(
             f"{spec.stats[stat].name} {amount}" for stat, amount in character.harm.items() if amount
@@ -400,6 +411,18 @@ def _combat_lines(character: Character, spec: CharacterSpec, combat: CombatRules
     elif character.save_due is not None:
         lines.append(f"Status: {spec.stats[character.save_due].name} save due")
     return lines
+
+
+def _monster_template(
+    character: Character, monsters: Mapping[str, MonsterTemplate] | None
+) -> MonsterTemplate | None:
+    """The statblock an NPC was built from, matched by the name it borrows."""
+    if not monsters or not character.creature:
+        return None
+    wanted = name_key(character.creature)
+    return next(
+        (monster for monster in monsters.values() if name_key(monster.name) == wanted), None
+    )
 
 
 def _shock_text(character: Character, attack: str) -> str:
@@ -1300,12 +1323,13 @@ def _encounter_lines(
             f"Initiative is not set yet. {waiting} must roll for initiative with player_initiative."
         )
     if view["acting"] is not None:
-        left = (
-            f", with {view['moves_left']} of {view['move_cells']} cells of movement left"
-            if view["moves_left"] is not None
-            else ""
-        )
-        lines.append(f"Taking their turn now: {view['acting']}{left}.")
+        left: list[str] = []
+        if view["attacks_left"] is not None:
+            left.append(f"{view['attacks_left']} of {view['attacks_per_turn']} attacks")
+        if view["moves_left"] is not None:
+            left.append(f"{view['moves_left']} of {view['move_cells']} cells of movement")
+        suffix = f", with {' and '.join(left)} left" if left else ""
+        lines.append(f"Taking their turn now: {view['acting']}{suffix}.")
     if not view["participants"]:
         lines.append("No participants yet.")
     for who in view["participants"]:

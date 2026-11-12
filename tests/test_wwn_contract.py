@@ -85,6 +85,14 @@ def test_wwn_statblock_multi_attack_uses_each_attack() -> None:
     assert combat.multi_attack == "each"
 
 
+def test_wwn_allows_one_attack_action_per_turn() -> None:
+    """The book gives each combatant one Main action and one Move per round; a statblock's
+    attacks per action all happen inside that one attack action."""
+    combat = _wwn().combat
+    assert combat is not None
+    assert combat.attacks_per_turn == 1
+
+
 def test_wwn_bestiary_abilities_are_structured_fields() -> None:
     monsters = _wwn().monsters
     spore = monsters["ember_hound"].abilities[0]

@@ -41,6 +41,7 @@ from cygnusloom.services.events import (
     ChatGM,
     EncounterEnded,
     MaxChanged,
+    PcAdded,
     Struck,
     current,
     decode,
@@ -53,7 +54,7 @@ from tests.conftest import content_library
 from tests.test_campaigns import _create_character
 from tests.test_character_creation import _cairn_campaign, _cairn_campaign_fast, _complete_form
 from tests.test_world import _db, _state
-from tests.turns import take_turn
+from tests.turns import next_turn, take_turn
 
 LIBRARY = content_library()
 CAIRN = LIBRARY.rule_sets["cairn2e"]
@@ -1059,6 +1060,7 @@ def test_turning_invincibility_off_restores_harm(client_factory):
     _set_invincible(app, campaign_id, PC, False)
     _set_stat(app, campaign_id, PC, "hp", 0)
     before = dict(_character(app, campaign_id, PC).harm)
+    next_turn(tools, "Grave Thing")
     result = _hit(tools, "Grave Thing", PC, 6)
     assert result["harm"]
     after = _character(app, campaign_id, PC).harm
@@ -1148,6 +1150,7 @@ def test_a_defeated_monster_cannot_be_hit_or_attack(client_factory):
     _foe(tools, "Bo")
     take_turn(tools, "Grave Thing")
     _hit(tools, "Grave Thing", "Bo", 6, 5, 20, 1, 1)
+    next_turn(tools, "Grave Thing")
     with pytest.raises(InvalidInput, match="Bo is dead"):
         _hit(tools, "Grave Thing", "Bo", 1)
     # The order passes over a dead Bo, so only a forced action reaches their own attack.
@@ -1188,6 +1191,53 @@ def test_a_player_hit_is_the_damage_the_player_rolled(client_factory):
     assert _character(app, campaign_id, "Bo").harm == {"hp": 4}
 
 
+def test_another_player_character_can_attack_by_name(client_factory):
+    client, campaign_id, tools = _fight_client(client_factory)
+    _foe(tools, "Bo", hp=30)
+    # A campaign can have more than one player character, such as a promoted hireling or a
+    # second account's character. The attack names the one acting.
+    with _db(client.app) as db:
+        record(
+            db,
+            campaign_id,
+            PcAdded(
+                name="Wren",
+                location=YARD,
+                stats={"hp": 6, "str": 10, "dex": 10, "wil": 10},
+            ),
+        )
+        db.commit()
+    tools.add_participant("Wren")
+    tools.give_item("Wren", "Sword", damage="1d8")
+    take_turn(tools, "Wren")
+
+    result = replace(tools, rng=Rolls(4)).player_attack("Bo", "Sword", character="Wren")
+
+    assert result["harm"] == {"hp": 4}
+    assert _struck_events(client.app, campaign_id)[-1].attacker == "Wren"
+    with pytest.raises(InvalidInput, match="is an NPC; use attack instead"):
+        tools.player_attack("Bo", "Sword", character="Bo")
+
+
+def test_a_player_character_attacks_once_per_turn(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _foe(tools, "Bo", hp=30)
+    take_turn(tools, PC)
+    first = replace(tools, rng=Rolls(4)).player_attack("Bo", "Sword")
+    assert first["harm"] == {"hp": 4}
+    with pytest.raises(InvalidInput, match="already attacked this turn"):
+        replace(tools, rng=Rolls(4)).player_attack("Bo", "Sword")
+    assert _character(app, campaign_id, "Bo").harm == {"hp": 4}
+
+    # The story override the GM uses when the player insists still works, and the next turn
+    # restores the budget.
+    forced = replace(tools, rng=Rolls(4)).player_attack("Bo", "Sword", force=True)
+    assert forced["harm"] == {"hp": 4}
+    next_turn(tools, PC)
+    second = replace(tools, rng=Rolls(4)).player_attack("Bo", "Sword")
+    assert second["harm"] == {"hp": 4}
+
+
 @pytest.mark.parametrize(
     ("weapon", "message"),
     [
@@ -1216,6 +1266,7 @@ def test_overflow_on_a_player_character_waits_for_the_player_to_save(client_fact
     assert result["defeated"] is False
     assert _character(app, campaign_id, PC).save_due == "str"
 
+    next_turn(tools, "Grave Thing")
     with pytest.raises(InvalidInput, match="must make their str save first"):
         _hit(tools, "Grave Thing", PC, 1, 1, 1)
     take_turn(tools, PC)

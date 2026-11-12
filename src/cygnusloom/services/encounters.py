@@ -188,7 +188,15 @@ def _character(state: CampaignState, name: str) -> Character:
 def _moves_left(encounter: Encounter, grid: EncounterGrid | None) -> int | None:
     if grid is None or encounter.acting is None:
         return None
-    return grid.move_cells - encounter.moved
+    return max(0, grid.move_cells - encounter.moved)
+
+
+def _attacks_left(encounter: Encounter, combat: CombatRules | None) -> int | None:
+    """How many attack actions the acting participant has left this turn. None between turns
+    or when the rule set has no combat."""
+    if combat is None or encounter.acting is None:
+        return None
+    return max(0, combat.attacks_per_turn - encounter.attacked)
 
 
 def _id_list(known: Mapping[str, object]) -> str:
@@ -1083,9 +1091,12 @@ def place_participant(
     grid: EncounterGrid | None,
     terrain: Mapping[str, EncounterTerrain] | None = None,
     encounter_objects: Mapping[str, EncounterObject] | None = None,
+    force: bool = False,
 ) -> dict[str, Any]:
     """Move a participant to a cell. Obstacles block; difficult terrain costs two moves per cell
-    entered. Without marks or a background, the cost is the plain distance in cells."""
+    entered. Without marks or a background, the cost is the plain distance in cells. `force` lets
+    a move go past the movement left this turn when the story needs it; the cost is still
+    recorded, so the participant has no movement left afterward."""
     state = load_state(db, campaign_id)
     encounter = _encounter(state)
     character = _participant(state, name)
@@ -1129,7 +1140,7 @@ def place_participant(
             too_far = f"{character.name} can move {left} more cells this turn, and that is {route}"
         if acting:
             cost = route
-            if left is not None and cost > left:
+            if left is not None and cost > left and not force:
                 raise InvalidInput(too_far)
     record(
         db,
@@ -1139,7 +1150,7 @@ def place_participant(
     db.commit()
     after = _moves_left(encounter, grid)
     if after is not None:
-        after -= cost
+        after = max(0, after - cost)
     cells = dict(encounter.cells)
     cells[name_key(character.name)] = (column, row)
     result: dict[str, Any] = {
@@ -1419,6 +1430,8 @@ def encounter_view(
         "round": encounter.round,
         "acting": encounter.acting,
         "awaiting_initiative": awaiting_initiative(state),
+        "attacks_left": _attacks_left(encounter, combat),
+        "attacks_per_turn": combat.attacks_per_turn if combat is not None else None,
         "moves_left": _moves_left(encounter, grid),
         "move_cells": grid.move_cells if grid is not None else None,
         "cell_feet": grid.cell_feet if grid is not None else None,

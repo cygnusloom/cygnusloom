@@ -29,7 +29,7 @@ from tests.test_combat import (
     _set_stat,
 )
 from tests.test_combat import _combat as _combat_definition
-from tests.turns import take_turn
+from tests.turns import next_turn, take_turn
 
 IMPAIRED = "1d4"
 ENHANCED = "1d12"
@@ -65,6 +65,7 @@ def test_an_impaired_npc_attack_rolls_the_impaired_dice(client_factory):
     result = replace(tools, rng=Rolls(4)).attack("Grave Thing", "Claw", "Bo", modifier="impaired")
     assert result["raw"] == 4
     assert _struck(app, campaign_id)[-1].modifier == "impaired"
+    next_turn(tools, "Grave Thing")
     with pytest.raises(AssertionError, match="cannot show 5"):
         replace(tools, rng=Rolls(5)).attack("Grave Thing", "Claw", "Bo", modifier="impaired")
 
