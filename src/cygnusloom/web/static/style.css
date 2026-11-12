@@ -119,6 +119,18 @@ button.secondary:hover, button.secondary:focus-visible,
 .button { display: inline-block; }
 
 [role="alert"] { color: var(--danger); }
+/* Page-level notices carry their own close button: the campaign workspace keeps its page
+   without a reload, so a notice would otherwise sit above the views until the next navigation. */
+.flash { display: flex; align-items: flex-start; gap: 0.75rem; margin: 1rem 0; }
+.flash > p { flex: 1; min-width: 0; margin: 0; }
+.flash-close {
+  flex: none; display: inline-flex; align-items: center; justify-content: center;
+  width: 1.7rem; height: 1.7rem; padding: 0;
+  border: 1px solid transparent; border-radius: 6px;
+  background: none; color: var(--muted);
+  font-size: 1.15rem; line-height: 1;
+}
+.flash-close:hover, .flash-close:focus-visible { color: var(--text); border-color: var(--border); }
 .muted { color: var(--muted); }
 .play-tabs {
   display: flex;

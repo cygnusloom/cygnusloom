@@ -244,6 +244,24 @@ def test_the_thinking_preference_is_per_account_and_controls_reply_details(
     assert guest.get(context_url).status_code == 200
 
 
+def test_saving_the_view_offers_a_dismiss_button_for_its_notice(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = campaign_ready_fast(client_factory)
+
+    response = _post_thinking(client, campaign_id, True)
+
+    assert response.status_code == 303
+    page = client.get(response.headers["location"]).text
+    assert "Your view is saved." in page
+    assert "data-dismiss-flash" in page
+    assert '<script src="/static/flash.js"></script>' in page
+    # The handler is served with the page instead of depending on a page-specific script.
+    script = client.get("/static/flash.js")
+    assert script.status_code == 200
+    assert 'closest(".flash")' in script.text
+
+
 def test_single_player_settings_page_keeps_credit_text_out(tmp_path):
     settings = Settings(
         database_url=f"sqlite:///{tmp_path / 'solo.db'}",

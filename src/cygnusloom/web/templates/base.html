@@ -42,7 +42,12 @@
   </header>
   <main>
     {% if step_up_done %}<p role="status">Re-authenticated. Repeat the action you were taking.</p>{% endif %}
-    {% if flash %}<p role="{{ 'alert' if flash.kind == 'error' else 'status' }}">{{ flash.message }}</p>{% endif %}
+    {% if flash %}
+    <div class="flash">
+      <p role="{{ 'alert' if flash.kind == 'error' else 'status' }}">{{ flash.message }}</p>
+      <button type="button" class="flash-close" data-dismiss-flash aria-label="Dismiss notification" title="Dismiss">&times;</button>
+    </div>
+    {% endif %}
     {% if error %}<p role="alert">{{ error }}</p>{% endif %}
     {% block content %}{% endblock %}
   </main>
@@ -56,5 +61,6 @@
   </footer>
   {% block scripts %}{% endblock %}
   {% if desktop %}<script src="/static/desktop.js"></script>{% endif %}
+  {% if flash %}<script src="/static/flash.js"></script>{% endif %}
 </body>
 </html>
