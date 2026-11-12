@@ -65,6 +65,7 @@ from cygnusloom.services.state import (  # noqa: F401
     defeat_status,
     estimate_tokens,
     group_by_side,
+    hit_points,
     marks_from_list,
     modifier_value,
     name_key,

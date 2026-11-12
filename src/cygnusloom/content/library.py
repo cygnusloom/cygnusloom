@@ -1357,6 +1357,11 @@ class CombatRules:
         return self.attack.damage
 
     @property
+    def hit_pool(self) -> str | None:
+        """The stat a hit's harm takes from, which is where a character's hit points live."""
+        return next((step.stat for step in self.damage if step.kind == "harm"), None)
+
+    @property
     def modifiers(self) -> Mapping[str, str]:
         return self.attack.modifiers
 
@@ -2070,6 +2075,12 @@ class RuleSet:
     @property
     def npc_hp_stat(self) -> str | None:
         return self.content.npc_hp_stat
+
+    @property
+    def hp_stat(self) -> str | None:
+        """The stat where a character's hit points live: the first stat a hit harms. None when
+        the rule set has no combat or no harm stat."""
+        return self.combat.hit_pool if self.combat is not None else None
 
     @property
     def dice_tables(self) -> Mapping[str, DiceTable]:
@@ -5225,9 +5236,7 @@ def _load_damage(
 
 def _hit_pool(combat: CombatRules | None) -> str | None:
     """The stat a hit's harm takes from, which is where a monster's hit points live."""
-    if combat is None:
-        return None
-    return next((step.stat for step in combat.damage if step.kind == "harm"), None)
+    return combat.hit_pool if combat is not None else None
 
 
 def _load_monster(

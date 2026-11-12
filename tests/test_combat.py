@@ -816,6 +816,21 @@ def test_the_roster_shows_the_statblock_beside_a_monster(client_factory):
     assert '<span class="muted">Blink Dog</span>' in roster
 
 
+def test_the_roster_and_sheets_show_current_and_maximum_hit_points(client_factory):
+    client, campaign_id, tools = _fight_client(client_factory)
+    _foe(tools, "Rover")
+    hp = _character(client.app, campaign_id, PC).stats["hp"]
+    tools.harm_stat(PC, "hp", 1, cause="a test")
+
+    page = client.get(f"/campaigns/{campaign_id}").text
+
+    roster = page[page.index('class="encounter-roster"') :]
+    assert f"HP {hp - 1}/{hp}" in roster
+    assert "HP 6/6" in roster
+    sheet = page[page.index('class="sheet-hp"') :]
+    assert f"<strong>HP</strong> {hp - 1} / {hp}" in sheet
+
+
 def test_the_encounter_view_names_the_statblock_a_monster_was_built_from(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     tools.create_monster("Rover", YARD, template="blink-dog")

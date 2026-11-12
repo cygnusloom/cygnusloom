@@ -1,6 +1,7 @@
 {# One character sheet: the player's own, or a hireling they play for. Expects `sheet_view`. #}
 {% if sheet_view.pronouns %}<p class="muted">Pronouns: {{ sheet_view.pronouns }}.</p>{% endif %}
 {% if sheet_view.description %}<p>{{ sheet_view.description }}</p>{% endif %}
+{% if sheet_view.hp is not none %}<p class="sheet-hp"><strong>HP</strong> {{ sheet_view.hp }} / {{ sheet_view.hp_max }}</p>{% endif %}
 {% for line in sheet_view.sheet %}
 <p>{{ line | compendium_links(sheet_view.sheet_links) }}</p>
 {% else %}

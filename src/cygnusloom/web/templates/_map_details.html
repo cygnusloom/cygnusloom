@@ -10,12 +10,14 @@
 <p><strong>Turn order</strong></p>
 <ul class="encounter-roster" aria-label="Turn order">
   {% for participant in encounter.participants %}
-  <li{% if participant.acting %} class="acting"{% endif %}>
+  <li{% if participant.acting %} class="acting"{% endif %}{% if participant.side_color %} style="--side-color: {{ participant.side_color }}"{% endif %}>
     <span class="muted">{{ participant.number }}.</span>
     <strong>{{ participant.name }}</strong>
     {% if participant.creature %}<span class="muted">{{ participant.creature }}</span>{% endif %}
     {% if participant.is_pc %}<span class="muted">(you)</span>{% endif %}
+    {% if participant.side %}<span class="roster-side">{{ participant.side }}</span>{% endif %}
     {% if participant.status %}<span class="roster-status">{{ participant.status }}</span>{% endif %}
+    {% if participant.hp is not none %}<span class="roster-hp{% if participant.hp == 0 %} empty{% endif %}">HP {{ participant.hp }}/{{ participant.hp_max }}</span>{% endif %}
     {% if participant.acting %}<span class="roster-state">acting</span>{% elif participant.next %}<span class="roster-state muted">next</span>{% endif %}
   </li>
   {% endfor %}

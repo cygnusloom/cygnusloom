@@ -685,6 +685,13 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 .character-panel { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
 .character-panel > .tab-list { flex: none; }
 .character-sheet-panel { padding-top: 0.75rem; }
+/* A character's hit points, when the rule set has them, read at a glance above the sheet. */
+.sheet-hp {
+  display: inline-flex; align-items: baseline; gap: 0.3rem; margin: 0.25rem 0 0.5rem;
+  padding: 0.1rem 0.65rem; border: 1px solid var(--border); border-radius: 999px;
+  background: var(--field); font-variant-numeric: tabular-nums;
+}
+.sheet-hp strong { color: var(--accent); letter-spacing: 0.05em; }
 /* The Inventory panel does the same for the player's pack and each hireling's. */
 .inventory-panel { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
 .inventory-panel > .tab-list { flex: none; }
@@ -747,11 +754,23 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
   box-sizing: border-box; width: 100%; margin: 0; padding: 0; list-style: none;
 }
 .encounter-roster li {
-  display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: baseline; padding: 0.2rem 0;
+  display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: baseline;
+  padding: 0.2rem 0 0.2rem 0.45rem;
+  border-left: 3px solid var(--side-color, transparent);
 }
 .encounter-roster li.acting { color: var(--accent); }
 .roster-state { margin-left: auto; font-size: 0.8rem; }
 .roster-status { font-size: 0.8rem; color: var(--muted); font-style: italic; }
+/* A side's name in its colour, so the roster matches the tokens on the board. */
+.roster-side {
+  padding: 0 0.45rem; border-radius: 999px; font-size: 0.7rem; line-height: 1.5;
+  color: color-mix(in srgb, var(--side-color, var(--muted)) 60%, white 40%);
+  background: color-mix(in srgb, var(--side-color, var(--panel)) 22%, transparent);
+  border: 1px solid color-mix(in srgb, var(--side-color, var(--border)) 65%, transparent);
+  text-transform: capitalize;
+}
+.roster-hp { font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.roster-hp.empty { color: var(--danger); }
 
 
 .shell { flex: 1; min-height: 0; display: flex; position: relative; overflow: hidden; }
@@ -1165,6 +1184,7 @@ main > .card + .card, main > .card + .admin-grid, main > .admin-grid + .card { m
 .map-token {
   --token-ring-width: 0px;
   --token-ring: transparent;
+  --token-side: var(--map-accent, var(--accent));
   display: grid; place-items: center;
   width: min(2rem, 90%); aspect-ratio: 1; box-sizing: border-box;
   padding: 0; border-radius: 50%;
@@ -1183,6 +1203,14 @@ main > .card + .card, main > .card + .admin-grid, main > .admin-grid + .card { m
     inset 0 1px 1px color-mix(in srgb, white 30%, transparent),
     inset 0 -2px 4px rgba(0, 0, 0, 0.42);
   transform: scale(calc(1 / var(--zoom, 1)));
+}
+/* An encounter token carries its side's colour, so the board reads at a glance while the
+   roster names each side in the same colour. */
+.map-token[data-side] {
+  border-color: color-mix(in srgb, var(--token-side) 55%, white 45%);
+  background:
+    radial-gradient(circle at 32% 24%, color-mix(in srgb, white 38%, transparent) 0 10%, transparent 42%),
+    radial-gradient(circle at 50% 58%, color-mix(in srgb, var(--token-side) 38%, var(--panel) 62%) 0 55%, color-mix(in srgb, var(--token-side) 70%, black 30%) 100%);
 }
 /* The acting token gets a bright ring on the base; the cell keeps its own accent outline. */
 .encounter-cell.acting .map-token {

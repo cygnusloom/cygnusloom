@@ -375,6 +375,14 @@ def current(character: Character, stat: str) -> int:
     return max(0, character.stats.get(stat, 0) - character.harm.get(stat, 0))
 
 
+def hit_points(character: Character, stat: str | None) -> tuple[int, int] | None:
+    """A character's current and maximum hit points, or None when the rule set has no hit
+    point stat or the character has no score in it."""
+    if stat is None or stat not in character.stats:
+        return None
+    return current(character, stat), character.stats[stat]
+
+
 def modifier_value(character: Character, stat: str) -> int:
     """A stat's score less the harm it has taken. Unlike current, it can go below 0, as a trait
     that a move adds can."""

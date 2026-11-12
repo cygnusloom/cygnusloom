@@ -50,6 +50,7 @@ from cygnusloom.services.events import (
     WorldObject,
     current,
     defeat_status,
+    hit_points,
     name_key,
     same_item_name,
     token_labels,
@@ -148,6 +149,9 @@ class CharacterSheetView:
     pronouns: str
     description: str
     sheet: list[str]
+    # The character's current and maximum hit points, when the rule set has an HP stat.
+    hp: int | None = None
+    hp_max: int | None = None
     abilities: tuple[FeatureLink, ...] = ()
     reactions: tuple[ReactionLink, ...] = ()
     dead: bool = False
@@ -754,11 +758,13 @@ def scene_view(
     sheet_links: Mapping[str, str] | None = None,
     track_inventory: bool = True,
     wage_currency: str = "",
+    hp_stat: str | None = None,
 ) -> SceneView:
     """The player's view. It shows only what is at the player character's location, including any
     hirelings there, and everyone the player has met. The pack shows the player character's items
     when the rule set has an inventory. The link maps name the compendium entries behind carried
-    items, the player character's features, met NPCs' creatures, and the current place."""
+    items, the player character's features, met NPCs' creatures, and the current place. The rule
+    set's HP stat, when it has one, gives every sheet its current and maximum hit points."""
     links = item_links or {}
     ability_entries = ability_links or {}
     creature_entries = creature_links or {}
@@ -776,11 +782,14 @@ def scene_view(
     reactions = _reaction_links(spec, pc) if pc is not None else ()
     pc_sheet = None
     if pc is not None:
+        points = hit_points(pc, hp_stat)
         pc_sheet = CharacterSheetView(
             name=pc.name,
             pronouns=pc.pronouns or "",
             description=pc.description,
             sheet=sheet,
+            hp=points[0] if points is not None else None,
+            hp_max=points[1] if points is not None else None,
             abilities=abilities,
             reactions=reactions,
             dead=pc.dead,
@@ -807,6 +816,7 @@ def scene_view(
         ability_entries,
         sheet_entries,
         wage_currency=wage_currency,
+        hp_stat=hp_stat,
     )
     hireling_inventories: tuple[CharacterInventoryView, ...] = ()
     if inventory is not None:
@@ -1534,6 +1544,7 @@ def _hireling_sheets(
     sheet_entries: Mapping[str, str],
     *,
     wage_currency: str = "",
+    hp_stat: str | None = None,
 ) -> tuple[CharacterSheetView, ...]:
     """Every hireling's sheet, with the same detail as the player's own sheet."""
     sheets = []
@@ -1541,12 +1552,15 @@ def _hireling_sheets(
         lines = _sheet_text(spec, character).splitlines()
         if conditions is not None:
             lines += _status_lines(character, conditions, None, None, None)
+        points = hit_points(character, hp_stat)
         sheets.append(
             CharacterSheetView(
                 name=character.name,
                 pronouns=character.pronouns or "",
                 description=character.summary or character.description,
                 sheet=lines,
+                hp=points[0] if points is not None else None,
+                hp_max=points[1] if points is not None else None,
                 abilities=_feature_links(spec, character, ability_entries),
                 reactions=_reaction_links(spec, character),
                 dead=character.dead,

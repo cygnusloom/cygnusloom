@@ -122,7 +122,7 @@ def _require_impaired(target: Character, modifier: str, combat: CombatRules) -> 
 
 def _harm_stat(combat: CombatRules) -> str | None:
     """The first stat a hit harms, which is the one shock and defeat are read from."""
-    return next((step.stat for step in combat.damage if step.kind == "harm"), None)
+    return combat.hit_pool
 
 
 def _defeat_after_harm(

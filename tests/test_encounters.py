@@ -713,7 +713,9 @@ def test_campaign_page_draws_tokens_with_full_name_tooltips_and_no_legend(
     _place(app, campaign_id, "Ada", 2, 3, grid=None)
 
     page = client.get(f"/campaigns/{campaign_id}").text
-    assert '<span class="map-token">Ada</span>' in page
+    assert 'class="map-token"' in page
+    assert 'data-side="party"' in page
+    assert ">Ada</span>" in page
     assert 'data-tip="Ada"' in page
     assert "Not on the map" not in page
     assert "encounter-list" not in page
@@ -730,7 +732,8 @@ def test_campaign_page_says_when_no_one_is_on_the_encounter_map(
     _place(app, campaign_id, "Pip", 2, 1, grid=None)
     page = client.get(f"/campaigns/{campaign_id}").text
     assert "Not on the map" not in page
-    assert '<span class="map-token">Pip</span>' in page
+    assert 'data-side="foes"' in page
+    assert ">Pip</span>" in page
 
 
 def test_campaign_page_lists_the_encounter_turn_order_in_the_location_panel(
@@ -751,8 +754,38 @@ def test_campaign_page_lists_the_encounter_turn_order_in_the_location_panel(
     _begin(app, campaign_id, "Pip")
     _finish_gm_reply(app, campaign_id)
     acting = client.get(f"/campaigns/{campaign_id}").text
-    assert '<li class="acting">' in acting
+    assert 'class="acting"' in acting
     assert '<span class="roster-state">acting</span>' in acting
+
+
+def test_the_roster_and_its_tokens_colour_each_side(client_factory: Callable[[], TestClient]):
+    client, campaign_id = _encounter_with(client_factory, columns=10, rows=10)
+    app = client.app
+    _call(
+        app,
+        campaign_id,
+        "create_npc",
+        {"name": "Moss", "location": TOWN, "description": "A bramble."},
+    )
+    added = _call(app, campaign_id, "add_participant", {"name": "Moss", "side": "wild things"})
+    assert added["side"] == "wild things"
+    _place(app, campaign_id, "Ada", 2, 3, grid=None)
+    _place(app, campaign_id, "Pip", 4, 4, grid=None)
+    _place(app, campaign_id, "Moss", 6, 6, grid=None)
+
+    page = client.get(f"/campaigns/{campaign_id}").text
+
+    assert f'style="--token-side: {encounters.PARTY_SIDE_COLOR}" data-side="party"' in page
+    assert f'style="--token-side: {encounters.FOES_SIDE_COLOR}" data-side="foes"' in page
+    assert (
+        f'style="--token-side: {encounters.OTHER_SIDE_COLORS[0]}" data-side="wild things"'
+        in page
+    )
+    assert '<span class="roster-side">party</span>' in page
+    assert '<span class="roster-side">foes</span>' in page
+    assert '<span class="roster-side">wild things</span>' in page
+    assert f'style="--side-color: {encounters.PARTY_SIDE_COLOR}"' in page
+    assert f'style="--side-color: {encounters.FOES_SIDE_COLOR}"' in page
 
 
 def _npc(name: str) -> Character:
