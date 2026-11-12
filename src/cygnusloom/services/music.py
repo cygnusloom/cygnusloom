@@ -73,6 +73,11 @@ class MusicView:
     intensity: int
     source: str
 
+    @property
+    def label(self) -> str:
+        """The mood's player-facing name."""
+        return MOOD_LABELS.get(self.mood, self.mood.title())
+
 
 def scene_key(state: CampaignState) -> str:
     """The scene a GM cue belongs to. A cue expires when the encounter, place, or day-part

@@ -72,6 +72,10 @@
     if (typeof value !== "string") return "auto";
     return value === "gm" || value === "auto" ? value : "auto";
   };
+  const moodLabel = (value) => {
+    const text = typeof value === "string" && value ? value : "exploration";
+    return text.charAt(0).toUpperCase() + text.slice(1);
+  };
   const trackUrl = (track) => {
     const file = String(track.file || "");
     return file.startsWith("/") ? file : `/static/music/${encodeURIComponent(file)}`;
@@ -120,6 +124,10 @@
 
   const syncControls = () => {
     const playing = userEnabled && !pendingGesture;
+    const moodText = moodLabel(mood);
+    for (const label of document.querySelectorAll("[data-music-mood-label]")) {
+      label.textContent = moodText;
+    }
     for (const button of document.querySelectorAll("[data-music-toggle]")) {
       button.setAttribute("aria-pressed", String(playing));
       const label = playing
@@ -131,9 +139,14 @@
       button.title = label;
     }
     for (const button of document.querySelectorAll("[data-music-menu-toggle]")) {
-      const label = nowPlaying ? `Music - ${nowPlaying.title} by ${nowPlaying.artist}` : "Music";
+      const label = nowPlaying
+        ? `Music - ${moodText} - ${nowPlaying.title} by ${nowPlaying.artist}`
+        : `Music - ${moodText}`;
       button.setAttribute("aria-label", label);
       button.title = label;
+    }
+    for (const button of document.querySelectorAll("[data-music-skip]")) {
+      button.disabled = !userEnabled || mood === "silence";
     }
     for (const input of document.querySelectorAll("[data-music-volume]")) {
       input.value = String(Math.round(volume * 100));
@@ -377,12 +390,26 @@
     });
   };
 
+  const skip = () => {
+    if (!userEnabled || mood === "silence") return;
+    const advance = () => {
+      if (!userEnabled || mood === "silence") return;
+      const following = pickTrack(mood, intensity);
+      if (following) fadeTo(following);
+    };
+    if (manifest) advance();
+    else loadManifest().then((data) => {
+      if (data) advance();
+    });
+  };
+
   const applyState = (nextMood, nextIntensity, nextSource) => {
     const moodChanged = nextMood !== mood;
     const intensityChanged = nextIntensity !== intensity;
     mood = typeof nextMood === "string" && nextMood ? nextMood : "exploration";
     intensity = clamp(Number(nextIntensity) || 1, 1, 3);
     source = normalise(nextSource);
+    syncControls();
     if (!userEnabled || mood === "silence") {
       stop();
       return;
@@ -445,7 +472,9 @@
 
   const onGesture = (event) => {
     // The music controls handle their own gestures; anything else on the page just unlocks sound.
-    if (event.target.closest?.("[data-music-toggle], [data-music-enabled]")) return;
+    if (event.target.closest?.("[data-music-toggle], [data-music-enabled], [data-music-skip]")) {
+      return;
+    }
     gestureSeen = true;
     unlock();
   };
@@ -483,6 +512,12 @@
     if (!button) return;
     event.preventDefault();
     toggle();
+  });
+  document.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-music-skip]");
+    if (!button || button.disabled) return;
+    event.preventDefault();
+    skip();
   });
   document.addEventListener("input", (event) => {
     const input = event.target.closest("[data-music-volume]");

@@ -1,7 +1,7 @@
 {
   "version": 1,
   "pack": "core",
-  "generated": "2026-11-11",
+  "generated": "2026-11-12",
   "tracks": [
     {
       "id": "scott-buckley-terminus",
@@ -28,7 +28,7 @@
       "source_url": "https://www.scottbuckley.com.au/library/wp-content/uploads/2021/05/sb_terminus.mp3",
       "artist_url": "https://www.scottbuckley.com.au/library/",
       "attribution": "Terminus by Scott Buckley - released under CC-BY 4.0. www.scottbuckley.com.au",
-      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+      "changes": "Re-encoded to 96 kbps MP3 and loudness-normalized for background playback."
     },
     {
       "id": "scott-buckley-nightfall",
@@ -55,7 +55,7 @@
       "source_url": "https://www.scottbuckley.com.au/library/wp-content/uploads/2019/05/sb_nightfall.mp3",
       "artist_url": "https://www.scottbuckley.com.au/library/",
       "attribution": "Nightfall by Scott Buckley - released under CC-BY 4.0. www.scottbuckley.com.au",
-      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+      "changes": "Re-encoded to 96 kbps MP3 and loudness-normalized for background playback."
     },
     {
       "id": "scott-buckley-the-summoning",
@@ -82,7 +82,7 @@
       "source_url": "https://www.scottbuckley.com.au/library/wp-content/uploads/2020/10/sb_thesummoning.mp3",
       "artist_url": "https://www.scottbuckley.com.au/library/",
       "attribution": "The Summoning by Scott Buckley - released under CC-BY 4.0. www.scottbuckley.com.au",
-      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+      "changes": "Re-encoded to 96 kbps MP3 and loudness-normalized for background playback."
     },
     {
       "id": "scott-buckley-reverie",
@@ -109,7 +109,7 @@
       "source_url": "https://www.scottbuckley.com.au/library/wp-content/uploads/2020/03/sb_reverie.mp3",
       "artist_url": "https://www.scottbuckley.com.au/library/",
       "attribution": "Reverie by Scott Buckley - released under CC-BY 4.0. www.scottbuckley.com.au",
-      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+      "changes": "Re-encoded to 96 kbps MP3 and loudness-normalized for background playback."
     },
     {
       "id": "scott-buckley-hiraeth",
@@ -136,7 +136,7 @@
       "source_url": "https://www.scottbuckley.com.au/library/wp-content/uploads/2020/06/sb_hiraeth.mp3",
       "artist_url": "https://www.scottbuckley.com.au/library/",
       "attribution": "Hiraeth by Scott Buckley - released under CC-BY 4.0. www.scottbuckley.com.au",
-      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+      "changes": "Re-encoded to 96 kbps MP3 and loudness-normalized for background playback."
     },
     {
       "id": "scott-buckley-rise-above",
@@ -163,7 +163,7 @@
       "source_url": "https://www.scottbuckley.com.au/library/wp-content/uploads/2023/09/RiseAbove.mp3",
       "artist_url": "https://www.scottbuckley.com.au/library/",
       "attribution": "Rise Above by Scott Buckley - released under CC-BY 4.0. www.scottbuckley.com.au",
-      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+      "changes": "Re-encoded to 96 kbps MP3 and loudness-normalized for background playback."
     },
     {
       "id": "scott-buckley-march-of-midnight",
@@ -190,7 +190,7 @@
       "source_url": "https://www.scottbuckley.com.au/library/wp-content/uploads/2019/10/sb_marchofmidnight.mp3",
       "artist_url": "https://www.scottbuckley.com.au/library/",
       "attribution": "March of Midnight by Scott Buckley - released under CC-BY 4.0. www.scottbuckley.com.au",
-      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+      "changes": "Re-encoded to 96 kbps MP3 and loudness-normalized for background playback."
     },
     {
       "id": "visager-the-great-forest",
@@ -217,7 +217,7 @@
       "source_url": "https://visager.bandcamp.com/album/songs-from-an-unmade-world",
       "artist_url": "https://visager.bandcamp.com/",
       "attribution": "The Great Forest (Loop) by Visager (Josie Brechner) - licensed under CC BY 4.0. https://visager.bandcamp.com/album/songs-from-an-unmade-world",
-      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+      "changes": "Re-encoded to 96 kbps MP3 and loudness-normalized for background playback."
     },
     {
       "id": "visager-dark-sanctum",
@@ -244,7 +244,7 @@
       "source_url": "https://visager.bandcamp.com/album/songs-from-an-unmade-world",
       "artist_url": "https://visager.bandcamp.com/",
       "attribution": "Dark Sanctum (Boss Fight Loop) by Visager (Josie Brechner) - licensed under CC BY 4.0. https://visager.bandcamp.com/album/songs-from-an-unmade-world",
-      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+      "changes": "Re-encoded to 96 kbps MP3 and loudness-normalized for background playback."
     },
     {
       "id": "visager-haunted-forest",
@@ -271,7 +271,7 @@
       "source_url": "https://visager.bandcamp.com/album/songs-from-an-unmade-world-2",
       "artist_url": "https://visager.bandcamp.com/",
       "attribution": "Haunted Forest (Loop) by Visager (Josie Brechner) - licensed under CC BY 4.0. https://visager.bandcamp.com/album/songs-from-an-unmade-world-2",
-      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+      "changes": "Re-encoded to 96 kbps MP3 and loudness-normalized for background playback."
     },
     {
       "id": "visager-village-dreaming",
@@ -298,7 +298,7 @@
       "source_url": "https://visager.bandcamp.com/album/songs-from-an-unmade-world",
       "artist_url": "https://visager.bandcamp.com/",
       "attribution": "Village Dreaming (Loop) by Visager (Josie Brechner) - licensed under CC BY 4.0. https://visager.bandcamp.com/album/songs-from-an-unmade-world",
-      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+      "changes": "Re-encoded to 96 kbps MP3 and loudness-normalized for background playback."
     },
     {
       "id": "komiku-cliff-road-chill",
@@ -325,7 +325,7 @@
       "source_url": "https://freemusicarchive.org/music/Komiku",
       "artist_url": "https://freemusicarchive.org/music/Komiku",
       "attribution": "Cliff Road Chill by Komiku - CC0 1.0. https://freemusicarchive.org/music/Komiku",
-      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+      "changes": "Re-encoded to 96 kbps MP3 and loudness-normalized for background playback."
     },
     {
       "id": "komiku-fight-for-your-life",
@@ -352,7 +352,7 @@
       "source_url": "https://freemusicarchive.org/music/Komiku",
       "artist_url": "https://freemusicarchive.org/music/Komiku",
       "attribution": "Fight for Your Life by Komiku - CC0 1.0. https://freemusicarchive.org/music/Komiku",
-      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+      "changes": "Re-encoded to 96 kbps MP3 and loudness-normalized for background playback."
     },
     {
       "id": "vindsvept-night-of-the-fae",
@@ -380,7 +380,7 @@
       "source_url": "https://vindsvept.se/wp-content/uploads/2021/07/Vindsvept-The-Youtube-Collection-172-Night-of-the-Fae.mp3",
       "artist_url": "https://vindsvept.se/",
       "attribution": "Night of the Fae by Vindsvept - licensed under CC BY 4.0. https://vindsvept.se/",
-      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+      "changes": "Re-encoded to 96 kbps MP3 and loudness-normalized for background playback."
     },
     {
       "id": "scott-buckley-juggernaut",
@@ -407,7 +407,7 @@
       "source_url": "https://www.scottbuckley.com.au/library/wp-content/uploads/2022/07/Juggernaut.mp3",
       "artist_url": "https://www.scottbuckley.com.au/library/",
       "attribution": "Juggernaut by Scott Buckley - released under CC-BY 4.0. www.scottbuckley.com.au",
-      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+      "changes": "Re-encoded to 96 kbps MP3 and loudness-normalized for background playback."
     },
     {
       "id": "scott-buckley-vanguard",
@@ -434,7 +434,7 @@
       "source_url": "https://www.scottbuckley.com.au/library/wp-content/uploads/2023/07/Vanguard.mp3",
       "artist_url": "https://www.scottbuckley.com.au/library/",
       "attribution": "Vanguard by Scott Buckley - released under CC-BY 4.0. www.scottbuckley.com.au",
-      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+      "changes": "Re-encoded to 96 kbps MP3 and loudness-normalized for background playback."
     },
     {
       "id": "scott-buckley-castles-in-the-sky",
@@ -461,7 +461,7 @@
       "source_url": "https://www.scottbuckley.com.au/library/wp-content/uploads/2021/11/sb_castlesinthesky.mp3",
       "artist_url": "https://www.scottbuckley.com.au/library/",
       "attribution": "Castles in the Sky by Scott Buckley - released under CC-BY 4.0. www.scottbuckley.com.au",
-      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+      "changes": "Re-encoded to 96 kbps MP3 and loudness-normalized for background playback."
     },
     {
       "id": "visager-miniboss-fight",
@@ -487,7 +487,7 @@
       "source_url": "https://visager.bandcamp.com/album/songs-from-an-unmade-world-2",
       "artist_url": "https://visager.bandcamp.com/",
       "attribution": "Miniboss Fight (Loop) by Visager (Josie Brechner) - licensed under CC BY 4.0. https://visager.bandcamp.com/album/songs-from-an-unmade-world-2",
-      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+      "changes": "Re-encoded to 96 kbps MP3 and loudness-normalized for background playback."
     },
     {
       "id": "visager-battle",
@@ -514,7 +514,7 @@
       "source_url": "https://visager.bandcamp.com/album/songs-from-an-unmade-world-2",
       "artist_url": "https://visager.bandcamp.com/",
       "attribution": "Battle (Loop) by Visager (Josie Brechner) - licensed under CC BY 4.0. https://visager.bandcamp.com/album/songs-from-an-unmade-world-2",
-      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+      "changes": "Re-encoded to 96 kbps MP3 and loudness-normalized for background playback."
     },
     {
       "id": "visager-windy-bluffs",
@@ -540,7 +540,7 @@
       "source_url": "https://visager.bandcamp.com/album/songs-from-an-unmade-world",
       "artist_url": "https://visager.bandcamp.com/",
       "attribution": "Windy Bluffs (Loop) by Visager (Josie Brechner) - licensed under CC BY 4.0. https://visager.bandcamp.com/album/songs-from-an-unmade-world",
-      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+      "changes": "Re-encoded to 96 kbps MP3 and loudness-normalized for background playback."
     },
     {
       "id": "visager-ice-cave",
@@ -567,7 +567,7 @@
       "source_url": "https://visager.bandcamp.com/album/songs-from-an-unmade-world",
       "artist_url": "https://visager.bandcamp.com/",
       "attribution": "Ice Cave (Loop) by Visager (Josie Brechner) - licensed under CC BY 4.0. https://visager.bandcamp.com/album/songs-from-an-unmade-world",
-      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+      "changes": "Re-encoded to 96 kbps MP3 and loudness-normalized for background playback."
     },
     {
       "id": "visager-the-final-road",
@@ -594,7 +594,7 @@
       "source_url": "https://visager.bandcamp.com/album/songs-from-an-unmade-world",
       "artist_url": "https://visager.bandcamp.com/",
       "attribution": "The Final Road (Loop) by Visager (Josie Brechner) - licensed under CC BY 4.0. https://visager.bandcamp.com/album/songs-from-an-unmade-world",
-      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+      "changes": "Re-encoded to 96 kbps MP3 and loudness-normalized for background playback."
     },
     {
       "id": "visager-the-plateau-at-night",
@@ -621,7 +621,7 @@
       "source_url": "https://visager.bandcamp.com/album/songs-from-an-unmade-world-2",
       "artist_url": "https://visager.bandcamp.com/",
       "attribution": "The Plateau at Night (Loop) by Visager (Josie Brechner) - licensed under CC BY 4.0. https://visager.bandcamp.com/album/songs-from-an-unmade-world-2",
-      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+      "changes": "Re-encoded to 96 kbps MP3 and loudness-normalized for background playback."
     },
     {
       "id": "visager-eerie-mausoleum",
@@ -648,7 +648,7 @@
       "source_url": "https://visager.bandcamp.com/album/songs-from-an-unmade-world-2",
       "artist_url": "https://visager.bandcamp.com/",
       "attribution": "Eerie Mausoleum (Loop) by Visager (Josie Brechner) - licensed under CC BY 4.0. https://visager.bandcamp.com/album/songs-from-an-unmade-world-2",
-      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+      "changes": "Re-encoded to 96 kbps MP3 and loudness-normalized for background playback."
     },
     {
       "id": "komiku-the-calling",
@@ -675,7 +675,7 @@
       "source_url": "https://freemusicarchive.org/music/Komiku",
       "artist_url": "https://freemusicarchive.org/music/Komiku",
       "attribution": "The Calling by Komiku - CC0 1.0. https://freemusicarchive.org/music/Komiku",
-      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+      "changes": "Re-encoded to 96 kbps MP3 and loudness-normalized for background playback."
     },
     {
       "id": "komiku-on-the-tracks-of-the-elders",
@@ -702,7 +702,7 @@
       "source_url": "https://freemusicarchive.org/music/Komiku",
       "artist_url": "https://freemusicarchive.org/music/Komiku",
       "attribution": "On the Tracks of the Elders by Komiku - CC0 1.0. https://freemusicarchive.org/music/Komiku",
-      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+      "changes": "Re-encoded to 96 kbps MP3 and loudness-normalized for background playback."
     },
     {
       "id": "komiku-dont-flinch",
@@ -729,7 +729,7 @@
       "source_url": "https://freemusicarchive.org/music/Komiku",
       "artist_url": "https://freemusicarchive.org/music/Komiku",
       "attribution": "Don't Flinch by Komiku - CC0 1.0. https://freemusicarchive.org/music/Komiku",
-      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+      "changes": "Re-encoded to 96 kbps MP3 and loudness-normalized for background playback."
     },
     {
       "id": "komiku-not-welcome",
@@ -756,7 +756,7 @@
       "source_url": "https://freemusicarchive.org/music/Komiku",
       "artist_url": "https://freemusicarchive.org/music/Komiku",
       "attribution": "We Are Not Welcome in This Territory by Komiku - CC0 1.0. https://freemusicarchive.org/music/Komiku",
-      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+      "changes": "Re-encoded to 96 kbps MP3 and loudness-normalized for background playback."
     },
     {
       "id": "komiku-sweet-night-and-friends",
@@ -783,7 +783,7 @@
       "source_url": "https://freemusicarchive.org/music/Komiku",
       "artist_url": "https://freemusicarchive.org/music/Komiku",
       "attribution": "Sweet Night and Friends by Komiku - CC0 1.0. https://freemusicarchive.org/music/Komiku",
-      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+      "changes": "Re-encoded to 96 kbps MP3 and loudness-normalized for background playback."
     },
     {
       "id": "vindsvept-enigma",
@@ -810,7 +810,7 @@
       "source_url": "https://vindsvept.se/wp-content/uploads/2021/07/Vindsvept-The-Youtube-Collection-178-Enigma.mp3",
       "artist_url": "https://vindsvept.se/",
       "attribution": "Enigma by Vindsvept - licensed under CC BY 4.0. https://vindsvept.se/",
-      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+      "changes": "Re-encoded to 96 kbps MP3 and loudness-normalized for background playback."
     },
     {
       "id": "vindsvept-onward",
@@ -837,7 +837,250 @@
       "source_url": "https://vindsvept.se/wp-content/uploads/2021/07/Vindsvept-The-Youtube-Collection-181-Onward.mp3",
       "artist_url": "https://vindsvept.se/",
       "attribution": "Onward by Vindsvept - licensed under CC BY 4.0. https://vindsvept.se/",
-      "changes": "Re-encoded to 128 kbps MP3 and loudness-normalized for background playback."
+      "changes": "Re-encoded to 96 kbps MP3 and loudness-normalized for background playback."
+    },
+    {
+      "id": "scott-buckley-tears-in-rain",
+      "title": "Tears in Rain",
+      "artist": "Scott Buckley",
+      "file": "scott-buckley-tears-in-rain.mp3",
+      "duration": 340.01,
+      "moods": [
+        "sorrow",
+        "calm"
+      ],
+      "intensity": [
+        1,
+        2
+      ],
+      "tags": [
+        "melancholy",
+        "piano",
+        "strings"
+      ],
+      "loop": false,
+      "license": "CC-BY-4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "source_url": "https://www.scottbuckley.com.au/library/wp-content/uploads/2019/07/sb_tearsinrain.mp3",
+      "artist_url": "https://www.scottbuckley.com.au/library/",
+      "attribution": "Tears in Rain by Scott Buckley - released under CC-BY 4.0. www.scottbuckley.com.au",
+      "changes": "Re-encoded to 96 kbps MP3 and loudness-normalized for background playback."
+    },
+    {
+      "id": "scott-buckley-what-we-dont-say",
+      "title": "What We Don't Say",
+      "artist": "Scott Buckley",
+      "file": "scott-buckley-what-we-dont-say.mp3",
+      "duration": 409.99,
+      "moods": [
+        "sorrow",
+        "calm"
+      ],
+      "intensity": [
+        1,
+        2
+      ],
+      "tags": [
+        "intimate",
+        "piano",
+        "voice"
+      ],
+      "loop": false,
+      "license": "CC-BY-4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "source_url": "https://www.scottbuckley.com.au/library/wp-content/uploads/2021/09/sb_whatwedontsay.mp3",
+      "artist_url": "https://www.scottbuckley.com.au/library/",
+      "attribution": "What We Don't Say by Scott Buckley - released under CC-BY 4.0. www.scottbuckley.com.au",
+      "changes": "Re-encoded to 96 kbps MP3 and loudness-normalized for background playback."
+    },
+    {
+      "id": "scott-buckley-solace",
+      "title": "Solace",
+      "artist": "Scott Buckley",
+      "file": "scott-buckley-solace.mp3",
+      "duration": 356.39,
+      "moods": [
+        "sorrow",
+        "calm"
+      ],
+      "intensity": [
+        1,
+        1
+      ],
+      "tags": [
+        "contemplative",
+        "strings",
+        "marimba"
+      ],
+      "loop": false,
+      "license": "CC-BY-4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "source_url": "https://www.scottbuckley.com.au/library/wp-content/uploads/2020/05/sb_solace.mp3",
+      "artist_url": "https://www.scottbuckley.com.au/library/",
+      "attribution": "Solace by Scott Buckley - released under CC-BY 4.0. www.scottbuckley.com.au",
+      "changes": "Re-encoded to 96 kbps MP3 and loudness-normalized for background playback."
+    },
+    {
+      "id": "scott-buckley-victor-lux",
+      "title": "Victor Lux",
+      "artist": "Scott Buckley",
+      "file": "scott-buckley-victor-lux.mp3",
+      "duration": 202.34,
+      "moods": [
+        "victory",
+        "exploration"
+      ],
+      "intensity": [
+        2,
+        3
+      ],
+      "tags": [
+        "orchestral",
+        "brass",
+        "triumphant"
+      ],
+      "loop": false,
+      "license": "CC-BY-4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "source_url": "https://www.scottbuckley.com.au/library/wp-content/uploads/2023/05/VictorLux.mp3",
+      "artist_url": "https://www.scottbuckley.com.au/library/",
+      "attribution": "Victor Lux by Scott Buckley - released under CC-BY 4.0. www.scottbuckley.com.au",
+      "changes": "Re-encoded to 96 kbps MP3 and loudness-normalized for background playback."
+    },
+    {
+      "id": "scott-buckley-golden-hour",
+      "title": "Golden Hour",
+      "artist": "Scott Buckley",
+      "file": "scott-buckley-golden-hour.mp3",
+      "duration": 276.3,
+      "moods": [
+        "social",
+        "calm"
+      ],
+      "intensity": [
+        1,
+        1
+      ],
+      "tags": [
+        "warm",
+        "uplifting",
+        "vocals"
+      ],
+      "loop": false,
+      "license": "CC-BY-4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "source_url": "https://www.scottbuckley.com.au/library/wp-content/uploads/2023/02/GoldenHour.mp3",
+      "artist_url": "https://www.scottbuckley.com.au/library/",
+      "attribution": "Golden Hour by Scott Buckley - released under CC-BY 4.0. www.scottbuckley.com.au",
+      "changes": "Re-encoded to 96 kbps MP3 and loudness-normalized for background playback."
+    },
+    {
+      "id": "scott-buckley-hour-of-the-witch",
+      "title": "Hour Of The Witch",
+      "artist": "Scott Buckley",
+      "file": "scott-buckley-hour-of-the-witch.mp3",
+      "duration": 217.1,
+      "moods": [
+        "horror",
+        "mystery"
+      ],
+      "intensity": [
+        2,
+        3
+      ],
+      "tags": [
+        "dark",
+        "ritual",
+        "gritty"
+      ],
+      "loop": false,
+      "license": "CC-BY-4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "source_url": "https://www.scottbuckley.com.au/library/wp-content/uploads/2022/10/HourOfTheWitch.mp3",
+      "artist_url": "https://www.scottbuckley.com.au/library/",
+      "attribution": "Hour Of The Witch by Scott Buckley - released under CC-BY 4.0. www.scottbuckley.com.au",
+      "changes": "Re-encoded to 96 kbps MP3 and loudness-normalized for background playback."
+    },
+    {
+      "id": "scott-buckley-the-illusionist",
+      "title": "The Illusionist",
+      "artist": "Scott Buckley",
+      "file": "scott-buckley-the-illusionist.mp3",
+      "duration": 215.07,
+      "moods": [
+        "mystery",
+        "sorrow"
+      ],
+      "intensity": [
+        1,
+        2
+      ],
+      "tags": [
+        "mysterious",
+        "orchestra",
+        "choir"
+      ],
+      "loop": false,
+      "license": "CC-BY-4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "source_url": "https://www.scottbuckley.com.au/library/wp-content/uploads/2019/07/sb_theillusionist.mp3",
+      "artist_url": "https://www.scottbuckley.com.au/library/",
+      "attribution": "The Illusionist by Scott Buckley - released under CC-BY 4.0. www.scottbuckley.com.au",
+      "changes": "Re-encoded to 96 kbps MP3 and loudness-normalized for background playback."
+    },
+    {
+      "id": "scott-buckley-into-the-wilds",
+      "title": "Into The Wilds",
+      "artist": "Scott Buckley",
+      "file": "scott-buckley-into-the-wilds.mp3",
+      "duration": 246.83,
+      "moods": [
+        "exploration",
+        "victory"
+      ],
+      "intensity": [
+        2,
+        3
+      ],
+      "tags": [
+        "adventurous",
+        "brass",
+        "high-fantasy"
+      ],
+      "loop": false,
+      "license": "CC-BY-4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "source_url": "https://www.scottbuckley.com.au/library/wp-content/uploads/2024/11/IntoTheWilds.mp3",
+      "artist_url": "https://www.scottbuckley.com.au/library/",
+      "attribution": "Into The Wilds by Scott Buckley - released under CC-BY 4.0. www.scottbuckley.com.au",
+      "changes": "Re-encoded to 96 kbps MP3 and loudness-normalized for background playback."
+    },
+    {
+      "id": "scott-buckley-precipice",
+      "title": "Precipice",
+      "artist": "Scott Buckley",
+      "file": "scott-buckley-precipice.mp3",
+      "duration": 118.88,
+      "moods": [
+        "tension",
+        "combat"
+      ],
+      "intensity": [
+        2,
+        3
+      ],
+      "tags": [
+        "fantasy",
+        "urgent",
+        "drums"
+      ],
+      "loop": false,
+      "license": "CC-BY-4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "source_url": "https://www.scottbuckley.com.au/library/wp-content/uploads/2021/01/sb_precipice.mp3",
+      "artist_url": "https://www.scottbuckley.com.au/library/",
+      "attribution": "Precipice by Scott Buckley - released under CC-BY 4.0. www.scottbuckley.com.au",
+      "changes": "Re-encoded to 96 kbps MP3 and loudness-normalized for background playback."
     }
   ]
 }

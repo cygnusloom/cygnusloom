@@ -106,9 +106,12 @@ def test_the_bundled_pack_is_valid_and_covers_every_mood_but_silence():
     assert validate_manifest(manifest) == []
     covered = {mood for track in manifest["tracks"] for mood in track["moods"]}
     assert set(MOODS) - covered == {"silence"}
-    assert len(manifest["tracks"]) >= 30
-    assert sum(1 for track in manifest["tracks"] if "combat" in track["moods"]) >= 8
-    assert sum(1 for track in manifest["tracks"] if "exploration" in track["moods"]) >= 8
+    assert len(manifest["tracks"]) >= 40
+    for mood in MOODS:
+        if mood == "silence":
+            continue
+        count = sum(1 for track in manifest["tracks"] if mood in track["moods"])
+        assert count >= 4, f"only {count} tracks for the {mood} mood"
     total = sum((MUSIC_DIR / track["file"]).stat().st_size for track in manifest["tracks"])
     assert total < 100 * 1024 * 1024
 
@@ -119,6 +122,11 @@ def test_combat_is_derived_and_intensifies_when_a_player_is_in_danger():
     assert derive_scene_mood(state) == MusicView("combat", 2, "auto")
     state.characters[name_key("Ada")].defeated = True
     assert derive_scene_mood(state) == MusicView("combat", 3, "auto")
+
+
+def test_a_music_view_has_a_player_facing_label():
+    assert MusicView("exploration", 1, "auto").label == "Exploration"
+    assert MusicView("silence", 1, "gm").label == "Silence"
 
 
 def test_places_and_night_suggest_a_mood():
@@ -195,6 +203,7 @@ def test_the_gm_can_cue_music_and_the_page_renders_it(
     assert 'data-music-mood="tension"' in page
     assert 'data-music-intensity="2"' in page
     assert 'data-music-manifest="/static/music/manifest.json"' in page
+    assert "data-music-mood-label>Tension<" in page
 
 
 def test_an_unknown_mood_is_refused_without_recording_a_cue(
@@ -235,6 +244,8 @@ def test_the_page_has_player_controls_and_the_license_page_has_music_credits(
     assert "data-music-volume" in page
     assert "data-music-ticker" in page
     assert "data-music-menu-toggle" in page
+    assert "data-music-mood-label" in page
+    assert "data-music-skip" in page
     assert 'data-music-default-enabled="1"' in page
     assert 'id="settings-music-title"' in page
     assert "Play background music" in page

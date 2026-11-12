@@ -9,11 +9,13 @@
 ## Music
 
 The bundled background music pack contains the following tracks. They were re-encoded to
-128 kbps MP3 and loudness-normalized for background playback. No track is relicensed under the
+96 kbps MP3 and loudness-normalized for background playback. No track is relicensed under the
 project's AGPL-3.0-or-later license; each remains under its own license.
 
 - "Terminus", "Nightfall", "The Summoning", "Reverie", "Hiraeth", "Rise Above", "March of
-  Midnight", "Juggernaut", "Vanguard", and "Castles in the Sky" by Scott Buckley, licensed
+  Midnight", "Juggernaut", "Vanguard", "Castles in the Sky", "Tears in Rain", "What We Don't
+  Say", "Solace", "Victor Lux", "Golden Hour", "Hour Of The Witch", "The Illusionist", "Into The
+  Wilds", and "Precipice" by Scott Buckley, licensed
   [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/):
   https://www.scottbuckley.com.au/library/.
 - "The Great Forest (Loop)", "Dark Sanctum (Boss Fight Loop)", "Haunted Forest (Loop)",
