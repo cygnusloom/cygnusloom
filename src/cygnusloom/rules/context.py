@@ -176,6 +176,10 @@ class CoreWorld(Protocol):
 
     def change_currency(self, name: str, amount: int, cause: str) -> dict[str, Any]: ...
 
+    def transfer_currency(
+        self, payer: str, payee: str, amount: int, cause: str
+    ) -> dict[str, Any]: ...
+
     def roll_currency(
         self, name: str, dice: str, multiplier: int, cause: str = ""
     ) -> dict[str, Any]:

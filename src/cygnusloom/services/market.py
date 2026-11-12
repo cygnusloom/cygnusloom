@@ -42,6 +42,7 @@ from cygnusloom.services.inventory import (
     used_slots,
 )
 from cygnusloom.services.recovery import recover
+from cygnusloom.services.state import PC_KIND
 
 MAX_PRICE = 100_000
 
@@ -405,6 +406,53 @@ def change_currency(
         "name": character.name,
         "amount": amount,
         "currency_left": left,
+        "currency": marketplace.currency,
+        "cause": cause,
+    }
+
+
+def transfer_currency(
+    db: Session,
+    campaign_id: int,
+    marketplace: Marketplace,
+    payer_name: str,
+    payee_name: str,
+    amount: int,
+    cause: str,
+) -> dict[str, Any]:
+    """Move currency from one character to another: a fee, a bribe, wages, a wager, or a price
+    agreed outside the marketplace. A player character pays only what its purse holds. An NPC
+    with no tracked purse can pay what the story gives it, and its balance stops at zero."""
+    amount = whole_number(amount, "the amount", 1, MAX_PRICE)
+    state = load_state(db, campaign_id)
+    payer = character_named(state, payer_name)
+    payee = character_named(state, payee_name)
+    if name_key(payer.name) == name_key(payee.name):
+        raise InvalidInput("the payer and the payee must be different characters")
+    if payer.kind == PC_KIND or marketplace.currency in payer.features:
+        payer_left = _pay(db, campaign_id, marketplace, payer, amount, cause=cause)
+    else:
+        record(
+            db,
+            campaign_id,
+            CurrencyChanged(
+                name=payer.name, feature=marketplace.currency, amount=-amount, cause=cause
+            ),
+        )
+        payer_left = 0
+    record(
+        db,
+        campaign_id,
+        CurrencyChanged(name=payee.name, feature=marketplace.currency, amount=amount, cause=cause),
+    )
+    payee_left = _held(payee, marketplace.currency) + amount
+    db.commit()
+    return {
+        "payer": payer.name,
+        "payee": payee.name,
+        "amount": amount,
+        "payer_currency_left": payer_left,
+        "payee_currency_left": payee_left,
         "currency": marketplace.currency,
         "cause": cause,
     }

@@ -43,5 +43,11 @@
     "id": "advance_time_care",
     "step": "state",
     "text": "Advance the clock only for time the fiction actually covers. A conversation, a few actions, or an NPC leaving the scene is not a part of the day: let the narration describe it and move the clock no more than an hour, or not at all. Use parts of a day only for a clear block of the day or a night. The result's notice says how many hours passed; if that is more time than the narration shows, the jump is wrong."
+  },
+  {
+    "type": "prompt",
+    "id": "payment_direction",
+    "step": "state",
+    "text": "Keep the direction of every payment straight. The payer hands over the money, and the payee receives it. When the player names a price or demands a fee for their help, the player is the payee and the other character pays. Record a payment between characters with transfer_currency, naming the payer and the payee, and use change_currency only when money enters or leaves one purse with no second character."
   }
 ]

@@ -341,6 +341,18 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 cause,
             )
 
+    def transfer_currency(self, payer: str, payee: str, amount: int, cause: str) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return market_service.transfer_currency(
+                db,
+                self.campaign_id,
+                _required(self.marketplace, "a marketplace"),
+                payer,
+                payee,
+                amount,
+                cause,
+            )
+
     def roll_currency(
         self, name: str, dice: str, multiplier: int, cause: str = ""
     ) -> dict[str, Any]:

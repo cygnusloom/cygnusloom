@@ -837,7 +837,7 @@
   {
     "type": "tool_call",
     "id": "change_currency",
-    "description": "Give a character money from outside a purchase (a gift, a reward, a loan repaid, a loot split), or take it away (a fine, a toll, a bribe, a debt paid to someone else). Use a positive amount to give and a negative amount to take. A take is refused if the character lacks the money; there is no credit. Give the cause in a few words. Do not use this for anything bought in a shop, and do not use it to make up money the story has not earned.",
+    "description": "Change one character's purse when money enters or leaves it with no second character to name: a gift from an unknown patron, a found purse, a fine, a toll, or a tax. The amount is from that character's point of view, so positive puts money in their purse and negative takes it out. A take is refused if the character lacks the money; there is no credit. Give the cause in a few words. When one character pays another, use transfer_currency and name both. Do not use this for anything bought in a shop, and do not use it to make up money the story has not earned.",
     "parameters": {
       "properties": {
         "name": {
@@ -855,6 +855,38 @@
       },
       "required": [
         "name",
+        "amount",
+        "cause"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "transfer_currency",
+    "description": "Move money from one character to another when one pays the other: a fee, a bribe, wages, a wager, a reward, or a price the story sets outside the marketplace. Name the payer and the payee by their roles in the payment, not by who is speaking. A player character pays only what their purse holds. Most NPCs carry no tracked purse, so an NPC can pay what the story gives them. For money that only enters or leaves one character's purse with no second character, use change_currency.",
+    "parameters": {
+      "properties": {
+        "payer": {
+          "type": "string",
+          "description": "The character who pays."
+        },
+        "payee": {
+          "type": "string",
+          "description": "The character who receives the money."
+        },
+        "amount": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Money to move, in the rule set's currency."
+        },
+        "cause": {
+          "type": "string",
+          "description": "Why the money changes hands, in a few words."
+        }
+      },
+      "required": [
+        "payer",
+        "payee",
         "amount",
         "cause"
       ]

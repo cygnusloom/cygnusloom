@@ -162,7 +162,9 @@ TOOL_GROUPS: dict[str, frozenset[str]] = {
             "list_factions",
         }
     ),
-    "market": frozenset({"buy_item", "buy_service", "search_marketplace", "change_currency"}),
+    "market": frozenset(
+        {"buy_item", "buy_service", "search_marketplace", "change_currency", "transfer_currency"}
+    ),
 }
 _CHARACTER_OPTIONS_SCHEMA = {
     "type": "object",

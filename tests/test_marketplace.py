@@ -437,6 +437,47 @@ def test_a_zero_or_unknown_gold_change_is_refused(client_factory):
     assert _gold(app, campaign_id) == before
 
 
+def test_a_transfer_moves_gold_from_the_payer_to_the_payee(client_factory):
+    app, campaign_id, tools = _pcs(client_factory)
+    _with_companion(tools)
+    _grant_gold(app, campaign_id, 10)
+    before = _gold(app, campaign_id)
+    result = tools.transfer_currency(PC, BRAN, 3, "a ferryman's fee")
+    assert result["payer"] == PC
+    assert result["payee"] == BRAN
+    assert result["payer_currency_left"] == before - 3
+    assert result["payee_currency_left"] == 3
+    assert _gold(app, campaign_id) == before - 3
+    assert _gold(app, campaign_id, BRAN) == 3
+
+
+def test_a_transfer_from_a_pc_without_enough_gold_is_refused(client_factory):
+    app, campaign_id, tools = _pcs(client_factory)
+    _with_companion(tools)
+    before = _gold(app, campaign_id)
+    with pytest.raises(InvalidInput):
+        tools.transfer_currency(PC, BRAN, before + 1, "a debt too far")
+    assert _gold(app, campaign_id) == before
+    assert _gold(app, campaign_id, BRAN) == 0
+
+
+def test_an_npc_with_no_tracked_purse_can_pay_the_player(client_factory):
+    app, campaign_id, tools = _pcs(client_factory)
+    _with_companion(tools)
+    before = _gold(app, campaign_id)
+    result = tools.transfer_currency(BRAN, PC, 2, "Rusk's fee")
+    assert result["payer"] == BRAN
+    assert result["payer_currency_left"] == 0
+    assert _gold(app, campaign_id) == before + 2
+    assert _gold(app, campaign_id, BRAN) == 0
+
+
+def test_a_transfer_needs_two_different_characters(client_factory):
+    _app, _campaign_id, tools = _pcs(client_factory)
+    with pytest.raises(InvalidInput):
+        tools.transfer_currency(PC, PC, 1, "a purse to itself")
+
+
 def _feature_market(tmp_path: Path, shop_item: dict[str, Any]) -> ContentLibrary:
     """A rule set with a currency, one item feature, and one shop item to load."""
     return ContentLibrary.load(
