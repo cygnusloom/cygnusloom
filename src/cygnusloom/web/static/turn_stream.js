@@ -296,9 +296,20 @@
 
   const rememberFocus = () => sessionStorage.setItem(FOCUS_KEY, "1");
 
+  // The last server-rendered markup for each live region. The DOM itself is not a reliable
+  // comparison: scripts change tab state, filters, and map zoom, so a view can differ from the
+  // server's markup even when the campaign has not changed. Comparing with the last markup we
+  // applied tells us whether the server has anything new to show.
+  const liveMarkup = { transcript: null, side: null, tools: null };
+  const liveViewMarkup = new Map();
+  const liveOverlayMarkup = new Map();
+
   // Replace the views with the server's current state instead of navigating. The composer and
   // transcript elements stay in place, so their handlers and the streaming helpers keep working
-  // and the player keeps their scroll position and focus.
+  // and the player keeps their scroll position and focus. Each region is rebuilt only when the
+  // server markup changed: most live events (a music cue, a quiet token move, a clock tick) leave
+  // the page as it was, and replacing every view anyway churned a large campaign's DOM on every
+  // event.
   const applyLive = (html) => {
     const template = document.createElement("template");
     template.innerHTML = html.trim();
@@ -317,10 +328,16 @@
     }
     const wasAtBottom = atBottom();
     const transcriptTop = transcript.scrollTop;
+    let playChanged = false;
 
-    transcript.replaceChildren(
-      ...Array.from(freshTranscript.childNodes, (node) => node.cloneNode(true)),
-    );
+    const freshTranscriptHtml = freshTranscript.innerHTML;
+    if (liveMarkup.transcript !== freshTranscriptHtml) {
+      transcript.replaceChildren(
+        ...Array.from(freshTranscript.childNodes, (node) => node.cloneNode(true)),
+      );
+      liveMarkup.transcript = freshTranscriptHtml;
+      playChanged = true;
+    }
     transcript.dataset.gmState = freshTranscript.dataset.gmState;
     transcript.dataset.lastEvent = freshTranscript.dataset.lastEvent;
     transcript.dataset.turnStatus = freshTranscript.dataset.turnStatus;
@@ -335,16 +352,27 @@
     // The encounter prompt, the advancement pause, and the waiting note sit between the chat
     // and the composer.
     for (const selector of [".encounter-turn", ".advancement-pause", ".turn-note"]) {
-      currentPlay.querySelector(selector)?.remove();
+      const current = currentPlay.querySelector(selector);
       const fresh = freshPlay.querySelector(selector);
+      const freshMarkup = fresh?.outerHTML ?? "";
+      if (liveOverlayMarkup.get(selector) === freshMarkup) continue;
+      liveOverlayMarkup.set(selector, freshMarkup);
+      current?.remove();
       // The typing note stays in place, so the fresh waiting note goes above it.
       if (fresh) (selector === ".turn-note" && typingNote ? typingNote : composer).before(fresh);
+      playChanged = true;
     }
 
     const currentSide = currentPlay.querySelector(".side");
     const freshSide = freshPlay.querySelector(".side");
     if (currentSide && freshSide) {
-      currentSide.innerHTML = freshSide.innerHTML;
+      if (liveMarkup.side !== freshSide.innerHTML) {
+        liveMarkup.side = freshSide.innerHTML;
+        currentSide.innerHTML = freshSide.innerHTML;
+        playChanged = true;
+        // The side panel carries the map and the roster, so their views need rebinding.
+        window.initMapViews?.(document);
+      }
       currentSide.classList.toggle(
         "in-encounter",
         freshSide.classList.contains("in-encounter"),
@@ -371,37 +399,48 @@
       if (freshSubmit) submit.disabled = freshSubmit.disabled;
       const tools = composer.querySelector(".composer-tools");
       const freshTools = freshComposer.querySelector(".composer-tools");
-      if (tools && freshTools) tools.innerHTML = freshTools.innerHTML;
+      if (tools && freshTools && liveMarkup.tools !== freshTools.innerHTML) {
+        liveMarkup.tools = freshTools.innerHTML;
+        tools.innerHTML = freshTools.innerHTML;
+        playChanged = true;
+      }
     }
 
     // The views outside Play are part of the same campaign state: the journal, roster, and
     // compendium can all change during a turn. Rebuild their contents in place so switching to
     // them after a reply does not show the state from before it. A hidden Settings view is
     // refreshed too, so a setting the GM changed mid-turn is current when the player opens it;
-    // a visible one is left alone so unsaved form input is not wiped.
+    // a visible one is left alone so unsaved form input is not wiped. A view whose server markup
+    // did not change keeps its DOM, listeners, scroll position, and open tabs.
     for (const current of document.querySelectorAll(
       '.views > [data-view]:not([data-view="play"])',
     )) {
       if (current.dataset.view === "settings" && !current.hidden) continue;
-      const fresh = template.content.querySelector(`[data-view="${current.dataset.view}"]`);
+      const view = current.dataset.view;
+      const fresh = template.content.querySelector(`[data-view="${view}"]`);
       if (!fresh) continue;
-      current.innerHTML = fresh.innerHTML;
+      const freshMarkup = fresh.innerHTML;
+      if (liveViewMarkup.get(view) === freshMarkup) continue;
+      liveViewMarkup.set(view, freshMarkup);
+      current.innerHTML = freshMarkup;
       window.initWorkspace?.(current);
+      window.initMapViews?.(current);
     }
-    window.initWorkspace?.(currentPlay);
-    window.initMapViews?.(document);
+    if (playChanged) window.initWorkspace?.(currentPlay);
     // The GM's music cue lives on the play view, which applyLive does not replace. Keep the
     // existing workspace's data current, then hand the fresh mood to the player, which keeps
     // the current track when it still fits.
-    if (freshPlay.dataset.musicMood) {
-      currentPlay.dataset.musicMood = freshPlay.dataset.musicMood;
-      currentPlay.dataset.musicSource = freshPlay.dataset.musicSource;
-      window.applyMusicState?.(
-        freshPlay.dataset.musicMood,
-        freshPlay.dataset.musicSource || "auto",
-      );
+    const freshMood = freshPlay.dataset.musicMood || "";
+    const freshSource = freshPlay.dataset.musicSource || "auto";
+    const moodChanged =
+      freshMood !== (currentPlay.dataset.musicMood || "") ||
+      freshSource !== (currentPlay.dataset.musicSource || "auto");
+    if (freshMood && moodChanged) {
+      currentPlay.dataset.musicMood = freshMood;
+      currentPlay.dataset.musicSource = freshSource;
+      window.applyMusicState?.(freshMood, freshSource);
+      window.syncMusicControls?.();
     }
-    window.syncMusicControls?.();
 
     for (const id of selectedTabs) window.workspaceSelectTab?.(id);
     for (const [id, top] of scrolls) {

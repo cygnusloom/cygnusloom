@@ -525,7 +525,10 @@ def test_an_npc_can_go_into_the_wind_and_be_brought_back(
     assert gone == {"moved": "Brin Gallowcap", "location": "in the wind"}
     text = world.world_state_text(_state(app, campaign_id), NO_CAMPAIGN)
     assert "NPCs here: none." in text
-    assert "NPCs in the wind, at no location: Brin Gallowcap." in text
+    assert (
+        "NPCs in the wind, at no location (search_notes for where they went, and bring one "
+        "back with move_actor when needed): Brin Gallowcap."
+    ) in text
 
     back = _tool(
         app,

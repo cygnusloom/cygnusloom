@@ -980,7 +980,10 @@ def world_state_text(
                 lines.append(f"Pronouns: {h.name}, {h.pronouns}.")
     wind = _npcs_in_the_wind(state)
     if wind:
-        lines.append(f"NPCs in the wind, at no location: {', '.join(wind)}.")
+        lines.append(
+            "NPCs in the wind, at no location (search_notes for where they went, and bring "
+            f"one back with move_actor when needed): {', '.join(wind)}."
+        )
     if multiplayer:
         for player in pcs:
             if player.retired:

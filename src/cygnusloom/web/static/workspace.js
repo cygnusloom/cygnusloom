@@ -453,7 +453,19 @@
     });
   };
 
-  const observedToolbars = new WeakSet();
+  // One observer watches the toolbars that are in the live page. A live update replaces a
+  // view's contents; a fresh observer for every update would keep the replaced toolbar (and
+  // its subtree) alive forever, because an observation holds its target. Re-observing the
+  // current toolbars after each init drops the old targets instead.
+  const toolbarObserver =
+    "ResizeObserver" in window ? new ResizeObserver(() => measureCompendiumToolbars()) : null;
+  const observeCompendiumToolbars = () => {
+    if (!toolbarObserver) return;
+    toolbarObserver.disconnect();
+    document
+      .querySelectorAll("[data-compendium] .compendium-toolbar")
+      .forEach((toolbar) => toolbarObserver.observe(toolbar));
+  };
   const initWorkspace = (root = document) => {
     initTabs(root);
     bindViewLinks(root);
@@ -464,13 +476,7 @@
     bindTurnContextButtons(root);
     bindComposer(root);
     measureCompendiumToolbars(root);
-    if ("ResizeObserver" in window) {
-      root.querySelectorAll("[data-compendium] .compendium-toolbar").forEach((toolbar) => {
-        if (observedToolbars.has(toolbar)) return;
-        observedToolbars.add(toolbar);
-        new ResizeObserver(() => measureCompendiumToolbars()).observe(toolbar);
-      });
-    }
+    observeCompendiumToolbars();
   };
   window.initWorkspace = initWorkspace;
   initWorkspace();

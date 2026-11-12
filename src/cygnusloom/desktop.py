@@ -9,10 +9,12 @@ from __future__ import annotations
 
 import hmac
 import json
+import logging
 import secrets
 import sys
 import threading
-from collections.abc import Callable
+import time
+from collections.abc import Callable, Sequence
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
@@ -27,6 +29,9 @@ from cygnusloom.desktop_servers import (
     origin_of,
 )
 
+_LOG = logging.getLogger(__name__)
+_JS_LOG = logging.getLogger("cygnusloom.desktop.page")
+
 WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 820
 MIN_WIDTH = 960
@@ -37,6 +42,19 @@ WINDOW_STATE_FILE = "window.ini"
 BRAND_ICON_FILE = Path(__file__).parent / "web" / "static" / "brand" / "cygnus-loom-256.png"
 # How long a browser sign-in may take before the app stops listening.
 BROWSER_LOGIN_SECONDS = 5 * 60
+# A renderer that stops leaves the window with a blank page and no page context menu, so the
+# window reloads it itself. A repeated crash usually means the machine cannot hold the page, so
+# the automatic retries are bounded and the player can then reload from the window's own bar.
+RENDERER_RETRY_WINDOW_SECONDS = 120.0
+RENDERER_AUTO_RELOADS = 2
+# QWebEnginePage.RenderProcessTerminationStatus: normal, abnormal, crashed, killed.
+RENDERER_STATUS_NAMES = {
+    0: "normal",
+    1: "abnormal",
+    2: "crashed",
+    3: "killed",
+}
+RENDERER_RECOVERABLE_STATUSES = frozenset({"abnormal", "crashed", "killed"})
 
 
 class DesktopUnavailable(RuntimeError):
@@ -173,6 +191,46 @@ def return_button_script(local_url: str) -> str:
 
 
 CONSOLE_PREFIX = "cygnus-desktop:"
+# QWebEnginePage's console levels: info, warning, error.
+JS_LOG_LEVELS = {0: logging.INFO, 1: logging.WARNING, 2: logging.ERROR}
+
+
+def js_message_level(level: object) -> int:
+    """The Python logging level for a QWebEnginePage console message level."""
+    value = getattr(level, "value", level)
+    try:
+        value = int(value)
+    except (TypeError, ValueError):
+        return logging.INFO
+    return JS_LOG_LEVELS.get(value, logging.INFO)
+
+
+def renderer_termination_name(status: object) -> str:
+    """A readable name for QWebEnginePage's render-process termination status."""
+    value = getattr(status, "value", status)
+    try:
+        return RENDERER_STATUS_NAMES.get(int(value), str(status))
+    except (TypeError, ValueError):
+        return str(status)
+
+
+def renderer_needs_recovery(status: object) -> bool:
+    """Whether the page lost its renderer and should be reloaded.
+
+    A normal termination is the page or app shutting down, not a failure."""
+    return renderer_termination_name(status) in RENDERER_RECOVERABLE_STATUSES
+
+
+def plan_renderer_recovery(
+    crash_times: Sequence[float], now: float
+) -> tuple[bool, tuple[float, ...]]:
+    """Record a renderer crash and say whether to reload it automatically.
+
+    Returns the decision and the crash history with old entries dropped. Reloading is automatic
+    for a first crash, but a page that keeps crashing is left on the reload bar so the window
+    does not spin through restarts."""
+    recent = tuple(t for t in crash_times if now - t <= RENDERER_RETRY_WINDOW_SECONDS) + (now,)
+    return (len(recent) <= RENDERER_AUTO_RELOADS, recent)
 
 
 def desktop_sentinel_script(local_origin: str) -> str:
@@ -337,12 +395,12 @@ class LoopbackReceiver:
         if server is not None:
             try:
                 server.shutdown()
-            except Exception:  # noqa: BLE001, S110 - shutdown is best effort
-                pass
+            except Exception:  # noqa: BLE001 - shutdown is best effort
+                _LOG.debug("could not stop the sign-in listener", exc_info=True)
             try:
                 server.server_close()
-            except Exception:  # noqa: BLE001, S110 - shutdown is best effort
-                pass
+            except Exception:  # noqa: BLE001 - shutdown is best effort
+                _LOG.debug("could not close the sign-in listener", exc_info=True)
         if thread is not None and thread is not threading.current_thread():
             thread.join(timeout=2)
 
@@ -350,8 +408,17 @@ class LoopbackReceiver:
 def run_window(url: str, title: str, data_dir: Path) -> int:
     """Open the game window and block until it closes. Returns the Qt exit code."""
     try:
-        from PySide6.QtCore import QEvent, QSettings, Qt, QTimer, QUrl, Signal
-        from PySide6.QtGui import QDesktopServices, QIcon
+        from PySide6.QtCore import (
+            QEvent,
+            QSettings,
+            Qt,
+            QTimer,
+            QtMsgType,
+            QUrl,
+            Signal,
+            qInstallMessageHandler,
+        )
+        from PySide6.QtGui import QAction, QDesktopServices, QIcon, QKeySequence
         from PySide6.QtNetwork import QNetworkAccessManager, QNetworkRequest
         from PySide6.QtWebEngineCore import (
             QWebEnginePage,
@@ -377,6 +444,26 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
             "The desktop edition needs PySide6. Install it with "
             "`pip install 'cygnusloom[desktop]'` or run the packaged build."
         ) from exc
+
+    # Qt and QtWebEngine report their own warnings and renderer errors to stderr by default,
+    # which a windowed build may not have. The run log keeps them beside the server's lines.
+    qt_log = logging.getLogger("cygnusloom.desktop.qt")
+    qt_levels = {
+        QtMsgType.QtDebugMsg: logging.DEBUG,
+        QtMsgType.QtInfoMsg: logging.INFO,
+        QtMsgType.QtWarningMsg: logging.WARNING,
+        QtMsgType.QtCriticalMsg: logging.ERROR,
+        QtMsgType.QtFatalMsg: logging.CRITICAL,
+    }
+
+    def log_qt_message(mode, context, message) -> None:
+        level = qt_levels.get(mode, logging.INFO)
+        if context.file:
+            qt_log.log(level, "qt %s:%s: %s", context.file, context.line, message)
+        else:
+            qt_log.log(level, "qt: %s", message)
+
+    qInstallMessageHandler(log_qt_message)
 
     local_origin = origin_of(url)
     servers = ServerStore(data_dir / FILE_NAME)
@@ -404,19 +491,34 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
                     self._allowed(),
                     invite_pending=invite,
                 ):
-                    QDesktopServices.openUrl(navigation_url)
+                    if not QDesktopServices.openUrl(navigation_url):
+                        _LOG.warning("could not open %s in the browser", navigation_url.toString())
                     return False
             return super().acceptNavigationRequest(navigation_url, nav_type, is_main_frame)
 
         def javaScriptConsoleMessage(self, level, message, line, source):
-            if message.startswith(CONSOLE_PREFIX) and self.desktop_handler is not None:
+            """Send every page console line to the app log, and route menu messages to the window.
+
+            QtWebEngine's default handler only writes to stderr, which a windowed build may not
+            have. The app's own ``cygnus-desktop:`` control messages are answered instead.
+            """
+            if message.startswith(CONSOLE_PREFIX):
+                if self.desktop_handler is None:
+                    _JS_LOG.debug("desktop message before the window was ready: %s", message)
+                    return
                 try:
                     payload = json.loads(message[len(CONSOLE_PREFIX) :])
                 except ValueError:
+                    _JS_LOG.warning(
+                        "malformed desktop message from %s:%s: %s", source, line, message
+                    )
                     return
+                _JS_LOG.debug("desktop message %s", message)
                 self.desktop_handler(payload)
                 return
-            super().javaScriptConsoleMessage(level, message, line, source)
+            _JS_LOG.log(
+                js_message_level(level), "page console %s:%s: %s", source or "?", line, message
+            )
 
     class DesktopWindow(QMainWindow):
         browser_result = Signal(str, str)
@@ -434,6 +536,7 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
             self.add_replies: set[Any] = set()
             self.loopback: LoopbackReceiver | None = None
             self.loading_active = False
+            self.crash_times: tuple[float, ...] = ()
             self.setWindowTitle(title)
             self.setWindowIcon(icon)
             self.view = QWebEngineView(self)
@@ -462,10 +565,40 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
                 "QPushButton#device-home:hover { background: #333b4e; }"
             )
             self.escape_bar.hide()
+            # A renderer that stops leaves nothing to paint and no page context menu, so the
+            # window keeps its own way back above the page. It is hidden during normal play.
+            self.recovery_bar = QFrame(self)
+            self.recovery_bar.setObjectName("recovery-bar")
+            recovery_layout = QHBoxLayout(self.recovery_bar)
+            recovery_layout.setContentsMargins(12, 8, 12, 8)
+            recovery_layout.setSpacing(10)
+            self.recovery_label = QLabel("", self.recovery_bar)
+            self.recovery_label.setObjectName("recovery-label")
+            self.reload_button = QPushButton("Reload the page", self.recovery_bar)
+            self.reload_button.setObjectName("recovery-reload")
+            self.reload_button.clicked.connect(self.reload_page)
+            recovery_layout.addWidget(self.recovery_label, 1)
+            recovery_layout.addWidget(self.reload_button)
+            self.recovery_bar.setStyleSheet(
+                "QFrame#recovery-bar { background: #2b2333;"
+                " border-bottom: 1px solid #4b3a56; }"
+                "QLabel#recovery-label { color: #e6d9ee; }"
+                "QPushButton#recovery-reload { color: #e8e8ec; background: #3b2f47;"
+                " border: 1px solid #5d4a6b; border-radius: 6px; padding: 6px 12px; }"
+                "QPushButton#recovery-reload:hover { background: #4a3a59; }"
+            )
+            self.recovery_bar.hide()
+            self.reload_action = QAction("Reload page", self)
+            self.reload_action.setShortcuts(
+                [QKeySequence.StandardKey.Refresh, QKeySequence("Ctrl+R")]
+            )
+            self.reload_action.triggered.connect(self.reload_page)
+            self.addAction(self.reload_action)
             self.shell = QWidget(self)
             shell_layout = QVBoxLayout(self.shell)
             shell_layout.setContentsMargins(0, 0, 0, 0)
             shell_layout.setSpacing(0)
+            shell_layout.addWidget(self.recovery_bar)
             shell_layout.addWidget(self.escape_bar)
             shell_layout.addWidget(self.view, 1)
             # A slim bar over the bottom of the page, so a slow page never looks frozen.
@@ -515,8 +648,42 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
             self.view.loadFinished.connect(self._page_loaded)
             self.view.loadFinished.connect(lambda _ok: self.report_activation())
             self.page.titleChanged.connect(self._title_changed)
+            self.page.renderProcessTerminated.connect(self._render_process_terminated)
             self.browser_result.connect(self._browser_ready)
             self.view.setUrl(QUrl(url))
+
+        def _render_process_terminated(self, status, exit_code) -> None:
+            name = renderer_termination_name(status)
+            page_url = self.view.url().toString()
+            if not renderer_needs_recovery(status):
+                # A normal termination is the window shutting down.
+                _LOG.debug(
+                    "the page's render process stopped (%s, exit code %s) at %s",
+                    name,
+                    exit_code,
+                    page_url or "no page",
+                )
+                return
+            _LOG.error(
+                "the page's render process stopped (%s, exit code %s) at %s",
+                name,
+                exit_code,
+                page_url or "no page",
+            )
+            reload, self.crash_times = plan_renderer_recovery(self.crash_times, time.monotonic())
+            self.recovery_bar.show()
+            if reload:
+                self.recovery_label.setText("The page stopped unexpectedly. Reloading…")
+                # Let the stopped renderer finish going away before asking for a new one.
+                QTimer.singleShot(0, self.view.reload)
+            else:
+                self.recovery_label.setText(
+                    "The page stopped unexpectedly. Reload the page to try again."
+                )
+
+        def reload_page(self) -> None:
+            """Reload the current page, restarting a renderer that stopped."""
+            self.view.reload()
 
         def report_activation(self) -> None:
             if self.page is None:
@@ -643,6 +810,7 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
                     for server in servers.list()
                 )
             except Exception:  # noqa: BLE001 - a broken list must not break the page
+                _LOG.warning("could not read the server list", exc_info=True)
                 return False
 
         def _title_changed(self, text: str) -> None:
@@ -660,6 +828,7 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
             if not self._is_trusted_page():
                 return
             if not QDesktopServices.openUrl(url):
+                _LOG.warning("could not open the download %s in the browser", url.toString())
                 self.statusBar().showMessage(
                     "Could not open the download in your web browser.", 8000
                 )
@@ -671,8 +840,8 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
                     allowed.add(origin_of(server.url))
                     if server.oidc_issuer:
                         allowed.add(origin_of(server.oidc_issuer))
-            except Exception:  # noqa: BLE001, S110 - a broken list must not block navigation
-                pass
+            except Exception:  # noqa: BLE001 - a broken list must not block navigation
+                _LOG.warning("could not read the server list", exc_info=True)
             if self.invite_origin:
                 allowed.add(self.invite_origin)
             allowed.discard("")
@@ -705,8 +874,8 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
         def _touch(self, server_id: str) -> None:
             try:
                 servers.touch(server_id)
-            except ServerError:
-                pass
+            except ServerError as exc:
+                _LOG.debug("could not record the server connection: %s", exc)
 
         def add_server(self, url: str, name: str) -> None:
             try:
@@ -829,6 +998,13 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
         def _page_loaded(self, ok: bool) -> None:
             self.loading_active = False
             self.loading_bar.hide()
+            if ok:
+                # A page that loaded after a renderer crash no longer needs the way back.
+                self.recovery_bar.hide()
+            elif self.recovery_bar.isVisible():
+                self.recovery_label.setText(
+                    "The page could not be reloaded. Reload the page to try again."
+                )
             page_origin = origin_of(self.view.url().toString())
             if not ok:
                 # Rejecting an external link emits loadFinished(False) while the current page
@@ -874,6 +1050,7 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
                     if origin_of(server.url) == page_origin:
                         return server
             except Exception:  # noqa: BLE001 - a broken list must not break the page
+                _LOG.warning("could not read the server list", exc_info=True)
                 return None
             return None
 
