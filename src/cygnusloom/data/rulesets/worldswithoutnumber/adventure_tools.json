@@ -449,6 +449,21 @@
   },
   {
     "type": "tool_call",
+    "id": "set_hireling_wage",
+    "extends": "core:tool_call/set_hireling_wage",
+    "patch": {
+      "description": "Change a retainer's daily wage in silver, including to 0 when they now serve without pay. Use this when the employer and retainer agree to new terms or the story changes what is paid. The character must be a retainer.",
+      "parameters": {
+        "properties": {
+          "wage": {
+            "description": "Silver per day, zero or more."
+          }
+        }
+      }
+    }
+  },
+  {
+    "type": "tool_call",
     "id": "dismiss_hireling",
     "extends": "core:tool_call/dismiss_hireling",
     "patch": {

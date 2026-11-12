@@ -74,6 +74,7 @@ from cygnusloom.services.events import (
     HirelingAdded,
     HirelingDismissed,
     HirelingPromoted,
+    HirelingWageChanged,
     Item,
     JournalAppended,
     JournalReplaced,
@@ -1157,6 +1158,24 @@ def hire_existing_npc(
         "employer": boss.name,
         "wage": wage,
         "location": boss.location,
+    }
+
+
+def set_hireling_wage(db: Session, campaign_id: int, name: str, wage: int) -> dict[str, Any]:
+    """Change a hireling's daily wage. A wage of 0 means the hireling serves without pay."""
+    state = load_state(db, campaign_id)
+    hireling = state.characters.get(name_key(name))
+    if hireling is None or not hireling.hireling:
+        raise InvalidInput(f"{name} is not a hireling")
+    if not isinstance(wage, int) or isinstance(wage, bool) or wage < 0:
+        raise InvalidInput("the wage must be a whole number of currency, zero or more")
+    record(db, campaign_id, HirelingWageChanged(name=hireling.name, wage=wage))
+    db.commit()
+    return {
+        "updated": "hireling wage",
+        "name": hireling.name,
+        "employer": hireling.employer,
+        "wage": wage,
     }
 
 

@@ -153,6 +153,8 @@ class CharacterSheetView:
     dead: bool = False
     location: str = ""
     employer: str = ""
+    # How the hireling is paid, such as "3 silver a day". Empty for a player character.
+    wage: str = ""
     sheet_links: Mapping[str, str] = field(default_factory=dict)
 
 
@@ -751,6 +753,7 @@ def scene_view(
     place_links: Mapping[str, str] | None = None,
     sheet_links: Mapping[str, str] | None = None,
     track_inventory: bool = True,
+    wage_currency: str = "",
 ) -> SceneView:
     """The player's view. It shows only what is at the player character's location, including any
     hirelings there, and everyone the player has met. The pack shows the player character's items
@@ -797,7 +800,14 @@ def scene_view(
         if c.hireling and place is not None and c.location == place.name
     )
     controlled = _controlled_hirelings(state, pc)
-    hireling_sheets = _hireling_sheets(controlled, spec, conditions, ability_entries, sheet_entries)
+    hireling_sheets = _hireling_sheets(
+        controlled,
+        spec,
+        conditions,
+        ability_entries,
+        sheet_entries,
+        wage_currency=wage_currency,
+    )
     hireling_inventories: tuple[CharacterInventoryView, ...] = ()
     if inventory is not None:
         hireling_inventories = tuple(
@@ -1522,6 +1532,8 @@ def _hireling_sheets(
     conditions: Mapping[str, ConditionRules] | None,
     ability_entries: Mapping[str, str],
     sheet_entries: Mapping[str, str],
+    *,
+    wage_currency: str = "",
 ) -> tuple[CharacterSheetView, ...]:
     """Every hireling's sheet, with the same detail as the player's own sheet."""
     sheets = []
@@ -1540,6 +1552,11 @@ def _hireling_sheets(
                 dead=character.dead,
                 location=character.location or "",
                 employer=character.employer,
+                wage=(
+                    f"{character.wage} {wage_currency} a day"
+                    if wage_currency
+                    else f"{character.wage} a day"
+                ),
                 sheet_links=sheet_entries,
             )
         )

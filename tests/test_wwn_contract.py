@@ -26,6 +26,7 @@ def test_wwn_tool_catalog_exposes_project_and_hireling_tools() -> None:
     expected = {
         "hire_hireling",
         "hire_existing_npc",
+        "set_hireling_wage",
         "dismiss_hireling",
         "start_project",
         "advance_project",

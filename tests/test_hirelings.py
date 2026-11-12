@@ -116,6 +116,57 @@ def test_a_negative_or_fractional_wage_is_refused(client_factory):
     assert _events(app, campaign_id, "hireling.added") == []
 
 
+def test_the_gm_can_change_a_hirelings_wage_and_the_new_wage_is_paid(client_factory):
+    app, campaign_id, tools = _pcs(client_factory)
+    _set_gold(app, campaign_id, 20)
+    _hire(tools)
+
+    result = tools.set_hireling_wage(HIRELING, 5)
+
+    assert result == {
+        "updated": "hireling wage",
+        "name": HIRELING,
+        "employer": PC,
+        "wage": 5,
+    }
+    assert _character(app, campaign_id, HIRELING).wage == 5
+    assert len(_events(app, campaign_id, "hireling.wage_changed")) == 1
+    tools.advance_time(days=1)
+    assert _gold(app, campaign_id) == 20 - 5
+
+
+def test_the_gm_can_put_a_hirelings_wage_to_zero(client_factory):
+    app, campaign_id, tools = _pcs(client_factory)
+    _set_gold(app, campaign_id, 20)
+    _hire(tools)
+
+    result = tools.set_hireling_wage(HIRELING, 0)
+
+    assert result["wage"] == 0
+    assert _character(app, campaign_id, HIRELING).wage == 0
+    tools.advance_time(days=2)
+    assert _gold(app, campaign_id) == 20
+    assert _events(app, campaign_id, "hireling.unpaid") == []
+    with Session(app.state.engine) as db:
+        state = load_state(db, campaign_id)
+        text = world_state_text(state, CAIRN.campaign, clock_rules=CAIRN.clock)
+    assert f"{HIRELING}, at {PLACE}, hired by {PC} at 0 a day" in text
+
+
+def test_only_a_hirelings_wage_can_be_changed(client_factory):
+    _app, _campaign_id, tools = _pcs(client_factory)
+    tools.create_npc(NPC, PLACE, "A stranger on the road.")
+    with pytest.raises(InvalidInput, match="not a hireling"):
+        tools.set_hireling_wage(NPC, 1)
+    with pytest.raises(InvalidInput, match="not a hireling"):
+        tools.set_hireling_wage(PC, 1)
+    _hire(tools)
+    with pytest.raises(InvalidInput, match="zero or more"):
+        tools.set_hireling_wage(HIRELING, -1)
+    with pytest.raises(InvalidInput, match="zero or more"):
+        tools.set_hireling_wage(HIRELING, True)
+
+
 def test_a_day_passing_takes_the_wage_from_the_employer(client_factory):
     app, campaign_id, tools = _pcs(client_factory)
     _set_gold(app, campaign_id, 20)
@@ -267,6 +318,18 @@ def test_the_character_tab_shows_the_hirelings_sheet(client_factory):
     assert 'id="panel-sheet-1"' in page
     assert f">{HIRELING}</button>" in page
     assert "Stats:" in page
+    assert f"Hired by {PC} · {WAGE} {CAIRN.clock.wage_currency} a day" in page
+
+
+def test_the_character_tab_shows_a_hirelings_wage_after_a_change(client_factory):
+    _app, campaign_id, tools = _pcs(client_factory)
+    _hire(tools)
+    tools.set_hireling_wage(HIRELING, 0)
+    client = _signed_in(client_factory)
+
+    page = client.get(f"/campaigns/{campaign_id}").text
+
+    assert f"Hired by {PC} · 0 {CAIRN.clock.wage_currency} a day" in page
 
 
 def test_the_player_sees_a_hirelings_pack(client_factory):

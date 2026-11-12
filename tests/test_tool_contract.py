@@ -37,6 +37,7 @@ CONSOLIDATED_TOOLS = {
     "transfer_currency": frozenset(),
     "hire_hireling": frozenset({"academia-arcana"}),
     "hire_existing_npc": frozenset({"academia-arcana"}),
+    "set_hireling_wage": frozenset({"academia-arcana"}),
     "dismiss_hireling": frozenset({"academia-arcana"}),
     "search_monster": frozenset({"academia-arcana"}),
 }

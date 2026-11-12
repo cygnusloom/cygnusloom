@@ -127,6 +127,10 @@ class PeopleMixin:
         hireling_levels.sync_employer(self, employer)
         return result
 
+    def set_hireling_wage(self, name: str, wage: int) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return set_hireling_wage(db, self.campaign_id, name, wage)
+
     def promote_hireling(self, name: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return promote_hireling(db, self.campaign_id, name)

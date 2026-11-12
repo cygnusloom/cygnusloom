@@ -280,7 +280,7 @@
               </div>
               {% for hireling in scene.hireling_sheets %}
               <div class="tab-panel character-sheet-panel" role="tabpanel" id="panel-sheet-{{ loop.index }}" aria-labelledby="tab-sheet-{{ loop.index }}" hidden>
-                <p class="muted">{% if hireling.employer %}Hired by {{ hireling.employer }}{% endif %}{% if hireling.location %} · {{ hireling.location }}{% endif %}{% if hireling.dead %} · dead{% endif %}</p>
+                <p class="muted">{% if hireling.employer %}Hired by {{ hireling.employer }}{% endif %}{% if hireling.wage %} · {{ hireling.wage }}{% endif %}{% if hireling.location %} · {{ hireling.location }}{% endif %}{% if hireling.dead %} · dead{% endif %}</p>
                 {% with sheet_view=hireling %}{% include "_character_sheet.html" %}{% endwith %}
               </div>
               {% endfor %}
