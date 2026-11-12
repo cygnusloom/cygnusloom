@@ -319,6 +319,19 @@ def test_the_character_tab_shows_the_hirelings_sheet(client_factory):
     assert f">{HIRELING}</button>" in page
     assert "Stats:" in page
     assert f"Hired by {PC} · {WAGE} {CAIRN.clock.wage_currency} a day" in page
+    assert 'class="sheet-hp"' in page
+
+
+def test_a_hirelings_sheet_shows_current_and_maximum_hit_points(client_factory):
+    app, campaign_id, tools = _pcs(client_factory)
+    _hire(tools)
+    hp = _character(app, campaign_id, HIRELING).stats["hp"]
+    tools.harm_stat(HIRELING, "hp", 1, cause="a test")
+
+    scene = _scene(app, campaign_id)
+
+    sheet = scene.hireling_sheets[0]
+    assert (sheet.hp, sheet.hp_max) == (hp - 1, hp)
 
 
 def test_the_character_tab_shows_a_hirelings_wage_after_a_change(client_factory):
@@ -395,7 +408,7 @@ def test_transfer_item_refuses_a_missing_item_or_the_same_character(client_facto
 def _scene(app: FastAPI, campaign_id: int):
     with Session(app.state.engine) as db:
         state = load_state(db, campaign_id)
-    return scene_view(state, CAIRN.character)
+    return scene_view(state, CAIRN.character, hp_stat=CAIRN.hp_stat)
 
 
 def test_the_gm_can_voice_a_hireling_at_the_players_location(client_factory):

@@ -59,6 +59,7 @@ from cygnusloom.services.events import (
     ParticipantPlaced,
     Place,
     defeat_status,
+    hit_points,
     load_state,
     name_key,
     record,
@@ -77,6 +78,11 @@ MAX_CELLS_PER_CALL = 200
 MAX_LISTED_IDS = 20
 # A cell label is a short caption for the tooltip.
 MAX_CELL_LABEL = 60
+# Side colours: the party and the foes keep a fixed colour, and any other side takes the next
+# colour of this palette in the order it joined, so every side reads apart at a glance.
+PARTY_SIDE_COLOR = "#3f7fbf"
+FOES_SIDE_COLOR = "#c04646"
+OTHER_SIDE_COLORS = ("#b07b2c", "#8558c7", "#3d8a63", "#2f8494", "#b0527f", "#7d8a35")
 
 _HEX_COLOR = re.compile(r"#[0-9a-fA-F]{6}")
 
@@ -1036,12 +1042,20 @@ def add_participant(
         )
     db.commit()
     result: dict[str, Any] = {"added": character.name, "side": side}
+    warnings = []
     if character.location != encounter.location:
         where = character.location or "nowhere in particular"
-        result["warning"] = (
+        warnings.append(
             f"{character.name} is at {where}, not at {encounter.location}, where the "
             "encounter is. Move them there first if they should be here."
         )
+    if character.kind == NPC_KIND and not character.attacks:
+        warnings.append(
+            f"{character.name} has no attacks; give them attacks with update_npc before "
+            "their turn if they are meant to fight."
+        )
+    if warnings:
+        result["warning"] = " ".join(warnings)
     return result
 
 
@@ -1326,6 +1340,25 @@ def _marked_cells(
     return cells
 
 
+def side_colors(encounter: Encounter) -> dict[str, str]:
+    """A colour for each side, keyed by name without case. The party and the foes keep fixed
+    colours, and any other side takes the next colour of the palette in the order it joined."""
+    colors: dict[str, str] = {}
+    other = 0
+    for side in encounter.sides.values():
+        key = name_key(side)
+        if not key or key in colors:
+            continue
+        if key == PARTY_SIDE:
+            colors[key] = PARTY_SIDE_COLOR
+        elif key == FOES_SIDE:
+            colors[key] = FOES_SIDE_COLOR
+        else:
+            colors[key] = OTHER_SIDE_COLORS[other % len(OTHER_SIDE_COLORS)]
+            other += 1
+    return colors
+
+
 def encounter_view(
     state: CampaignState,
     grid: EncounterGrid | None,
@@ -1340,11 +1373,15 @@ def encounter_view(
     entry = state.maps[name_key(encounter.map)]
     terrain = terrain or {}
     encounter_objects = encounter_objects or {}
+    colors = side_colors(encounter)
+    hp_stat = combat.hit_pool if combat is not None else None
     participants = []
     characters = [state.characters[name_key(display)] for display in encounter.order]
     labels = token_labels(character.name for character in characters)
     for number, character in enumerate(characters, start=1):
         acting = encounter.acting == character.name
+        side = encounter.sides.get(name_key(character.name), "")
+        points = hit_points(character, hp_stat)
         participants.append(
             {
                 "number": number,
@@ -1357,8 +1394,11 @@ def encounter_view(
                 "next": encounter.acting is None
                 and encounter.order[encounter.up] == character.name,
                 "location": character.location,
-                "side": encounter.sides.get(name_key(character.name), ""),
+                "side": side,
+                "side_color": colors.get(name_key(side), ""),
                 "initiative": encounter.initiative.get(name_key(character.name)),
+                "hp": points[0] if points is not None else None,
+                "hp_max": points[1] if points is not None else None,
                 "defeated": character.defeated,
                 "fled": character.fled,
                 "status": _status(character, combat),

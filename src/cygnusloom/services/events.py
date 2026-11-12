@@ -65,6 +65,7 @@ from cygnusloom.services.state import (  # noqa: F401
     defeat_status,
     estimate_tokens,
     group_by_side,
+    hit_points,
     marks_from_list,
     modifier_value,
     name_key,
@@ -658,6 +659,34 @@ class NpcStatted(GameEvent):
 
 
 @dataclass(frozen=True)
+class NpcArmed(GameEvent):
+    """An NPC's attacks or armor change without touching the rest of their sheet, such as when
+    they pick up a weapon before a fight. An attack list given here replaces the old one; a
+    missing list leaves the attacks as they are."""
+
+    kind: ClassVar[str] = "npc.armed"
+    hidden: ClassVar[bool] = True
+
+    name: str
+    attacks: dict[str, str] | None = None
+    attack_flags: dict[str, list[str]] = field(default_factory=dict)
+    attack_shock: dict[str, list[int]] = field(default_factory=dict)
+    armor: int | None = None
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        npc = state.characters[name_key(self.name)]
+        if self.attacks is not None:
+            npc.attacks = dict(self.attacks)
+            npc.attack_flags = {name: list(flags) for name, flags in self.attack_flags.items()}
+            npc.attack_shock = {name: list(pair) for name, pair in self.attack_shock.items()}
+        if self.armor is not None:
+            npc.armor = self.armor
+
+    def render(self) -> str:
+        return f"Character's weapons or armor change: {self.name}."
+
+
+@dataclass(frozen=True)
 class HirelingAdded(GameEvent):
     """A hireling joins a party member's company. It has the player character's sheet shape and
     is controlled by the player, paid `wage` a day from its employer's currency."""
@@ -703,9 +732,7 @@ class HirelingAdded(GameEvent):
             armor=self.armor,
             skills=dict(self.skills),
             attack_shock={name: list(pair) for name, pair in self.attack_shock.items()},
-            feature_choices={
-                key: list(values) for key, values in self.feature_choices.items()
-            },
+            feature_choices={key: list(values) for key, values in self.feature_choices.items()},
             stat_modifiers=dict(self.stat_modifiers),
             hireling=True,
             employer=self.employer,

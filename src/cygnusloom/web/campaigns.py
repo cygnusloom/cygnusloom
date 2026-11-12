@@ -1698,6 +1698,7 @@ def _campaign_page(
                 wage_currency=(
                     rule_set.clock.wage_currency if rule_set is not None and rule_set.clock else ""
                 ),
+                hp_stat=rule_set.hp_stat if rule_set is not None else None,
             ),
             world_map=world_map,
             rule_set=rule_set,
@@ -1810,6 +1811,7 @@ def _campaign_page(
             wage_currency=(
                 rule_set.clock.wage_currency if rule_set is not None and rule_set.clock else ""
             ),
+            hp_stat=rule_set.hp_stat if rule_set is not None else None,
         ),
         "world_map": world_map,
         "time": time_view(world.state, rule_set.clock if rule_set else None),
@@ -1922,6 +1924,11 @@ def _interaction_state(
         elif actor is not None:
             waiting_for = f"The GM is playing {actor.name}'s turn."
             other_turn = True
+            if pending is None and not busy:
+                # A reply that finished without ending the turn would otherwise leave the table
+                # with no way forward, so the owner can close the NPC's turn by hand.
+                waiting_for = f"{actor.name}'s turn is still open."
+                control = "end" if is_owner else ""
         elif encounter.order and encounter.up < len(encounter.order):
             upcoming = state.characters.get(name_key(encounter.order[encounter.up]))
             if upcoming is not None:
