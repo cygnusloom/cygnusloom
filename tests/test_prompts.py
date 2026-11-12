@@ -204,7 +204,7 @@ def test_the_state_step_requires_the_turn_checklist():
 
 
 def test_turn_checklist_covers_core_areas_and_the_rule_sets_optional_groups():
-    text, keys = turn_checklist({"combat", "market"})
+    text, keys = turn_checklist(rules_for().checklist, {"combat", "market"})
     assert keys[:8] == (
         "characters",
         "summaries",
@@ -236,7 +236,7 @@ def test_missing_checklist_items_reads_marked_lines_only_once():
 
 
 def test_the_system_prompt_carries_the_checklist_as_its_own_part():
-    checklist, _ = turn_checklist({"combat"})
+    checklist, _ = turn_checklist(rules_for().checklist, {"combat"})
     parts = system_parts("test", {}, frozenset(), "", 0, checklist=checklist)
     checklist_part = next(part for part in parts if part.source == "Turn checklist")
     assert checklist_part.content == checklist

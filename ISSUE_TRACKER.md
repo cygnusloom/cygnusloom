@@ -4,7 +4,7 @@ Tackle triaged issues in the order presented (untraiged issues have no particula
 
 # Untriaged Issues
 
-* Move the model checklist into ruleset JSON (all of it will be in core, for now)
+None.
 
 # Triaged Issues
 

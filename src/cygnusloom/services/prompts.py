@@ -12,7 +12,7 @@ import re
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-from cygnusloom.content.library import PromptFragment, RuleSet, WorldTemplate
+from cygnusloom.content.library import ChecklistRules, PromptFragment, RuleSet, WorldTemplate
 from cygnusloom.rules.context import brief
 from cygnusloom.services.events import ContextPart
 
@@ -123,80 +123,37 @@ STATE_CLOSING = (
     "When nothing else needs to change, reply with the turn checklist from the system prompt: "
     'one [x] line for every area, noting what changed or "no change".'
 )
-# The general areas every state step checks, and the optional areas its rule set's tools add.
-# A live A/B in November 2026 found this checklist, not restoring the "when to use" sentences in
-# the brief tool schemas, drove the character-summary and relationship updates. The tool
-# descriptions stay short to keep the per-round token cost down.
-TURN_CHECKLIST_CORE = (
-    ("characters", "new or met people, and anyone who left, fell, or died"),
-    (
-        "summaries",
-        (
-            "the player-facing summary and relationship of the player character, every "
-            "hireling, and everyone the player knows"
-        ),
-    ),
-    (
-        "movement",
-        "where the player character and every NPC is, and any move this action makes",
-    ),
-    (
-        "notes",
-        "settled facts, clues, promises, debts, secrets, and changes to people or places",
-    ),
-    (
-        "storylines",
-        (
-            "the focused thread's player-facing summary says what this action changed, and "
-            "anything resolved or deactivated"
-        ),
-    ),
-    ("objects", "anything placed, taken, given, lost, bought, sold, or paid"),
-    ("time", "the clock, watches, rest, and any day change"),
-    ("rules", "checks, saves, attacks, harm, and conditions the action calls for"),
-)
-TURN_CHECKLIST_GROUPS = {
-    "combat": (
-        "encounter",
-        "turn order, initiative, morale, harm, defeat, and the end of a fight",
-    ),
-    "maps": ("maps", "the player character's and NPCs' tokens, and any local map changes"),
-    "magic": ("magic", "spells, effort, charges, and prepared spells"),
-    "advancement": ("advancement", "XP, level, skills, attributes, and projects"),
-    "factions": ("factions", "standing, assets, and faction turns"),
-    "market": ("market", "prices, purchases, sales, and currency"),
-}
 _CHECKLIST_ITEM = re.compile(
     r"^\s*(?:[-*]\s*)?\[[xX]\]\s*\**\s*([a-z][a-z0-9_-]*)\b",
     re.MULTILINE,
 )
 
 
-def turn_checklist(groups: set[str]) -> tuple[str, tuple[str, ...]]:
+def turn_checklist(rules: ChecklistRules | None, groups: set[str]) -> tuple[str, tuple[str, ...]]:
     """The checklist every state step must check, and the keys its final reply must mark. The
-    rule set's optional tool groups add their own areas, so a rule set without magic or factions
-    does not ask the GM to check them."""
-    items = [
-        *TURN_CHECKLIST_CORE,
-        *(
-            TURN_CHECKLIST_GROUPS[group]
-            for group in sorted(groups)
-            if group in TURN_CHECKLIST_GROUPS
-        ),
-    ]
+    items and their order come from the rule set's JSON; an item with an optional tool group is
+    left out when the rule set offers no tool in that group, so a rule set without magic or
+    factions does not ask the GM to check them."""
+    items = (
+        [item for item in rules.items if not item.group or item.group in groups]
+        if rules is not None
+        else []
+    )
+    if not items:
+        return "", ()
     lines = [
         (
             "Turn checklist. The state step is not finished until you have checked every area. "
             "Finish by replying with one line per item, in this order, each starting [x] and "
             'followed by a short note or "no change":'
         ),
-        *(f"[x] {key}: {label}" for key, label in items),
+        *(f"[x] {item.id}: {item.text}" for item in items),
         (
             "Check each area even when you expect no change. If a check shows something "
             "missing, make the change with the right tool before you write the checklist."
         ),
     ]
-    return "\n".join(lines), tuple(key for key, _ in items)
+    return "\n".join(lines), tuple(item.id for item in items)
 
 
 def missing_checklist_items(text: str, keys: Sequence[str]) -> list[str]:
@@ -537,18 +494,18 @@ def narrate_instruction(rule_set: RuleSet, world: WorldTemplate | None = None) -
 
 def state_instruction(rule_set: RuleSet, world: WorldTemplate | None = None) -> str:
     """The state step's prompt: the generic loop text, then the ruleset's state prompt fragments
-    in order."""
-    return " ".join(
-        [
-            STATE_INSTRUCTION,
-            *(
-                fragment.text
-                for fragment in _prompt_fragments(rule_set, world)
-                if fragment.step in ("state", "all")
-            ),
-            STATE_CLOSING,
-        ]
-    )
+    in order. The closing line is left out when the rule set has no turn checklist."""
+    parts = [
+        STATE_INSTRUCTION,
+        *(
+            fragment.text
+            for fragment in _prompt_fragments(rule_set, world)
+            if fragment.step in ("state", "all")
+        ),
+    ]
+    if rule_set.checklist is not None:
+        parts.append(STATE_CLOSING)
+    return " ".join(parts)
 
 
 def speech_instruction(sentence_cap: int | None) -> str:

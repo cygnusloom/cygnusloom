@@ -1,0 +1,70 @@
+[
+  {
+    "type": "checklist",
+    "id": "turn",
+    "items": [
+      {
+        "id": "characters",
+        "text": "new or met people, and anyone who left, fell, or died"
+      },
+      {
+        "id": "summaries",
+        "text": "the player-facing summary and relationship of the player character, every hireling, and everyone the player knows"
+      },
+      {
+        "id": "movement",
+        "text": "where the player character and every NPC is, and any move this action makes"
+      },
+      {
+        "id": "notes",
+        "text": "settled facts, clues, promises, debts, secrets, and changes to people or places"
+      },
+      {
+        "id": "storylines",
+        "text": "the focused thread's player-facing summary says what this action changed, and anything resolved or deactivated"
+      },
+      {
+        "id": "objects",
+        "text": "anything placed, taken, given, lost, bought, sold, or paid"
+      },
+      {
+        "id": "time",
+        "text": "the clock, watches, rest, and any day change"
+      },
+      {
+        "id": "rules",
+        "text": "checks, saves, attacks, harm, and conditions the action calls for"
+      },
+      {
+        "id": "advancement",
+        "group": "advancement",
+        "text": "XP, level, skills, attributes, and projects"
+      },
+      {
+        "id": "encounter",
+        "group": "combat",
+        "text": "turn order, initiative, morale, harm, defeat, and the end of a fight"
+      },
+      {
+        "id": "factions",
+        "group": "factions",
+        "text": "standing, assets, and faction turns"
+      },
+      {
+        "id": "magic",
+        "group": "magic",
+        "text": "spells, effort, charges, and prepared spells"
+      },
+      {
+        "id": "maps",
+        "group": "maps",
+        "text": "the player character's and NPCs' tokens, and any local map changes"
+      },
+      {
+        "id": "market",
+        "group": "market",
+        "text": "prices, purchases, sales, and currency"
+      }
+    ]
+  }
+]

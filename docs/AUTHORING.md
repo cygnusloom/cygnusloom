@@ -200,6 +200,30 @@ off.
 }
 ```
 
+## Turn checklist
+
+A rule set may define one `checklist` definition: the areas the GM's state step
+must check before it narrates, in the order given. Each item has an `id` and a
+`text`; the GM's reply must mark every item with an `[x] id:` line. An item with
+a `group` belongs to one of the engine's optional tool groups (`advancement`,
+`combat`, `factions`, `magic`, `maps`, `market`) and joins the checklist only
+when the rule set offers a tool in that group. Core defines the base checklist;
+a rule set replaces it by defining its own `checklist` with the same id.
+
+```json
+{
+  "type": "checklist",
+  "id": "turn",
+  "items": [
+    {"id": "characters", "text": "new or met people"},
+    {"id": "encounter", "group": "combat", "text": "turn order and the end of a fight"}
+  ]
+}
+```
+
+A rule set with no checklist can drop the core one with
+`{"type": "checklist", "id": "turn", "disabled": true}`.
+
 ## Shared template features
 
 A rule set head may declare default feature grants per template kind:

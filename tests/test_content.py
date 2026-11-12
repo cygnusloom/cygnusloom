@@ -2107,6 +2107,84 @@ def test_sentence_cap_is_read_from_narration(tree: Path):
     assert ContentLibrary.load(tree).rule_sets["testset"].sentence_cap == 3
 
 
+def test_a_rule_set_can_define_its_turn_checklist(tree: Path):
+    _write(
+        tree,
+        {
+            "rulesets/testset/checklist.json": [
+                {
+                    "type": "checklist",
+                    "id": "turn",
+                    "items": [
+                        {"id": "people", "text": "everyone here"},
+                        {"id": "fight", "group": "combat", "text": "the fight"},
+                    ],
+                }
+            ]
+        },
+    )
+    checklist = ContentLibrary.load(tree).rule_sets["testset"].checklist
+    assert checklist is not None
+    assert [(item.id, item.text, item.group) for item in checklist.items] == [
+        ("people", "everyone here", ""),
+        ("fight", "the fight", "combat"),
+    ]
+
+
+def test_a_checklist_group_must_name_a_tool_group(tree: Path):
+    _write(
+        tree,
+        {
+            "rulesets/testset/checklist.json": [
+                {
+                    "type": "checklist",
+                    "id": "turn",
+                    "items": [{"id": "fight", "group": "fite", "text": "The fight."}],
+                }
+            ]
+        },
+    )
+    with pytest.raises(ContentError, match="'group' must be one of"):
+        ContentLibrary.load(tree)
+
+
+def test_a_checklist_item_id_must_be_a_reply_key(tree: Path):
+    _write(
+        tree,
+        {
+            "rulesets/testset/checklist.json": [
+                {
+                    "type": "checklist",
+                    "id": "turn",
+                    "items": [{"id": "Not a key", "text": "Bad."}],
+                }
+            ]
+        },
+    )
+    with pytest.raises(ContentError, match="'id' must be lowercase"):
+        ContentLibrary.load(tree)
+
+
+def test_duplicate_checklist_item_ids_are_rejected(tree: Path):
+    _write(
+        tree,
+        {
+            "rulesets/testset/checklist.json": [
+                {
+                    "type": "checklist",
+                    "id": "turn",
+                    "items": [
+                        {"id": "same", "text": "One."},
+                        {"id": "same", "text": "Two."},
+                    ],
+                }
+            ]
+        },
+    )
+    with pytest.raises(ContentError, match="duplicate id"):
+        ContentLibrary.load(tree)
+
+
 def _prompt_definitions(rule_set: str) -> list[dict[str, Any]]:
     """The prompt definitions a rule set's own prompts.json declares, in file order."""
     path = DATA_DIR / "rulesets" / rule_set / "prompts.json"

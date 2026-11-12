@@ -597,7 +597,9 @@ def _start_run(
     metered = MeteredProvider(provider, meter)
     world = library.world_content(campaign.world_template, campaign.rule_set)
     template = library.world_templates.get(campaign.world_template)
-    checklist, checklist_keys = turn_checklist(tool_group_names(rule_set.tool_calls))
+    checklist, checklist_keys = turn_checklist(
+        rule_set.checklist, tool_group_names(rule_set.tool_calls)
+    )
     return _Run(
         engine=engine,
         campaign_id=campaign.id or 0,

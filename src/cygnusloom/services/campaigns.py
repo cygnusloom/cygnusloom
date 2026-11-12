@@ -1045,7 +1045,9 @@ def context_usage(
         **world_rules,
     }
     checklist = (
-        turn_checklist(tool_group_names(rule_set.tool_calls))[0] if rule_set is not None else ""
+        turn_checklist(rule_set.checklist, tool_group_names(rule_set.tool_calls))[0]
+        if rule_set is not None
+        else ""
     )
     system = system_parts(
         campaign.rule_set,

@@ -55,6 +55,9 @@ from cygnusloom.services.geometry import overlaps, polygon_problem
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 TOOL_NAME = re.compile(r"[A-Za-z0-9_-]{1,64}")
+# A checklist item id is the key the GM's final state-step reply marks, so it must match what
+# the engine reads back from an `[x] key:` line.
+CHECKLIST_KEY = re.compile(r"[a-z][a-z0-9_-]*\Z")
 # What a tool with no runnable handler is told to add. Its id is not a WorldTools method and it
 # names no Python function.
 TOOL_HANDLER_HINT = "give 'world_method', or 'python_module' with 'function'"
@@ -1780,6 +1783,26 @@ class PromptFragment:
 
 
 @dataclass(frozen=True)
+class ChecklistItem:
+    """One area the state step must check before it narrates. Its id is the key the final
+    state-step reply marks in an `[x] id:` line."""
+
+    id: str
+    text: str
+    # The optional tool group that adds this area, or "" when every rule set checks it.
+    group: str = ""
+
+
+@dataclass(frozen=True)
+class ChecklistRules:
+    """The rule set's turn checklist: the areas every state step must check, in order. A live A/B
+    in November 2026 found this checklist, not restoring the "when to use" sentences in the brief
+    tool schemas, drove the character-summary and relationship updates."""
+
+    items: tuple[ChecklistItem, ...]
+
+
+@dataclass(frozen=True)
 class RuleContent:
     """The content a rule set carries: rules, tables, monsters, encounter and world terrain,
     prompt fragments, and the other definition-shaped data."""
@@ -1793,6 +1816,8 @@ class RuleContent:
     npc_hp_stat: str | None = None
     dice_tables: Mapping[str, DiceTable] = field(default_factory=dict)
     prompt_fragments: tuple[PromptFragment, ...] = ()
+    # The areas every state step must check, or None when the rule set has no turn checklist.
+    checklist: ChecklistRules | None = None
     sentence_cap: int | None = None
     terrain: Mapping[str, EncounterTerrain] = field(default_factory=dict)
     encounter_objects: Mapping[str, EncounterObject] = field(default_factory=dict)
@@ -2035,6 +2060,10 @@ class RuleSet:
     @property
     def prompt_fragments(self) -> tuple[PromptFragment, ...]:
         return self.content.prompt_fragments
+
+    @property
+    def checklist(self) -> ChecklistRules | None:
+        return self.content.checklist
 
     @property
     def sentence_cap(self) -> int | None:
@@ -2306,6 +2335,7 @@ RULE_SET_DEFINITION_TYPES = frozenset(
         "rest",
         "clock",
         "housekeeping",
+        "checklist",
         "item_size",
         "inventory",
         "magic",
@@ -4031,6 +4061,7 @@ def _build_rule_set(
                 )
     clock = _load_clock(definitions, template)
     housekeeping = _load_housekeeping(definitions, template)
+    checklist = _load_checklist(definitions, template)
     rests = _load_rests(definitions, character, template, clock, condition_ends)
     interrupted_rest = _load_interrupted_rest(definitions, rests, template)
     item_sizes = _load_item_sizes(definitions, template)
@@ -4121,6 +4152,7 @@ def _build_rule_set(
             npc_hp_stat=npc_hp_stat,
             dice_tables=dice_tables,
             prompt_fragments=prompt_fragments,
+            checklist=checklist,
             sentence_cap=sentence_cap,
             terrain=terrain,
             encounter_objects=encounter_objects,
@@ -5750,6 +5782,47 @@ def _single_optional(definitions: list[Definition], kind: str, template: str) ->
     if len(found) > 1:
         raise ContentError(f"{template}: more than one {kind} definition")
     return found[0] if found else None
+
+
+def _load_checklist(definitions: list[Definition], template: str) -> ChecklistRules | None:
+    """The rule set's single `checklist` definition: the areas its state step must check, in
+    order. An item with a `group` joins the checklist only when the rule set offers a tool in
+    that optional group. The group names come from the engine's tool policy, so the import is
+    lazy to keep this module's import order clean."""
+    definition = _single_optional(definitions, "checklist", template)
+    if definition is None:
+        return None
+    label = f"{template}: checklist {definition.id}"
+    check_keys(definition.data, {"type", "id", "items"}, label)
+    raw_items = definition.data.get("items")
+    if not isinstance(raw_items, list) or not raw_items:
+        raise ContentError(f"{label}: 'items' must be a non-empty list")
+    from cygnusloom.services.tools import TOOL_GROUPS
+
+    items: list[ChecklistItem] = []
+    seen: set[str] = set()
+    for index, raw in enumerate(raw_items):
+        item_label = f"{label}: items[{index}]"
+        if not isinstance(raw, Mapping):
+            raise ContentError(f"{item_label}: must be an object")
+        item = check_object_keys(raw, {"id", "text", "group"}, item_label)
+        ident = required_text(item, "id", item_label)
+        if not CHECKLIST_KEY.fullmatch(ident):
+            raise ContentError(
+                f"{item_label}: 'id' must be lowercase letters, digits, '_' or '-', starting "
+                "with a letter"
+            )
+        if ident in seen:
+            raise ContentError(f"{item_label}: duplicate id {ident!r}")
+        seen.add(ident)
+        group = _optional_text(item, "group", item_label) or ""
+        if group and group not in TOOL_GROUPS:
+            groups = ", ".join(sorted(TOOL_GROUPS))
+            raise ContentError(f"{item_label}: 'group' must be one of {groups}")
+        items.append(
+            ChecklistItem(id=ident, text=required_text(item, "text", item_label), group=group)
+        )
+    return ChecklistRules(items=tuple(items))
 
 
 def _load_prompts(
