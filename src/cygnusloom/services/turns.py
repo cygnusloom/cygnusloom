@@ -77,7 +77,7 @@ from cygnusloom.services.events import (
     speaker_name,
     truncate,
 )
-from cygnusloom.services.level_up import advancement_due
+from cygnusloom.services.level_up import advancement_due_for_player
 from cygnusloom.services.prompts import (
     NARRATION_REVISION,
     OOC_INSTRUCTION,
@@ -534,6 +534,7 @@ def _tool_context(
         moves=rule_set.moves,
         counters=rule_set.counters,
         advancements=rule_set.advancements,
+        level_ups=rule_set.level_ups,
         periods=rule_set.periods,
         tallies=rule_set.tallies,
         relations=rule_set.relations,
@@ -1895,9 +1896,9 @@ async def stream_message(
         if rule_set is None:
             raise InvalidInput("that campaign's rule set is no longer available")
         current = _state(engine, campaign.id)
-        player = _character_to_play(current, owner_id)
+        _character_to_play(current, owner_id)
         _check_encounter_turn(current, owner_id)
-        if advancement_due(current, rule_set, player):
+        if advancement_due_for_player(current, rule_set, owner_id):
             raise InvalidInput("level up or choose your Advancement before sending another message")
 
         def build_run() -> _Run:
@@ -2039,7 +2040,7 @@ async def start_encounter_turn(
         if rule_set is None:
             raise InvalidInput("that campaign's rule set is no longer available")
         current = _state(engine, campaign.id)
-        if advancement_due(current, rule_set, current.player_character(owner_id)):
+        if advancement_due_for_player(current, rule_set, owner_id):
             raise InvalidInput("level up or choose your Advancement before starting a turn")
 
         def build_run() -> _Run:

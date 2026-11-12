@@ -38,6 +38,7 @@ from cygnusloom.content.library import (
     Hooks,
     HousekeepingRules,
     InventoryRules,
+    LevelUpRules,
     MagicRules,
     Marketplace,
     MonsterTemplate,
@@ -87,6 +88,7 @@ from cygnusloom.services.events import (
     NoteRemoved,
     NoteUpdated,
     NpcAdded,
+    NpcHired,
     NpcKnown,
     NpcRemoved,
     NpcStatted,
@@ -1012,6 +1014,7 @@ def hire_hireling(
     pronouns: str | None = None,
     *,
     plus: str,
+    level_ups: Mapping[str, LevelUpRules],
 ) -> dict[str, Any]:
     """Hire a character into the employer's company, at the employer's location. The hireling is
     controlled by the player and its wage is paid each day from the employer's currency. Its sheet is
@@ -1030,6 +1033,7 @@ def hire_hireling(
         check_choices(spec, character or {})
     except CharacterError as error:
         raise InvalidInput(str(error)) from error
+    _require_leveling_template(spec, character, name, level_ups)
     event = _npc_event(
         tables,
         rng,
@@ -1074,6 +1078,77 @@ def hire_hireling(
         "personality": event.personality,
         "accent": event.accent,
         "quirks": list(event.quirks),
+    }
+
+
+def hire_existing_npc(
+    db: Session,
+    campaign_id: int,
+    spec: CharacterSpec,
+    rng: random.Random,
+    name: str,
+    employer: str,
+    wage: int,
+    character: Mapping[str, Any] | None = None,
+    *,
+    plus: str,
+    level_ups: Mapping[str, LevelUpRules],
+) -> dict[str, Any]:
+    """Hire an NPC already in the story into the employer's company, at their shared location.
+    The NPC keeps their name and manner; their sheet is built from the character options the GM
+    gives, so those choices can fit how they have been portrayed."""
+    state = load_state(db, campaign_id)
+    npc = _npc_named(state, name)
+    boss = state.characters.get(name_key(employer))
+    if boss is None or boss.kind != PC_KIND or boss.hireling:
+        raise InvalidInput(f"{employer} is not a player character who can hire")
+    if boss.location is None:
+        raise InvalidInput(f"{boss.name} has no location yet, so cannot hire anyone")
+    if npc.location != boss.location:
+        raise InvalidInput(
+            f"{npc.name} is not with {boss.name}; a hireling joins the employer where they are"
+        )
+    if npc.out_of_play or npc.dying_hours is not None or npc.dying_rounds is not None:
+        raise InvalidInput(f"{npc.name} cannot be hired: they are not able to act")
+    if state.encounter is not None and npc.name in state.encounter.order:
+        raise InvalidInput(f"{npc.name} is in the encounter; finish the encounter first")
+    if not isinstance(wage, int) or isinstance(wage, bool) or wage < 0:
+        raise InvalidInput("the wage must be a whole number of currency, zero or more")
+    try:
+        check_choices(spec, character or {})
+    except CharacterError as error:
+        raise InvalidInput(str(error)) from error
+    _require_leveling_template(spec, character, npc.name, level_ups)
+    try:
+        sheet = resolve(spec, character or {}, rng, plus=plus)
+    except CharacterError as error:
+        raise InvalidInput(str(error)) from error
+    _check_sheet_text(sheet)
+    known = state.known.get(name_key(npc.name))
+    summary = known.summary if known is not None and known.summary else npc.summary
+    record(
+        db,
+        campaign_id,
+        NpcHired(
+            name=npc.name,
+            employer=boss.name,
+            wage=wage,
+            location=boss.location,
+            summary=summary,
+            stats=dict(sheet.stats),
+            templates=dict(sheet.templates),
+            features=dict(sheet.features),
+            fields=dict(sheet.fields),
+            counters=dict(sheet.counters),
+            skills=dict(sheet.skills),
+            armor=sheet.armor,
+        ),
+    )
+    return {
+        "hired": npc.name,
+        "employer": boss.name,
+        "wage": wage,
+        "location": boss.location,
     }
 
 
@@ -2516,6 +2591,27 @@ def _check_sheet_text(sheet: Sheet) -> None:
     for value in sheet.fields.values():
         if len(value) > MAX_TEXT:
             raise InvalidInput(f"character text must be at most {MAX_TEXT} characters")
+
+
+def _require_leveling_template(
+    spec: CharacterSpec,
+    character: Mapping[str, Any] | None,
+    name: str,
+    level_ups: Mapping[str, LevelUpRules],
+) -> None:
+    """Refuse a character that can never gain a level because it chose no class-like template."""
+    rules = next(iter(level_ups.values()), None)
+    if rules is None or not rules.template_kinds:
+        return
+    chosen = (character or {}).get("templates", {})
+    if isinstance(chosen, Mapping) and any(
+        spec.templates.get(template_id) is not None
+        and spec.templates[template_id].kind in rules.template_kinds
+        for template_id in chosen.values()
+    ):
+        return
+    kinds = " or ".join(repr(kind) for kind in rules.template_kinds)
+    raise InvalidInput(f"choose a {kinds} template for {name} so they can gain levels")
 
 
 def _ensure_free_name(state: CampaignState, name: str) -> None:

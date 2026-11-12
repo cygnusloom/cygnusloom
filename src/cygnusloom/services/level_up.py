@@ -22,6 +22,7 @@ from cygnusloom.content.library import (
     WorldContent,
 )
 from cygnusloom.rules.context import ToolContext
+from cygnusloom.services import hireling_levels
 from cygnusloom.services.advancements import learnable_features
 from cygnusloom.services.common import InvalidInput, session_scope
 from cygnusloom.services.events import PC_KIND, Character, load_state, name_key
@@ -87,6 +88,8 @@ def advancement_due(state: Any, rule_set: RuleSet, pc: Character | None = None) 
     if pc is None or pc.out_of_play or pc.kind != PC_KIND:
         return False
     for rules in rule_set.level_ups.values():
+        if not has_leveling_template(pc, rule_set, rules):
+            continue
         if level_ready(state, pc, rules, rule_set.counters):
             return True
     for advancement in rule_set.advancements.values():
@@ -94,6 +97,59 @@ def advancement_due(state: Any, rule_set: RuleSet, pc: Character | None = None) 
         if pc.counters.get(advancement.counter, counter.initial) > 0:
             return True
     return False
+
+
+def has_leveling_template(pc: Character, rule_set: RuleSet, rules: LevelUpRules) -> bool:
+    """Whether the character has a template the rule set needs for a level."""
+    if not rules.template_kinds:
+        return True
+    return any(
+        rule_set.character.templates.get(template_id) is not None
+        and rule_set.character.templates[template_id].kind in rules.template_kinds
+        for template_id in pc.templates.values()
+    )
+
+
+def controlled_characters(state: Any, player_id: int) -> list[Character]:
+    """The player character this account plays and every hireling in their company. A hireling
+    belongs to the player of the character who hired it, not to the campaign owner by default."""
+    found: list[Character] = []
+    pc = state.player_character(player_id)
+    if pc is not None:
+        found.append(pc)
+    for character in state.characters.values():
+        if not character.hireling or character.kind != PC_KIND:
+            continue
+        employer = state.characters.get(name_key(character.employer))
+        if employer is not None and state.owned_by(employer, player_id):
+            found.append(character)
+    return found
+
+
+def advancement_due_for_player(state: Any, rule_set: RuleSet, player_id: int) -> bool:
+    """Whether any character this account controls must advance before play continues."""
+    return any(
+        advancement_due(state, rule_set, character)
+        for character in controlled_characters(state, player_id)
+    )
+
+
+def pages_for_player(
+    engine: Engine,
+    campaign_id: int,
+    rule_set: RuleSet,
+    world: WorldContent,
+    player_id: int,
+) -> list[AdvancementPage]:
+    """Every advancement page this account has waiting, the player character first."""
+    with session_scope(engine) as db:
+        state = load_state(db, campaign_id)
+    pages: list[AdvancementPage] = []
+    for character in controlled_characters(state, player_id):
+        page = page_view(engine, campaign_id, rule_set, world, character.name)
+        if page is not None:
+            pages.append(page)
+    return pages
 
 
 def page_view(
@@ -112,7 +168,7 @@ def page_view(
     if pc is None or pc.out_of_play or pc.kind != PC_KIND:
         return None
     level_rules = next(iter(rule_set.level_ups.values()), None)
-    if level_rules is not None:
+    if level_rules is not None and has_leveling_template(pc, rule_set, level_rules):
         ctx = tool_context(engine, campaign_id, rule_set, world)
         if level_ready(state, pc, level_rules, rule_set.counters):
             summary = level_rules.summary(pc.name, ctx) if level_rules.summary else {}
@@ -354,6 +410,9 @@ def _apply_level(
     changes = _plan_picks(view, engine, campaign_id, rule_set, ctx, form)
     view.level_up.apply_level(view.character, ctx)
     _apply_changes(view, changes, ctx)
+    # A hireling is always the employer's level. Queue the catch-up levels; the player still
+    # makes the choices for them on this page.
+    hireling_levels.sync_employer(ctx.world, view.character)
 
 
 def _apply_picks(
@@ -601,6 +660,7 @@ def tool_context(
         moves=rule_set.moves,
         counters=rule_set.counters,
         advancements=rule_set.advancements,
+        level_ups=rule_set.level_ups,
         periods=rule_set.periods,
         tallies=rule_set.tallies,
         relations=rule_set.relations,

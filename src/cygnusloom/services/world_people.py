@@ -8,6 +8,7 @@ from typing import Any
 from cygnusloom.content.character import (
     choice_options,
 )
+from cygnusloom.services import hireling_levels
 from cygnusloom.services.common import (
     session_scope,
 )
@@ -94,10 +95,37 @@ class PeopleMixin:
                 character,
                 pronouns=pronouns,
                 plus=self.plus,
+                level_ups=self.level_ups,
             )
             self._initialize_generated_defense(db, name)
             db.commit()
-            return result
+        hireling_levels.sync_employer(self, employer)
+        return result
+
+    def hire_existing_npc(
+        self,
+        name: str,
+        employer: str,
+        wage: int,
+        character: Mapping[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            result = hire_existing_npc(
+                db,
+                self.campaign_id,
+                self.character,
+                self.rng,
+                name,
+                employer,
+                wage,
+                character,
+                plus=self.plus,
+                level_ups=self.level_ups,
+            )
+            self._initialize_generated_defense(db, name)
+            db.commit()
+        hireling_levels.sync_employer(self, employer)
+        return result
 
     def promote_hireling(self, name: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:

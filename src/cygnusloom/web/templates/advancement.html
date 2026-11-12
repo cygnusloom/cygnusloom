@@ -6,6 +6,19 @@
   <h1 id="advancement-title">{{ view.label }}: {{ view.character }}</h1>
   <p class="muted">{{ rule_set.name if rule_set else campaign.rule_set }}{% if world %} · {{ world.name }}{% endif %}</p>
 
+  {% if pending and pending|length > 1 %}
+  <nav class="advancement-pending" aria-label="Characters with advancement waiting">
+    <span class="muted">Waiting:</span>
+    <ul>
+      {% for name in pending %}
+      <li>
+        {% if name == view.character %}<strong>{{ name }}</strong>{% else %}<a href="/campaigns/{{ campaign.id }}/advancement?character={{ name|urlencode }}">{{ name }}</a>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+  </nav>
+  {% endif %}
+
   {% if view.kind == "level" and view.summary %}
   <section class="advancement-summary" aria-labelledby="summary-title">
     <h2 id="summary-title">Level {{ view.summary.new_level }}</h2>
@@ -19,6 +32,7 @@
   {% if view.kind == "options" and view.options %}
   <form method="post" action="/campaigns/{{ campaign.id }}/advancement" class="advancement-form">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="character" value="{{ view.character }}">
     <fieldset>
       <legend>Choose one {{ view.label|lower }}</legend>
       {% for option in view.options %}
@@ -52,6 +66,7 @@
   {% elif view.picks %}
   <form method="post" action="/campaigns/{{ campaign.id }}/advancement" class="advancement-form">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="character" value="{{ view.character }}">
     {% for pick in view.picks %}
       {% if pick.kind == "skill" %}
       <fieldset class="creation-panel">

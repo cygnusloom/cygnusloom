@@ -1016,6 +1016,8 @@ class LevelUpRules:
     picks: Mapping[str, LevelUpPick]
     # What the level-up means in the rule set's own words.
     description: str = ""
+    # Template kinds a character needs at least one of to gain a level, such as a class.
+    template_kinds: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -7098,6 +7100,7 @@ def _load_level_ups(
                 "apply_level",
                 "summary",
                 "picks",
+                "template_kinds",
             },
             label,
         )
@@ -7130,6 +7133,13 @@ def _load_level_ups(
             rule_data,
             label,
         )
+        template_kinds = tuple(_names(definition.data, "template_kinds", label))
+        known_kinds = {template.kind for template in character.templates.values()}
+        unknown_kinds = sorted(set(template_kinds) - known_kinds)
+        if unknown_kinds:
+            raise ContentError(
+                f"{label}: template_kinds names unknown template kinds {unknown_kinds!r}"
+            )
         loaded[definition.id] = LevelUpRules(
             id=definition.id,
             label=required_text(definition.data, "label", label),
@@ -7142,6 +7152,7 @@ def _load_level_ups(
             apply_level=apply_level,
             summary=summary,
             picks=picks,
+            template_kinds=template_kinds,
         )
     return loaded
 

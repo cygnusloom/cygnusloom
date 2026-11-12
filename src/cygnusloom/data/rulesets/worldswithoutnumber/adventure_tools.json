@@ -374,7 +374,7 @@
     "id": "hire_hireling",
     "extends": "core:tool_call/hire_hireling",
     "patch": {
-      "description": "Hire a retainer into a player character's company. The retainer has a rolled sheet like an NPC's and is controlled by the player. Its wage is paid in silver from the employer each new day, and an employer who cannot pay is reported as unpaid. Leave personality, accent, or quirks out to have them rolled. Names must be unique among locations and characters.",
+      "description": "Hire a retainer into a player character's company. The retainer has a rolled sheet like an NPC's and is controlled by the player. Its wage is paid in silver from the employer each new day, and an employer who cannot pay is reported as unpaid. Leave personality, accent, or quirks out to have them rolled. Names must be unique among locations and characters. The retainer joins with enough experience to catch up to the employer's level, and the player makes its level-up choices on the character sheet. To hire an NPC already in the story as a retainer, use hire_existing_npc.",
       "parameters": {
         "properties": {
           "employer": {
@@ -385,6 +385,14 @@
           }
         }
       }
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "hire_existing_npc",
+    "extends": "core:tool_call/hire_existing_npc",
+    "patch": {
+      "description": "Turn an NPC already in the story into a retainer in a player character's company. The NPC keeps their name, description, personality, accent, quirks, pronouns, and summary; choose character options that fit how they have been portrayed, including a class from their work and skills and Foci from what they have shown. The NPC must be an NPC, able to act, out of an encounter, and at the employer's location. The employer must be a player character with a location. The retainer is controlled by the player, and its wage is paid in silver from the employer each new day. It joins with enough experience to catch up to the employer's level, and the player makes its level-up choices on the character sheet. Give the wage the NPC asks for."
     }
   },
   {

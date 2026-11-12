@@ -267,3 +267,96 @@ def test_the_player_character_still_cannot_be_spoken_for(client_factory):
     _hire(tools)
     with pytest.raises(InvalidInput, match="does not need speaking for"):
         tools.speaker_profile(PC)
+
+
+def _guide(tools, name: str = NPC, location: str = PLACE) -> None:
+    tools.create_npc(
+        name,
+        location,
+        "A weathered guide with a map case.",
+        personality="Patient and watchful",
+        accent="Low and slow",
+        quirks=["Taps the map twice"],
+        pronouns="they/them",
+    )
+
+
+def test_an_existing_npc_becomes_a_hireling_without_losing_who_they_are(client_factory):
+    app, campaign_id, tools = _pcs(client_factory)
+    _guide(tools)
+    tools.describe_character(NPC, "A guide who knows the old road.")
+    added = len(_events(app, campaign_id, "npc.added"))
+
+    result = tools.hire_existing_npc(NPC, PC, WAGE, character={})
+
+    assert result == {
+        "hired": NPC,
+        "employer": PC,
+        "wage": WAGE,
+        "location": PLACE,
+    }
+    character = _character(app, campaign_id, NPC)
+    assert character.kind == PC_KIND
+    assert character.hireling is True
+    assert character.employer == PC
+    assert character.wage == WAGE
+    assert character.location == PLACE
+    assert character.description == "A weathered guide with a map case."
+    assert character.personality == "Patient and watchful"
+    assert character.accent == "Low and slow"
+    assert character.quirks == ["Taps the map twice"]
+    assert character.pronouns == "they/them"
+    assert character.summary == "A guide who knows the old road."
+    assert character.stats
+    assert len(_events(app, campaign_id, "npc.added")) == added
+    assert len(_events(app, campaign_id, "npc.hired")) == 1
+    with Session(app.state.engine) as db:
+        state = load_state(db, campaign_id)
+    assert NPC.casefold() in state.known
+
+
+def test_an_npc_can_be_hired_only_once_and_only_while_they_are_an_npc(client_factory):
+    app, campaign_id, tools = _pcs(client_factory)
+    _guide(tools)
+    tools.hire_existing_npc(NPC, PC, WAGE, character={})
+
+    with pytest.raises(InvalidInput, match="not an NPC"):
+        tools.hire_existing_npc(NPC, PC, WAGE, character={})
+    with pytest.raises(InvalidInput, match="not an NPC"):
+        tools.hire_existing_npc(PC, PC, WAGE, character={})
+    assert len(_events(app, campaign_id, "npc.hired")) == 1
+
+
+def test_an_npc_must_be_with_the_employer_to_be_hired(client_factory):
+    _app, _campaign_id, tools = _pcs(client_factory)
+    tools.create_location("Elsewhere", "Another road.")
+    _guide(tools, location="Elsewhere")
+
+    with pytest.raises(InvalidInput, match="is not with"):
+        tools.hire_existing_npc(NPC, PC, WAGE, character={})
+
+
+def test_a_hireling_must_be_hired_by_a_player_character_with_a_location(client_factory):
+    _app, _campaign_id, tools = _pcs(client_factory)
+    _guide(tools)
+    tools.hire_hireling(SECOND, PC, WAGE, "A hired hand.")
+
+    with pytest.raises(InvalidInput, match="is not a player character who can hire"):
+        tools.hire_existing_npc(NPC, SECOND, WAGE, character={})
+    with pytest.raises(InvalidInput, match="is not a player character who can hire"):
+        tools.hire_existing_npc(NPC, "Nobody", WAGE, character={})
+
+
+def test_a_hired_npc_can_be_dismissed_back_into_the_world(client_factory):
+    app, campaign_id, tools = _pcs(client_factory)
+    _guide(tools)
+    tools.hire_existing_npc(NPC, PC, WAGE, character={})
+
+    tools.dismiss_hireling(NPC, "The road parts them.")
+
+    character = _character(app, campaign_id, NPC)
+    assert character.kind == NPC_KIND
+    assert character.hireling is False
+    assert character.employer == ""
+    assert character.wage == 0
+    assert character.location == PLACE

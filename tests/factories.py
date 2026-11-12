@@ -249,6 +249,7 @@ def tools_for(
         faction_assets=rules.faction_assets,
         counters=rules.counters,
         advancements=rules.advancements,
+        level_ups=rules.level_ups,
         periods=rules.periods,
         tallies=rules.tallies,
         relations=rules.relations,

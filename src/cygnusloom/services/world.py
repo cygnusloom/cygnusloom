@@ -36,6 +36,7 @@ from cygnusloom.content.library import (
     HousekeepingRules,
     InventoryRules,
     JourneyRules,
+    LevelUpRules,
     MagicRules,
     Marketplace,
     MonsterTemplate,
@@ -174,6 +175,8 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
     # The rule set's counters by id, such as Experience or Luck.
     counters: Mapping[str, CounterRules] = field(default_factory=dict)
     advancements: Mapping[str, AdvancementRules] = field(default_factory=dict)
+    # The rule set's experience levels, or empty when characters do not gain levels.
+    level_ups: Mapping[str, LevelUpRules] = field(default_factory=dict, kw_only=True)
     periods: Mapping[str, PeriodRules] = field(default_factory=dict)
     tallies: Mapping[str, TallyRules] = field(default_factory=dict)
     relations: Mapping[str, RelationRules] = field(default_factory=dict)

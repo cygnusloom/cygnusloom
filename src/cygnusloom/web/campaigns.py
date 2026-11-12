@@ -500,9 +500,11 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
 
 @router.get("/{campaign_id}/advancement")
 def advancement_page(request: Request, campaign_id: int) -> Response:
-    """The player's level-up or Advancement page."""
+    """The player's level-up or Advancement page, for their character or a hireling."""
     user = page_user(request)
-    return _advancement_page(request, user, campaign_id)
+    return _advancement_page(
+        request, user, campaign_id, character=request.query_params.get("character", "")
+    )
 
 
 @router.post("/{campaign_id}/advancement")
@@ -520,18 +522,45 @@ async def submit_advancement(request: Request, campaign_id: int) -> Response:
             request, user, campaign_id, 400, "that rule set is no longer available"
         )
     world = library.world_content(campaign.world_template, campaign.rule_set)
-    viewer_pc = campaign_world(engine, user.id, campaign.id).state.player_character(user.id)
+    state = campaign_world(engine, user.id, campaign.id).state
+    viewer_pc = state.player_character(user.id)
+    requested = str(form.get("character", "")).strip()
+    target = None
+    if requested:
+        target = next(
+            (
+                character
+                for character in level_up_service.controlled_characters(state, user.id)
+                if name_key(character.name) == name_key(requested)
+            ),
+            None,
+        )
+        if target is None:
+            return _campaign_page(
+                request, user, campaign_id, 400, "that character is not yours to advance"
+            )
+    character_name = (
+        target.name if target is not None else (viewer_pc.name if viewer_pc is not None else None)
+    )
     try:
         level_up_service.apply_page(
-            engine,
-            campaign.id,
-            rule_set,
-            world,
-            dict(form),
-            viewer_pc.name if viewer_pc is not None else None,
+            engine, campaign.id, rule_set, world, dict(form), character_name
         )
     except InvalidInput as exc:
-        return _advancement_page(request, user, campaign_id, 400, str(exc))
+        return _advancement_page(
+            request,
+            user,
+            campaign_id,
+            400,
+            str(exc),
+            character=target.name if target is not None else "",
+        )
+    try:
+        remaining = level_up_service.pages_for_player(engine, campaign.id, rule_set, world, user.id)
+    except InvalidInput:
+        remaining = []
+    if remaining:
+        return RedirectResponse(f"/campaigns/{campaign_id}/advancement", status_code=303)
     return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
 
 
@@ -1450,6 +1479,7 @@ def _advancement_page(
     campaign_id: int,
     status_code: int = 200,
     error: str = "",
+    character: str = "",
 ) -> Response:
     engine = request.app.state.engine
     library = request.app.state.content
@@ -1460,16 +1490,23 @@ def _advancement_page(
             request, user, campaign_id, 400, "that rule set is no longer available"
         )
     world = library.world_content(campaign.world_template, campaign.rule_set)
-    viewer_pc = campaign_world(engine, user.id, campaign.id).state.player_character(user.id)
-    view = level_up_service.page_view(
-        engine,
-        campaign.id,
-        rule_set,
-        world,
-        viewer_pc.name if viewer_pc is not None else None,
-    )
-    if view is None:
+    try:
+        pages = level_up_service.pages_for_player(engine, campaign.id, rule_set, world, user.id)
+    except InvalidInput as exc:
+        return _campaign_page(request, user, campaign_id, 400, str(exc))
+    if not pages:
         return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
+    view = pages[0]
+    if character:
+        chosen = next(
+            (page for page in pages if name_key(page.character) == name_key(character)),
+            None,
+        )
+        if chosen is None:
+            return _campaign_page(
+                request, user, campaign_id, 400, "that character has no advancement waiting"
+            )
+        view = chosen
     return render(
         request,
         "advancement.html",
@@ -1479,6 +1516,7 @@ def _advancement_page(
         rule_set=rule_set,
         world=library.world_templates.get(campaign.world_template),
         view=view,
+        pending=tuple(page.character for page in pages),
     )
 
 
@@ -1606,22 +1644,17 @@ def _campaign_page(
     world_content = library.world_content(campaign.world_template, campaign.rule_set)
     pending = pending_turn(engine, user.id, campaign.id)
     advancement_due = (
-        level_up_service.advancement_due(world.state, rule_set, viewer_pc)
+        level_up_service.advancement_due_for_player(world.state, rule_set, user.id)
         if rule_set is not None
         else False
     )
     advancement_available = False
     if rule_set is not None:
         try:
-            advancement_available = (
-                level_up_service.page_view(
-                    engine,
-                    campaign.id,
-                    rule_set,
-                    world_content,
-                    viewer_pc.name if viewer_pc is not None else None,
+            advancement_available = bool(
+                level_up_service.pages_for_player(
+                    engine, campaign.id, rule_set, world_content, user.id
                 )
-                is not None
             )
         except InvalidInput:
             advancement_available = False
