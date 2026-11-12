@@ -594,6 +594,9 @@ class Encounter:
     acting: str | None = None
     # Cells the acting participant has moved this turn.
     moved: int = 0
+    # Attack actions the acting participant has used this turn. A statblock's multiattack is one
+    # action, so its attacks per action all count here once.
+    attacked: int = 0
     # The side each participant fights on, as given when they joined. Keys are name_key.
     sides: dict[str, str] = field(default_factory=dict)
     # Whether round one starts with each player character rolling initiative.

@@ -47,6 +47,7 @@ from cygnusloom.services.events import (
     PC_KIND,
     CampaignState,
     Character,
+    EncounterAttacked,
     ShieldBashed,
     Struck,
     current,
@@ -354,7 +355,7 @@ def attack(
     state = load_state(db, campaign_id)
     _no_initiative_pending(state)
     source = _participant(state, attacker)
-    _require_turn(state, source, force)
+    _require_attack(state, source, combat, force)
     if source.grappled_by and name_key(attack_name) not in combat.unarmed_names:
         raise InvalidInput(f"{source.name} is grappled and can only make unarmed attacks")
     if source.surprised_turns > 0:
@@ -371,7 +372,7 @@ def attack(
                 f"{source.name} is a group; its Blast hits every living individual on the other "
                 "side, so leave targets out"
             )
-        return _blast(
+        result = _blast(
             db,
             campaign_id,
             combat,
@@ -384,9 +385,12 @@ def attack(
             plus=plus,
             spec=spec,
         )
+        if state.encounter is not None:
+            _mark_attack(db, campaign_id, source.name)
+        return result
     flags = AttackFlags.of(source.attack_flags.get(name, ()))
     if flags.hits_all_targets:
-        return _blast_attack(
+        result = _blast_attack(
             db,
             campaign_id,
             combat,
@@ -400,6 +404,9 @@ def attack(
             plus=plus,
             spec=spec,
         )
+        if state.encounter is not None:
+            _mark_attack(db, campaign_id, source.name)
+        return result
     if targets:
         raise InvalidInput(f"{name} has no Blast, so it hits one target; leave targets out")
     _require_impaired(struck, modifier_name(modifier), combat)
@@ -412,7 +419,7 @@ def attack(
     )
     raw += _stat_bonus(combat, source, combat.damage_bonus_stat)
     shock, shock_ac = _attack_shock(source, name)
-    return _strike(
+    result = _strike(
         db,
         campaign_id,
         combat,
@@ -431,6 +438,9 @@ def attack(
         shock_ac=shock_ac,
         spec=spec,
     )
+    if state.encounter is not None:
+        _mark_attack(db, campaign_id, source.name)
+    return result
 
 
 def _blast_attack(
@@ -629,7 +639,7 @@ def resolve_attacks(
         source = _living(_participant(state, attacker_name), combat)
         if source.kind != NPC_KIND:
             raise InvalidInput(f"{source.name} is a player character; use player_attack instead")
-        _require_turn(state, source, force)
+        _require_attack(state, source, combat, force)
         if source.large_group:
             raise InvalidInput(f"{source.name} is a group; use attack, which has its Blast")
         if encounter.sides.get(name_key(source.name), "") == foe_side:
@@ -669,9 +679,12 @@ def resolve_attacks(
         for attack in planned
     ]
     if combat.multi_attack == "each":
-        return _strike_each(
+        result = _strike_each(
             db, campaign_id, combat, rng, struck.name, planned, rolls, plus=plus, spec=spec
         )
+        if state.encounter is not None:
+            _mark_attacks(db, campaign_id, [attack.attacker for attack in planned])
+        return result
     best = highest_index(rolls)
     chosen = planned[best]
     rolled = ""
@@ -682,7 +695,7 @@ def resolve_attacks(
                 for attack, roll in zip(planned, rolls)
             ]
         )
-    return _strike(
+    result = _strike(
         db,
         campaign_id,
         combat,
@@ -700,6 +713,9 @@ def resolve_attacks(
         shock_ac=chosen.shock_ac,
         spec=spec,
     )
+    if state.encounter is not None:
+        _mark_attacks(db, campaign_id, [attack.attacker for attack in planned])
+    return result
 
 
 @dataclass(frozen=True)
@@ -789,11 +805,14 @@ def player_attack(
     range_band: str = "",
     dual_wield: bool = False,
     force: bool = False,
+    character: str = "",
 ) -> dict[str, Any]:
     """A player character's hit. The engine rolls the damage unless the player's roll is passed as
     `damage_roll`. The hit mode decides whether it lands. A group takes only impaired attacks.
     When the player has already rolled the d20, pass it as `attack_roll`; the engine uses that
-    natural roll. The character strikes on their own turn unless `force` overrides that.
+    natural roll. The character strikes on their own turn unless `force` overrides that. `character`
+    names the player character or controlled hireling attacking; the campaign's primary player
+    character is used when it is left out.
 
     A rule set with modifier bands and skills passes its `spec` and the weapon's `feature`. The
     hit roll then adds the rule set's hit bonus stat, the weapon skill (or its unskilled penalty),
@@ -802,8 +821,8 @@ def player_attack(
     unarmed strike; and shock comes from the weapon plus the attribute and damage bonuses."""
     state = load_state(db, campaign_id)
     _no_initiative_pending(state)
-    pc = _player_character(state)
-    _require_turn(state, pc, force)
+    pc = _player_character(state, character)
+    _require_attack(state, pc, combat, force)
     if pc.grappled_by and name_key(weapon) not in combat.unarmed_names:
         raise InvalidInput(f"{pc.name} is grappled and can only make unarmed attacks")
     if pc.surprised_turns > 0:
@@ -853,7 +872,7 @@ def player_attack(
             + dual_penalty
             + _condition_attack_modifier(pc, conditions)
         )
-    return _strike(
+    result = _strike(
         db,
         campaign_id,
         combat,
@@ -870,6 +889,9 @@ def player_attack(
         shock_ac=bonuses.shock_ac,
         spec=spec,
     )
+    if state.encounter is not None:
+        _mark_attack(db, campaign_id, pc.name)
+    return result
 
 
 def _condition_attack_modifier(
@@ -908,11 +930,60 @@ def _record_shield_bash(db: Session, campaign_id: int, attacker: str, weapon: st
         record(db, campaign_id, ShieldBashed(name=attacker))
 
 
-def _player_character(state: CampaignState) -> Character:
+def _player_character(state: CampaignState, name: str = "") -> Character:
+    """The player character or player-controlled hireling making an attack. A campaign can have
+    several player characters, so an attack may name the one acting; otherwise the campaign's
+    primary player character is used."""
+    if name:
+        pc = state.characters.get(name_key(name))
+        if pc is None:
+            raise InvalidInput(f"there is no character named {name!r}")
+        if pc.kind != PC_KIND:
+            raise InvalidInput(f"{pc.name} is an NPC; use attack instead")
+        return pc
     pc = state.pc()
     if pc is None:
         raise InvalidInput("there is no player character in this campaign")
     return pc
+
+
+def _mark_attack(db: Session, campaign_id: int, attacker: str) -> None:
+    """Record one attack action for the acting character. The event is hidden and feeds the
+    turn's remaining-attack count; an NPC's multiattack still makes one attack action."""
+    record(db, campaign_id, EncounterAttacked(name=attacker))
+    db.commit()
+
+
+def _mark_attacks(db: Session, campaign_id: int, attackers: Sequence[str]) -> None:
+    """Record one attack action for each distinct attacker in a combined resolution."""
+    for attacker in dict.fromkeys(attackers):
+        record(db, campaign_id, EncounterAttacked(name=attacker))
+    db.commit()
+
+
+def _require_attack(
+    state: CampaignState, actor: Character, combat: CombatRules, force: bool
+) -> None:
+    """Refuse an attack outside the actor's turn, or after the turn's attack actions are spent.
+    The limit comes from the rule set's combat, so a rule set that grants more attack actions
+    per turn works without engine changes. `force` is the story override the GM may use when
+    the player insists."""
+    _require_turn(state, actor, force)
+    if force:
+        return
+    encounter = state.encounter
+    if encounter is None or encounter.attacked < combat.attacks_per_turn:
+        return
+    limit = combat.attacks_per_turn
+    if limit == 1:
+        spent = f"{actor.name} has already attacked this turn"
+    else:
+        spent = f"{actor.name} has used {encounter.attacked} of {limit} attack actions this turn"
+    plural = "" if limit == 1 else "s"
+    raise InvalidInput(
+        f"{spent}, and the rules allow {limit} attack action{plural} per turn; wait for the next "
+        "turn, or pass force true when the player insists for the story"
+    )
 
 
 def _require_turn(state: CampaignState, actor: Character, force: bool) -> None:

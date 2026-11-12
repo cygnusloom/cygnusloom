@@ -1764,6 +1764,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
         range_band: str = "",
         dual_wield: bool = False,
         force: bool = False,
+        character: str = "",
     ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return combat.player_attack(
@@ -1784,6 +1785,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 range_band=range_band,
                 dual_wield=dual_wield,
                 force=force,
+                character=character,
             )
 
     def attack_dice(self, weapon: str, modifier: str = "") -> str:
@@ -2191,7 +2193,9 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
     def _initiative_order(self) -> encounters.InitiativeOrder | None:
         return self.combat.initiative_order if self.combat is not None else None
 
-    def place_participant(self, name: str, column: int, row: int) -> dict[str, Any]:
+    def place_participant(
+        self, name: str, column: int, row: int, force: bool = False
+    ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return encounters.place_participant(
                 db,
@@ -2202,6 +2206,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 self.grid,
                 self.terrain,
                 self.encounter_objects,
+                force=force,
             )
 
     def add_note(self, text: str, subject: str | None = None) -> dict[str, Any]:

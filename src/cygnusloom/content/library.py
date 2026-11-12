@@ -1351,6 +1351,10 @@ class CombatRules:
     # How many of a surprised character's turns are lost. Zero when the rule set has no
     # surprise rule.
     surprise_turns: int = 0
+    # How many attack actions a combatant may take in one turn. A statblock's multiattack is one
+    # attack action, so its attacks per action all resolve inside this budget. Defaults to the
+    # common one-attack-per-turn rule.
+    attacks_per_turn: int = 1
 
     @property
     def damage(self) -> tuple[DamageStep, ...]:
@@ -4785,6 +4789,7 @@ def _load_combat(
             "dual_wield_hit_penalty",
             "dual_wield_damage_bonus",
             "surprise_turns",
+            "attacks_per_turn",
             "save",
             "initiative_mode",
             "groups",
@@ -4909,6 +4914,9 @@ def _load_combat(
             else 0
         ),
         surprise_turns=_optional_whole(data, "surprise_turns", label) or 0,
+        attacks_per_turn=(
+            _whole(data, "attacks_per_turn", label, 1) if "attacks_per_turn" in data else 1
+        ),
     )
 
 

@@ -258,6 +258,7 @@ class PeopleMixin:
                 self.counters,
                 track_inventory=tracks_inventory(db, self.campaign_id),
                 currency=self.marketplace.currency if self.marketplace else "",
+                monsters=self.monsters,
             )
 
     def character_options(self, field: str | None = None) -> dict[str, Any]:

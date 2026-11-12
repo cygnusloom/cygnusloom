@@ -26,6 +26,11 @@
         "column": {
           "type": "integer"
         },
+        "force": {
+          "type": "boolean",
+          "default": false,
+          "description": "Allow the move even though it costs more than the movement left this turn. Set it only when the player insists for the story; the move is still charged, so the participant has no movement left afterward."
+        },
         "name": {
           "type": "string"
         },
@@ -295,7 +300,7 @@
     "type": "tool_call",
     "id": "resolve_attacks",
     "requires": ["combat"],
-    "description": "Resolve several NPC attacks on one character at once, such as several foes attacking the same character or one NPC using several weapons. Each attack rolls its own dice. Every attacker must be taking their turn unless force is true. Use it only when the attackers' turns come up, after the initiative is set. Player characters attack with player_attack, not this tool.",
+    "description": "Resolve several NPC attacks on one character at once, such as several foes attacking the same character or one NPC using several weapons. Each attack rolls its own dice. Every attacker must be taking their turn unless force is true, and each attacker spends its one attack action for the turn, so a later attack action from the same NPC is refused. Use it only when the attackers' turns come up, after the initiative is set. Player characters attack with player_attack, not this tool.",
     "parameters": {
       "properties": {
         "attacks": {
@@ -316,7 +321,7 @@
         },
         "force": {
           "default": false,
-          "description": "Resolve the attacks even though they are not the attackers' turns. Set it only when the story needs an action outside the turn order, such as an ambush.",
+          "description": "Resolve the attacks even though they are not the attackers' turns, or the attackers have already used their attack actions this turn. Set it only when the story needs it: an ambush outside the turn order, or a player who insists for the story's sake.",
           "type": "boolean"
         },
         "target": {
@@ -384,7 +389,7 @@
     "type": "tool_call",
     "id": "attack",
     "requires": ["combat"],
-    "description": "Make an NPC's attack against a character. Use it only when the attacker is taking their turn, after the initiative is set; an attack by anyone else is refused unless force is true. Player characters attack with player_attack, not this tool. The engine resolves the attack by the rule set's combat rules and narrates the result.",
+    "description": "Make an NPC's attack against a character. Use it only when the attacker is taking their turn, after the initiative is set; an attack by anyone else is refused unless force is true. The tool resolves the statblock's full attacks per action, and that is the NPC's one attack action for the turn: a second attack action in the same turn is refused unless force is true. Player characters attack with player_attack, not this tool. The engine resolves the attack by the rule set's combat rules and narrates the result.",
     "parameters": {
       "properties": {
         "attacker": {
@@ -402,7 +407,7 @@
         "force": {
           "type": "boolean",
           "default": false,
-          "description": "Resolve the attack even though this is not the attacker's turn. Set it only when the story needs an action outside the turn order, such as an ambush that catches the party unawares."
+          "description": "Resolve the attack even though this is not the attacker's turn, or the attacker has already used its attack action this turn. Set it only when the story needs it: an ambush outside the turn order, or a player who insists for the story's sake."
         }
       },
       "required": ["attacker", "attack", "target"]
@@ -412,9 +417,13 @@
     "type": "tool_call",
     "id": "player_attack",
     "requires": ["combat"],
-    "description": "Ask the player to roll their attack against a target. Use it when the player says what they attack with, the target is in the encounter, and it is the player character's turn; an attack outside their turn is refused unless force is true.",
+    "description": "Ask the player to roll a player character's attack against a target. Use it when the player says what they attack with, the target is in the encounter, and it is that player character's turn; an attack outside their turn, or after the character has used the turn's attacks, is refused unless force is true. Name the character when the table controls more than one player character or a hireling.",
     "parameters": {
       "properties": {
+        "character": {
+          "type": "string",
+          "description": "The player character or controlled hireling attacking, when it is not the campaign's primary player character."
+        },
         "target": {
           "type": "string",
           "description": "The name of the character or NPC being attacked."
@@ -426,7 +435,7 @@
         "force": {
           "type": "boolean",
           "default": false,
-          "description": "Resolve the attack even though this is not the player character's turn. Set it only when the story needs an action outside the turn order."
+          "description": "Resolve the attack even though it is not the player character's turn, or their attacks for this turn are spent. Set it only when the player insists for the story."
         }
       },
       "required": ["target", "weapon"]

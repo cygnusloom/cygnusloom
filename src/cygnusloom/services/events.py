@@ -2314,6 +2314,7 @@ class ParticipantLeft(GameEvent):
         if encounter.acting is not None and name_key(encounter.acting) == key:
             encounter.acting = None
             encounter.moved = 0
+            encounter.attacked = 0
         if index < encounter.up:
             encounter.up -= 1
         if encounter.order and encounter.up >= len(encounter.order):
@@ -2374,11 +2375,36 @@ class EncounterTurnBegun(GameEvent):
             character.total_defense_armor = 0
         encounter.acting = character.name
         encounter.moved = 0
+        encounter.attacked = 0
         if character.kind == NPC_KIND and state.turn is None:
             state.turn = Turn(opener=event_id, text=self.instruction, actor=character.name)
 
     def render(self) -> str:
         return f"{self.name}'s turn begins."
+
+
+@dataclass(frozen=True)
+class EncounterAttacked(GameEvent):
+    """A combatant used one attack action this turn. An NPC's statblock resolves all its attacks
+    per action inside that one action, so this is recorded once even when several strikes land.
+    An attack forced outside the turn order does not spend the acting character's action."""
+
+    kind: ClassVar[str] = "encounter.attacked"
+    hidden: ClassVar[bool] = True
+
+    name: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        encounter = state.encounter
+        if encounter is None:
+            return
+        # A player character may attack while their turn is next but not yet opened. That is
+        # still their action, so it counts; a forced strike during someone else's turn does not.
+        if encounter.acting is None or name_key(encounter.acting) == name_key(self.name):
+            encounter.attacked += 1
+
+    def render(self) -> str:
+        return f"{self.name} attacks."
 
 
 @dataclass(frozen=True)
@@ -2396,6 +2422,7 @@ class EncounterTurnEnded(GameEvent):
             character.surprised_turns -= 1
         encounter.acting = None
         encounter.moved = 0
+        encounter.attacked = 0
         encounter.up += 1
         if encounter.up >= len(encounter.order):
             _next_round(encounter)
@@ -2445,6 +2472,7 @@ class InitiativeSettled(GameEvent):
         # opened, so clear that provisional turn and let the settled order open the right one.
         encounter.acting = None
         encounter.moved = 0
+        encounter.attacked = 0
 
     def render(self) -> str:
         return "Initiative is set: " + ", ".join(self.order) + "."

@@ -154,9 +154,9 @@
           <div class="encounter-turn">
             {% if encounter_control == "end" and actor %}
               {% if actor.is_pc and (player_name == actor.name or is_owner) %}
-              <p>{{ "It is your turn." if player_name == actor.name else "End " ~ actor.name ~ "'s turn when the table is ready to move on." }} Send a message to act, then end the turn.{% if encounter.moves_left is not none %} {{ encounter.moves_left }} of {{ encounter.move_cells }} cells of movement left.{% endif %}</p>
+              <p>{{ "It is your turn." if player_name == actor.name else "End " ~ actor.name ~ "'s turn when the table is ready to move on." }} Send a message to act, then end the turn.{% if encounter.attacks_left is not none %} Attacks left: {{ encounter.attacks_left }} of {{ encounter.attacks_per_turn }}.{% endif %}{% if encounter.moves_left is not none %} Movement left: {{ encounter.moves_left }} of {{ encounter.move_cells }} cells.{% endif %}</p>
               {% else %}
-              <p class="muted">{{ actor.name }} is taking their turn.</p>
+              <p class="muted">{{ actor.name }} is taking their turn.{% if encounter.attacks_left is not none %} Attacks left: {{ encounter.attacks_left }} of {{ encounter.attacks_per_turn }}.{% endif %}{% if encounter.moves_left is not none %} Movement left: {{ encounter.moves_left }} of {{ encounter.move_cells }} cells.{% endif %}</p>
               {% endif %}
               <form method="post" action="/campaigns/{{ campaign.id }}/encounter/turn/end" data-once>
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">

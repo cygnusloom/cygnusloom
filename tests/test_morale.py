@@ -21,7 +21,7 @@ from tests.test_combat import (
     save_succeeds,
 )
 from tests.test_world import _db, _state
-from tests.turns import take_turn
+from tests.turns import next_turn, take_turn
 
 LEADER_WIL = 15
 
@@ -50,7 +50,7 @@ def test_a_lone_foe_checks_morale_at_zero_hp_not_before(client_factory):
     assert "morale" not in result
     assert _morale(app, campaign_id) == {}
 
-    take_turn(tools, PC)
+    next_turn(tools, PC)
     result = replace(tools, rng=Rolls(3, 1)).player_attack("Bo", "Sword")
     assert result["morale"] == [
         {
@@ -140,13 +140,13 @@ def test_a_group_checks_at_first_casualty_and_at_half_once_each(client_factory):
     take_turn(tools, "Grave Thing")
     first = _hit(tools, "Grave Thing", "Bo", 6, 5, 20, 1)
     assert [check["tag"] for check in first["morale"]] == ["first"]
-    take_turn(tools, "Grave Thing")
+    next_turn(tools, "Grave Thing")
     second = _hit(tools, "Grave Thing", "Cy", 6, 5, 20, 1)
     assert [check["tag"] for check in second["morale"]] == ["half"]
     assert _morale(app, campaign_id) == {FOES_SIDE: ["first", "half"]}
     # Three of four are down and both tags are spent, so no morale die is rolled. Rolls(6, 5, 20)
     # would fail if one were.
-    take_turn(tools, "Grave Thing")
+    next_turn(tools, "Grave Thing")
     third = _hit(tools, "Grave Thing", "Dee", 6, 5, 20)
     assert "morale" not in third
     assert _morale(app, campaign_id) == {FOES_SIDE: ["first", "half"]}

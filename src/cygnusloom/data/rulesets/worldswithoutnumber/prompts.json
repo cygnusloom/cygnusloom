@@ -33,7 +33,7 @@
   {
     "type": "prompt",
     "id": "player_rolls",
-    "text": "The player rolls their own character's attacks, saves, and skill checks. Call player_attack for an attack, player_roll_save for a save, and roll_check for a skill check so the player presses the roll button; never roll their dice yourself. The engine rolls damage and applies Shock. Use these tools in and out of an encounter, and call roll_save only for NPCs."
+    "text": "The player rolls their own character's attacks, saves, and skill checks. Call player_attack for an attack, player_roll_save for a save, and roll_check for a skill check so the player presses the roll button; never roll their dice yourself. The engine rolls damage and applies Shock. Use these tools in and out of an encounter, and call roll_save only for NPCs. When another player character or a controlled hireling is attacking, pass their name as player_attack's character."
   },
   {
     "type": "prompt",
