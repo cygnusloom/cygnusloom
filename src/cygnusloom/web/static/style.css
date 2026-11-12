@@ -636,6 +636,9 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 .compendium-entry h5 { margin: 0 0 0.25rem; overflow-wrap: anywhere; }
 .compendium-entry a, .compendium-links a { color: var(--accent); }
 .compendium-links { margin: 0.5rem 0 0; }
+.reaction-block > p { margin: 0; }
+.reaction-list { margin: 0.25rem 0 0; padding-left: 1.25rem; }
+.reaction-list li { margin: 0.15rem 0; }
 .compendium-summary { margin: 0.25rem 0; color: var(--muted); }
 .compendium-text { white-space: pre-line; overflow-wrap: anywhere; }
 .compendium-tags { display: flex; flex-wrap: wrap; gap: 0.25rem; margin: 0.25rem 0; }

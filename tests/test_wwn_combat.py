@@ -736,6 +736,21 @@ def test_a_rest_recharges_cultured_and_the_character_panel_shows_it(client_facto
     assert again["reaction"] == "Cultured already rerolled the failed social check."
 
 
+def test_the_sheet_lists_each_reaction_on_its_own_line(client_factory):
+    client, campaign_id, _tools = _wwn_campaign(client_factory)
+    feature = WWN.character.features["focus_trapmaster"]
+    _learn(client.app, campaign_id, feature.id, feature.name)
+
+    page = client.get(f"/campaigns/{campaign_id}").text
+    panel = page[page.index('id="panel-character"') : page.index('id="panel-inventory"')]
+    block = panel[panel.index("Reactions:") :]
+
+    assert '<ul class="reaction-list">' in block
+    assert block.count("<li>") == 2
+    assert "Trapmaster already rerolled the failed check involving a trap." in block
+    assert "Trapmaster already rerolled the failed save involving a trap." in block
+
+
 def test_impostor_rerolls_a_disguise_check_once_per_hour(client_factory):
     client, campaign_id, tools = _wwn_campaign(client_factory)
     feature = WWN.character.features["focus_impostor"]
