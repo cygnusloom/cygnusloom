@@ -283,9 +283,12 @@ def test_desktop_mode_adds_the_server_list_to_the_main_menu(tmp_path, monkeypatc
     assert "Servers" in page.text
     assert "Add by invitation link" in page.text
     assert "data-desktop-add" in page.text
-    assert "Play on your Computer" in page.text
-    assert "Play on a Server" in page.text
-    assert page.text.index("Play on your Computer") < page.text.index("Play on a Server")
+    assert "Play on my device" in page.text
+    assert "Play on a server" in page.text
+    assert page.text.index("Play on my device") < page.text.index("Play on a server")
+    assert "data-play-tab" in page.text
+    assert "data-play-panel" in page.text
+    assert "/static/play_tabs.js" in page.text
     assert "/static/desktop.js" in page.text
 
     token = csrf_token(client, "/campaigns")
@@ -319,8 +322,9 @@ def test_the_desktop_menu_without_desktop_mode_has_no_server_list(client: TestCl
     page = client.get("/campaigns")
 
     assert "Add by invitation link" not in page.text
-    assert "Play on your Computer" not in page.text
-    assert "Play on a Server" not in page.text
+    assert "Play on my device" not in page.text
+    assert "Play on a server" not in page.text
+    assert "/static/play_tabs.js" not in page.text
     assert "/static/desktop.js" not in page.text
 
 

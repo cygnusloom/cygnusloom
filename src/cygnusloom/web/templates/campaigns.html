@@ -2,8 +2,19 @@
 {% block title %}Campaigns{% endblock %}
 {% block content %}
   {% if desktop %}
-  <h1 class="play-heading">Play on your Computer</h1>
-  <p class="play-subtitle">These campaigns live on this device.</p>
+  <h1 class="visually-hidden">Campaigns</h1>
+  <div class="play-tabs" role="tablist" aria-label="Play mode">
+    <button class="play-tab" id="tab-device" type="button" role="tab"
+            aria-selected="true" aria-controls="panel-device" data-play-tab="device">
+      Play on my device
+    </button>
+    <button class="play-tab" id="tab-server" type="button" role="tab"
+            aria-selected="false" aria-controls="panel-server" tabindex="-1" data-play-tab="server">
+      Play on a server
+    </button>
+  </div>
+  <div class="play-panel" id="panel-device" role="tabpanel" aria-labelledby="tab-device"
+       data-play-panel="device">
   {% endif %}
   <section class="card">
     <div class="heading">
@@ -67,8 +78,10 @@
   </section>
 
   {% if desktop %}
-  <h2 class="play-heading">Play on a Server</h2>
-  <p class="play-subtitle">Join a game hosted on another Cygnus Loom server.</p>
+  </div>
+
+  <div class="play-panel" id="panel-server" role="tabpanel" aria-labelledby="tab-server"
+       data-play-panel="server" hidden>
   <section class="card" id="servers">
     <div class="heading">
       <h2>Servers</h2>
@@ -135,8 +148,12 @@
       Connect and log in need the Cygnus Loom desktop app.
     </p>
   </section>
+  </div>
   {% endif %}
 {% endblock %}
 {% block scripts %}
-  {% if desktop %}<script src="/static/desktop.js"></script>{% endif %}
+  {% if desktop %}
+  <script src="/static/desktop.js"></script>
+  <script src="/static/play_tabs.js"></script>
+  {% endif %}
 {% endblock %}

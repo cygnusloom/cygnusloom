@@ -11,7 +11,7 @@ as the local administrator, and asks for one language model. There is no identit
 Docker, or Python install.
 
 The same window is a client for Cygnus Loom servers on other machines. Under **Play on a
-Server** on the main menu, add a server by its address (for example `https://table.example.com`) or paste an
+server** on the main menu, add a server by its address (for example `https://table.example.com`) or paste an
 Authentik invitation link. Connecting shows the server's own campaigns and accounts in the same
 window; a **Return to my device** button in the top bar and the campaign sidebar returns to your
 local campaigns. You can sign in on the server's embedded login pages, or choose **Log in with
