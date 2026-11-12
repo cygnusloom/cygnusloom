@@ -45,7 +45,11 @@ JOURNAL_REVIEW_MARKER = "Journal and review step."
 REVIEW_MARKER = "Turn review step."
 REVISION_MARKER = "The last narration was set aside because:"
 NARRATION_RETRY_MARKER = "Your last reply was empty or was a tool call"
-_CHECKLIST_PROMPT_ITEM = re.compile(r"^\[x\]\s+([a-z][a-z0-9_-]*):", re.MULTILINE)
+# Must match FINISH_STATE_STEP in services/tools.py. The fake provider is the engine's scripted
+# model, so it plays the same checklist protocol the real prompt asks for.
+_CHECKLIST_TOOL = "finish_state_step"
+_CHECKLIST_START = "Turn checklist. The state step is not finished"
+_CHECKLIST_PROMPT_ITEM = re.compile(r"^- ([a-z][a-z0-9_-]*):", re.MULTILINE)
 _decoder = json.JSONDecoder()
 _WORDS = re.compile(r"\s*\S+|\s+")
 
@@ -242,7 +246,7 @@ def _respond(messages: list[dict[str, Any]], decision: bool) -> ChatReply:
         # A decision with no script still answers the engine's turn checklist, so an opening
         # without a directive does not look like a model that ignored it. Without a checklist
         # in the prompt, decisions stay silent so the narration is the only text produced.
-        return ChatReply(text=_checklist_from_prompt(messages) if decision else _echo(messages))
+        return _checklist_from_prompt(messages) if decision else ChatReply(text=_echo(messages))
     turn_index, turn = current
     if "error" in turn:
         raise LLMError(str(turn["error"]))
@@ -266,18 +270,37 @@ def _respond(messages: list[dict[str, Any]], decision: bool) -> ChatReply:
     if done >= len(rounds):
         if _is_ooc(messages):
             return ChatReply(text=str(turn.get("ooc", "")))
-        return ChatReply(text=_checklist_from_prompt(messages))
+        return _checklist_from_prompt(messages)
     prefix = f"fake_{turn_index}_{done}"
     return ChatReply(text="", tool_requests=_tool_requests(rounds[done], prefix))
 
 
-def _checklist_from_prompt(messages: list[dict[str, Any]]) -> str:
-    """A checked-off turn checklist copied from the system prompt, or empty when the prompt has
-    none. The engine validates the state step's final reply against the same items."""
+def _checklist_from_prompt(messages: list[dict[str, Any]]) -> ChatReply:
+    """A finish_state_step call with a "no change" note for every checklist area in the system
+    prompt, or an empty reply when the prompt has no checklist. The engine validates the state
+    step's report against the same items."""
     if not messages or messages[0].get("role") != "system":
-        return ""
-    keys = [match.group(1) for match in _CHECKLIST_PROMPT_ITEM.finditer(messages[0]["content"])]
-    return "\n".join(f"[x] {key}: no change" for key in keys)
+        return ChatReply(text="")
+    content = str(messages[0].get("content", ""))
+    if _CHECKLIST_START not in content:
+        return ChatReply(text="")
+    # Only the checklist block counts: a rules list earlier in the prompt also uses "- id:".
+    block = content.split(_CHECKLIST_START, 1)[1].split("\n\n", 1)[0]
+    keys = [match.group(1) for match in _CHECKLIST_PROMPT_ITEM.finditer(block)]
+    if not keys:
+        return ChatReply(text="")
+    last_user = max((i for i, m in enumerate(messages) if m["role"] == "user"), default=0)
+    taken = sum(len(m.get("tool_calls") or ()) for m in messages[last_user:])
+    return ChatReply(
+        text="",
+        tool_requests=(
+            ToolRequest(
+                id=f"fake-checklist-{last_user}-{taken}",
+                name=_CHECKLIST_TOOL,
+                arguments=json.dumps({key: "no change" for key in keys}),
+            ),
+        ),
+    )
 
 
 def _is_ooc(messages: list[dict[str, Any]]) -> bool:

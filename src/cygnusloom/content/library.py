@@ -55,8 +55,8 @@ from cygnusloom.services.geometry import overlaps, polygon_problem
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 TOOL_NAME = re.compile(r"[A-Za-z0-9_-]{1,64}")
-# A checklist item id is the key the GM's final state-step reply marks, so it must match what
-# the engine reads back from an `[x] key:` line.
+# A checklist item id is the key the GM's finish_state_step call takes a note for, so it must be
+# a safe tool argument name.
 CHECKLIST_KEY = re.compile(r"[a-z][a-z0-9_-]*\Z")
 # What a tool with no runnable handler is told to add. Its id is not a WorldTools method and it
 # names no Python function.
@@ -1784,8 +1784,8 @@ class PromptFragment:
 
 @dataclass(frozen=True)
 class ChecklistItem:
-    """One area the state step must check before it narrates. Its id is the key the final
-    state-step reply marks in an `[x] id:` line."""
+    """One area the state step must check before it narrates. Its id is the argument the
+    finish_state_step tool takes a note for."""
 
     id: str
     text: str

@@ -12,7 +12,7 @@ from sqlmodel import Session, select
 
 from cygnusloom.config import Settings
 from cygnusloom.db.models import Campaign, Event
-from cygnusloom.llm.base import ChatReply, LLMError
+from cygnusloom.llm.base import ChatReply, LLMError, ToolRequest
 from cygnusloom.llm.fake import FakeProvider
 from cygnusloom.services.campaigns import last_activity_text
 from cygnusloom.services.events import Turn
@@ -266,33 +266,30 @@ def test_model_change_applies_to_the_next_message(
 ):
     used: list[str] = []
 
-    checklist = "\n".join(
-        f"[x] {area}: no change"
-        for area in (
-            "characters",
-            "summaries",
-            "movement",
-            "notes",
-            "storylines",
-            "objects",
-            "time",
-            "rules",
-            "advancement",
-            "encounter",
-            "factions",
-            "maps",
-            "market",
-        )
-    )
-
     class Echo:
         name = "echo"
 
         async def chat(self, model, messages, tools=None):
             used.append(model)
-            # A tool-bearing call is the state step or the review; a real model answers the
-            # turn checklist there. Narration gets the plain echo.
-            return ChatReply(text=checklist if tools is not None else f"from {model}")
+            last = str(messages[-1].get("content", "")) if messages else ""
+            if tools is not None and last.startswith("State management step."):
+                finish = next(
+                    (spec for spec in tools if spec["function"]["name"] == "finish_state_step"),
+                    None,
+                )
+                if finish is not None:
+                    keys = list(finish["function"]["parameters"]["properties"])
+                    return ChatReply(
+                        text="",
+                        tool_requests=(
+                            ToolRequest(
+                                id=f"checklist-{len(used)}",
+                                name="finish_state_step",
+                                arguments=json.dumps({key: "no change" for key in keys}),
+                            ),
+                        ),
+                    )
+            return ChatReply(text=f"from {model}")
 
         async def stream(self, model, messages, tools=None):
             yield await self.chat(model, messages, tools)

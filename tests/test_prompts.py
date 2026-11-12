@@ -8,9 +8,9 @@ from cygnusloom.services.prompts import (
     STATE_INSTRUCTION,
     SYSTEM_PROMPT,
     TURN_REVIEW_INSTRUCTION,
+    checklist_areas,
     journal_instruction,
     journal_review_instruction,
-    missing_checklist_items,
     narrate_instruction,
     speech_instruction,
     state_instruction,
@@ -199,7 +199,7 @@ def test_the_state_step_requires_the_turn_checklist():
     text = state_instruction(rules_for())
     assert "turn checklist" in STATE_CLOSING
     assert STATE_CLOSING in text
-    assert "one [x] line for every area" in text
+    assert "finish_state_step" in text
     assert "The turn checklist does not apply to an out-of-character reply" in STATE_INSTRUCTION
 
 
@@ -219,20 +219,25 @@ def test_turn_checklist_covers_core_areas_and_the_rule_sets_optional_groups():
     assert "market" in keys
     assert "magic" not in keys
     assert "player-facing summary says what this action changed" in text
+    assert "finish_state_step" in text
     for key in keys:
-        assert f"[x] {key}:" in text
+        assert f"- {key}:" in text
 
 
-def test_missing_checklist_items_reads_marked_lines_only_once():
-    text = (
-        "[x] characters: Sela met the party.\n"
-        "- [x] **summaries**: described Sela.\n"
-        "[X] movement - no change.\n"
-        "notes: this line is not checked.\n"
-    )
-    assert missing_checklist_items(
-        text, ("characters", "summaries", "movement", "notes", "rules")
-    ) == ["notes", "rules"]
+def test_checklist_areas_drop_groups_the_rule_set_does_not_offer():
+    areas = checklist_areas(rules_for().checklist, {"combat"})
+    assert [area.id for area in areas][:8] == [
+        "characters",
+        "summaries",
+        "movement",
+        "notes",
+        "storylines",
+        "objects",
+        "time",
+        "rules",
+    ]
+    assert "encounter" in [area.id for area in areas]
+    assert "market" not in [area.id for area in areas]
 
 
 def test_the_system_prompt_carries_the_checklist_as_its_own_part():

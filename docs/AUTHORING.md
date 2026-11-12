@@ -223,11 +223,13 @@ off.
 
 A rule set may define one `checklist` definition: the areas the GM's state step
 must check before it narrates, in the order given. Each item has an `id` and a
-`text`; the GM's reply must mark every item with an `[x] id:` line. An item with
-a `group` belongs to one of the engine's optional tool groups (`advancement`,
-`combat`, `factions`, `magic`, `maps`, `market`) and joins the checklist only
-when the rule set offers a tool in that group. Core defines the base checklist;
-a rule set replaces it by defining its own `checklist` with the same id.
+`text`; the GM finishes the state step by calling the engine's
+`finish_state_step` tool with one short note per item. The notes are internal to
+the state step and never reach the narration. An item with a `group` belongs to
+one of the engine's optional tool groups (`advancement`, `combat`, `factions`,
+`magic`, `maps`, `market`) and joins the checklist only when the rule set offers
+a tool in that group. Core defines the base checklist; a rule set replaces it by
+defining its own `checklist` with the same id.
 
 ```json
 {
