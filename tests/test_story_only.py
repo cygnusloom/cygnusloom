@@ -183,6 +183,40 @@ def test_stats_for_a_normal_npc_are_refused(client_factory: Callable[[], TestCli
         tools.update_npc(PLAIN, character={"stats": STATS, "fields": {}})
 
 
+def test_a_statted_npc_gets_attacks_without_rebuilding_the_sheet(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _cairn_campaign(client_factory)
+    tools = _tools_for(client.app, campaign_id)
+    before = _state(client.app, campaign_id).named(PLAIN)
+    assert before is not None
+
+    result = tools.update_npc(PLAIN, attacks=[{"name": "Club", "dice": "1d6"}], armor=2)
+
+    assert result == {"updated": "npc", "name": PLAIN, "statted": False, "armed": True}
+    npc = _state(client.app, campaign_id).named(PLAIN)
+    assert npc is not None
+    assert npc.attacks == {"Club": "1d6"}
+    assert npc.armor == 2
+    # The rest of the sheet is left exactly as it was.
+    assert npc.stats == before.stats
+    assert npc.templates == before.templates
+    assert npc.features == before.features
+    assert npc.story_only is False
+
+
+def test_attacks_on_a_statted_npc_are_replaced_by_a_later_update(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _cairn_campaign(client_factory)
+    tools = _tools_for(client.app, campaign_id)
+    tools.update_npc(PLAIN, attacks=[{"name": "Club", "dice": "1d6"}])
+
+    tools.update_npc(PLAIN, attacks=[{"name": "Spear", "dice": "1d8"}])
+
+    assert _state(client.app, campaign_id).named(PLAIN).attacks == {"Spear": "1d8"}
+
+
 def test_a_description_only_update_works_for_a_story_only_npc(
     client_factory: Callable[[], TestClient],
 ):

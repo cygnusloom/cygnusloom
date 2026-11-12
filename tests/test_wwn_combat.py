@@ -1045,6 +1045,33 @@ def test_wwn_npc_turn_ends_when_the_gm_reply_finishes(client_factory):
     assert "End your turn" in page
 
 
+def test_an_npc_created_for_the_story_can_be_armed_and_fight(client_factory):
+    """A hired man who entered the story as a plain NPC has a sheet but no attacks. The GM used
+    to have to delete and rebuild him as a monster; now update_npc can add attacks in place, and
+    the warning at the join says so."""
+    client, campaign_id, tools = _wwn_campaign(client_factory)
+    tools.create_location(YARD, "Cobbles around a dry well.")
+    tools.move_actor(PC, YARD)
+    tools.create_encounter_map(MAP, YARD, 10, 10, "Open cobbles.")
+    tools.start_encounter(MAP)
+    tools.add_participant(PC)
+    tools.create_npc("Gull", YARD, description="A hired causeway man with a boat hook.")
+
+    joined = tools.add_participant("Gull")
+
+    assert "has no attacks" in joined["warning"]
+    assert "update_npc" in joined["warning"]
+    armed = tools.update_npc("Gull", attacks=[{"name": "boat hook", "dice": "1d6"}])
+    assert armed["armed"] is True
+
+    take_turn(tools, "Gull")
+
+    tools.resolve_attacks(PC, [{"attacker": "Gull", "attack": "boat hook"}])
+
+    struck = _struck(client.app, campaign_id)[-1]
+    assert (struck.attacker, struck.weapon, struck.name) == ("Gull", "boat hook", PC)
+
+
 def test_wwn_player_save_prompt_works_outside_an_encounter(client_factory):
     client, campaign_id, tools = _wwn_campaign(client_factory)
     ctx = SimpleNamespace(world=tools)

@@ -119,6 +119,56 @@ def test_a_complete_checklist_finishes_the_state_step_without_another_round(
     assert _saved_assistant(app, campaign_id)[-1] == "The room is quiet."
 
 
+class _OocThenChecklist(FakeProvider):
+    """A model that marks the message out of character and still calls the checklist tool in
+    the same state step, as a model that reaches for both tools at once can do."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.asked = False
+
+    async def chat(
+        self,
+        model: str,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None = None,
+    ) -> ChatReply:
+        if _is_state_step(messages) and not self.asked:
+            self.asked = True
+            return ChatReply(
+                text="",
+                tool_requests=(
+                    ToolRequest(id="ooc-call", name="ooc", arguments='{"no_narration": true}'),
+                    ToolRequest(id="finish-call", name=FINISH_TOOL, arguments="{}"),
+                ),
+            )
+        return await super().chat(model, messages, tools)
+
+
+def test_an_out_of_character_state_step_can_also_answer_the_checklist(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    """The checklist answer in an out-of-character step records its turn and the OOC reply
+    still lands; it used to raise before anything was saved."""
+    client, campaign_id = campaign_ready_fast(client_factory)
+    provider = _OocThenChecklist()
+    app.state.providers = lambda model_id: (provider, model_id)
+    script = "__FAKE__:" + json.dumps(
+        {
+            "turns": [
+                {
+                    "rounds": [[{"name": "ooc", "arguments": {"no_narration": True}}]],
+                    "ooc": "That is a rules question.",
+                }
+            ]
+        }
+    )
+
+    assert send_message(client, campaign_id, script).status_code == 303
+
+    assert _saved_assistant(app, campaign_id)[-1] == "That is a rules question."
+
+
 class _IncompleteFinishCalls(FakeProvider):
     """A provider whose finish_state_step call leaves an area out `incomplete` times."""
 

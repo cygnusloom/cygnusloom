@@ -118,9 +118,7 @@ def _dice_value_tools() -> dict[str, ToolCall]:
         description="A test check.",
         parameters=schema,
         function=lambda roll, dice_values: {"roll": roll, "dice": dice_values},
-        player_input=PlayerInput(
-            dice="2d6", param="roll", dice_values_param="dice_values"
-        ),
+        player_input=PlayerInput(dice="2d6", param="roll", dice_values_param="dice_values"),
     )
     return {"check": tool}
 
@@ -280,6 +278,59 @@ def test_arguments_are_checked_before_the_tool_runs():
     for arguments, expected in cases.items():
         assert expected in _error_of(_run(tools, _request("t", arguments)))
     assert calls == []
+
+
+def test_free_form_object_arguments_take_any_key_of_the_declared_type():
+    """A stats map is declared with `additionalProperties`: its keys are the rule set's stat
+    names, so the schema cannot list them, but every value must still be an integer."""
+    schema = {
+        "type": "object",
+        "properties": {
+            "name": {"type": "string"},
+            "stats": {"type": "object", "additionalProperties": {"type": "integer"}},
+        },
+        "required": ["name", "stats"],
+    }
+    tools = {
+        "t": ToolCall(
+            id="t",
+            name="t",
+            description="A test tool.",
+            parameters=schema,
+            function=lambda **kwargs: kwargs,
+        )
+    }
+
+    result = _run(tools, _request("t", '{"name": "Gull", "stats": {"str": 9, "hp": 6}}'))
+
+    assert json.loads(result) == {"name": "Gull", "stats": {"str": 9, "hp": 6}}
+    assert (
+        _error_of(_run(tools, _request("t", '{"name": "Gull", "stats": {"str": "nine"}}')))
+        == "argument 'stats.str' must be integer"
+    )
+
+
+def test_a_nested_object_without_properties_still_refuses_unknown_keys():
+    """Only an explicit `additionalProperties` opens a free-form object, so a typo in a nested
+    object does not slip through."""
+    schema = {
+        "type": "object",
+        "properties": {"note": {"type": "object", "properties": {"text": {"type": "string"}}}},
+        "required": ["note"],
+    }
+    tools = {
+        "t": ToolCall(
+            id="t",
+            name="t",
+            description="A test tool.",
+            parameters=schema,
+            function=lambda **kwargs: kwargs,
+        )
+    }
+
+    assert "unknown argument 'note.body'" in _error_of(
+        _run(tools, _request("t", '{"note": {"body": "hi"}}'))
+    )
 
 
 def test_arguments_are_fitted_to_the_schema_before_the_check():

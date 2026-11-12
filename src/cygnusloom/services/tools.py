@@ -998,10 +998,20 @@ def _check_object(schema: Mapping[str, Any], value: Mapping[str, Any], path: str
     for name in schema.get("required", []):
         if name not in value:
             return f"missing required argument {_child(path, name)!r}"
+    # A schema with `additionalProperties` takes free-form keys: a stats map, for example, whose
+    # keys the rule set names and whose values are all integers. Without it, an unknown key is a
+    # mistake the GM should hear about rather than a value quietly dropped.
+    additional = schema.get("additionalProperties")
     for name, item in value.items():
         child = _child(path, name)
         if name not in properties:
-            return _unknown_argument(child, name, properties)
+            if additional is None or additional is False:
+                return _unknown_argument(child, name, properties)
+            if isinstance(additional, dict):
+                problem = _check_value(additional, item, child)
+                if problem:
+                    return problem
+            continue
         spec = properties[name]
         if isinstance(spec, dict):
             problem = _check_value(spec, item, child)

@@ -255,6 +255,27 @@ def test_participant_off_the_encounter_location_gets_a_warning(
     assert _call(app, campaign_id, "remove_participant", {"name": "Wren"}) == {"removed": "Wren"}
 
 
+def test_participant_with_no_attacks_gets_a_warning(
+    client_factory: Callable[[], TestClient],
+):
+    """An NPC with a sheet but no attacks can take a turn in the order, but the GM should hear
+    before the fight that they cannot strike. The result warns without refusing the join."""
+    client, campaign_id = _encounter_with(client_factory)
+    app = client.app
+    _call(
+        app,
+        campaign_id,
+        "create_npc",
+        {"name": "Wren", "location": TOWN, "description": "A ferry hand."},
+    )
+
+    added = _call(app, campaign_id, "add_participant", {"name": "Wren"})
+
+    assert added["added"] == "Wren"
+    assert "has no attacks" in added["warning"]
+    assert "update_npc" in added["warning"]
+
+
 def test_placement_is_bounded_occupied_and_movement_limited(
     client_factory: Callable[[], TestClient],
 ):
@@ -430,8 +451,65 @@ def test_npc_turn_is_played_out_and_ends_automatically(
     assert state.encounter.acting == "Ada"
     assert state.encounter.up == 1
     page = client.get(f"/campaigns/{campaign_id}").text
-    assert "End Pip's turn" not in page
+    assert "End Pip&#39;s turn" not in page
     assert "Start Ada's turn" not in page
+    assert "End your turn" in page
+
+
+def test_an_out_of_character_npc_turn_still_ends_when_the_reply_finishes(
+    client_factory: Callable[[], TestClient],
+):
+    """The GM can answer an NPC's turn out of character, such as when the statblock has nothing
+    to roll. That reply is still the end of the turn, so the table is not left waiting on it."""
+    client, campaign_id = _encounter_with(client_factory, columns=10, rows=10, cairn=True)
+    app = client.app
+    script = _script(
+        {"text": "Pip waits by the gate."},
+        {
+            "rounds": [[{"name": "ooc", "arguments": {"no_narration": True}}]],
+            "ooc": "Pip has no attacks to roll.",
+        },
+    )
+    assert send_message(client, campaign_id, script).status_code == 303
+
+    lines = _npc_turn_stream(client, campaign_id, "Pip")
+
+    assert lines[-1]["type"] == "saved"
+    state = _state(app, campaign_id)
+    assert state.turn is None
+    assert state.encounter.acting == "Ada"
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert "End Pip&#39;s turn" not in page
+    assert "End your turn" in page
+
+
+def test_the_owner_can_end_an_npc_turn_the_gm_left_open(
+    client_factory: Callable[[], TestClient],
+):
+    """A reply that finished without closing its NPC turn used to leave the table with no input.
+    The owner now gets the End control for that turn so play can continue."""
+    client, campaign_id = _encounter_with(client_factory, columns=10, rows=10, cairn=True)
+    app = client.app
+    with _db(app) as db:
+        encounters.begin_turn(db, campaign_id, "Pip")
+    # The old failed path: the reply is saved, the turn is closed, but the encounter still says
+    # it is Pip's turn.
+    _finish_gm_reply(app, campaign_id)
+    state = _state(app, campaign_id)
+    assert state.turn is None
+    assert state.encounter is not None and state.encounter.acting == "Pip"
+
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert "End Pip&#39;s turn" in page
+    assert "Pip&#39;s turn is still open." in page
+
+    ended = _encounter_post(client, campaign_id, "end", "Pip")
+
+    assert ended.status_code == 303
+    state = _state(app, campaign_id)
+    assert state.encounter is not None and state.encounter.acting == "Ada"
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert "End Pip&#39;s turn" not in page
     assert "End your turn" in page
 
 
