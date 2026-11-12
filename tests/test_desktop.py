@@ -203,6 +203,43 @@ def test_page_console_levels_map_to_logging_levels():
     assert desktop.js_message_level(Level()) == logging.ERROR
 
 
+def test_a_stopped_renderer_is_named_and_recovered():
+    assert desktop.renderer_termination_name(0) == "normal"
+    assert desktop.renderer_termination_name(1) == "abnormal"
+    assert desktop.renderer_termination_name(2) == "crashed"
+    assert desktop.renderer_termination_name(3) == "killed"
+    assert desktop.renderer_termination_name("unexpected") == "unexpected"
+
+    class Status:
+        value = 2
+
+    assert desktop.renderer_termination_name(Status()) == "crashed"
+    assert not desktop.renderer_needs_recovery(0)
+    assert desktop.renderer_needs_recovery(1)
+    assert desktop.renderer_needs_recovery(2)
+    assert desktop.renderer_needs_recovery(3)
+
+
+def test_renderer_recovery_retries_briefly_then_leaves_the_choice_to_the_player():
+    reload, crashes = desktop.plan_renderer_recovery((), 100.0)
+    assert reload
+    assert crashes == (100.0,)
+
+    reload, crashes = desktop.plan_renderer_recovery(crashes, 110.0)
+    assert reload
+    assert crashes == (100.0, 110.0)
+
+    # A crash loop must not restart the page forever.
+    reload, crashes = desktop.plan_renderer_recovery(crashes, 120.0)
+    assert not reload
+    assert crashes == (100.0, 110.0, 120.0)
+
+    # A crash long after the last one starts a fresh retry budget.
+    reload, crashes = desktop.plan_renderer_recovery(crashes, 300.0)
+    assert reload
+    assert crashes == (300.0,)
+
+
 def test_the_desktop_sentinel_is_limited_to_the_local_app():
     script = desktop.desktop_sentinel_script("http://127.0.0.1:8123")
 

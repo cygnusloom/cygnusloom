@@ -13,7 +13,8 @@ import logging
 import secrets
 import sys
 import threading
-from collections.abc import Callable
+import time
+from collections.abc import Callable, Sequence
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
@@ -41,6 +42,19 @@ WINDOW_STATE_FILE = "window.ini"
 BRAND_ICON_FILE = Path(__file__).parent / "web" / "static" / "brand" / "cygnus-loom-256.png"
 # How long a browser sign-in may take before the app stops listening.
 BROWSER_LOGIN_SECONDS = 5 * 60
+# A renderer that stops leaves the window with a blank page and no page context menu, so the
+# window reloads it itself. A repeated crash usually means the machine cannot hold the page, so
+# the automatic retries are bounded and the player can then reload from the window's own bar.
+RENDERER_RETRY_WINDOW_SECONDS = 120.0
+RENDERER_AUTO_RELOADS = 2
+# QWebEnginePage.RenderProcessTerminationStatus: normal, abnormal, crashed, killed.
+RENDERER_STATUS_NAMES = {
+    0: "normal",
+    1: "abnormal",
+    2: "crashed",
+    3: "killed",
+}
+RENDERER_RECOVERABLE_STATUSES = frozenset({"abnormal", "crashed", "killed"})
 
 
 class DesktopUnavailable(RuntimeError):
@@ -189,6 +203,34 @@ def js_message_level(level: object) -> int:
     except (TypeError, ValueError):
         return logging.INFO
     return JS_LOG_LEVELS.get(value, logging.INFO)
+
+
+def renderer_termination_name(status: object) -> str:
+    """A readable name for QWebEnginePage's render-process termination status."""
+    value = getattr(status, "value", status)
+    try:
+        return RENDERER_STATUS_NAMES.get(int(value), str(status))
+    except (TypeError, ValueError):
+        return str(status)
+
+
+def renderer_needs_recovery(status: object) -> bool:
+    """Whether the page lost its renderer and should be reloaded.
+
+    A normal termination is the page or app shutting down, not a failure."""
+    return renderer_termination_name(status) in RENDERER_RECOVERABLE_STATUSES
+
+
+def plan_renderer_recovery(
+    crash_times: Sequence[float], now: float
+) -> tuple[bool, tuple[float, ...]]:
+    """Record a renderer crash and say whether to reload it automatically.
+
+    Returns the decision and the crash history with old entries dropped. Reloading is automatic
+    for a first crash, but a page that keeps crashing is left on the reload bar so the window
+    does not spin through restarts."""
+    recent = tuple(t for t in crash_times if now - t <= RENDERER_RETRY_WINDOW_SECONDS) + (now,)
+    return (len(recent) <= RENDERER_AUTO_RELOADS, recent)
 
 
 def desktop_sentinel_script(local_origin: str) -> str:
@@ -376,7 +418,7 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
             Signal,
             qInstallMessageHandler,
         )
-        from PySide6.QtGui import QDesktopServices, QIcon
+        from PySide6.QtGui import QAction, QDesktopServices, QIcon, QKeySequence
         from PySide6.QtNetwork import QNetworkAccessManager, QNetworkRequest
         from PySide6.QtWebEngineCore import (
             QWebEnginePage,
@@ -494,6 +536,7 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
             self.add_replies: set[Any] = set()
             self.loopback: LoopbackReceiver | None = None
             self.loading_active = False
+            self.crash_times: tuple[float, ...] = ()
             self.setWindowTitle(title)
             self.setWindowIcon(icon)
             self.view = QWebEngineView(self)
@@ -522,10 +565,40 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
                 "QPushButton#device-home:hover { background: #333b4e; }"
             )
             self.escape_bar.hide()
+            # A renderer that stops leaves nothing to paint and no page context menu, so the
+            # window keeps its own way back above the page. It is hidden during normal play.
+            self.recovery_bar = QFrame(self)
+            self.recovery_bar.setObjectName("recovery-bar")
+            recovery_layout = QHBoxLayout(self.recovery_bar)
+            recovery_layout.setContentsMargins(12, 8, 12, 8)
+            recovery_layout.setSpacing(10)
+            self.recovery_label = QLabel("", self.recovery_bar)
+            self.recovery_label.setObjectName("recovery-label")
+            self.reload_button = QPushButton("Reload the page", self.recovery_bar)
+            self.reload_button.setObjectName("recovery-reload")
+            self.reload_button.clicked.connect(self.reload_page)
+            recovery_layout.addWidget(self.recovery_label, 1)
+            recovery_layout.addWidget(self.reload_button)
+            self.recovery_bar.setStyleSheet(
+                "QFrame#recovery-bar { background: #2b2333;"
+                " border-bottom: 1px solid #4b3a56; }"
+                "QLabel#recovery-label { color: #e6d9ee; }"
+                "QPushButton#recovery-reload { color: #e8e8ec; background: #3b2f47;"
+                " border: 1px solid #5d4a6b; border-radius: 6px; padding: 6px 12px; }"
+                "QPushButton#recovery-reload:hover { background: #4a3a59; }"
+            )
+            self.recovery_bar.hide()
+            self.reload_action = QAction("Reload page", self)
+            self.reload_action.setShortcuts(
+                [QKeySequence.StandardKey.Refresh, QKeySequence("Ctrl+R")]
+            )
+            self.reload_action.triggered.connect(self.reload_page)
+            self.addAction(self.reload_action)
             self.shell = QWidget(self)
             shell_layout = QVBoxLayout(self.shell)
             shell_layout.setContentsMargins(0, 0, 0, 0)
             shell_layout.setSpacing(0)
+            shell_layout.addWidget(self.recovery_bar)
             shell_layout.addWidget(self.escape_bar)
             shell_layout.addWidget(self.view, 1)
             # A slim bar over the bottom of the page, so a slow page never looks frozen.
@@ -580,7 +653,37 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
             self.view.setUrl(QUrl(url))
 
         def _render_process_terminated(self, status, exit_code) -> None:
-            _LOG.error("the page's render process stopped (%s, exit code %s)", status, exit_code)
+            name = renderer_termination_name(status)
+            page_url = self.view.url().toString()
+            if not renderer_needs_recovery(status):
+                # A normal termination is the window shutting down.
+                _LOG.debug(
+                    "the page's render process stopped (%s, exit code %s) at %s",
+                    name,
+                    exit_code,
+                    page_url or "no page",
+                )
+                return
+            _LOG.error(
+                "the page's render process stopped (%s, exit code %s) at %s",
+                name,
+                exit_code,
+                page_url or "no page",
+            )
+            reload, self.crash_times = plan_renderer_recovery(self.crash_times, time.monotonic())
+            self.recovery_bar.show()
+            if reload:
+                self.recovery_label.setText("The page stopped unexpectedly. Reloading…")
+                # Let the stopped renderer finish going away before asking for a new one.
+                QTimer.singleShot(0, self.view.reload)
+            else:
+                self.recovery_label.setText(
+                    "The page stopped unexpectedly. Reload the page to try again."
+                )
+
+        def reload_page(self) -> None:
+            """Reload the current page, restarting a renderer that stopped."""
+            self.view.reload()
 
         def report_activation(self) -> None:
             if self.page is None:
@@ -895,6 +998,13 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
         def _page_loaded(self, ok: bool) -> None:
             self.loading_active = False
             self.loading_bar.hide()
+            if ok:
+                # A page that loaded after a renderer crash no longer needs the way back.
+                self.recovery_bar.hide()
+            elif self.recovery_bar.isVisible():
+                self.recovery_label.setText(
+                    "The page could not be reloaded. Reload the page to try again."
+                )
             page_origin = origin_of(self.view.url().toString())
             if not ok:
                 # Rejecting an external link emits loadFinished(False) while the current page

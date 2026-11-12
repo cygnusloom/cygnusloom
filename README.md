@@ -26,6 +26,8 @@ plain HTTP is accepted only for this machine.
   `servers.json` beside the database. Each run writes its server output, page console messages,
   and Qt errors to its own file in `logs/` beside the database; the newest ten runs are kept,
   and the same lines are printed when the app is started from a terminal.
+- If a page's renderer process stops, the window reloads it automatically. A page that keeps
+  stopping stays on a **Reload the page** bar, and **Ctrl+R** or **F5** reloads at any time.
 - The wizard offers free local models (Ollama, LM Studio), hosted providers (DeepSeek, OpenAI,
   OpenRouter), any other OpenAI-compatible endpoint, and a scripted demo.
 - Run it from a checkout with `uv run --extra desktop cygnusloom play`.
