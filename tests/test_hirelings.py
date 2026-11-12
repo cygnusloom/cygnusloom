@@ -269,6 +269,66 @@ def test_the_character_tab_shows_the_hirelings_sheet(client_factory):
     assert "Stats:" in page
 
 
+def test_the_player_sees_a_hirelings_pack(client_factory):
+    app, campaign_id, tools = _pcs(client_factory)
+    _hire(tools)
+    tools.give_item(HIRELING, "Rations")
+
+    with Session(app.state.engine) as db:
+        state = load_state(db, campaign_id)
+    scene = scene_view(state, CAIRN.character, CAIRN.inventory)
+
+    assert [view.name for view in scene.hireling_inventories] == [HIRELING]
+    view = scene.hireling_inventories[0]
+    assert view.employer == PC
+    assert [item.name for item in view.pack.items] == ["Rations"]
+
+
+def test_the_inventory_tab_has_a_tab_for_each_hirelings_pack(client_factory):
+    _app, campaign_id, tools = _pcs(client_factory)
+    _hire(tools)
+    tools.give_item(HIRELING, "Rope")
+    client = _signed_in(client_factory)
+
+    page = client.get(f"/campaigns/{campaign_id}").text
+    start = page.index('id="panel-inventory"')
+    inventory = page[start : page.index("</section>", start)]
+
+    assert 'class="tab-list inventory-tab-list"' in inventory
+    assert 'aria-controls="panel-pack-pc"' in inventory
+    assert 'aria-controls="panel-pack-1"' in inventory
+    assert f">{HIRELING}</button>" in inventory
+    hireling_panel = inventory[inventory.index('id="panel-pack-1"') :]
+    assert "<strong>Rope</strong>" in hireling_panel
+
+
+def test_transfer_item_moves_an_item_between_packs_and_keeps_its_uses(client_factory):
+    app, campaign_id, tools = _pcs(client_factory)
+    _hire(tools)
+    tools.give_item(HIRELING, "Rations")
+    carried = [i for i in _character(app, campaign_id, PC).items if i.name == "Rations"]
+
+    result = tools.transfer_item(HIRELING, PC, "Rations")
+
+    assert result["giver"] == HIRELING
+    assert result["receiver"] == PC
+    after = [i for i in _character(app, campaign_id, PC).items if i.name == "Rations"]
+    assert len(after) == len(carried) + 1
+    assert (after[-1].uses, after[-1].max_uses) == (3, 3)
+    assert "Rations" not in [i.name for i in _character(app, campaign_id, HIRELING).items]
+
+
+def test_transfer_item_refuses_a_missing_item_or_the_same_character(client_factory):
+    _app, _campaign_id, tools = _pcs(client_factory)
+    _hire(tools)
+    tools.give_item(HIRELING, "Rope")
+
+    with pytest.raises(InvalidInput, match="different characters"):
+        tools.transfer_item(HIRELING, HIRELING, "Rope")
+    with pytest.raises(InvalidInput, match="carries no"):
+        tools.transfer_item(HIRELING, PC, "Unicorn")
+
+
 def _scene(app: FastAPI, campaign_id: int):
     with Session(app.state.engine) as db:
         state = load_state(db, campaign_id)

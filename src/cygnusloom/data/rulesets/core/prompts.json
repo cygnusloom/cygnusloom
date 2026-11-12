@@ -49,5 +49,17 @@
     "id": "payment_direction",
     "step": "state",
     "text": "Keep the direction of every payment straight. The payer hands over the money, and the payee receives it. When the player names a price or demands a fee for their help, the player is the payee and the other character pays. Record a payment between characters with transfer_currency, naming the payer and the payee, and use change_currency only when money enters or leaves one purse with no second character."
+  },
+  {
+    "type": "prompt",
+    "id": "item_transfer",
+    "step": "state",
+    "text": "Keep the direction of every item straight. When one character hands another an item they carry, call transfer_item with the giver and the receiver; never drop the item and give a copy, which loses its uses and description. Use give_item only when an item enters a character's pack from outside both inventories, and drop_item only when an item leaves a character and is left behind."
+  },
+  {
+    "type": "prompt",
+    "id": "hireling_gear",
+    "step": "state",
+    "text": "A hireling brings the tools of their former life. Right after hire_hireling or hire_existing_npc, call give_item for the kit their prior trade or station would provide, chosen by you to fit how they have been portrayed: a guard has a spear and armor, a groom a knife and brushes, a scholar books and ink. Do not leave a new hireling empty-handed unless the story says they lost everything. This is the hireling's own outfit, not a purchase by the employer."
   }
 ]

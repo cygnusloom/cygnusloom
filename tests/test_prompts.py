@@ -30,7 +30,9 @@ def test_a_rule_set_without_prompt_fragments_gets_the_generic_loop_text_alone():
     assert "Cairn" not in prompt
     assert "relic" not in prompt
     assert "group" not in prompt
-    for tool in ("advance_time", "rest", "give_item", "set_condition", "recharge_charged_item"):
+    # Core inventory guidance names give_item, which every rule set inherits. The names below
+    # are not part of the generic loop text.
+    for tool in ("advance_time", "rest", "set_condition", "recharge_charged_item"):
         assert tool not in prompt
 
 
