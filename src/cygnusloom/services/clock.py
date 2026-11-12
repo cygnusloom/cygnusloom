@@ -55,6 +55,18 @@ def rest_target(start: int, rest: RestLength, clock: ClockRules) -> int:
     return target
 
 
+def _passed_text(hours: int, hours_per_day: int) -> str:
+    """How much time a clock move passed, in days and hours."""
+    days, rest = divmod(max(0, hours), hours_per_day)
+    if days and rest:
+        return (
+            f"{days} day{'s' if days != 1 else ''} and {rest} hour{'s' if rest != 1 else ''} passed"
+        )
+    if days:
+        return f"{days} day{'s' if days != 1 else ''} passed"
+    return f"{hours} hour{'s' if hours != 1 else ''} passed"
+
+
 def advance_to(
     db: Session,
     campaign_id: int,
@@ -114,9 +126,8 @@ def advance_to(
         for day in range(before.day + 1, new.day + 1):
             call_hook(hooks, "new_day", hc, day, default=None)
     if new.day > before.day or (passed is not None and target > start):
-        elapsed = new.day - before.day
         if passed is None:
-            passed = f"{elapsed} day{'s' if elapsed != 1 else ''} passed"
+            passed = _passed_text(target - start, parts_per_day * hours_per_part)
         notices = [f"{passed}; update anything that should be updated."]
         state = load_state(db, campaign_id)
         stale = sorted(

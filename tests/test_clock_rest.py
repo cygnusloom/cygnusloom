@@ -97,6 +97,16 @@ def test_advancing_a_day_lands_on_the_morning_and_a_part_moves_to_the_afternoon(
     assert tools.advance_time(parts=1) == {"day": 2, "part": "afternoon", "hour": 0}
 
 
+def test_a_move_across_midnight_reports_the_hours_that_passed(client_factory):
+    _, _, tools = _fight(client_factory)
+    tools.advance_time(hours=23)
+    result = tools.advance_time(hours=1)
+    assert result["day"] == 2
+    assert result["part"] == "morning"
+    assert result["hour"] == 0
+    assert result["notice"].startswith("1 hour passed; update anything that should be updated.")
+
+
 def test_a_clock_move_into_a_new_day_is_a_day_end(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     before = _last_event_id(app, campaign_id)

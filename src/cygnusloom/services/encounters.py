@@ -725,7 +725,7 @@ def place_arrivals(
             name=character.name,
             column=cell[0],
             row=cell[1],
-            quiet=False,
+            quiet=character.kind != PC_KIND,
         )
         event.apply(state, record(db, campaign_id, event))
         placed.append(
@@ -756,10 +756,10 @@ def place_map_token(
     `Encounter.cells`, so it refuses and `place_participant` is used instead.
 
     The cell must be on the map and free: a blocking object or another token cannot share it.
-    Placing a token again moves it, and the player's Log says where it went. A caller that is
-    already holding the campaign state, and keeping it current, can pass it as `state`; otherwise
-    the state is loaded from the log. Seeding a world's starting tokens passes `quiet` so setup
-    does not fill the transcript."""
+    Placing a token again moves it. The player's Log says where the player character went; an
+    NPC's or prop's move is left to the narration. A caller that is already holding the campaign
+    state, and keeping it current, can pass it as `state`; otherwise the state is loaded from the
+    log. Seeding a world's starting tokens passes `quiet` so setup does not fill the transcript."""
     if state is None:
         state = load_state(db, campaign_id)
     entry = _map_named(state, map_name)
@@ -800,6 +800,7 @@ def place_map_token(
     display = character.name if character is not None else name
     previous = entry.tokens.get(key)
     moved = previous is not None and previous != target
+    quiet = quiet or character is None or character.kind != PC_KIND
     event = MapTokenPlaced(
         map=entry.name,
         name=display,

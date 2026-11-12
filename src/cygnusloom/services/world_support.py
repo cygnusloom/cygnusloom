@@ -1685,7 +1685,7 @@ def move_actor(
     if location is None:
         if actor.kind != NPC_KIND:
             raise InvalidInput(f"{actor.name} is the player character and cannot go into the wind")
-        record(db, campaign_id, ActorMoved(name=actor.name, location=None))
+        record(db, campaign_id, ActorMoved(name=actor.name, location=None, quiet=True))
         db.commit()
         return {"moved": actor.name, "location": "in the wind"}
     if speed is None:
@@ -1703,7 +1703,11 @@ def move_actor(
     minutes = None
     if travel is not None and actor.kind == PC_KIND and mode == IN_SETTLEMENT:
         minutes = _travel_minutes(state, actor, where, travel, speed)
-    record(db, campaign_id, ActorMoved(name=actor.name, location=where.name))
+    record(
+        db,
+        campaign_id,
+        ActorMoved(name=actor.name, location=where.name, quiet=actor.kind != PC_KIND),
+    )
     # Going somewhere in person means the player character knows the place in detail, and every
     # place that holds it: anyone inside the great hall is inside the castle too.
     if actor.kind == PC_KIND:
@@ -1715,7 +1719,11 @@ def move_actor(
     if actor.kind == PC_KIND and not actor.hireling:
         for hireling in state.characters.values():
             if hireling.hireling and hireling.employer == actor.name:
-                record(db, campaign_id, ActorMoved(name=hireling.name, location=where.name))
+                record(
+                    db,
+                    campaign_id,
+                    ActorMoved(name=hireling.name, location=where.name, quiet=True),
+                )
                 travelers.append(hireling.name)
     result: dict[str, Any] = {"moved": actor.name, "location": where.name}
     if tasks:

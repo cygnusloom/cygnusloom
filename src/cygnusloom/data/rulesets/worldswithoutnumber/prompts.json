@@ -68,7 +68,7 @@
   {
     "type": "prompt",
     "id": "site_turns",
-    "text": "Exploring a site runs in 10-minute turns. Move the clock with advance_time for each turn, and roll the site's wandering check with roll_tables dungeon_event every 1 to 6 turns, as alert as the site is. A torch burns 6 turns and a lantern 24. For foraging, privation, and travel, call roll_check for foraging and harm_character for hunger, thirst, and exposure."
+    "text": "Exploring a site runs in 10-minute turns. The clock counts whole hours, so six turns make an hour: use advance_time with hours, not parts, once six turns have passed. Roll the site's wandering check with roll_tables dungeon_event every 1 to 6 turns, as alert as the site is. A torch burns 6 turns and a lantern 24. A conversation or a few actions does not consume an exploration turn. For foraging, privation, and travel, call roll_check for foraging and harm_character for hunger, thirst, and exposure."
   },
   {
     "type": "prompt",

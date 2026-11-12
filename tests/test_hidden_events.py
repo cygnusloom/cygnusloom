@@ -14,6 +14,7 @@ from cygnusloom.services.accounts import set_show_internal_thinking
 from cygnusloom.services.campaigns import campaign_transcript
 from cygnusloom.services.events import (
     EVENT_TYPES,
+    ActorMoved,
     GameEvent,
     LocationAdded,
     LocationDiscovered,
@@ -76,6 +77,11 @@ def test_gm_bookkeeping_is_hidden_and_what_the_pc_perceives_is_visible():
     assert not is_hidden("actor.moved")
     assert not is_hidden("map.token_placed")
     assert not is_hidden("tool.ran")
+
+
+def test_a_quiet_npc_move_has_no_log_line():
+    assert ActorMoved(name="Pip", location="Far Ledge", quiet=True).render() is None
+    assert ActorMoved(name="Ada", location="Far Ledge").render() == "Ada moved to Far Ledge."
 
 
 def test_the_transcript_flags_hidden_log_lines(

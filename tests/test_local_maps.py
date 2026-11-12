@@ -165,6 +165,73 @@ def test_token_movement_appears_in_the_player_transcript(
     )
 
 
+def test_an_npc_token_movement_is_left_to_the_narration(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _campaign_id(client_factory)
+    _place_pc(client, campaign_id, TOWN)
+    _create_local_map(client, campaign_id)
+    created = _call(
+        client.app,
+        campaign_id,
+        "create_npc",
+        {"name": "Nib", "location": TOWN, "description": "A scruffy courier."},
+    )
+    assert created["created"] == "npc"
+    _call(
+        client.app,
+        campaign_id,
+        "place_map_token",
+        {"map": MAP, "name": "Nib", "column": 3, "row": 4},
+    )
+    _call(
+        client.app,
+        campaign_id,
+        "place_map_token",
+        {"map": MAP, "name": "Nib", "column": 5, "row": 4},
+    )
+
+    page = client.get(f"/campaigns/{campaign_id}").text
+
+    assert "Nib is placed at column" not in page
+    assert "Nib moves from column" not in page
+    state = open_campaign(client.app, campaign_id)
+    assert state.maps[name_key(MAP)].tokens[name_key("Nib")] == (5, 4)
+
+
+def test_an_npc_move_is_left_to_the_narration(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _campaign_id(client_factory)
+    _place_pc(client, campaign_id, TOWN)
+    _call(
+        client.app,
+        campaign_id,
+        "create_location",
+        {"name": "Far Ledge", "description": "A ledge above the road."},
+    )
+    created = _call(
+        client.app,
+        campaign_id,
+        "create_npc",
+        {"name": "Nib", "location": TOWN, "description": "A scruffy courier."},
+    )
+    assert created["created"] == "npc"
+    moved = _call(
+        client.app,
+        campaign_id,
+        "move_actor",
+        {"name": "Nib", "location": "Far Ledge", "mode": "in_settlement"},
+    )
+    assert moved.get("location") == "Far Ledge", moved
+
+    page = client.get(f"/campaigns/{campaign_id}").text
+
+    assert "Nib moved to Far Ledge." not in page
+    state = open_campaign(client.app, campaign_id)
+    assert state.characters[name_key("Nib")].location == "Far Ledge"
+
+
 def test_old_token_placements_replay_without_filling_the_transcript(
     client_factory: Callable[[], TestClient],
 ):

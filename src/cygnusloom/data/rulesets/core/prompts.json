@@ -37,5 +37,11 @@
     "id": "music",
     "step": "state",
     "text": "Background music follows the mood of the scene. Use set_music when the mood changes, at most once per turn, with the closest mood. Use silence for a deliberate pause. Do not call it every turn, do not call it for an out-of-character message or a rules question, and never mention music, the tool, or its result in the narration. Combat changes the music automatically; when the party camps, journeys, or settles into a town, cue the new mood. The same mood may last many turns without another call."
+  },
+  {
+    "type": "prompt",
+    "id": "advance_time_care",
+    "step": "state",
+    "text": "Advance the clock only for time the fiction actually covers. A conversation, a few actions, or an NPC leaving the scene is not a part of the day: let the narration describe it and move the clock no more than an hour, or not at all. Use parts of a day only for a clear block of the day or a night. The result's notice says how many hours passed; if that is more time than the narration shows, the jump is wrong."
   }
 ]

@@ -788,6 +788,10 @@ class ActorMoved(GameEvent):
 
     name: str
     location: str | None
+    # The player's Log shows their own move. Another character's move is left to the narration,
+    # so the Log does not reveal where someone went when the player was not there.
+    # BACKWARDS-COMPATIBILITY: 4 -- older records have no flag and stay visible.
+    quiet: bool = False
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         actor = state.characters[name_key(self.name)]
@@ -810,7 +814,9 @@ class ActorMoved(GameEvent):
             # An NPC coming to the player's place is seen at once.
             _remember_npc(state, actor)
 
-    def render(self) -> str:
+    def render(self) -> str | None:
+        if self.quiet:
+            return None
         if self.location is None:
             return f"{self.name} went into the wind."
         return f"{self.name} moved to {self.location}."
@@ -1789,8 +1795,9 @@ class MapDeleted(GameEvent):
 @dataclass(frozen=True)
 class MapTokenPlaced(GameEvent):
     """A character, NPC, or prop is placed on a local map outside an encounter, or moves to a new
-    cell on it, and the player's Log says so. When an encounter starts on the map, the character's
-    token cell becomes their participant cell."""
+    cell on it. The player's Log shows the player character's own placement or move; an NPC's or
+    prop's move is left to the narration, so the Log does not reveal where it went. When an
+    encounter starts on the map, the character's token cell becomes their participant cell."""
 
     kind: ClassVar[str] = "map.token_placed"
 

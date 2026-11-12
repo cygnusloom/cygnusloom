@@ -1939,7 +1939,7 @@
   {
     "type": "tool_call",
     "id": "advance_time",
-    "description": "Move the campaign clock forward. Use it when time passes in the fiction: days, watches of the day (morning, afternoon, night; eight hours each), or hours within a watch. The result says when a new day begins and lists places not visited for a while, so update anything that should change. A dying character dies when enough hours have passed, so advance time only as far as the fiction needs.",
+    "description": "Move the campaign clock forward. Use it when time passes in the fiction: days, parts of the day, or hours within a part. Use hours for a short wait and parts only for a clear block of the day; never advance time for a conversation, a few actions, or an NPC leaving the scene. The result says when a new day begins and lists places not visited for a while, so update anything that should change. A dying character dies when enough hours have passed, so advance time only as far as the fiction needs.",
     "parameters": {
       "properties": {
         "days": {

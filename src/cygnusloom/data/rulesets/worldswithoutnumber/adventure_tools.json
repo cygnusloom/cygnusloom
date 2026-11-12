@@ -366,7 +366,7 @@
     "id": "advance_time",
     "extends": "core:tool_call/advance_time",
     "patch": {
-      "description": "Move the campaign clock forward. Use it for downtime, travel you track yourself, or the hour a mortally wounded character has left to live."
+      "description": "Move the campaign clock forward when time passes in the fiction. Use hours for a short wait or exploration time (six 10-minute turns make an hour), and parts only for a clear block of the day or a night. Do not advance time for a conversation, a few actions, or an NPC leaving the scene; the narration covers that."
     }
   },
   {
