@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import http.server
 import json
+import logging
 import os
 import re
 import ssl
@@ -187,6 +188,19 @@ def test_the_loading_message_names_the_destination():
         == "Loading Tuesday table…"
     )
     assert desktop.loading_message("about:blank", local) == "Loading…"
+
+
+def test_page_console_levels_map_to_logging_levels():
+    assert desktop.js_message_level(0) == logging.INFO
+    assert desktop.js_message_level(1) == logging.WARNING
+    assert desktop.js_message_level(2) == logging.ERROR
+    assert desktop.js_message_level(9) == logging.INFO
+    assert desktop.js_message_level("unexpected") == logging.INFO
+
+    class Level:
+        value = 2
+
+    assert desktop.js_message_level(Level()) == logging.ERROR
 
 
 def test_the_desktop_sentinel_is_limited_to_the_local_app():

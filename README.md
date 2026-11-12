@@ -23,7 +23,9 @@ plain HTTP is accepted only for this machine.
 
 - Data lives in `%LOCALAPPDATA%\CygnusLoom` on Windows and
   `${XDG_DATA_HOME:-~/.local/share}/cygnusloom` on Linux. The server list lives in
-  `servers.json` beside the database.
+  `servers.json` beside the database. Each run writes its server output, page console messages,
+  and Qt errors to its own file in `logs/` beside the database; the newest ten runs are kept,
+  and the same lines are printed when the app is started from a terminal.
 - The wizard offers free local models (Ollama, LM Studio), hosted providers (DeepSeek, OpenAI,
   OpenRouter), any other OpenAI-compatible endpoint, and a scripted demo.
 - Run it from a checkout with `uv run --extra desktop cygnusloom play`.

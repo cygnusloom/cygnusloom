@@ -159,7 +159,8 @@ def _server_from_mapping(row: object) -> Server | None:
         return None
     try:
         url = normalize_server_url(url)
-    except ServerError:
+    except ServerError as exc:
+        _LOG.warning("skipping a server entry that is not usable: %s", exc)
         return None
     return Server(
         id=server_id,
@@ -277,8 +278,8 @@ class ServerStore:
             _LOG.warning("the server list at %s is not valid JSON; starting a new list", self.path)
             try:
                 self.path.replace(self.path.with_name(f"{self.path.name}.corrupt"))
-            except OSError:
-                pass
+            except OSError as exc:
+                _LOG.warning("could not set the corrupt list aside: %s", exc)
             return []
         rows = data.get("servers") if isinstance(data, dict) else None
         if not isinstance(rows, list):
@@ -309,8 +310,8 @@ class ServerStore:
                 os.fsync(stream.fileno())
             try:
                 os.chmod(temporary, 0o600)
-            except OSError:
-                pass
+            except OSError as exc:
+                _LOG.debug("could not restrict %s to the owner: %s", temporary, exc)
             os.replace(temporary, self.path)
         finally:
             try:

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hmac
 import json
+import logging
 import secrets
 import sys
 import threading
@@ -26,6 +27,9 @@ from cygnusloom.desktop_servers import (
     normalize_server_url,
     origin_of,
 )
+
+_LOG = logging.getLogger(__name__)
+_JS_LOG = logging.getLogger("cygnusloom.desktop.page")
 
 WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 820
@@ -173,6 +177,18 @@ def return_button_script(local_url: str) -> str:
 
 
 CONSOLE_PREFIX = "cygnus-desktop:"
+# QWebEnginePage's console levels: info, warning, error.
+JS_LOG_LEVELS = {0: logging.INFO, 1: logging.WARNING, 2: logging.ERROR}
+
+
+def js_message_level(level: object) -> int:
+    """The Python logging level for a QWebEnginePage console message level."""
+    value = getattr(level, "value", level)
+    try:
+        value = int(value)
+    except (TypeError, ValueError):
+        return logging.INFO
+    return JS_LOG_LEVELS.get(value, logging.INFO)
 
 
 def desktop_sentinel_script(local_origin: str) -> str:
@@ -337,12 +353,12 @@ class LoopbackReceiver:
         if server is not None:
             try:
                 server.shutdown()
-            except Exception:  # noqa: BLE001, S110 - shutdown is best effort
-                pass
+            except Exception:  # noqa: BLE001 - shutdown is best effort
+                _LOG.debug("could not stop the sign-in listener", exc_info=True)
             try:
                 server.server_close()
-            except Exception:  # noqa: BLE001, S110 - shutdown is best effort
-                pass
+            except Exception:  # noqa: BLE001 - shutdown is best effort
+                _LOG.debug("could not close the sign-in listener", exc_info=True)
         if thread is not None and thread is not threading.current_thread():
             thread.join(timeout=2)
 
@@ -350,7 +366,16 @@ class LoopbackReceiver:
 def run_window(url: str, title: str, data_dir: Path) -> int:
     """Open the game window and block until it closes. Returns the Qt exit code."""
     try:
-        from PySide6.QtCore import QEvent, QSettings, Qt, QTimer, QUrl, Signal
+        from PySide6.QtCore import (
+            QEvent,
+            QSettings,
+            Qt,
+            QTimer,
+            QtMsgType,
+            QUrl,
+            Signal,
+            qInstallMessageHandler,
+        )
         from PySide6.QtGui import QDesktopServices, QIcon
         from PySide6.QtNetwork import QNetworkAccessManager, QNetworkRequest
         from PySide6.QtWebEngineCore import (
@@ -378,6 +403,26 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
             "`pip install 'cygnusloom[desktop]'` or run the packaged build."
         ) from exc
 
+    # Qt and QtWebEngine report their own warnings and renderer errors to stderr by default,
+    # which a windowed build may not have. The run log keeps them beside the server's lines.
+    qt_log = logging.getLogger("cygnusloom.desktop.qt")
+    qt_levels = {
+        QtMsgType.QtDebugMsg: logging.DEBUG,
+        QtMsgType.QtInfoMsg: logging.INFO,
+        QtMsgType.QtWarningMsg: logging.WARNING,
+        QtMsgType.QtCriticalMsg: logging.ERROR,
+        QtMsgType.QtFatalMsg: logging.CRITICAL,
+    }
+
+    def log_qt_message(mode, context, message) -> None:
+        level = qt_levels.get(mode, logging.INFO)
+        if context.file:
+            qt_log.log(level, "qt %s:%s: %s", context.file, context.line, message)
+        else:
+            qt_log.log(level, "qt: %s", message)
+
+    qInstallMessageHandler(log_qt_message)
+
     local_origin = origin_of(url)
     servers = ServerStore(data_dir / FILE_NAME)
 
@@ -404,19 +449,34 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
                     self._allowed(),
                     invite_pending=invite,
                 ):
-                    QDesktopServices.openUrl(navigation_url)
+                    if not QDesktopServices.openUrl(navigation_url):
+                        _LOG.warning("could not open %s in the browser", navigation_url.toString())
                     return False
             return super().acceptNavigationRequest(navigation_url, nav_type, is_main_frame)
 
         def javaScriptConsoleMessage(self, level, message, line, source):
-            if message.startswith(CONSOLE_PREFIX) and self.desktop_handler is not None:
+            """Send every page console line to the app log, and route menu messages to the window.
+
+            QtWebEngine's default handler only writes to stderr, which a windowed build may not
+            have. The app's own ``cygnus-desktop:`` control messages are answered instead.
+            """
+            if message.startswith(CONSOLE_PREFIX):
+                if self.desktop_handler is None:
+                    _JS_LOG.debug("desktop message before the window was ready: %s", message)
+                    return
                 try:
                     payload = json.loads(message[len(CONSOLE_PREFIX) :])
                 except ValueError:
+                    _JS_LOG.warning(
+                        "malformed desktop message from %s:%s: %s", source, line, message
+                    )
                     return
+                _JS_LOG.debug("desktop message %s", message)
                 self.desktop_handler(payload)
                 return
-            super().javaScriptConsoleMessage(level, message, line, source)
+            _JS_LOG.log(
+                js_message_level(level), "page console %s:%s: %s", source or "?", line, message
+            )
 
     class DesktopWindow(QMainWindow):
         browser_result = Signal(str, str)
@@ -515,8 +575,12 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
             self.view.loadFinished.connect(self._page_loaded)
             self.view.loadFinished.connect(lambda _ok: self.report_activation())
             self.page.titleChanged.connect(self._title_changed)
+            self.page.renderProcessTerminated.connect(self._render_process_terminated)
             self.browser_result.connect(self._browser_ready)
             self.view.setUrl(QUrl(url))
+
+        def _render_process_terminated(self, status, exit_code) -> None:
+            _LOG.error("the page's render process stopped (%s, exit code %s)", status, exit_code)
 
         def report_activation(self) -> None:
             if self.page is None:
@@ -643,6 +707,7 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
                     for server in servers.list()
                 )
             except Exception:  # noqa: BLE001 - a broken list must not break the page
+                _LOG.warning("could not read the server list", exc_info=True)
                 return False
 
         def _title_changed(self, text: str) -> None:
@@ -660,6 +725,7 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
             if not self._is_trusted_page():
                 return
             if not QDesktopServices.openUrl(url):
+                _LOG.warning("could not open the download %s in the browser", url.toString())
                 self.statusBar().showMessage(
                     "Could not open the download in your web browser.", 8000
                 )
@@ -671,8 +737,8 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
                     allowed.add(origin_of(server.url))
                     if server.oidc_issuer:
                         allowed.add(origin_of(server.oidc_issuer))
-            except Exception:  # noqa: BLE001, S110 - a broken list must not block navigation
-                pass
+            except Exception:  # noqa: BLE001 - a broken list must not block navigation
+                _LOG.warning("could not read the server list", exc_info=True)
             if self.invite_origin:
                 allowed.add(self.invite_origin)
             allowed.discard("")
@@ -705,8 +771,8 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
         def _touch(self, server_id: str) -> None:
             try:
                 servers.touch(server_id)
-            except ServerError:
-                pass
+            except ServerError as exc:
+                _LOG.debug("could not record the server connection: %s", exc)
 
         def add_server(self, url: str, name: str) -> None:
             try:
@@ -874,6 +940,7 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
                     if origin_of(server.url) == page_origin:
                         return server
             except Exception:  # noqa: BLE001 - a broken list must not break the page
+                _LOG.warning("could not read the server list", exc_info=True)
                 return None
             return None
 
