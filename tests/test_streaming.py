@@ -18,6 +18,7 @@ from cygnusloom.services.campaigns import list_messages
 from tests.conftest import NARRATE_TEXT, csrf_token
 from tests.test_campaigns import _answer, _campaign_id
 from tests.test_context import (
+    LONG_MESSAGE,
     RecordingProvider,
     _saved_message_count,
     _small_window_app,
@@ -107,8 +108,8 @@ def test_compression_is_announced_as_a_status(settings: Settings):
     client, campaign_id = _campaign_id(lambda: TestClient(app))
 
     events: list[dict[str, Any]] = []
-    for index in range(10):
-        events = _stream(client, campaign_id, f"m{index} " + "x" * 600)
+    for index in range(30):
+        events = _stream(client, campaign_id, f"m{index} " + "x" * LONG_MESSAGE)
         if _state(app, campaign_id).summary:
             break
 

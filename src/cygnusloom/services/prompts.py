@@ -364,11 +364,19 @@ NAME_CHECK_PROMPT = (
 )
 SUMMARY_PROMPT = (
     "You are Cygnus, the AI game master of a roleplaying campaign, and you keep its memory. Given "
-    "the summary so far and new events, write an updated summary. Keep names, places, facts the "
-    "players established, open threads, "
-    "and anything the players asked to remember. Reply with the summary only."
+    "the summary so far and new events, rewrite the summary as one compact memory of the "
+    "campaign. Keep names, places, facts the players established, open threads, and anything the "
+    "players asked to remember. Merge the new events into the summary so far rather than adding "
+    "to it: drop details that no longer matter, and keep the whole thing under the word limit "
+    "even as the campaign grows. Reply with the summary only."
 )
 SUMMARY_HEADING = "Summary so far:"
+SUMMARY_SHORTEN_PROMPT = (
+    "You are Cygnus, the AI game master of a roleplaying campaign, and you keep its memory. "
+    "Rewrite the campaign memory you are given as one shorter memory. Keep the campaign's "
+    "premise, the player character, the people, places, and facts that still matter, and every "
+    "open thread. Drop details that no longer matter. Reply with the summary only."
+)
 SETTING_INSTRUCTION = (
     "The player asked for this setting and story when the campaign began. Let it shape the world, "
     "the situations, the people, and the tone, and steer the campaign toward the kind of story "
@@ -584,4 +592,15 @@ def summary_messages(previous: str, transcript: str, words: int) -> list[dict[st
             "role": "user",
             "content": f"{SUMMARY_HEADING}\n{previous or '(none)'}\n\nNew events:\n{transcript}",
         },
+    ]
+
+
+def summary_shorten_messages(summary: str, limit: int) -> list[dict[str, Any]]:
+    """The request to rewrite an overlong summary within the summary's character budget."""
+    return [
+        {
+            "role": "system",
+            "content": f"{SUMMARY_SHORTEN_PROMPT} Reply with at most {limit} characters.",
+        },
+        {"role": "user", "content": f"{SUMMARY_HEADING}\n{summary}\n\nRewrite it shorter."},
     ]

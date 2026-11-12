@@ -15,8 +15,15 @@ from cygnusloom.config import Settings
 from cygnusloom.db.models import Campaign, Event
 from cygnusloom.llm.base import ChatReply, LLMError, ToolRequest
 from cygnusloom.rules.context import brief
-from cygnusloom.services.events import CampaignState, Channel, load_state
-from cygnusloom.services.prompts import SUMMARY_PROMPT, SYSTEM_PROMPT, system_parts
+from cygnusloom.services.campaigns import _keep_newest
+from cygnusloom.services.events import CampaignState, Channel, estimate_tokens, load_state
+from cygnusloom.services.prompts import (
+    SUMMARY_PROMPT,
+    SUMMARY_SHORTEN_PROMPT,
+    SYSTEM_PROMPT,
+    system_parts,
+)
+from cygnusloom.services.turns import COMPRESS_AT, SUMMARY_HEADROOM
 from tests.conftest import is_journal_messages, is_review_messages, make_app
 from tests.test_campaigns import _campaign_id, _send, _set_model
 
@@ -50,6 +57,7 @@ class RecordingProvider:
         self.calls: list[list[dict[str, Any]]] = []
         self.summaries = 0
         self.summary_reply = "SUMMARY"
+        self.shortened_reply: str | None = None
         self.fail_after_summary = False
         self.checklist_calls = 0
 
@@ -60,6 +68,9 @@ class RecordingProvider:
         tools: list[dict[str, Any]] | None = None,
     ) -> ChatReply:
         self.calls.append(messages)
+        if messages[0]["content"].startswith(SUMMARY_SHORTEN_PROMPT):
+            self.summaries += 1
+            return ChatReply(text=self.shortened_reply or self.summary_reply)
         if messages[0]["content"].startswith(SUMMARY_PROMPT):
             self.summaries += 1
             return ChatReply(text=self.summary_reply)
@@ -98,7 +109,11 @@ class RecordingProvider:
         yield await self.chat(model, messages, tools)
 
     def summarizer_calls(self) -> list[list[dict[str, Any]]]:
-        return [call for call in self.calls if call[0]["content"].startswith(SUMMARY_PROMPT)]
+        return [
+            call
+            for call in self.calls
+            if call[0]["content"].startswith((SUMMARY_PROMPT, SUMMARY_SHORTEN_PROMPT))
+        ]
 
 
 def _set_model_context(app: FastAPI, tokens: int, model_id: str | None = None) -> None:
@@ -109,10 +124,16 @@ def _set_model_context(app: FastAPI, tokens: int, model_id: str | None = None) -
     app.state.catalog.update(spec.row_id, base_url=spec.base_url, context_tokens=tokens)
 
 
+# The test campaign's fixed prompt is about 11,000 tokens, so a 32,768-token window leaves
+# room for a verbatim tail and for the turns after a summary, much like a real campaign's.
+SMALL_WINDOW = 32768
+# Messages large enough to reach the compress point in a reasonable number of turns.
+LONG_MESSAGE = 4000
+
+
 def _small_window_app(settings: Settings, provider: RecordingProvider) -> FastAPI:
-    # A 1000-token window: summaries start at 500 tokens and the verbatim tail is about 100.
     app = make_app(settings, fake_provider=provider)
-    _set_model_context(app, 1000)
+    _set_model_context(app, SMALL_WINDOW)
     return app
 
 
@@ -136,9 +157,22 @@ def _saved_message_count(app: FastAPI) -> int:
         ).one()
 
 
+def _last_turn_context_tokens(app: FastAPI, campaign_id: int) -> int:
+    """The estimated prompt the newest turn began with, from its recorded context."""
+    with Session(app.state.engine) as db:
+        event = db.exec(
+            select(Event)
+            .where(Event.campaign_id == campaign_id, Event.kind == "turn.begun")
+            .order_by(Event.id.desc())
+        ).first()
+    assert event is not None
+    context = json.loads(event.payload)["context"]
+    return sum(estimate_tokens(part["content"]) for part in context)
+
+
 def _send_until_summarized(client: TestClient, app: FastAPI, campaign_id: int, sends: int) -> None:
     for index in range(sends):
-        _send(client, campaign_id, f"m{index} " + "x" * 600)
+        _send(client, campaign_id, f"m{index} " + "x" * LONG_MESSAGE)
         if _state(app, campaign_id).summary:
             return
 
@@ -260,11 +294,11 @@ def test_no_summary_when_the_chat_is_well_inside_the_window(settings: Settings):
     assert state.through == 0
 
 
-def test_history_is_summarized_at_half_the_window_and_the_tail_is_kept(settings: Settings):
+def test_history_is_summarized_at_the_compress_point_and_the_tail_is_kept(settings: Settings):
     provider = RecordingProvider()
     app = _small_window_app(settings, provider)
     client, campaign_id = _campaign_id(lambda: TestClient(app), opening=True)
-    _send_until_summarized(client, app, campaign_id, sends=8)
+    _send_until_summarized(client, app, campaign_id, sends=30)
 
     state = _state(app, campaign_id)
     assert state.summary == "SUMMARY"
@@ -272,7 +306,7 @@ def test_history_is_summarized_at_half_the_window_and_the_tail_is_kept(settings:
 
     [summarizer] = provider.summarizer_calls()
     assert "m0 " in summarizer[1]["content"]
-    assert "Keep it under 187 words." in summarizer[0]["content"]
+    assert "Keep it under 2457 words." in summarizer[0]["content"]
 
     after = next(
         call for call in provider.calls if "Summary of earlier events" in call[0]["content"]
@@ -282,20 +316,51 @@ def test_history_is_summarized_at_half_the_window_and_the_tail_is_kept(settings:
     assert "m0 " not in older_text
 
 
-def test_long_summary_is_capped_to_a_quarter_of_the_window_keeping_the_newest_text(
+def test_long_summary_is_capped_to_its_share_of_the_window_keeping_the_newest_text(
     settings: Settings,
 ):
     provider = RecordingProvider()
-    provider.summary_reply = "old detail " * 300 + "NEWEST"
+    provider.summary_reply = "old detail " * 2000 + "NEWEST"
     app = _small_window_app(settings, provider)
     client, campaign_id = _campaign_id(lambda: TestClient(app), opening=True)
-    _send_until_summarized(client, app, campaign_id, sends=8)
+    _send_until_summarized(client, app, campaign_id, sends=30)
 
     summary = _state(app, campaign_id).summary
-    # 25% of a 1000-token window at about four characters per token.
-    assert len(summary) <= 1000
+    # 10% of a 32,768-token window at about four characters per token.
+    assert len(summary) <= 13104
     assert summary.endswith("NEWEST")
     assert not summary.startswith(" ")
+
+
+def test_a_summary_leaves_room_for_the_next_turns(settings: Settings):
+    provider = RecordingProvider()
+    app = _small_window_app(settings, provider)
+    client, campaign_id = _campaign_id(lambda: TestClient(app), opening=True)
+    _send_until_summarized(client, app, campaign_id, sends=30)
+    assert len(provider.summarizer_calls()) == 1
+
+    # The summarizing turn ends below the compress point by the summary headroom.
+    assert _last_turn_context_tokens(app, campaign_id) <= SMALL_WINDOW * (
+        COMPRESS_AT - SUMMARY_HEADROOM
+    )
+    # The next turn does not summarize again.
+    _send(client, campaign_id, "next " + "x" * 200)
+    assert len(provider.summarizer_calls()) == 1
+
+
+def test_an_overlong_summary_is_rewritten_whole_instead_of_cut(settings: Settings):
+    provider = RecordingProvider()
+    provider.summary_reply = "old detail " * 2000
+    provider.shortened_reply = "The party met a mushroom sage."
+    app = _small_window_app(settings, provider)
+    client, campaign_id = _campaign_id(lambda: TestClient(app), opening=True)
+    _send_until_summarized(client, app, campaign_id, sends=30)
+    assert _state(app, campaign_id).summary == "The party met a mushroom sage."
+
+
+def test_a_cut_summary_starts_at_a_sentence_boundary():
+    kept = _keep_newest("First sentence. " * 400 + "The newest sentence.", 40)
+    assert kept.startswith("First sentence.")
 
 
 def test_summary_drops_the_heading_the_model_repeats(settings: Settings):
@@ -303,7 +368,7 @@ def test_summary_drops_the_heading_the_model_repeats(settings: Settings):
     provider.summary_reply = "Summary so far:\n\nThe party met a mushroom sage."
     app = _small_window_app(settings, provider)
     client, campaign_id = _campaign_id(lambda: TestClient(app), opening=True)
-    _send_until_summarized(client, app, campaign_id, sends=8)
+    _send_until_summarized(client, app, campaign_id, sends=30)
     assert _state(app, campaign_id).summary == "The party met a mushroom sage."
 
 
@@ -313,8 +378,9 @@ def test_failed_reply_after_summarizing_keeps_the_summary_and_the_open_turn(sett
     app = _small_window_app(settings, provider)
     client, campaign_id = _campaign_id(lambda: TestClient(app), opening=True)
     statuses = []
-    for index in range(8):
-        statuses.append(_send(client, campaign_id, f"m{index} " + "x" * 600).status_code)
+    for index in range(30):
+        message = f"m{index} " + "x" * LONG_MESSAGE
+        statuses.append(_send(client, campaign_id, message).status_code)
         if provider.summarizer_calls():
             break
 
@@ -332,8 +398,8 @@ def test_transcript_keeps_every_message_after_summarizing(settings: Settings):
     app = _small_window_app(settings, provider)
     client, campaign_id = _campaign_id(lambda: TestClient(app), opening=True)
     sends = 0
-    for index in range(8):
-        _send(client, campaign_id, f"m{index} " + "x" * 600)
+    for index in range(30):
+        _send(client, campaign_id, f"m{index} " + "x" * LONG_MESSAGE)
         sends += 1
         if _state(app, campaign_id).summary:
             break

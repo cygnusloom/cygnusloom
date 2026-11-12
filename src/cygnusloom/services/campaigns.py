@@ -59,6 +59,7 @@ from cygnusloom.services.prompts import (
     checklist_areas,
     state_instruction,
     summary_messages,
+    summary_shorten_messages,
     system_parts,
     turn_checklist,
 )
@@ -101,11 +102,17 @@ SPEECH_ATTEMPTS = 3
 NARRATION_ATTEMPTS = 2
 JOURNAL_ROUNDS = 3
 # Once the prompt reaches this share of the context window, older history is summarized.
-COMPRESS_AT = 0.5
+COMPRESS_AT = 0.7
 # After a summary, the newest messages worth up to this share of the window stay verbatim.
-KEEP_RECENT = 0.1
+KEEP_RECENT = 0.15
 # A summary may take up to this share of the window. Longer ones keep only their newest text.
-SUMMARY_SHARE = 0.25
+SUMMARY_SHARE = 0.1
+# After a summary, the prompt is kept this far below the compress point. The room is what the
+# next turns grow into before another summary, so one summary serves several turns.
+SUMMARY_HEADROOM = 0.15
+# A summary stays at least this long even when the fixed prompt leaves little room, since a
+# memory with no room for the summary would forget the campaign entirely.
+MIN_SUMMARY_SHARE = 0.02
 WORDS_PER_TOKEN = 0.75
 
 
@@ -1170,13 +1177,19 @@ def _verbatim_start(history: Sequence[ChatMessage], budget: int) -> int:
 
 
 def _keep_newest(text: str, budget_tokens: int) -> str:
-    """Keep the newest text that fits the budget, starting at a word boundary."""
+    """Keep the newest text that fits the budget, starting at a paragraph, sentence, or word
+    boundary, so the kept memory never begins in the middle of a sentence."""
     limit = budget_tokens * CHARS_PER_TOKEN
     if len(text) <= limit:
         return text
     kept = text[-limit:]
-    first_space = kept.find(" ")
-    return kept[first_space + 1 :] if first_space != -1 else kept
+    window = max(120, limit // 3)
+    for marker, width in (("\n\n", 2), (". ", 2), ("! ", 2), ("? ", 2), ("\n", 1), (" ", 1)):
+        index = kept.find(marker)
+        if index != -1 and index <= window:
+            return kept[index + width :]
+    index = kept.find(" ")
+    return kept[index + 1 :] if index != -1 else kept
 
 
 async def _repeated_place(
@@ -1219,6 +1232,27 @@ async def _summarize(
     # Models often repeat the heading they were given. It is not part of the summary.
     if summary.startswith(SUMMARY_HEADING):
         summary = summary[len(SUMMARY_HEADING) :].strip()
+    limit = budget_tokens * CHARS_PER_TOKEN
+    for _attempt in range(2):
+        if len(summary) <= limit:
+            break
+        # Cutting the text would leave a fragment of the memory. Ask for a whole compact
+        # summary instead, and keep the cut only as a last resort.
+        shorten = summary_shorten_messages(summary, max(1, int(limit * 0.8)))
+        shortened = (await complete(provider, model_name, shorten)).strip()
+        parts.extend(
+            [
+                ContextPart(
+                    "user", "Summary shortening request", "\n\n".join(m["content"] for m in shorten)
+                ),
+                ContextPart("assistant", "Summary shortening reply", shortened),
+            ]
+        )
+        if shortened.startswith(SUMMARY_HEADING):
+            shortened = shortened[len(SUMMARY_HEADING) :].strip()
+        if not shortened:
+            break
+        summary = shortened
     if not summary:
         raise LLMError("the model returned an empty summary")
     return _keep_newest(summary, budget_tokens)

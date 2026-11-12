@@ -156,7 +156,7 @@ def test_summary_part_appears_and_folded_messages_do_not(
     provider = RecordingProvider()
     app = _small_window_app(settings, provider)
     client, campaign_id = _campaign_id(lambda: TestClient(app))
-    _send_until_summarized(client, app, campaign_id, sends=10)
+    _send_until_summarized(client, app, campaign_id, sends=30)
     assert _state(app, campaign_id).summary
     _send(client, campaign_id, "final")
     reply_id = _message_ids(app, campaign_id, "assistant")[-1]
@@ -279,7 +279,7 @@ def test_transcript_records_the_summary_exchange_when_compressing(
     provider = RecordingProvider()
     app = _small_window_app(settings, provider)
     client, campaign_id = _campaign_id(lambda: TestClient(app))
-    _send_until_summarized(client, app, campaign_id, sends=10)
+    _send_until_summarized(client, app, campaign_id, sends=30)
     for reply_id in _message_ids(app, campaign_id, "assistant"):
         sources = [entry.source for entry in _transcript(app, campaign_id, reply_id)]
         if "Summary request" in sources:

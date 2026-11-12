@@ -175,11 +175,17 @@ JOURNAL_ROUNDS = 3
 # times. The turn is never blocked on it: after the retries the story goes on.
 CHECKLIST_RETRIES = 2
 # Once the prompt reaches this share of the context window, older history is summarized.
-COMPRESS_AT = 0.5
+COMPRESS_AT = 0.7
 # After a summary, the newest messages worth up to this share of the window stay verbatim.
-KEEP_RECENT = 0.1
+KEEP_RECENT = 0.15
 # A summary may take up to this share of the window. Longer ones keep only their newest text.
-SUMMARY_SHARE = 0.25
+SUMMARY_SHARE = 0.1
+# After a summary, the prompt is kept this far below the compress point. The room is what the
+# next turns grow into before another summary, so one summary serves several turns.
+SUMMARY_HEADROOM = 0.15
+# A summary stays at least this long even when the fixed prompt leaves little room, since a
+# memory with no room for the summary would forget the campaign entirely.
+MIN_SUMMARY_SHARE = 0.02
 WORDS_PER_TOKEN = 0.75
 
 
@@ -1026,11 +1032,27 @@ async def _begin(run: _Run, turn: Turn) -> AsyncIterator[TurnEvent]:
     )
     prompt_tokens += estimate_tokens(state_text)
     prompt_tokens += sum(part.tokens for part in tool_parts)
-    prompt_tokens += estimate_tokens(message) + sum(estimate_tokens(m.content) for m in history)
+    history_tokens = sum(estimate_tokens(m.content) for m in history)
+    prompt_tokens += estimate_tokens(message) + history_tokens
     summary_record: list[ContextPart] = []
     events: list[GameEvent] = []
     if prompt_tokens >= run.context_tokens * COMPRESS_AT:
-        start = _campaigns()._verbatim_start(history, int(run.context_tokens * KEEP_RECENT))
+        # Keep the recent tail verbatim, but only as much as leaves the summary and its
+        # headroom below the compress point. Without that room, the next turns push the prompt
+        # back over the point and summarize again after a turn or two.
+        head_tokens = prompt_tokens - history_tokens
+        target = int(run.context_tokens * (COMPRESS_AT - SUMMARY_HEADROOM))
+        summary_budget = int(run.context_tokens * SUMMARY_SHARE)
+        if head_tokens + summary_budget > target:
+            summary_budget = max(int(run.context_tokens * MIN_SUMMARY_SHARE), target - head_tokens)
+        keep_budget = max(
+            0,
+            min(
+                int(run.context_tokens * KEEP_RECENT),
+                target - head_tokens - summary_budget,
+            ),
+        )
+        start = _campaigns()._verbatim_start(history, keep_budget)
         if start > 0:
             folded = history[:start]
             yield Status("Summarizing older messages...")
@@ -1039,7 +1061,7 @@ async def _begin(run: _Run, turn: Turn) -> AsyncIterator[TurnEvent]:
                 run.model_name,
                 summary,
                 folded,
-                int(run.context_tokens * SUMMARY_SHARE),
+                summary_budget,
                 summary_record,
             )
             watermark = folded[-1].id
@@ -2232,9 +2254,7 @@ async def resume_turn(
         elif action == "roll":
             if turn.prompt.choices:
                 raise InvalidInput("choose one of the move's options before rolling again")
-            values, total = roll_values(
-                turn.prompt.dice, rng, plus=rule_set.plus
-            )
+            values, total = roll_values(turn.prompt.dice, rng, plus=rule_set.plus)
             answer = RollAnswer(total=total, dice=tuple(values), use_optional=use_optional)
         elif action == "choice":
             if not turn.prompt.choices:
