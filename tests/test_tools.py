@@ -106,6 +106,35 @@ def test_dice_param_rejects_a_formula_that_is_not_dice():
     assert "is not a dice formula" in _error_of(run.output)
 
 
+def _dice_value_tools() -> dict[str, ToolCall]:
+    schema = {
+        "type": "object",
+        "properties": {"prompt": {"type": "string"}},
+        "required": ["prompt"],
+    }
+    tool = ToolCall(
+        id="check",
+        name="check",
+        description="A test check.",
+        parameters=schema,
+        function=lambda roll, dice_values: {"roll": roll, "dice": dice_values},
+        player_input=PlayerInput(
+            dice="2d6", param="roll", dice_values_param="dice_values"
+        ),
+    )
+    return {"check": tool}
+
+
+def test_player_input_passes_the_individual_dice_to_the_function():
+    run = _call(
+        _dice_value_tools(),
+        _request("check", json.dumps({"prompt": "Roll a check."})),
+        RollAnswer(7, dice=(1, 6)),
+    )
+    assert isinstance(run, ToolRun)
+    assert json.loads(run.output) == {"roll": 7, "dice": [1, 6]}
+
+
 def _offered_names(calls):
     return {call.name for call in calls.values() if not call.journal_step and not call.review_step}
 

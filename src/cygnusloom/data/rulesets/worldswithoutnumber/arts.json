@@ -42,7 +42,18 @@
     "id": "art_inexorable_effect",
     "name": "Inexorable Effect",
     "tag": "high",
-    "description": "Commit Effort for the day as an Instant action to force an enemy who just succeeded on a save to reroll it and take the worse result. Usable once per scene. The Effort returns the next morning."
+    "description": "Commit Effort for the day as an Instant action to force an enemy who just succeeded on a save to reroll it and take the worse result. Usable once per scene. The Effort returns the next morning.",
+    "reactions": [
+      {
+        "id": "inexorable-effect",
+        "trigger": "save",
+        "when": {"cause_contains": ["inexorable effect"]},
+        "effect": {"op": "reroll", "keep": "worse"},
+        "uses": 1,
+        "reset": "hour",
+        "text": "Inexorable Effect forces a successful enemy save to reroll."
+      }
+    ]
   },
   {
     "type": "feature",
@@ -491,6 +502,28 @@
     "id": "art_unobtrusive_step",
     "name": "Unobtrusive Step",
     "tag": "vowed",
-    "description": "Once per scene, you may Commit Effort for the day as an Instant action to reroll a failed Sneak skill check or a skill check related to impersonating someone else."
+    "description": "Once per scene, you may Commit Effort for the day as an Instant action to reroll a failed Sneak skill check or a skill check related to impersonating someone else.",
+    "reactions": [
+      {
+        "id": "unobtrusive-sneak",
+        "trigger": "check",
+        "when": {"skills": ["sneak"], "success": false},
+        "effect": {"op": "reroll", "keep": "better"},
+        "uses": 1,
+        "reset": "hour",
+        "shared": "unobtrusive-step",
+        "text": "Unobtrusive Step rerolls the failed Sneak check."
+      },
+      {
+        "id": "unobtrusive-impersonate",
+        "trigger": "check",
+        "when": {"success": false, "cause_contains": ["impersonat", "disguise", "imposture"]},
+        "effect": {"op": "reroll", "keep": "better"},
+        "uses": 1,
+        "reset": "hour",
+        "shared": "unobtrusive-step",
+        "text": "Unobtrusive Step rerolls the failed impersonation check."
+      }
+    ]
   }
 ]

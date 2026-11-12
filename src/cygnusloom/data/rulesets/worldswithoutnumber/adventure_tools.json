@@ -55,6 +55,57 @@
   },
   {
     "type": "tool_call",
+    "id": "empowered_sorcery",
+    "world_method": "empowered_sorcery",
+    "description": "Use the Empowered Sorcery art to reroll a variable die in a spell's effect, such as its damage dice. Pass the spell's dice and the total already rolled; the player may choose either total. Record the Effort commitment separately.",
+    "parameters": {
+      "properties": {
+        "dice": {
+          "type": "string",
+          "description": "The variable dice to reroll, such as 3d6."
+        },
+        "original": {
+          "type": "integer",
+          "description": "The total the spell already rolled."
+        },
+        "character": {
+          "type": "string",
+          "description": "The caster; leave out for the player character, or name an NPC with the art."
+        }
+      },
+      "required": ["dice"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "inexorable_effect",
+    "world_method": "inexorable_effect",
+    "description": "Use the Inexorable Effect art after an enemy succeeds on a save: reroll that save and use the new result, which is the worse outcome for the enemy. The art is once per scene and requires the player character to have it. Record the Effort commitment separately.",
+    "parameters": {
+      "properties": {
+        "target": {
+          "type": "string",
+          "description": "The enemy whose successful save is being rerolled."
+        },
+        "stat": {
+          "type": "string",
+          "enum": ["save_physical", "save_evasion", "save_mental", "save_luck"],
+          "description": "The save that succeeded."
+        },
+        "reason": {
+          "type": "string",
+          "description": "What the save was against, in a few words."
+        },
+        "character": {
+          "type": "string",
+          "description": "The caster; leave out for the player character, or name an NPC with the art."
+        }
+      },
+      "required": ["target", "stat"]
+    }
+  },
+  {
+    "type": "tool_call",
     "id": "roll_reaction",
     "python_module": "wwn",
     "function": "roll_reaction",

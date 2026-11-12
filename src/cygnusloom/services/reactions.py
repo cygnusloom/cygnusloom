@@ -72,6 +72,61 @@ def _within_total(reaction: Reaction, total: int) -> bool:
     return (low is None or total >= low) and (high is None or total <= high)
 
 
+def has_trigger(
+    character: Character,
+    spec: CharacterSpec,
+    extra: Mapping[str, Feature] | None,
+    trigger: str,
+) -> bool:
+    """Whether the character has an available reaction for this kind of roll."""
+    return any(
+        reaction.trigger == trigger and _available(character, feature, reaction)
+        for feature in _features(character, spec, extra)
+        for reaction in feature.reactions
+    )
+
+
+def match_attack(
+    character: Character,
+    spec: CharacterSpec,
+    extra: Mapping[str, Feature] | None,
+    total: int,
+) -> Triggered | None:
+    """The reaction an attack roll triggers, such as Lucky rolling it twice."""
+    return _match_unfiltered(character, spec, extra, "attack", total)
+
+
+def match_damage(
+    character: Character,
+    spec: CharacterSpec,
+    extra: Mapping[str, Feature] | None,
+    total: int,
+) -> Triggered | None:
+    """The reaction a damage roll triggers, such as Lucky rolling it twice."""
+    return _match_unfiltered(character, spec, extra, "damage", total)
+
+
+def _match_unfiltered(
+    character: Character,
+    spec: CharacterSpec,
+    extra: Mapping[str, Feature] | None,
+    trigger: str,
+    total: int,
+) -> Triggered | None:
+    for feature in _features(character, spec, extra):
+        for reaction in feature.reactions:
+            if reaction.trigger != trigger or not _available(character, feature, reaction):
+                continue
+            if not _within_total(reaction, total):
+                continue
+            return Triggered(
+                feature=feature,
+                reaction=reaction,
+                text=reaction_effect_text(reaction, feature),
+            )
+    return None
+
+
 def _cause_matches(reaction: Reaction, cause: str) -> bool:
     """Whether the cause names one of the fragments a reaction watches for."""
     wanted = reaction.when.get("cause_contains")
@@ -342,7 +397,10 @@ __all__ = [
     "Triggered",
     "apply_save_effect",
     "check_best",
+    "has_trigger",
+    "match_attack",
     "match_check",
+    "match_damage",
     "match_move",
     "match_reaction_roll",
     "match_save",

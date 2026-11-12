@@ -341,6 +341,8 @@ class PlayerInput:
     param: str | None = None
     dice: str | None = None
     dice_param: str | None = None
+    # A function parameter that receives the individual dice the engine rolled.
+    dice_values_param: str | None = None
     # A string argument naming a move or check. The engine knows that move's or check's dice and
     # asks the player to roll them. The total reaches the function as `param`.
     move_param: str | None = None
@@ -8747,6 +8749,7 @@ def _check_player_input(
             "param",
             "dice",
             "dice_param",
+            "dice_values_param",
             "move_param",
             "check_param",
             "weapon_param",
@@ -8758,6 +8761,7 @@ def _check_player_input(
     )
     dice = data.get("dice")
     dice_param = data.get("dice_param")
+    dice_values_param = data.get("dice_values_param")
     move_param = data.get("move_param")
     check_param = data.get("check_param")
     weapon_param = data.get("weapon_param")
@@ -8799,6 +8803,19 @@ def _check_player_input(
             raise ContentError(f"{label}: 'player_input.dice_param' must name a string parameter")
         if dice_param not in parameters.get("required", []):
             raise ContentError(f"{label}: 'player_input.dice_param' must be a required parameter")
+    if dice_values_param is not None:
+        if not isinstance(dice_values_param, str) or not dice_values_param:
+            raise ContentError(
+                f"{label}: 'player_input.dice_values_param' must name a function parameter"
+            )
+        if dice_values_param in parameters["properties"]:
+            raise ContentError(
+                f"{label}: 'player_input.dice_values_param' must not be a schema parameter"
+            )
+        if dice_values_param not in accepted:
+            raise ContentError(
+                f"{label}: function does not accept parameter {dice_values_param!r}"
+            )
     if weapon_param is not None:
         schema = parameters["properties"].get(weapon_param)
         if not isinstance(schema, dict) or schema.get("type") != "string":
@@ -8848,6 +8865,7 @@ def _check_player_input(
     return PlayerInput(
         dice=dice,
         dice_param=dice_param,
+        dice_values_param=dice_values_param,
         move_param=move_param,
         check_param=check_param,
         weapon_param=weapon_param,

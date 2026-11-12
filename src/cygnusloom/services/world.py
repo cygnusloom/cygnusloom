@@ -84,6 +84,7 @@ from cygnusloom.services.dungeon import dungeon_rules
 from cygnusloom.services.dungeon import roll_reaction as roll_reaction_service
 from cygnusloom.services.events import (
     PC_KIND,
+    CharacterSaved,
     CurrencyChanged,
     ExecutionPrepared,
     ExecutionTaken,
@@ -98,6 +99,7 @@ from cygnusloom.services.events import (
     ProjectAbandoned,
     ProjectAdvanced,
     ProjectStarted,
+    ReactionUsed,
     Recovered,
     SkillChanged,
     Surprised,
@@ -794,6 +796,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
         cause: str = "",
         features: Mapping[str, Feature] | None = None,
         roll: int | None = None,
+        dice_values: list[int] | None = None,
     ) -> dict[str, Any]:
         try:
             check_id = resolve_id(
@@ -826,6 +829,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 armor_penalty=self._armor_check_penalty(db, character, skill_id),
                 features=features if features is not None else self.features,
                 roll=roll,
+                dice_values=dice_values,
             )
 
     def raise_skill(self, name: str, skill: str, level: int, cause: str = "") -> dict[str, Any]:
@@ -1272,6 +1276,97 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 plus=self.plus,
                 rules=dungeon_rules(self.rule_data),
             )
+
+    def empowered_sorcery(
+        self, dice: str, original: int | None = None, character: str = ""
+    ) -> dict[str, Any]:
+        """Reroll a spell effect's variable dice through the Empowered Sorcery art. The caller
+        chooses which total to use; the Effort is committed separately. `character` is the
+        caster, defaulting to the player character so an NPC with the art can use it too."""
+        if not is_formula(dice):
+            raise InvalidInput(f"{dice!r} is not a dice formula such as '3d6'")
+        with session_scope(self.engine) as db:
+            state = load_state(db, self.campaign_id)
+            caster = (
+                state.characters.get(name_key(character)) if character else state.pc()
+            )
+            if caster is None:
+                raise InvalidInput(f"there is no character named {character!r}")
+            if caster.features.get("art_empowered_sorcery", 0) <= 0:
+                raise InvalidInput(f"{caster.name} does not have Empowered Sorcery")
+            rerolled = roll_total(dice, self.rng, plus=self.plus)
+            return {
+                "character": caster.name,
+                "dice": dice,
+                "original": original,
+                "rerolled": rerolled,
+            }
+
+    def inexorable_effect(
+        self, target: str, stat: str, reason: str = "", character: str = ""
+    ) -> dict[str, Any]:
+        """Force a reroll of a successful enemy save through the Inexorable Effect art. The
+        caster defaults to the player character, so an NPC with the art can use it too."""
+        spec = self.character
+        stat = magic_service.save_stat_id(spec, stat)
+        with session_scope(self.engine) as db:
+            state = load_state(db, self.campaign_id)
+            caster = (
+                state.characters.get(name_key(character)) if character else state.pc()
+            )
+            if caster is None:
+                raise InvalidInput(f"there is no character named {character!r}")
+            if caster.features.get("art_inexorable_effect", 0) <= 0:
+                raise InvalidInput(f"{caster.name} does not have Inexorable Effect")
+            enemy = state.characters.get(name_key(target))
+            if enemy is None:
+                raise InvalidInput(f"there is no character named {target!r}")
+            if enemy.name == caster.name:
+                raise InvalidInput("Inexorable Effect targets an enemy, not the caster")
+            if enemy.story_only:
+                raise InvalidInput(f"{enemy.name} has no stats yet and cannot save")
+            if stat not in enemy.stats:
+                raise InvalidInput(f"{enemy.name} has no stat {stat!r}")
+            key = "hour:art_inexorable_effect:inexorable-effect"
+            if caster.reaction_uses.get(key, 0) >= 1:
+                raise InvalidInput("Inexorable Effect is already used this scene")
+            rules = _required(self.combat, "combat")
+            result = combat.resolve_save(
+                rules, current(enemy, stat), rng=self.rng, plus=self.plus
+            )
+            record(
+                db,
+                self.campaign_id,
+                CharacterSaved(
+                    name=enemy.name,
+                    stat=stat,
+                    roll=result.roll,
+                    score=result.score,
+                    passed=result.passed,
+                    cause=f"Inexorable Effect: {reason}".strip(),
+                ),
+            )
+            record(
+                db,
+                self.campaign_id,
+                ReactionUsed(
+                    name=caster.name,
+                    feature="art_inexorable_effect",
+                    feature_name="Inexorable Effect",
+                    reaction="inexorable-effect",
+                    reset="hour",
+                    text="forces an enemy's successful save to reroll.",
+                ),
+            )
+            db.commit()
+            return {
+                "character": caster.name,
+                "target": enemy.name,
+                "stat": stat,
+                "roll": result.roll,
+                "score": result.score,
+                "passed": result.passed,
+            }
 
     def roll_save(
         self, name: str, stat: str, reason: str, natural: int | None = None

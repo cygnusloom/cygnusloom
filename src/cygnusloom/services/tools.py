@@ -200,6 +200,8 @@ class Ask:
 @dataclass(frozen=True)
 class RollAnswer:
     total: int
+    # The individual dice, when the engine rolled them, so a feature can reroll 1s.
+    dice: tuple[int, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -592,6 +594,8 @@ async def run_tool(
         return ToolRun(_error("that tool does not take a choice"), None)
     if tool.player_input.dice_param:
         arguments.pop(tool.player_input.dice_param, None)
+    if tool.player_input.dice_values_param is not None:
+        arguments[tool.player_input.dice_values_param] = list(answer.dice)
     if tool.player_input.param is not None:
         arguments[tool.player_input.param] = answer.total
     if tool.player_input.weapon_roll_param is not None:

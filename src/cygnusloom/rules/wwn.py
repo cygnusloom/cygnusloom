@@ -361,6 +361,10 @@ def roll_reaction(
             if effect["op"] == "add_total":
                 total += int(effect["amount"])
                 reactions.use(db, campaign_id, found, triggered)
+            elif effect["op"] == "reroll":
+                rerolled = roll_total("2d6", ctx.world.rng) + bonus
+                total = max(total, rerolled)
+                reactions.use(db, campaign_id, found, triggered)
             elif effect["op"] == "set_reaction" and not override:
                 override = str(effect["to"])
                 reactions.use(db, campaign_id, found, triggered)

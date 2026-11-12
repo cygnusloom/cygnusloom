@@ -185,6 +185,17 @@ def make_move(
             total += int(effect["amount"])
             band = band_for(move, total)
             applied = True
+        elif effect["op"] == "reroll":
+            reroll = roll_total(move.dice, rng, plus=plus)
+            reroll_total = reroll + bonus
+            keep = "better" if effect.get("keep", "better") == "better" else "worse"
+            if (keep == "better" and reroll_total > total) or (
+                keep == "worse" and reroll_total < total
+            ):
+                roll = reroll
+                total = reroll_total
+                band = band_for(move, total)
+            applied = True
     record(
         db,
         campaign_id,

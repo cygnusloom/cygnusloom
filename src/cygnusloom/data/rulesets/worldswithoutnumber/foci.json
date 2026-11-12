@@ -426,6 +426,15 @@
         "op": "note",
         "text": "Speak common regional languages; learn a new one to a workable level in a week and to fluency in a month. Reroll 1s on negotiation or diplomacy skill checks."
       }
+    ],
+    "reactions": [
+      {
+        "id": "diplomatic-grace-reroll-ones",
+        "trigger": "check",
+        "when": {"skills": ["convince"]},
+        "effect": {"op": "reroll_ones"},
+        "text": "Diplomatic Grace rerolls 1s on the social check."
+      }
     ]
   },
   {
@@ -608,6 +617,38 @@
       {
         "op": "note",
         "text": "Once per week, a blow or effect that would kill, Mortally Wound, or helplessly disable you fails to affect you. Roll all chance-based rolls twice and keep the better. Requires an attribute modifier of -1 or less."
+      }
+    ],
+    "reactions": [
+      {
+        "id": "lucky-check",
+        "trigger": "check",
+        "effect": {"op": "reroll", "keep": "better"},
+        "text": "Lucky rolls the check twice and keeps the better result."
+      },
+      {
+        "id": "lucky-save",
+        "trigger": "save",
+        "effect": {"op": "reroll", "keep": "better"},
+        "text": "Lucky rolls the save twice and keeps the better result."
+      },
+      {
+        "id": "lucky-reaction",
+        "trigger": "reaction",
+        "effect": {"op": "reroll", "keep": "better"},
+        "text": "Lucky rolls the reaction twice and keeps the better result."
+      },
+      {
+        "id": "lucky-attack",
+        "trigger": "attack",
+        "effect": {"op": "reroll", "keep": "better"},
+        "text": "Lucky rolls the attack twice and keeps the better result."
+      },
+      {
+        "id": "lucky-damage",
+        "trigger": "damage",
+        "effect": {"op": "reroll", "keep": "better"},
+        "text": "Lucky rolls the damage twice and keeps the better result."
       }
     ]
   },

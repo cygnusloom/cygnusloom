@@ -48,6 +48,7 @@
     "player_input": {
       "param": "roll",
       "dice": "2d6",
+      "dice_values_param": "dice_values",
       "details": "The engine adds the skill and attribute modifiers."
     }
   },

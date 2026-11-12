@@ -59,7 +59,7 @@ DEFAULT_FEATURE_TYPES: Mapping[str, FeatureTypeRules] = {
 # `armor` effect adds its `delta` to the character's armor. A `note` effect only says something.
 FEATURE_EFFECT_OPS = ("stat", "skill", "counter", "armor", "note")
 # When a feature may react to a roll that is already being resolved.
-REACTION_TRIGGERS = ("move", "check", "reaction", "save")
+REACTION_TRIGGERS = ("move", "check", "reaction", "save", "attack", "damage")
 # What a reaction may do to that roll.
 REACTION_EFFECT_OPS = ("raise_band", "add_total", "set_reaction", "reroll", "reroll_ones", "best_of")
 
@@ -1351,6 +1351,8 @@ def _reaction_when(data: object, trigger: str, label: str) -> Mapping[str, Any]:
         allowed |= {"checks", "skills", "stats", "success", "cause_contains", "skill_choice"}
     elif trigger == "save":
         allowed |= {"stats", "success", "cause_contains"}
+    elif trigger in ("attack", "damage"):
+        allowed |= {"cause_contains"}
     _check_reaction_keys(data, allowed, f"{label}: when")
     checked: dict[str, Any] = {}
     for key in ("moves", "move_tags", "bands", "stats", "checks", "skills", "cause_contains"):
@@ -1412,8 +1414,11 @@ def _reaction_effect(data: object, trigger: str, label: str) -> Mapping[str, Any
         if not isinstance(keep, int) or isinstance(keep, bool) or not 1 <= keep < dice:
             raise ContentError(f"{label}: best_of 'keep' must be between 1 and 'dice' - 1")
     else:
-        if trigger not in ("check", "save"):
-            raise ContentError(f"{label}: reroll only applies to a check or save")
+        if trigger not in ("check", "save", "attack", "damage", "reaction", "move"):
+            raise ContentError(
+                f"{label}: reroll only applies to a check, save, attack, damage, reaction, "
+                "or move roll"
+            )
         _check_reaction_keys(data, {"op", "keep"}, f"{label}: effect")
         if data.get("keep", "better") not in ("better", "worse"):
             raise ContentError(f"{label}: reroll 'keep' must be 'better' or 'worse'")

@@ -487,7 +487,7 @@ def test_a_player_turn_starts_after_the_initiative_prompt_finishes(
     assert pending is not None and pending.prompt is not None, pending
 
     # The reply ends after the roll, so Ada's turn should start without another button.
-    monkeypatch.setattr(turns_service, "roll_total", lambda *args, **kwargs: 1)
+    monkeypatch.setattr(turns_service, "roll_values", lambda *args, **kwargs: ([1], 1))
     events = answer(client, campaign_id, "roll")
 
     assert events[-1]["type"] == "saved"

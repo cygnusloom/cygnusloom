@@ -87,6 +87,11 @@
   },
   {
     "type": "prompt",
+    "id": "npc_class_abilities",
+    "text": "An NPC built with class levels can have the same abilities as a player character. The engine applies their reaction features automatically on their checks, saves, and damage rolls where supported (Lucky, Unobtrusive Step, Diplomatic Grace, Impostor, Poisoner, Rider, Trapmaster, Specialist, or Elf). For Inexorable Effect, call inexorable_effect with character set to the NPC's name after a target succeeds on a save. For Empowered Sorcery, call empowered_sorcery with the caster's name and the spell's dice. Read the feature with lookup_feature first, and commit the NPC's Effort with commit_effort when the art requires it. Use these abilities when the fiction calls for them, not automatically."
+  },
+  {
+    "type": "prompt",
     "id": "healing",
     "step": "narration",
     "text": "When a spell, art, or item heals, call heal_character with the amount it rolls; the tool caps the healing at the harm actually taken. Healing Touch heals 2d6 plus the Healer's Heal skill and adds 1 System Strain with add_strain. A mortally wounded character must be stabilized before healing can bring them back, and a cure that ends Frail must call end_condition with \"magic\". Never simply narrate lost hit points back."

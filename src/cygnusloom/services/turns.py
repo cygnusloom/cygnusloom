@@ -31,7 +31,7 @@ from cygnusloom.llm.base import (
 )
 from cygnusloom.llm.registry import ProviderFactory
 from cygnusloom.rules.context import ToolContext, brief
-from cygnusloom.rules.dice import roll_total
+from cygnusloom.rules.dice import roll_values
 from cygnusloom.services import encounters
 from cygnusloom.services.common import Conflict, InvalidInput, NotFound, session_scope
 from cygnusloom.services.credits import (
@@ -2178,7 +2178,10 @@ async def resume_turn(
         elif action == "roll":
             if turn.prompt.choices:
                 raise InvalidInput("choose one of the move's options before rolling again")
-            answer = RollAnswer(roll_total(turn.prompt.dice, rng, plus=rule_set.plus))
+            values, total = roll_values(
+                turn.prompt.dice, rng, plus=rule_set.plus
+            )
+            answer = RollAnswer(total=total, dice=tuple(values))
         elif action == "choice":
             if not turn.prompt.choices:
                 raise InvalidInput("there is no choice to make")

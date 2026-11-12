@@ -15,6 +15,7 @@ from sqlmodel import Session
 from cygnusloom.content.character import CharacterSpec, Feature
 from cygnusloom.content.library import ALL_STATS, CheckRules, ConditionRules
 from cygnusloom.content.lookup import AmbiguousId, resolve_id
+from cygnusloom.rules.dice import roll_values
 from cygnusloom.services import reactions, resolution
 from cygnusloom.services.common import InvalidInput, whole_number
 from cygnusloom.services.conditions import active_conditions
@@ -80,6 +81,7 @@ def roll_check(
     armor_penalty: int = 0,
     features: Mapping[str, Feature] | None = None,
     roll: int | None = None,
+    dice_values: list[int] | None = None,
 ) -> dict[str, Any]:
     """Roll `check` for a character and record what it made. The roll is the check's dice plus the
     skill's level (or the check's untrained penalty when the character has no level in it), the
@@ -128,6 +130,7 @@ def roll_check(
         for rules in active_conditions(found, conditions or {})
     )
     bonus = skill_bonus + stat_bonus + modifier + condition_modifier + armor_penalty
+    rolled_values: list[int] = list(dice_values or [])
     best = reactions.check_best(found, spec, features, skill_id) if skill_id else None
     best_die = _best_of_die(check.dice) if best is not None else ""
     if roll is None and best is not None and best_die:
@@ -135,19 +138,18 @@ def roll_check(
         rolled = sorted(
             (resolution.roll_die(rng, best_die, plus=plus) for _ in range(dice)), reverse=True
         )
+        rolled_values = rolled
         kept = sum(rolled[:keep])
         result = resolution.CheckResult(
             roll=kept, total=kept + bonus, difficulty=target, passed=kept + bonus >= target
         )
     elif roll is None:
-        result = resolution.roll_check(
-            rng,
-            check.dice,
-            skill_level=skill_bonus,
-            stat_modifier=stat_bonus,
+        rolled_values, rolled = roll_values(check.dice, rng, plus=plus)
+        result = resolution.CheckResult(
+            roll=rolled,
+            total=rolled + bonus,
             difficulty=target,
-            modifier=modifier + condition_modifier + armor_penalty,
-            plus=plus,
+            passed=rolled + bonus >= target,
         )
     else:
         rolled = whole_number(roll, "roll", 0, 1000)
@@ -184,6 +186,23 @@ def roll_check(
             result = resolution.CheckResult(
                 roll=result.roll, total=total, difficulty=target, passed=total >= target
             )
+        elif effect["op"] == "reroll_ones":
+            die = _best_of_die(check.dice)
+            if die and rolled_values:
+                sides = int(die[2:])
+                rerolled_values = [
+                    rng.randint(1, sides) if value == 1 else value for value in rolled_values
+                ]
+                rerolled = sum(rerolled_values)
+                result = resolution.CheckResult(
+                    roll=rerolled,
+                    total=rerolled + bonus,
+                    difficulty=target,
+                    passed=rerolled + bonus >= target,
+                )
+            else:
+                # Without the individual dice there is no honest way to reroll only the 1s.
+                triggered = None
     record(
         db,
         campaign_id,

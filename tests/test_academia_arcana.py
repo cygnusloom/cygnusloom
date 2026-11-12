@@ -234,7 +234,7 @@ def test_a_seven_to_nine_spell_asks_the_player_to_choose(
     assert _pc(app, campaign_id).counters.get("stress", 0) == 0
 
     # Practice is +2, so a reported 5 reaches the 7-9 band.
-    monkeypatch.setattr(turns_service, "roll_total", lambda *args, **kwargs: 5)
+    monkeypatch.setattr(turns_service, "roll_values", lambda *args, **kwargs: ([5], 5))
     events = answer(client, campaign_id, "roll")
 
     assert events[-1]["type"] == "prompt"

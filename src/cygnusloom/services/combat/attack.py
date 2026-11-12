@@ -15,7 +15,7 @@ from cygnusloom.content.library import (
     GroupRules,
 )
 from cygnusloom.rules.dice import roll_total
-from cygnusloom.services import death
+from cygnusloom.services import death, reactions
 from cygnusloom.services.attacks import (
     AttackFlags,
     highest_index,
@@ -56,6 +56,12 @@ from cygnusloom.services.events import (
     record,
     same_item_name,
 )
+
+
+def _damage_total(dice: str, rng: random.Random, *, plus: str, lucky: bool) -> int:
+    """Roll damage, and roll it twice and keep the better when Lucky applies."""
+    total = roll_total(dice, rng, plus=plus)
+    return max(total, roll_total(dice, rng, plus=plus)) if lucky else total
 
 
 def _stat_bonus(combat: CombatRules, character: Character, stat: str) -> int:
@@ -398,7 +404,12 @@ def attack(
         raise InvalidInput(f"{name} has no Blast, so it hits one target; leave targets out")
     _require_impaired(struck, modifier_name(modifier), combat)
     dice = modifier_dice(combat.modifiers, modifier)
-    raw = roll_total(dice or source.attacks[name], rng, plus=plus)
+    raw = _damage_total(
+        dice or source.attacks[name],
+        rng,
+        plus=plus,
+        lucky=spec is not None and reactions.has_trigger(source, spec, None, "damage"),
+    )
     raw += _stat_bonus(combat, source, combat.damage_bonus_stat)
     shock, shock_ac = _attack_shock(source, name)
     return _strike(
@@ -467,7 +478,12 @@ def _blast_attack(
         current_target = load_state(db, campaign_id).characters[name_key(target.name)]
         if out_of_fight(current_target):
             continue
-        raw = roll_total(dice, rng, plus=plus) + damage_bonus
+        raw = _damage_total(
+            dice,
+            rng,
+            plus=plus,
+            lucky=spec is not None and reactions.has_trigger(source, spec, None, "damage"),
+        ) + damage_bonus
         results.append(
             _strike(
                 db,
@@ -549,7 +565,12 @@ def _blast(
         current_target = load_state(db, campaign_id).characters[name_key(target.name)]
         if out_of_fight(current_target):
             continue
-        raw = roll_total(dice, rng, plus=plus) + damage_bonus
+        raw = _damage_total(
+            dice,
+            rng,
+            plus=plus,
+            lucky=spec is not None and reactions.has_trigger(source, spec, None, "damage"),
+        ) + damage_bonus
         results.append(
             _strike(
                 db,
@@ -636,9 +657,17 @@ def resolve_attacks(
                 damage_bonus=_stat_bonus(combat, source, combat.damage_bonus_stat),
                 shock=shock,
                 shock_ac=shock_ac,
+                lucky_damage=spec is not None
+                and reactions.has_trigger(source, spec, None, "damage"),
             )
         )
-    rolls = [roll_total(attack.dice, rng, plus=plus) + attack.damage_bonus for attack in planned]
+    rolls = [
+        _damage_total(
+            attack.dice, rng, plus=plus, lucky=attack.lucky_damage
+        )
+        + attack.damage_bonus
+        for attack in planned
+    ]
     if combat.multi_attack == "each":
         return _strike_each(
             db, campaign_id, combat, rng, struck.name, planned, rolls, plus=plus, spec=spec
@@ -686,6 +715,7 @@ class PlannedAttack:
     damage_bonus: int = 0
     shock: int = 0
     shock_ac: int = 0
+    lucky_damage: bool = False
 
 
 def _strike_each(
@@ -787,6 +817,9 @@ def player_attack(
     dice = _attack_dice(pc, name, modifier, combat)
     _require_impaired(struck, modifier_name(modifier), combat)
     raw = damage_roll if damage_roll is not None else roll_total(dice, rng, plus=plus)
+    if spec is not None and reactions.has_trigger(pc, spec, None, "damage"):
+        second = roll_total(dice, rng, plus=plus)
+        raw = max(raw, second)
     bonuses = _player_bonuses(combat, pc, name, spec, weapon_feature)
     range_penalty = 0
     if range_band:
@@ -810,6 +843,8 @@ def player_attack(
         natural = (
             attack_roll if attack_roll is not None else roll_total(combat.check_die, rng, plus=plus)
         )
+        if spec is not None and reactions.has_trigger(pc, spec, None, "attack"):
+            natural = max(natural, roll_total(combat.check_die, rng, plus=plus))
         to_hit = (
             natural
             + bonuses.to_hit

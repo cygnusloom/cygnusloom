@@ -40,6 +40,31 @@ def roll_total(formula: str, rng: random.Random | None = None, *, plus: str | No
     return kept + flat
 
 
+def roll_values(
+    formula: str, rng: random.Random | None = None, *, plus: str | None = None
+) -> tuple[list[int], int]:
+    """Roll a formula and return every die value in order, plus the total `roll_total` gives.
+    The values include dice a `highest` mode did not keep, so a caller can reroll 1s."""
+    if not is_formula(formula):
+        raise ValueError(f"not a dice formula: {formula!r}")
+    generator = rng or random.Random()
+    dice, flat = _terms(formula)
+    values: list[int] = []
+    totals: list[int] = []
+    for count, sides in dice:
+        rolled = [generator.randint(1, sides) for _ in range(count)]
+        values.extend(rolled)
+        totals.append(sum(rolled))
+    if len(dice) == 1:
+        return values, totals[0] + flat
+    if plus is None:
+        raise ValueError(f"{formula!r} has several terms, so the rule set's plus mode is needed")
+    if plus not in PLUS_MODES:
+        raise ValueError(f"unknown plus mode: {plus!r}")
+    kept = max(totals) if plus == "highest" else sum(totals)
+    return values, kept + flat
+
+
 def max_total(formula: str, plus: str | None = None) -> int:
     """The highest total a formula can roll. A multi-term formula uses the same `plus` mode as
     `roll_total`; flat bonuses and penalties always add."""

@@ -255,7 +255,7 @@ def test_the_player_sees_their_hirelings_whole_sheet_even_when_it_is_away(client
 
 
 def test_the_character_tab_shows_the_hirelings_sheet(client_factory):
-    app, campaign_id, tools = _pcs(client_factory)
+    _app, campaign_id, tools = _pcs(client_factory)
     _hire(tools)
     client = _signed_in(client_factory)
 
