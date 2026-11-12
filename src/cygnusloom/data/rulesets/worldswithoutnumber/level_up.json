@@ -8,6 +8,7 @@
     "xp_counter": "xp",
     "rate_option": "xp_rate",
     "xp_source": "progression.xp",
+    "template_kinds": ["class", "class2"],
     "python_module": "wwn",
     "apply_level": "apply_level_up",
     "summary": "level_up_summary",

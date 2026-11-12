@@ -2207,7 +2207,7 @@
     "type": "tool_call",
     "id": "hire_hireling",
     "character_options": true,
-    "description": "Hire a character into a player character's company. The hireling has a rolled sheet like an NPC's and is controlled by the player. Its wage is paid in the rule set's currency from the employer each new day, and an employer who cannot pay is reported as unpaid. The employer must be a player character who has a location. Give the wage the hireling asks for, or the marketplace's listed wage for a hireling listed there. Leave personality, accent, or quirks out to have them rolled. Names must be unique among locations and characters.",
+    "description": "Hire a character into a player character's company. The hireling has a rolled sheet like an NPC's and is controlled by the player. Its wage is paid in the rule set's currency from the employer each new day, and an employer who cannot pay is reported as unpaid. The employer must be a player character who has a location. Give the wage the hireling asks for, or the marketplace's listed wage for a hireling listed there. Leave personality, accent, or quirks out to have them rolled. Names must be unique among locations and characters. In a rule set with levels, the hireling joins with enough experience to catch up to the employer's level, and the player makes its level-up choices on the character sheet. To hire someone already in the story, use hire_existing_npc.",
     "parameters": {
       "properties": {
         "name": {
@@ -2251,6 +2251,33 @@
         "employer",
         "wage",
         "description"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "hire_existing_npc",
+    "character_options": true,
+    "description": "Turn an NPC already in the story into a hireling in a player character's company. The NPC keeps their name, description, personality, accent, quirks, pronouns, and summary; choose character options that fit how they have been portrayed, with a class from their work and skills and features from what they have shown. The NPC must be an NPC, able to act, out of an encounter, and at the employer's location. The employer must be a player character with a location. The hireling is controlled by the player, and its wage is paid in the rule set's currency from the employer each new day. In a rule set with levels, it joins with enough experience to catch up to the employer's level, and the player makes its level-up choices on the character sheet. Give the wage the NPC asks for.",
+    "parameters": {
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the NPC who joins the company."
+        },
+        "employer": {
+          "type": "string",
+          "description": "The name of the player character who hires them. The wage comes from this character's money."
+        },
+        "wage": {
+          "type": "integer",
+          "description": "Money per day, in the rule set's currency, zero or more."
+        }
+      },
+      "required": [
+        "name",
+        "employer",
+        "wage"
       ]
     }
   },

@@ -74,6 +74,7 @@ def test_each_phase_shows_a_status_and_only_the_narration_is_streamed(
         "Managing state...",
         "Running advance_time...",
         "Managing state...",
+        "Finishing the state step...",
         "Narrating...",
         "Updating the journal and reviewing the turn...",
     ]

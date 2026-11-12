@@ -77,7 +77,7 @@ from cygnusloom.services.events import (
     speaker_name,
     truncate,
 )
-from cygnusloom.services.level_up import advancement_due
+from cygnusloom.services.level_up import advancement_due_for_player
 from cygnusloom.services.prompts import (
     NARRATION_REVISION,
     OOC_INSTRUCTION,
@@ -85,7 +85,6 @@ from cygnusloom.services.prompts import (
     TURN_REVIEW_INSTRUCTION,
     journal_instruction,
     journal_review_instruction,
-    missing_checklist_items,
     narrate_instruction,
     opening_prompt,
     speech_instruction,
@@ -94,6 +93,7 @@ from cygnusloom.services.prompts import (
     turn_checklist,
 )
 from cygnusloom.services.tools import (
+    FINISH_STATE_STEP,
     LOAD_TOOL,
     TOOL_GROUPS,
     Ask,
@@ -101,6 +101,7 @@ from cygnusloom.services.tools import (
     RollAnswer,
     TextAnswer,
     ToolRun,
+    checklist_tool_spec,
     run_tool,
     state_tool_groups,
     tool_group_names,
@@ -264,10 +265,94 @@ def _checklist_retry(missing: Sequence[str]) -> str:
     return (
         "The state step is not finished: the turn checklist is missing "
         + ", ".join(missing)
-        + ". Reply with the complete checklist now, one [x] line for every area in the system "
-        'prompt, and use "no change" where nothing changed. Make any change you missed with the '
-        "right tool before you reply."
+        + ". Call finish_state_step now with one short note for every area in the system prompt, "
+        'and use "no change" where nothing changed. Make any change you missed with the right '
+        "tool before you call it."
     )
+
+
+def _checklist_active(turn: Turn) -> bool:
+    """Whether this turn was begun with the turn checklist in its system prompt. A turn begun
+    before the checklist existed keeps playing without one."""
+    return any(part.source == "Turn checklist" for part in turn.context)
+
+
+def _checklist_items(run: _Run) -> dict[str, str]:
+    """The checklist areas this turn requires, in the rule set's order, mapping each key to the
+    area's description for the finish tool."""
+    rules = run.rule_set.checklist
+    if rules is None:
+        return {}
+    keys = set(run.checklist_keys)
+    return {item.id: item.text for item in rules.items if item.id in keys}
+
+
+def _read_checklist_report(
+    request: ToolRequest, keys: Sequence[str]
+) -> tuple[dict[str, str], list[str]]:
+    """The finish tool's notes by area, and the required areas with no note. A malformed request
+    leaves every area missing, so the engine asks for the whole checklist again."""
+    try:
+        payload = json.loads(request.arguments or "{}")
+    except (TypeError, ValueError):
+        payload = None
+    if not isinstance(payload, Mapping):
+        return {}, list(keys)
+    # A model may wrap the notes one level down; accept either shape.
+    nested = payload.get("checks")
+    if isinstance(nested, Mapping):
+        payload = nested
+    report: dict[str, str] = {}
+    missing: list[str] = []
+    for key in keys:
+        value = payload.get(key)
+        note = value.strip() if isinstance(value, str) else ""
+        if note:
+            report[key] = note
+        else:
+            missing.append(key)
+    return report, missing
+
+
+def _format_checklist_report(report: Mapping[str, str]) -> str:
+    return "\n".join(f"- {key}: {note}" for key, note in report.items())
+
+
+def _is_checklist_retry_message(message: Mapping[str, Any]) -> bool:
+    return message.get("role") == "system" and str(message.get("content", "")).startswith(
+        "The state step is not finished: the turn checklist is missing"
+    )
+
+
+def _without_checklist_exchange(messages: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
+    """The turn's messages without the finish tool's call and result. Its arguments are the
+    state step's internal notes; the narration and the review of it never read them."""
+    ids = {
+        call.get("id")
+        for message in messages
+        if message.get("role") == "assistant"
+        for call in (message.get("tool_calls") or ())
+        if (call.get("function") or {}).get("name") == FINISH_STATE_STEP
+    }
+    if not ids:
+        return list(messages)
+    kept: list[dict[str, Any]] = []
+    for message in messages:
+        if message.get("role") == "tool" and message.get("tool_call_id") in ids:
+            continue
+        if message.get("role") == "assistant" and message.get("tool_calls"):
+            calls = [
+                call
+                for call in message["tool_calls"]
+                if (call.get("function") or {}).get("name") != FINISH_STATE_STEP
+            ]
+            if not calls:
+                # The message held only the finish call, so any prose in it is state-step
+                # draft as well. The narration and review read neither.
+                continue
+            message = {**message, "tool_calls": calls}
+        kept.append(message)
+    return kept
 
 
 def _add_speech(
@@ -341,6 +426,8 @@ def _loaded_group(request: ToolRequest) -> str:
 
 
 def _status_for(request: ToolRequest) -> str:
+    if request.name == FINISH_STATE_STEP:
+        return "Finishing the state step..."
     if request.name != "speak":
         return f"Running {request.name}..."
     try:
@@ -534,6 +621,7 @@ def _tool_context(
         moves=rule_set.moves,
         counters=rule_set.counters,
         advancements=rule_set.advancements,
+        level_ups=rule_set.level_ups,
         periods=rule_set.periods,
         tallies=rule_set.tallies,
         relations=rule_set.relations,
@@ -694,7 +782,8 @@ def _narration_messages(
     in the turn, so the scene is rebuilt from the state as it is now, which also brings in the
     rules for anything that came into the scene. The turn log follows the conversation, so the
     narration covers each entry. A state step's prose is a draft written before the tools ran, so
-    the narration sees the tool calls but not that prose. `log` replaces the turn's own Log lines.
+    the narration sees the tool calls but not that prose. The turn checklist and its finish tool
+    are state-step bookkeeping, so they are left out too. `log` replaces the turn's own Log lines.
     The narration instruction is always last, after the log and any review note, even when a
     review step added its own tool exchange to the turn."""
     state = _state(run.engine, run.campaign_id)
@@ -714,8 +803,11 @@ def _narration_messages(
         {"role": "system", "content": "\n\n".join(p.content for p in scene)},
         *(
             _without_draft(m)
-            for m in turn.messages[1:]
-            if not (m.get("role") == "system" and m.get("content") == instruction)
+            for m in _without_checklist_exchange(turn.messages[1:])
+            if not (
+                (m.get("role") == "system" and m.get("content") == instruction)
+                or _is_checklist_retry_message(m)
+            )
         ),
     ]
     log = _turn_log(run.engine, run.campaign_id, turn.opener) if log is None else log
@@ -908,7 +1000,11 @@ async def _begin(run: _Run, turn: Turn) -> AsyncIterator[TurnEvent]:
     state_text = state_instruction(run.rule_set, run.world)
     groups = state_tool_groups(state, message) | run.extra_groups
     tool_parts = _campaigns().tool_definition_parts(
-        rule_set, run.tool_schema_mode, include_groups=groups, load_tools=True
+        rule_set,
+        run.tool_schema_mode,
+        include_groups=groups,
+        load_tools=True,
+        checklist=_checklist_items(run) or None,
     )
     prompt_tokens = sum(
         p.tokens
@@ -1470,6 +1566,106 @@ async def _review_narration(
     result.append(_ReviewResult(undone=undone))
 
 
+def _record_state_finished(
+    run: _Run,
+    turn: Turn,
+    messages: list[dict[str, Any]],
+    context: list[ContextPart],
+) -> None:
+    """Record the state step's last message, with the dialogue it queued and the narration
+    instruction the narration step reads last."""
+    if turn.speech:
+        _add_speech(messages, context, turn.speech)
+    _add_instruction(
+        messages,
+        context,
+        "Narrate instruction",
+        narrate_instruction(run.rule_set, run.world),
+    )
+    _record(
+        run.engine,
+        run.campaign_id,
+        StateStepMade(requests=[], messages=messages, context=_dicts(context)),
+    )
+
+
+async def _finish_checklist(
+    run: _Run, turn: Turn, request: ToolRequest
+) -> AsyncIterator[TurnEvent]:
+    """Accept the state step's checklist report or ask for the missing areas again. The report
+    arrives as a tool call so its notes stay out of the text and out of the narration."""
+    # The state step that requested the finish call is the latest round already recorded.
+    round_no = turn.rounds
+    if turn.ooc:
+        # The checklist does not apply to an out-of-character reply. Answer the call so the
+        # conversation stays valid, then let the out-of-character step run.
+        _record(
+            run.engine,
+            run.campaign_id,
+            StateStepMade(
+                requests=[],
+                messages=[
+                    {
+                        "role": "tool",
+                        "tool_call_id": request.id,
+                        "content": json.dumps(
+                            {
+                                "error": "the message is out of character; the turn checklist "
+                                "does not apply"
+                            }
+                        ),
+                    }
+                ],
+                final=False,
+            ),
+        )
+        for entry in _flush(run):
+            yield entry
+        return
+    report, missing = _read_checklist_report(request, run.checklist_keys)
+    retry = _checklist_retry(missing) if missing else ""
+    messages: list[dict[str, Any]] = [
+        {
+            "role": "tool",
+            "tool_call_id": request.id,
+            "content": json.dumps({"error": retry}) if missing else json.dumps({"finished": True}),
+        }
+    ]
+    context = [
+        ContextPart(
+            "assistant",
+            f"GM state step (round {round_no}), "
+            + ("incomplete checklist" if missing else "turn checklist"),
+            _format_checklist_report(report),
+        )
+    ]
+    if not missing:
+        _record_state_finished(run, turn, messages, context)
+        for entry in _flush(run):
+            yield entry
+        return
+    retries = sum(1 for part in turn.context if part.source == "Checklist retry")
+    if retries < CHECKLIST_RETRIES:
+        context.append(ContextPart("system", "Checklist retry", retry))
+        _record(
+            run.engine,
+            run.campaign_id,
+            StateStepMade(requests=[], messages=messages, context=_dicts(context), final=False),
+        )
+    else:
+        logger.warning("state step ended without checklist items: %s", ", ".join(missing))
+        context.append(
+            ContextPart(
+                "system",
+                "Checklist incomplete",
+                "Missing: " + ", ".join(missing) + ".",
+            )
+        )
+        _record_state_finished(run, turn, messages, context)
+    for entry in _flush(run):
+        yield entry
+
+
 async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
     """Run the reply until it is recorded or paused. Log entries are yielded as the steps that
     recorded them finish. A pause is recorded before the player hears of it."""
@@ -1485,14 +1681,25 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
             include_groups=groups,
             load_tools=True,
         )
+        checklist_required = _checklist_active(turn) and bool(run.checklist_keys)
+        if checklist_required:
+            tools = [*(tools or []), checklist_tool_spec(_checklist_items(run))]
         ooc_tools = (
-            [spec for spec in tools if spec["function"]["name"] != OOC_TOOL]
+            [
+                spec
+                for spec in tools
+                if spec["function"]["name"] not in (OOC_TOOL, FINISH_STATE_STEP)
+            ]
             if tools is not None
             else None
         )
         if turn.queue:
             request = turn.queue[0]
             yield Status(_status_for(request))
+            if request.name == FINISH_STATE_STEP:
+                async for event in _finish_checklist(run, turn, request):
+                    yield event
+                continue
             if request.name == LOAD_TOOL:
                 group = _loaded_group(request)
                 if group in TOOL_GROUPS:
@@ -1616,7 +1823,15 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
             return
         yield Status("Managing state...")
         round_no = turn.rounds + 1
-        view = [*turn.messages, state_message]
+        view = [*turn.messages]
+        # A checklist retry is state-step guidance, not conversation. It is kept in the turn's
+        # context and added here, so the narration never receives it.
+        view.extend(
+            {"role": "system", "content": part.content}
+            for part in turn.context
+            if part.source == "Checklist retry" and part.role == "system"
+        )
+        view.append(state_message)
         if turn.speech:
             view.append(_queued_dialogue_note(turn.speech))
         replied: list[ChatReply] = []
@@ -1626,14 +1841,9 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
             yield event
         step = replied[0]
         if not step.tool_requests:
-            # A turn begun before the checklist existed keeps playing without one.
-            checklist_active = any(part.source == "Turn checklist" for part in turn.context)
             retries = sum(1 for part in turn.context if part.source == "Checklist retry")
-            missing = (
-                missing_checklist_items(step.text, run.checklist_keys) if checklist_active else []
-            )
-            if missing and retries < CHECKLIST_RETRIES:
-                retry = _checklist_retry(missing)
+            if checklist_required and retries < CHECKLIST_RETRIES:
+                retry = _checklist_retry(run.checklist_keys)
                 context: list[ContextPart] = []
                 if step.text.strip():
                     context.append(
@@ -1649,7 +1859,7 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
                     run.campaign_id,
                     StateStepMade(
                         requests=[],
-                        messages=[{"role": "system", "content": retry}],
+                        messages=[],
                         context=_dicts(context),
                         final=False,
                     ),
@@ -1665,38 +1875,37 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
                         step.text,
                     )
                 )
-            if missing:
-                logger.warning("state step ended without checklist items: %s", ", ".join(missing))
+            if checklist_required:
+                logger.warning("state step ended without calling %s", FINISH_STATE_STEP)
                 context.append(
                     ContextPart(
                         "system",
                         "Checklist incomplete",
-                        "Missing: " + ", ".join(missing) + ".",
+                        f"The state step did not call {FINISH_STATE_STEP}.",
                     )
                 )
-            if turn.speech:
-                _add_speech(messages, context, turn.speech)
-            _add_instruction(
-                messages,
-                context,
-                "Narrate instruction",
-                narrate_instruction(run.rule_set, run.world),
-            )
-            _record(
-                run.engine,
-                run.campaign_id,
-                StateStepMade(requests=[], messages=messages, context=_dicts(context)),
-            )
+            _record_state_finished(run, turn, messages, context)
             continue
         context = []
         if step.text:
             context.append(ContextPart("assistant", f"GM text (round {round_no})", step.text))
+        # The finish tool must run after every other tool, so its notes describe the state the
+        # other calls left. A repeated finish call would only add unanswered tool calls.
+        requests = [request for request in step.tool_requests if request.name != FINISH_STATE_STEP]
+        finishes = [request for request in step.tool_requests if request.name == FINISH_STATE_STEP]
+        if finishes:
+            requests.append(finishes[-1])
+        recorded = (
+            step
+            if len(requests) == len(step.tool_requests)
+            else ChatReply(text=step.text, tool_requests=tuple(requests), reasoning=step.reasoning)
+        )
         _record(
             run.engine,
             run.campaign_id,
             StateStepMade(
-                requests=[asdict(request) for request in step.tool_requests],
-                messages=[_tool_call_message(step)],
+                requests=[asdict(request) for request in requests],
+                messages=[_tool_call_message(recorded)],
                 context=_dicts(context),
             ),
         )
@@ -1895,9 +2104,9 @@ async def stream_message(
         if rule_set is None:
             raise InvalidInput("that campaign's rule set is no longer available")
         current = _state(engine, campaign.id)
-        player = _character_to_play(current, owner_id)
+        _character_to_play(current, owner_id)
         _check_encounter_turn(current, owner_id)
-        if advancement_due(current, rule_set, player):
+        if advancement_due_for_player(current, rule_set, owner_id):
             raise InvalidInput("level up or choose your Advancement before sending another message")
 
         def build_run() -> _Run:
@@ -2039,7 +2248,7 @@ async def start_encounter_turn(
         if rule_set is None:
             raise InvalidInput("that campaign's rule set is no longer available")
         current = _state(engine, campaign.id)
-        if advancement_due(current, rule_set, current.player_character(owner_id)):
+        if advancement_due_for_player(current, rule_set, owner_id):
             raise InvalidInput("level up or choose your Advancement before starting a turn")
 
         def build_run() -> _Run:

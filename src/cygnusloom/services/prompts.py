@@ -8,11 +8,16 @@ this text, so the opening words of each instruction are part of the engine contr
 
 from __future__ import annotations
 
-import re
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping
 from typing import Any
 
-from cygnusloom.content.library import ChecklistRules, PromptFragment, RuleSet, WorldTemplate
+from cygnusloom.content.library import (
+    ChecklistItem,
+    ChecklistRules,
+    PromptFragment,
+    RuleSet,
+    WorldTemplate,
+)
 from cygnusloom.rules.context import brief
 from cygnusloom.services.events import ContextPart
 
@@ -120,12 +125,8 @@ STATE_INSTRUCTION = (
 )
 # Closes the state step after the ruleset's fragments.
 STATE_CLOSING = (
-    "When nothing else needs to change, reply with the turn checklist from the system prompt: "
-    'one [x] line for every area, noting what changed or "no change".'
-)
-_CHECKLIST_ITEM = re.compile(
-    r"^\s*(?:[-*]\s*)?\[[xX]\]\s*\**\s*([a-z][a-z0-9_-]*)\b",
-    re.MULTILINE,
+    "When nothing else needs to change, call finish_state_step with the turn checklist from the "
+    'system prompt: one short note for every area, what changed or "no change".'
 )
 
 
@@ -134,32 +135,31 @@ def turn_checklist(rules: ChecklistRules | None, groups: set[str]) -> tuple[str,
     items and their order come from the rule set's JSON; an item with an optional tool group is
     left out when the rule set offers no tool in that group, so a rule set without magic or
     factions does not ask the GM to check them."""
-    items = (
-        [item for item in rules.items if not item.group or item.group in groups]
-        if rules is not None
-        else []
-    )
+    items = checklist_areas(rules, groups)
     if not items:
         return "", ()
     lines = [
         (
             "Turn checklist. The state step is not finished until you have checked every area. "
-            "Finish by replying with one line per item, in this order, each starting [x] and "
-            'followed by a short note or "no change":'
+            "Finish by calling finish_state_step, alone, with one short note per area, in this "
+            'order; each is what changed, or "no change":'
         ),
-        *(f"[x] {item.id}: {item.text}" for item in items),
+        *(f"- {item.id}: {item.text}" for item in items),
         (
             "Check each area even when you expect no change. If a check shows something "
-            "missing, make the change with the right tool before you write the checklist."
+            "missing, make the change with the right tool before you call finish_state_step. "
+            "The notes are internal; they are never shown to the player."
         ),
     ]
     return "\n".join(lines), tuple(item.id for item in items)
 
 
-def missing_checklist_items(text: str, keys: Sequence[str]) -> list[str]:
-    """The required checklist keys the final state-step reply did not mark."""
-    seen = {match.group(1).casefold() for match in _CHECKLIST_ITEM.finditer(text)}
-    return [key for key in keys if key.casefold() not in seen]
+def checklist_areas(rules: ChecklistRules | None, groups: set[str]) -> list[ChecklistItem]:
+    """The checklist areas the rule set asks for, in order, without the optional areas whose
+    tool group the rule set does not offer."""
+    if rules is None:
+        return []
+    return [item for item in rules.items if not item.group or item.group in groups]
 
 
 NARRATE_INSTRUCTION = (

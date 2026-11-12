@@ -56,6 +56,9 @@ _WIRE_STRUCTURAL_KEYS = (
 )
 _CHARACTER_SCHEMA_BYTES = 500
 LOAD_TOOL = "load_tool"
+# The engine's own tool that ends the state step. It takes one short note per turn-checklist
+# area, so the checklist never becomes narration prose.
+FINISH_STATE_STEP = "finish_state_step"
 # Optional tool groups are data-like policy, not state. A tool not named here is always
 # available. New ruleset tools therefore stay available until deliberately gated.
 TOOL_GROUPS: dict[str, frozenset[str]] = {
@@ -377,6 +380,34 @@ def _load_tool_spec() -> dict[str, Any]:
                     }
                 },
                 "required": ["group"],
+            },
+        },
+    }
+
+
+def checklist_tool_spec(items: Mapping[str, str]) -> dict[str, Any]:
+    """The engine tool that ends the state step, with one argument per checklist area. Its
+    arguments are internal notes for the state step, never narration, so the narrator is not
+    offered this tool and the turn's narration messages leave the exchange out."""
+    return {
+        "type": "function",
+        "function": {
+            "name": FINISH_STATE_STEP,
+            "description": (
+                "Finish the state step after checking every area of the turn checklist. Call it "
+                "alone, after all other tool calls, with one short note per area: what changed, "
+                'or "no change". The notes are internal and are never shown to the player.'
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    key: {
+                        "type": "string",
+                        "description": f'{text}. What changed, or "no change".',
+                    }
+                    for key, text in items.items()
+                },
+                "required": list(items),
             },
         },
     }

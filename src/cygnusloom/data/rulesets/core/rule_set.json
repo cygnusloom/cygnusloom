@@ -3,7 +3,11 @@
     "type": "rule_set",
     "id": "core",
     "name": "Core",
-    "description": "Rules every campaign uses: narration, locations, NPCs, notes, and speech. A campaign's own rule set can replace any of these by using the same id."
+    "description": "Rules every campaign uses: narration, locations, NPCs, notes, and speech. A campaign's own rule set can replace any of these by using the same id.",
+    "default_campaign": {
+      "rule_set": "worldswithoutnumber",
+      "world_template": "unwritten-world"
+    }
   },
   {
     "type": "python_module",

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
+import json
 import re
 from collections.abc import Callable
 from typing import Any
@@ -12,7 +13,7 @@ from sqlmodel import Session, func, select
 
 from cygnusloom.config import Settings
 from cygnusloom.db.models import Campaign, Event
-from cygnusloom.llm.base import ChatReply, LLMError
+from cygnusloom.llm.base import ChatReply, LLMError, ToolRequest
 from cygnusloom.rules.context import brief
 from cygnusloom.services.events import CampaignState, Channel, load_state
 from cygnusloom.services.prompts import SUMMARY_PROMPT, SYSTEM_PROMPT, system_parts
@@ -50,6 +51,7 @@ class RecordingProvider:
         self.summaries = 0
         self.summary_reply = "SUMMARY"
         self.fail_after_summary = False
+        self.checklist_calls = 0
 
     async def chat(
         self,
@@ -64,7 +66,26 @@ class RecordingProvider:
         if self.fail_after_summary and self.summaries:
             raise LLMError("the model is down")
         last = str(messages[-1].get("content", "")) if messages else ""
-        if tools is not None and last.startswith(("State management step.", "Turn review step.")):
+        if tools is not None and last.startswith("State management step."):
+            finish = next(
+                (spec for spec in tools if spec["function"]["name"] == "finish_state_step"),
+                None,
+            )
+            if finish is not None:
+                keys = list(finish["function"]["parameters"]["properties"])
+                self.checklist_calls += 1
+                return ChatReply(
+                    text="",
+                    tool_requests=(
+                        ToolRequest(
+                            id=f"checklist-{self.checklist_calls}",
+                            name="finish_state_step",
+                            arguments=json.dumps({key: "no change" for key in keys}),
+                        ),
+                    ),
+                )
+            return ChatReply(text="")
+        if tools is not None and last.startswith("Turn review step."):
             return ChatReply(text=CHECKLIST)
         return ChatReply(text="reply")
 

@@ -181,7 +181,7 @@
           {% endif %}
           {% endif %}
           {% if advancement_due %}
-          <p class="advancement-pause" role="status">Your character has advancement choices to make. <a href="/campaigns/{{ campaign.id }}/advancement">Level up or choose an Advancement</a> before continuing.</p>
+          <p class="advancement-pause" role="status">A character you control has advancement choices to make. <a href="/campaigns/{{ campaign.id }}/advancement">Level up or choose an Advancement</a> before continuing.</p>
           {% endif %}
           {% if waiting_for %}<p class="turn-note" data-turn-note role="status">{{ waiting_for }}</p>{% else %}<p class="turn-note" data-turn-note role="status" hidden></p>{% endif %}
           <p class="typing-note" data-typing-note role="status" hidden></p>

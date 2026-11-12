@@ -1614,11 +1614,14 @@ def test_generated_character_creation_rolls_back_if_defense_initialization_fails
         raise InvalidInput("defense initialization failed")
 
     monkeypatch.setattr(world_service, "_initialize_generated_defense", fail_initialization)
+    hireling_choices = {
+        "templates": {"class": "warrior", "tradition": "no_tradition"},
+    }
     with pytest.raises(InvalidInput, match="defense initialization failed"):
         if kind == "npc":
             tools.create_npc("Unfinished", "Yard", "A scout.", force=True)
         elif kind == "hireling":
-            tools.hire_hireling("Unfinished", NAME, 1, "A guide.")
+            tools.hire_hireling("Unfinished", NAME, 1, "A guide.", character=hireling_choices)
         else:
             tools.update_npc("Unfinished", character={})
     with Session(app.state.engine) as db:

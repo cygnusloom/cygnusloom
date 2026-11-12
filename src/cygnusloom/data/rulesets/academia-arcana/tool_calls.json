@@ -291,6 +291,11 @@
   },
   {
     "type": "tool_call",
+    "id": "hire_existing_npc",
+    "disabled": true
+  },
+  {
+    "type": "tool_call",
     "id": "dismiss_hireling",
     "disabled": true
   },
