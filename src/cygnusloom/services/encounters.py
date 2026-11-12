@@ -725,6 +725,7 @@ def place_arrivals(
             name=character.name,
             column=cell[0],
             row=cell[1],
+            quiet=False,
         )
         event.apply(state, record(db, campaign_id, event))
         placed.append(
@@ -748,14 +749,17 @@ def place_map_token(
     encounter_objects: Mapping[str, EncounterObject] | None = None,
     *,
     state: CampaignState | None = None,
+    quiet: bool = False,
 ) -> dict[str, Any]:
     """Place a token on a local map outside an encounter. A token may be a character, an NPC, or
     a prop; a character must be at the map's location. During an encounter, positions belong to
     `Encounter.cells`, so it refuses and `place_participant` is used instead.
 
     The cell must be on the map and free: a blocking object or another token cannot share it.
-    Placing a token again moves it. A caller that is already holding the campaign state, and
-    keeping it current, can pass it as `state`; otherwise the state is loaded from the log."""
+    Placing a token again moves it, and the player's Log says where it went. A caller that is
+    already holding the campaign state, and keeping it current, can pass it as `state`; otherwise
+    the state is loaded from the log. Seeding a world's starting tokens passes `quiet` so setup
+    does not fill the transcript."""
     if state is None:
         state = load_state(db, campaign_id)
     entry = _map_named(state, map_name)
@@ -795,7 +799,16 @@ def place_map_token(
             )
     display = character.name if character is not None else name
     previous = entry.tokens.get(key)
-    event = MapTokenPlaced(map=entry.name, name=display, column=column, row=row)
+    moved = previous is not None and previous != target
+    event = MapTokenPlaced(
+        map=entry.name,
+        name=display,
+        column=column,
+        row=row,
+        from_column=previous[0] if moved else None,
+        from_row=previous[1] if moved else None,
+        quiet=quiet,
+    )
     event.apply(state, record(db, campaign_id, event))
     db.commit()
     result: dict[str, Any] = {

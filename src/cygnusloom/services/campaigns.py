@@ -250,6 +250,7 @@ def _seed_local_maps(db: Any, campaign_id: int, template: Any, rule_set: RuleSet
                         row,
                         rule_set.encounter_objects,
                         state=state,
+                        quiet=True,
                     )
                 except InvalidInput:
                     continue

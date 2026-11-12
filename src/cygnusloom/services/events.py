@@ -1788,24 +1788,36 @@ class MapDeleted(GameEvent):
 
 @dataclass(frozen=True)
 class MapTokenPlaced(GameEvent):
-    """A character, NPC, or prop is placed on a local map outside an encounter. When an encounter
-    starts on the map, the character's token cell becomes their participant cell."""
+    """A character, NPC, or prop is placed on a local map outside an encounter, or moves to a new
+    cell on it, and the player's Log says so. When an encounter starts on the map, the character's
+    token cell becomes their participant cell."""
 
     kind: ClassVar[str] = "map.token_placed"
-    hidden: ClassVar[bool] = True
 
     map: str
     name: str
     column: int
     row: int
+    # The cell the token left, when this placement moves a token already on the map.
+    from_column: int | None = None
+    from_row: int | None = None
+    # Setup placements, such as the NPCs a world starts with, are recorded without a Log line.
+    # BACKWARDS-COMPATIBILITY: 4 -- older records have no flag and stay out of the transcript.
+    quiet: bool = True
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         encounter_map = state.maps.get(name_key(self.map))
         if encounter_map is not None:
             encounter_map.tokens[name_key(self.name)] = (self.column, self.row)
 
-    def render(self) -> str:
-        return f"{self.name} placed on {self.map} at column {self.column + 1}, row {self.row + 1}."
+    def render(self) -> str | None:
+        if self.quiet:
+            return None
+        cell = f"column {self.column + 1}, row {self.row + 1}"
+        if self.from_column is not None and self.from_row is not None:
+            left = f"column {self.from_column + 1}, row {self.from_row + 1}"
+            return f"{self.name} moves from {left} to {cell} on {self.map}."
+        return f"{self.name} is placed at {cell} on {self.map}."
 
 
 @dataclass(frozen=True)

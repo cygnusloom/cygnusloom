@@ -74,6 +74,7 @@ def test_gm_bookkeeping_is_hidden_and_what_the_pc_perceives_is_visible():
     assert not is_hidden("chat.player")
     assert not is_hidden("location.discovered")
     assert not is_hidden("actor.moved")
+    assert not is_hidden("map.token_placed")
     assert not is_hidden("tool.ran")
 
 

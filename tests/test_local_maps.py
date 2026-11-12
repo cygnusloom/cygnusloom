@@ -14,6 +14,7 @@ from sqlalchemy import func, select
 
 from cygnusloom.db.models import Event
 from cygnusloom.services import encounters, views
+from cygnusloom.services.campaigns import campaign_transcript
 from cygnusloom.services.events import CellMark, name_key
 from tests.conftest import content_library
 from tests.factories import create_campaign, open_campaign, signed_in_client
@@ -134,6 +135,61 @@ def test_moving_a_token_reports_the_cell_it_left(
         {"map": MAP, "name": "Ada", "column": 5, "row": 4},
     )
     assert "moved_from" not in stayed
+
+
+def test_token_movement_appears_in_the_player_transcript(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _campaign_id(client_factory)
+    _place_pc(client, campaign_id, TOWN)
+    _create_local_map(client, campaign_id)
+    _call(
+        client.app,
+        campaign_id,
+        "place_map_token",
+        {"map": MAP, "name": "Ada", "column": 3, "row": 4},
+    )
+    _call(
+        client.app,
+        campaign_id,
+        "place_map_token",
+        {"map": MAP, "name": "Ada", "column": 5, "row": 4},
+    )
+
+    page = client.get(f"/campaigns/{campaign_id}").text
+
+    assert f'<div class="log-line">Ada is placed at column 4, row 5 on {MAP}.</div>' in page
+    assert (
+        f'<div class="log-line">Ada moves from column 4, row 5 to column 6, row 5 on {MAP}.</div>'
+        in page
+    )
+
+
+def test_old_token_placements_replay_without_filling_the_transcript(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _campaign_id(client_factory)
+    _place_pc(client, campaign_id, TOWN)
+    _create_local_map(client, campaign_id)
+    with _db(client.app) as db:
+        newest = db.exec(
+            select(func.max(Event.seq)).where(Event.campaign_id == campaign_id)
+        ).scalar_one()
+        db.add(
+            Event(
+                campaign_id=campaign_id,
+                seq=(newest or 0) + 1,
+                channel="log",
+                kind="map.token_placed",
+                payload=json.dumps({"map": MAP, "name": "Ada", "column": 3, "row": 4}),
+            )
+        )
+        db.commit()
+
+    state = open_campaign(client.app, campaign_id)
+    assert state.maps[name_key(MAP)].tokens[name_key("Ada")] == (3, 4)
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert "is placed at column 4, row 5" not in page
 
 
 def test_a_local_map_can_be_named_by_its_place_without_the_suffix(
@@ -576,6 +632,14 @@ def test_a_bundled_world_seeds_its_authored_local_maps(
     assert inn.tokens
     town = next(entry for entry in state.maps.values() if entry.name == "Isthmus Town local map")
     assert len({row for _, row in town.tokens.values()}) > 1
+    # Setup placements are recorded but do not fill the player's transcript.
+    assert state.owner_id is not None
+    lines = [
+        item.content
+        for item in campaign_transcript(client.app.state.engine, state.owner_id, campaign_id)
+        if item.role == "log"
+    ]
+    assert not [line for line in lines if "is placed at column" in line]
 
 
 def test_a_local_map_copies_its_template_style_and_can_override_it(
