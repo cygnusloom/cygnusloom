@@ -974,7 +974,7 @@
     "type": "tool_call",
     "id": "update_npc",
     "character_options": true,
-    "description": "Change an NPC's details. Only the fields you give change; the rest stay as they are. Giving quirks replaces the whole list. Use it when an NPC changes, for example after a shift in attitude or appearance. The description is your own record and may hold secrets the player has not learned; the player never sees it. The personality, accent, and quirks are what the player sees on meeting them. To record what the player has learned, use update_npc_knowledge. The player character cannot be changed this way. A story-only NPC has no stats until you give them with character, armor, and attacks; this works once, and it refuses an NPC that already has stats.",
+    "description": "Change an NPC's details. Only the fields you give change; the rest stay as they are. Giving quirks replaces the whole list. Use it when an NPC changes, for example after a shift in attitude or appearance. The description is your own record and may hold secrets the player has not learned; the player never sees it. The personality, accent, and quirks are what the player sees on meeting them. To record what the player has learned, use update_npc_knowledge. The player character cannot be changed this way. A story-only NPC has no stats until you give them with character, armor, and attacks; this works once. An NPC who already has stats keeps them, but attacks and armor can still be changed, such as when they pick up a weapon before a fight.",
     "parameters": {
       "properties": {
         "name": {
@@ -1003,11 +1003,11 @@
         "armor": {
           "type": "integer",
           "minimum": 0,
-          "description": "Optional, for a story-only NPC being given stats. What each hit against them absorbs."
+          "description": "Optional. What each hit against them absorbs. For a story-only NPC this is part of giving them stats; for any other NPC it changes their armor."
         },
         "attacks": {
           "type": "array",
-          "description": "Optional, for a story-only NPC being given stats. The NPC's attacks, each with a name and dice such as '1d8' or '1d6+1d6'.",
+          "description": "Optional. The NPC's attacks, each with a name and dice such as '1d8' or '1d6+1d6'. For a story-only NPC this is part of giving them stats; for any other NPC it replaces their attacks.",
           "items": {
             "type": "object",
             "properties": {

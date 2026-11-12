@@ -1619,6 +1619,7 @@ async def _finish_checklist(
                         ),
                     }
                 ],
+                context=[],
                 final=False,
             ),
         )
@@ -1816,12 +1817,10 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
             if turn.opening:
                 async for event in _write_journal(run, turn, reply, step.reasoning):
                     yield event
-            event_id = _record(
-                run.engine,
-                run.campaign_id,
-                ChatGM(content=reply, model=run.model, reasoning=step.reasoning),
-            )
-            _after_reply(run, event_id)
+            # An out-of-character reply can still be the reply that plays out an NPC's turn, so
+            # it closes the turn exactly as a narrated reply does. Skipping this left the
+            # encounter acting forever, with the table unable to send another message.
+            event_id = _finish_reply(run, turn, reply, step.reasoning)
             yield Saved(event_id)
             return
         yield Status("Managing state...")

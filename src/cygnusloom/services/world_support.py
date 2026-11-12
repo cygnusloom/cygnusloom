@@ -89,6 +89,7 @@ from cygnusloom.services.events import (
     NoteRemoved,
     NoteUpdated,
     NpcAdded,
+    NpcArmed,
     NpcHired,
     NpcKnown,
     NpcRemoved,
@@ -1612,7 +1613,9 @@ def update_npc(
     plus: str,
 ) -> dict[str, Any]:
     """Change the NPC's details. Only the given fields change; quirks, if given, replace the list.
-    A story-only NPC can be given its stats once, with character, armor, and attacks."""
+    A story-only NPC can be given its stats once, with character, armor, and attacks. An NPC who
+    already has stats keeps them, but their attacks and armor can still change: a GM arming a
+    hireling's guard picks up a weapon without rebuilding the sheet."""
     state = load_state(db, campaign_id)
     npc = _npc_named(state, name)
     text_given = any(value is not None for value in (description, personality, accent, quirks))
@@ -1622,28 +1625,44 @@ def update_npc(
             "give at least one of description, personality, accent, quirks, or stats"
         )
     statted: NpcStatted | None = None
+    armed: NpcArmed | None = None
     if stats_given:
-        if not npc.story_only:
+        if npc.story_only:
+            try:
+                check_choices(spec, character or {})
+                sheet = resolve(spec, character or {}, rng, plus=plus)
+            except CharacterError as error:
+                raise InvalidInput(str(error)) from error
+            _check_sheet_text(sheet)
+            attack_map, attack_flags, attack_shock = _attacks(attacks or [])
+            statted = NpcStatted(
+                name=npc.name,
+                armor=(sheet.armor if defense_base else 0)
+                if armor is None
+                else whole_number(armor, "armor", 0, armor_max or combat.UNCAPPED_ARMOR),
+                attacks=attack_map,
+                attack_flags=attack_flags,
+                attack_shock=attack_shock,
+                **_sheet_fields(sheet),
+            )
+        elif character is not None:
             raise InvalidInput(
                 f"{npc.name} already has stats; only a story-only NPC can be given them"
             )
-        try:
-            check_choices(spec, character or {})
-            sheet = resolve(spec, character or {}, rng, plus=plus)
-        except CharacterError as error:
-            raise InvalidInput(str(error)) from error
-        _check_sheet_text(sheet)
-        attack_map, attack_flags, attack_shock = _attacks(attacks or [])
-        statted = NpcStatted(
-            name=npc.name,
-            armor=(sheet.armor if defense_base else 0)
-            if armor is None
-            else whole_number(armor, "armor", 0, armor_max or combat.UNCAPPED_ARMOR),
-            attacks=attack_map,
-            attack_flags=attack_flags,
-            attack_shock=attack_shock,
-            **_sheet_fields(sheet),
-        )
+        else:
+            # The sheet stays; only the weapons and armor in hand change.
+            attack_map = attack_flags = attack_shock = None
+            if attacks is not None:
+                attack_map, attack_flags, attack_shock = _attacks(attacks)
+            armed = NpcArmed(
+                name=npc.name,
+                attacks=attack_map,
+                attack_flags=attack_flags or {},
+                attack_shock=attack_shock or {},
+                armor=None
+                if armor is None
+                else whole_number(armor, "armor", 0, armor_max or combat.UNCAPPED_ARMOR),
+            )
     if text_given:
         record(
             db,
@@ -1662,7 +1681,16 @@ def update_npc(
         )
     if statted is not None:
         record(db, campaign_id, statted)
-    return {"updated": "npc", "name": npc.name, "statted": statted is not None}
+    if armed is not None:
+        record(db, campaign_id, armed)
+    result: dict[str, Any] = {
+        "updated": "npc",
+        "name": npc.name,
+        "statted": statted is not None,
+    }
+    if armed is not None:
+        result["armed"] = True
+    return result
 
 
 def update_npc_knowledge(

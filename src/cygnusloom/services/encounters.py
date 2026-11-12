@@ -1036,12 +1036,20 @@ def add_participant(
         )
     db.commit()
     result: dict[str, Any] = {"added": character.name, "side": side}
+    warnings = []
     if character.location != encounter.location:
         where = character.location or "nowhere in particular"
-        result["warning"] = (
+        warnings.append(
             f"{character.name} is at {where}, not at {encounter.location}, where the "
             "encounter is. Move them there first if they should be here."
         )
+    if character.kind == NPC_KIND and not character.attacks:
+        warnings.append(
+            f"{character.name} has no attacks; give them attacks with update_npc before "
+            "their turn if they are meant to fight."
+        )
+    if warnings:
+        result["warning"] = " ".join(warnings)
     return result
 
 

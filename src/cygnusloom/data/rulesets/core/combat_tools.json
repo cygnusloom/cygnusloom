@@ -3,7 +3,7 @@
     "type": "tool_call",
     "id": "add_participant",
     "requires": ["combat"],
-    "description": "Add a character to the encounter in progress, on a side. Player characters default to the party and NPCs to the foes. The turn order keeps each side together: the party first, then the other sides in the order they first appear. A character who is not at the encounter's location is still added, and the result carries a warning to act on.",
+    "description": "Add a character to the encounter in progress, on a side. Player characters default to the party and NPCs to the foes. The turn order keeps each side together: the party first, then the other sides in the order they first appear. A character who is not at the encounter's location is still added, and the result carries a warning to act on. An NPC with no attacks is also warned about: give them attacks with update_npc before their turn if they are meant to fight.",
     "parameters": {
       "properties": {
         "name": {
