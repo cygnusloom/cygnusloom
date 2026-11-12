@@ -1,0 +1,1 @@
+Do the task in a new worktree, then merge it back to the current branch when you are done.
