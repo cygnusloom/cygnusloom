@@ -8,7 +8,6 @@ import threading
 import urllib.error
 import urllib.request
 from datetime import UTC, datetime, timedelta
-from types import SimpleNamespace
 from urllib.parse import parse_qs, urlsplit
 
 import pytest
@@ -19,7 +18,6 @@ from cygnusloom import desktop
 from cygnusloom.config import Settings
 from cygnusloom.db.models import DesktopLogin
 from cygnusloom.db.session import make_engine
-from cygnusloom.desktop_credentials import CredentialStore, CredentialUnavailable
 from cygnusloom.desktop_servers import (
     ServerError,
     ServerStore,
@@ -48,44 +46,6 @@ def desktop_settings(tmp_path, **overrides) -> Settings:
         **overrides,
     }
     return Settings(**values)
-
-
-class FakeKeyring:
-    """A keyring backend with the small interface CredentialStore uses."""
-
-    name = "memory"
-    errors = SimpleNamespace(PasswordDeleteError=KeyError)
-
-    def __init__(self):
-        self.values: dict[tuple[str, str], str] = {}
-
-    def get_keyring(self):
-        return self
-
-    def get_password(self, service: str, username: str) -> str | None:
-        return self.values.get((service, username))
-
-    def set_password(self, service: str, username: str, password: str) -> None:
-        self.values[(service, username)] = password
-
-    def delete_password(self, service: str, username: str) -> None:
-        del self.values[(service, username)]
-
-
-class BrokenKeyring:
-    name = "broken"
-
-    def get_keyring(self):
-        return self
-
-    def get_password(self, service: str, username: str) -> str | None:
-        raise RuntimeError("no credential store")
-
-    def set_password(self, service: str, username: str, password: str) -> None:
-        raise RuntimeError("no credential store")
-
-    def delete_password(self, service: str, username: str) -> None:
-        raise RuntimeError("no credential store")
 
 
 def test_normalize_server_url_adds_https_and_drops_the_path():
@@ -139,12 +99,9 @@ def test_the_server_store_adds_renames_removes_and_deduplicates(tmp_path):
 
     assert again.id == first.id
     assert [server.id for server in store.list()] == [second.id, first.id]
-    assert store.get(first.id).account == ""
     assert store.get(first.id).oidc_issuer == "https://idp.example.com"
 
-    store.set_account(first.id, "ada")
     store.set_issuer(first.id, "https://idp.example.com/")
-    assert store.get(first.id).account == "ada"
     assert store.get(first.id).oidc_issuer == "https://idp.example.com"
 
     renamed = store.rename(first.id, "Wednesday table")
@@ -177,51 +134,6 @@ def test_the_server_list_keeps_its_permissions_private(tmp_path):
     assert store.path.stat().st_mode & 0o777 == 0o600
 
 
-def test_credential_store_saves_gets_and_deletes():
-    backend = FakeKeyring()
-    store = CredentialStore(backend=backend)
-
-    assert store.available() is True
-    assert store.get("https://table.example.com") is None
-    store.save("https://table.example.com", "ada", "secret")
-    assert store.get("https://table.example.com").username == "ada"
-    assert store.get("https://table.example.com").password == "secret"
-    assert json.loads(backend.values[("cygnusloom", "https://table.example.com")]) == {
-        "username": "ada",
-        "password": "secret",
-    }
-
-    store.delete("https://table.example.com")
-    assert store.get("https://table.example.com") is None
-    # Deleting an entry that is already gone is not an error.
-    store.delete("https://table.example.com")
-
-
-def test_credential_store_reports_a_missing_keyring():
-    class FailKeyring:
-        name = "fail Keyring"
-
-        def get_keyring(self):
-            return self
-
-    assert CredentialStore(backend=FailKeyring()).available() is False
-    store = CredentialStore(backend=BrokenKeyring())
-
-    with pytest.raises(CredentialUnavailable):
-        store.save("https://table.example.com", "ada", "secret")
-    with pytest.raises(CredentialUnavailable):
-        store.get("https://table.example.com")
-
-
-def test_credential_store_rejects_an_empty_username_or_password():
-    store = CredentialStore(backend=FakeKeyring())
-
-    with pytest.raises(CredentialUnavailable):
-        store.save("https://table.example.com", "", "secret")
-    with pytest.raises(CredentialUnavailable):
-        store.save("https://table.example.com", "ada", "")
-
-
 def test_the_desktop_helpers_build_the_browser_sign_in_url():
     url = desktop.browser_login_url(
         "https://table.example.com/", "http://127.0.0.1:5000/callback", "state-1"
@@ -236,29 +148,24 @@ def test_the_desktop_helpers_build_the_browser_sign_in_url():
     }
 
 
-def test_the_prefill_script_only_fills_fields():
-    script = desktop.prefill_script('ada"x', "pa\\ss")
-
-    assert json.dumps('ada"x') in script
-    assert json.dumps("pa\\ss") in script
-    assert "submit" not in script
-    assert "passwordSelector" in script
-    assert "shadowRoot" in script
-    assert "ak-flow-executor" in script
-    assert "uidField" in script
-    assert "setTimeout(fill" in script
-
-
 def test_the_return_script_fills_both_prepared_slots():
     script = desktop.return_button_script("http://127.0.0.1:8123")
 
     assert "desktop-slot" in script
     assert "desktop-slot-sidebar" in script
     assert 'const local = "http://127.0.0.1:8123"' in script
-    assert "local + '/campaigns'" in script
-    assert "Main menu" in script
+    assert "local + '/campaigns?desktop_home=1'" in script
+    assert "Return to my device" in script
+    assert "action: 'home'" in script
     assert "DOMContentLoaded" in script
     assert "attempt < 20" in script
+
+
+def test_the_device_bar_is_needed_outside_the_local_controls():
+    assert desktop.needs_device_bar("https://idp.example.com", "http://127.0.0.1:8123", False)
+    assert not desktop.needs_device_bar("https://table.example.com", "http://127.0.0.1:8123", True)
+    assert not desktop.needs_device_bar("http://127.0.0.1:8123", "http://127.0.0.1:8123", False)
+    assert desktop.needs_device_bar("", "http://127.0.0.1:8123", False)
 
 
 def test_the_desktop_sentinel_is_limited_to_the_local_app():
@@ -305,21 +212,19 @@ def test_desktop_actions_are_parsed_and_validated():
     assert desktop.parse_desktop_action({"action": "connect", "server": "abc"}) == (
         "connect",
         "abc",
-        True,
     )
-    assert desktop.parse_desktop_action({"action": "login", "server": "abc", "saved": False}) == (
+    assert desktop.parse_desktop_action({"action": "login", "server": "abc"}) == (
         "login",
         "abc",
-        False,
     )
+    assert desktop.parse_desktop_action({"action": "home"}) == ("home", "")
     assert desktop.parse_desktop_action({"action": "browser", "server": "abc"}) == (
         "browser",
         "abc",
-        True,
     )
     assert desktop.parse_desktop_action(
         {"action": "invite", "url": "https://idp.example.com/if/flow/x"}
-    ) == ("invite", "https://idp.example.com/if/flow/x", True)
+    ) == ("invite", "https://idp.example.com/if/flow/x")
     assert desktop.parse_desktop_action({"action": "connect"}) is None
     assert desktop.parse_desktop_action({"action": "unknown", "server": "abc"}) is None
     assert desktop.parse_desktop_action("not a dict") is None
@@ -372,13 +277,15 @@ def test_desktop_mode_adds_the_server_list_to_the_main_menu(tmp_path, monkeypatc
     )
     settings = desktop_settings(tmp_path)
     app = make_app(settings)
-    app.state.credentials = CredentialStore(backend=FakeKeyring())
     client = TestClient(app)
 
     page = client.get("/campaigns")
     assert "Servers" in page.text
     assert "Add by invitation link" in page.text
     assert "data-desktop-add" in page.text
+    assert "Play on your Computer" in page.text
+    assert "Play on a Server" in page.text
+    assert page.text.index("Play on your Computer") < page.text.index("Play on a Server")
     assert "/static/desktop.js" in page.text
 
     token = csrf_token(client, "/campaigns")
@@ -412,6 +319,8 @@ def test_the_desktop_menu_without_desktop_mode_has_no_server_list(client: TestCl
     page = client.get("/campaigns")
 
     assert "Add by invitation link" not in page.text
+    assert "Play on your Computer" not in page.text
+    assert "Play on a Server" not in page.text
     assert "/static/desktop.js" not in page.text
 
 
@@ -502,124 +411,6 @@ def test_probe_server_reports_an_ssl_configuration_failure(monkeypatch):
     assert "secure connection" in str(error.value)
 
 
-def test_saving_a_login_stores_it_in_the_keyring(tmp_path, monkeypatch):
-    monkeypatch.setattr(
-        desktop_web,
-        "probe_server",
-        lambda url: desktop_web.ServerInfo(oidc_issuer="https://idp.example.com"),
-    )
-    keyring = FakeKeyring()
-    settings = desktop_settings(tmp_path)
-    app = make_app(settings)
-    app.state.credentials = CredentialStore(backend=keyring)
-    client = TestClient(app)
-    token = csrf_token(client, "/campaigns")
-    client.post(
-        "/desktop/servers",
-        data={"csrf_token": token, "url": "https://table.example.com", "name": "Table"},
-    )
-    server = ServerStore(tmp_path / "servers.json").list()[0]
-
-    response = client.post(
-        f"/desktop/servers/{server.id}/login",
-        data={
-            "csrf_token": token,
-            "username": "ada",
-            "password": "secret",
-            "remember": "1",
-        },
-        follow_redirects=False,
-    )
-
-    assert response.status_code == 303
-    assert response.headers["location"].startswith("/campaigns?desktop_login=")
-    assert "desktop_remember=1" in response.headers["location"]
-    assert keyring.values[("cygnusloom", server.url)]
-    assert ServerStore(tmp_path / "servers.json").get(server.id).account == "ada"
-    page = client.get("/campaigns")
-    assert "saved login: ada" in page.text
-
-    response = client.post(
-        f"/desktop/servers/{server.id}/forget",
-        data={"csrf_token": token},
-        follow_redirects=True,
-    )
-    assert "Forgot the saved login for Table." in response.text
-    assert keyring.values == {}
-    assert ServerStore(tmp_path / "servers.json").get(server.id).account == ""
-
-
-def test_saving_a_login_without_remembering_clears_an_old_password(tmp_path, monkeypatch):
-    monkeypatch.setattr(
-        desktop_web,
-        "probe_server",
-        lambda url: desktop_web.ServerInfo(oidc_issuer="https://idp.example.com"),
-    )
-    keyring = FakeKeyring()
-    settings = desktop_settings(tmp_path)
-    app = make_app(settings)
-    app.state.credentials = CredentialStore(backend=keyring)
-    client = TestClient(app)
-    token = csrf_token(client, "/campaigns")
-    client.post(
-        "/desktop/servers",
-        data={"csrf_token": token, "url": "https://table.example.com"},
-    )
-    server = ServerStore(tmp_path / "servers.json").list()[0]
-    client.post(
-        f"/desktop/servers/{server.id}/login",
-        data={
-            "csrf_token": token,
-            "username": "ada",
-            "password": "secret",
-            "remember": "1",
-        },
-    )
-
-    response = client.post(
-        f"/desktop/servers/{server.id}/login",
-        data={"csrf_token": token, "username": "ada", "password": "secret"},
-        follow_redirects=False,
-    )
-
-    assert response.status_code == 303
-    assert "desktop_remember=0" in response.headers["location"]
-    assert keyring.values == {}
-    assert ServerStore(tmp_path / "servers.json").get(server.id).account == ""
-
-
-def test_a_login_that_cannot_be_saved_is_reported(tmp_path, monkeypatch):
-    monkeypatch.setattr(
-        desktop_web,
-        "probe_server",
-        lambda url: desktop_web.ServerInfo(oidc_issuer="https://idp.example.com"),
-    )
-    settings = desktop_settings(tmp_path)
-    app = make_app(settings)
-    app.state.credentials = CredentialStore(backend=BrokenKeyring())
-    client = TestClient(app)
-    token = csrf_token(client, "/campaigns")
-    client.post(
-        "/desktop/servers",
-        data={"csrf_token": token, "url": "https://table.example.com"},
-    )
-    server = ServerStore(tmp_path / "servers.json").list()[0]
-
-    response = client.post(
-        f"/desktop/servers/{server.id}/login",
-        data={
-            "csrf_token": token,
-            "username": "ada",
-            "password": "secret",
-            "remember": "1",
-        },
-        follow_redirects=True,
-    )
-
-    assert "could not save the password" in response.text
-    assert ServerStore(tmp_path / "servers.json").get(server.id).account == ""
-
-
 def test_an_invitation_link_opens_the_desktop_invite_page(tmp_path):
     settings = desktop_settings(tmp_path)
     client = TestClient(make_app(settings))
@@ -645,25 +436,6 @@ def test_a_non_authentik_link_is_not_opened_as_an_invitation(tmp_path):
     )
 
     assert "not an Authentik invitation link" in response.text
-
-
-def test_the_desktop_menu_explains_when_it_cannot_save_passwords(tmp_path):
-    class FailKeyring:
-        name = "fail Keyring"
-
-        def get_keyring(self):
-            return self
-
-    settings = desktop_settings(tmp_path)
-    ServerStore(tmp_path / "servers.json").add("https://table.example.com")
-    app = make_app(settings)
-    app.state.credentials = CredentialStore(backend=FailKeyring())
-    client = TestClient(app)
-
-    page = client.get("/campaigns")
-
-    assert "This computer has no password store" in page.text
-    assert 'name="remember" value="1" checked' not in page.text
 
 
 def test_desktop_info_identifies_a_server_without_exposing_a_secret(tmp_path):

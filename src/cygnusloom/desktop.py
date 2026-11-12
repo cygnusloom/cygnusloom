@@ -2,8 +2,7 @@
 
 The renderer is bundled with the app, so Windows and Linux behave the same and no system
 browser or webview runtime is required. The window is also the desktop client for servers on
-other machines: it remembers their addresses, fills the identity provider's login form from the
-operating system's credential store, and injects a way back to the local main menu.
+other machines: it remembers their addresses and injects a way back to the local device.
 """
 
 from __future__ import annotations
@@ -19,7 +18,6 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlencode, urlsplit
 
-from cygnusloom.desktop_credentials import CredentialStore
 from cygnusloom.desktop_servers import (
     FILE_NAME,
     ServerError,
@@ -88,86 +86,19 @@ def browser_login_url(
     return f"{server_url.rstrip('/')}/desktop/login?{query}"
 
 
-def prefill_script(username: str, password: str) -> str:
-    """Fill the identity provider's visible login fields, without submitting them.
-
-    Authentik renders its stages in open shadow roots, so a plain document query would fill the
-    hidden light-DOM form. Values are only written into empty fields, so a player who edits the
-    username is not overwritten.
-    """
-    return f"""
-    (() => {{
-      const username = {json.dumps(username)};
-      const password = {json.dumps(password)};
-      const userSelector =
-        'input[autocomplete="username"], input[name="username"], input[name="uidField"],' +
-        ' input[type="email"]';
-      const passwordSelector =
-        'input[autocomplete="current-password"], input[type="password"]';
-      const visible = (field) => {{
-        if (!field || field.disabled || field.type === 'hidden') return false;
-        const style = window.getComputedStyle(field);
-        return (
-          field.offsetWidth > 0 ||
-          field.offsetHeight > 0 ||
-          field.getClientRects().length > 0
-        ) && style.visibility !== 'hidden' && style.display !== 'none';
-      }};
-      const collect = () => {{
-        const roots = [document];
-        const fields = [];
-        for (let index = 0; index < roots.length; index += 1) {{
-          const root = roots[index];
-          fields.push(...root.querySelectorAll('input'));
-          for (const element of root.querySelectorAll('*')) {{
-            if (element.shadowRoot) roots.push(element.shadowRoot);
-          }}
-        }}
-        return {{ roots, fields }};
-      }};
-      const shadowOnly = !!document.querySelector('ak-flow-executor');
-      let ticks = 0;
-      const find = (selector) => {{
-        const shadow = collect();
-        const match = shadow.fields.find(
-          (field) => field.matches(selector) && visible(field)
-        );
-        if (match) return match;
-        // Authentik's hidden light-DOM form is not the visible stage; wait for its flow
-        // component. Other providers fall back to the document after a short wait.
-        if (shadowOnly) return null;
-        if (shadow.roots.length && ticks < 200) return null;
-        return [...document.querySelectorAll(selector)].find(visible) || null;
-      }};
-      const setValue = (field, value) => {{
-        if (!field || field.value) return;
-        const setter =
-          Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
-        setter.call(field, value);
-        field.dispatchEvent(new Event('input', {{bubbles: true}}));
-        field.dispatchEvent(new Event('change', {{bubbles: true}}));
-      }};
-      const fill = () => {{
-        const user = find(userSelector);
-        const passwordField = find(passwordSelector);
-        setValue(user, username);
-        setValue(passwordField, password);
-        if (++ticks < 800) setTimeout(fill, 150);
-      }};
-      fill();
-    }})();
-    """
-
-
 def return_button_script(local_url: str) -> str:
-    """Fill the prepared desktop slots on a connected server with a way back to the main menu."""
+    """Fill the prepared desktop slots with a native way back to the local device."""
     local = local_url.rstrip("/")
     return f"""
     (() => {{
       const local = {json.dumps(local)};
       if (location.origin === new URL(local).origin) return;
       if (!/^https?:$/.test(location.protocol)) return;
-      const href = local + '/campaigns';
+      const href = local + '/campaigns?desktop_home=1';
+      const goHome = (event) => {{
+        event.preventDefault();
+        console.log('cygnus-desktop:' + JSON.stringify({{ action: 'home' }}));
+      }};
       const fill = (attempt = 0) => {{
         const top = document.getElementById('desktop-slot');
         const side = document.getElementById('desktop-slot-sidebar');
@@ -179,8 +110,9 @@ def return_button_script(local_url: str) -> str:
           const link = document.createElement('a');
           link.className = 'desktop-home';
           link.href = href;
-          link.textContent = '\\u2190 Main menu';
-          link.title = 'Return to the Cygnus Loom main menu';
+          link.textContent = '\\u2190 Return to my device';
+          link.title = 'Return to Cygnus Loom on this device';
+          link.addEventListener('click', goHome);
           top.replaceChildren(link);
           top.hidden = false;
         }}
@@ -188,8 +120,9 @@ def return_button_script(local_url: str) -> str:
           const link = document.createElement('a');
           link.className = 'sidebar-item';
           link.href = href;
-          link.title = 'Main menu';
-          link.setAttribute('aria-label', 'Main menu');
+          link.title = 'Return to my device';
+          link.setAttribute('aria-label', 'Return to my device');
+          link.addEventListener('click', goHome);
           link.innerHTML =
             '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none"' +
             ' stroke="currentColor" stroke-width="1.8" stroke-linecap="round"' +
@@ -215,28 +148,39 @@ def desktop_sentinel_script(local_origin: str) -> str:
     """Tell the local main-menu page that it runs inside the desktop window.
 
     QtWebEngine refuses to load ``qrc:///`` scripts from HTTP pages, so page-to-window actions use
-    a prefixed console message instead of a QWebChannel. The window only accepts them while the
-    page is on its own local origin.
+    a prefixed console message instead of a QWebChannel. The window accepts menu actions only while
+    the page is on its own local origin, except the harmless home action.
     """
     return f"if (location.origin === {json.dumps(local_origin)}) window.__cygnusDesktop = true;"
 
 
-def parse_desktop_action(payload: object) -> tuple[str, str, bool] | None:
-    """Validate one action from the local menu: ``(action, value, saved_login)``."""
+def parse_desktop_action(payload: object) -> tuple[str, str] | None:
+    """Validate one action from a menu: ``(action, value)``."""
     if not isinstance(payload, dict):
         return None
     action = payload.get("action")
     server = payload.get("server")
     invite = payload.get("url")
     if action == "connect" and isinstance(server, str) and server:
-        return ("connect", server, True)
+        return ("connect", server)
     if action == "login" and isinstance(server, str) and server:
-        return ("login", server, bool(payload.get("saved", True)))
+        return ("login", server)
     if action == "browser" and isinstance(server, str) and server:
-        return ("browser", server, True)
+        return ("browser", server)
     if action == "invite" and isinstance(invite, str) and invite:
-        return ("invite", invite, True)
+        return ("invite", invite)
+    if action == "home":
+        return ("home", "")
     return None
+
+
+def needs_device_bar(page_origin: str, local_origin: str, has_desktop_controls: bool) -> bool:
+    """Whether the window needs its native way back to the local device."""
+    if not page_origin:
+        return True
+    if page_origin == local_origin:
+        return False
+    return not has_desktop_controls
 
 
 def parse_add_action(payload: object) -> tuple[str, str] | None:
@@ -355,7 +299,17 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
             QWebEngineSettings,
         )
         from PySide6.QtWebEngineWidgets import QWebEngineView
-        from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox
+        from PySide6.QtWidgets import (
+            QApplication,
+            QFrame,
+            QHBoxLayout,
+            QLabel,
+            QMainWindow,
+            QMessageBox,
+            QPushButton,
+            QVBoxLayout,
+            QWidget,
+        )
     except ImportError as exc:  # pragma: no cover - exercised by the packaged build
         raise DesktopUnavailable(
             "The desktop edition needs PySide6. Install it with "
@@ -364,7 +318,6 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
 
     local_origin = origin_of(url)
     servers = ServerStore(data_dir / FILE_NAME)
-    credentials = CredentialStore()
 
     class LocalPage(QWebEnginePage):
         """Keep app pages in the window and send other sites to the system browser."""
@@ -411,16 +364,14 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
             super().__init__()
             self.local_origin = local_origin
             self.current_server_id = ""
-            self.pending_login_id = ""
             self.browser_server_id = ""
-            self.fill_saved = True
             self.invite_pending = False
             self.invite_origin = ""
             self.invite_probed: set[str] = set()
             self.invite_replies: set[Any] = set()
             self.add_replies: set[Any] = set()
             self.loopback: LoopbackReceiver | None = None
-            self._credential_warning_shown = False
+            self._local_reloads = 0
             self.setWindowTitle(title)
             self.setWindowIcon(icon)
             self.view = QWebEngineView(self)
@@ -428,7 +379,34 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
             self.page.desktop_handler = self._desktop_action
             self.page.invite_navigation = lambda: self.invite_pending
             self.view.setPage(self.page)
-            self.setCentralWidget(self.view)
+            self.escape_bar = QFrame(self)
+            self.escape_bar.setObjectName("device-bar")
+            bar_layout = QHBoxLayout(self.escape_bar)
+            bar_layout.setContentsMargins(12, 8, 12, 8)
+            bar_layout.setSpacing(10)
+            self.home_button = QPushButton("\u2190 Return to my device", self.escape_bar)
+            self.home_button.setObjectName("device-home")
+            self.home_button.clicked.connect(lambda: self.go_home())
+            self.escape_label = QLabel("", self.escape_bar)
+            self.escape_label.setObjectName("device-label")
+            bar_layout.addWidget(self.home_button)
+            bar_layout.addWidget(self.escape_label, 1)
+            self.escape_bar.setStyleSheet(
+                "QFrame#device-bar { background: #1a1d25;"
+                " border-bottom: 1px solid #2d3242; }"
+                "QLabel#device-label { color: #9aa3b5; }"
+                "QPushButton#device-home { color: #e8e8ec; background: #272d3c;"
+                " border: 1px solid #3a4257; border-radius: 6px; padding: 6px 12px; }"
+                "QPushButton#device-home:hover { background: #333b4e; }"
+            )
+            self.escape_bar.hide()
+            self.shell = QWidget(self)
+            shell_layout = QVBoxLayout(self.shell)
+            shell_layout.setContentsMargins(0, 0, 0, 0)
+            shell_layout.setSpacing(0)
+            shell_layout.addWidget(self.escape_bar)
+            shell_layout.addWidget(self.view, 1)
+            self.setCentralWidget(self.shell)
             self.view.settings().setAttribute(
                 QWebEngineSettings.WebAttribute.PlaybackRequiresUserGesture, False
             )
@@ -464,6 +442,38 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
             ):
                 self.report_activation()
 
+        def go_home(self) -> None:
+            self.stop_browser_login()
+            self.current_server_id = ""
+            self.invite_pending = False
+            self.invite_origin = ""
+            self.invite_probed = set()
+            self.escape_bar.hide()
+            self.view.setUrl(
+                QUrl(f"{self.local_origin}/campaigns?desktop_home={secrets.token_urlsafe(6)}")
+            )
+
+        def _ensure_desktop_bridge(self, has_bridge: object) -> None:
+            if origin_of(self.view.url().toString()) != self.local_origin:
+                return
+            if has_bridge:
+                self._local_reloads = 0
+                return
+            if self._local_reloads >= 1:
+                return
+            self._local_reloads += 1
+            self.view.setUrl(
+                QUrl(f"{self.local_origin}/campaigns?desktop_home={secrets.token_urlsafe(6)}")
+            )
+
+        def _set_device_bar(self, origin: str, has_desktop_controls: object) -> None:
+            if origin != origin_of(self.view.url().toString()):
+                return
+            self.escape_label.setText(urlsplit(origin).netloc if origin else "")
+            self.escape_bar.setVisible(
+                needs_device_bar(origin, self.local_origin, bool(has_desktop_controls))
+            )
+
         def _install_script(self, name: str, source: str, point) -> None:
             script = QWebEngineScript()
             script.setName(name)
@@ -474,20 +484,23 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
             self.page.scripts().insert(script)
 
         def _desktop_action(self, payload: object) -> None:
+            action = parse_desktop_action(payload)
+            if action is not None and action[0] == "home":
+                self.go_home()
+                return
             if origin_of(self.page.url().toString()) != self.local_origin:
                 return
             add = parse_add_action(payload)
             if add is not None:
                 self.add_server(*add)
                 return
-            action = parse_desktop_action(payload)
             if action is None:
                 return
-            name, value, saved = action
+            name, value = action
             if name == "connect":
                 self.connect_server(value)
             elif name == "login":
-                self.login_server(value, saved)
+                self.login_server(value)
             elif name == "browser":
                 self.login_with_browser(value)
             elif name == "invite":
@@ -522,18 +535,14 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
             if server is None:
                 return
             self.current_server_id = server.id
-            self.pending_login_id = ""
-            self.fill_saved = True
             self._touch(server.id)
             self.view.setUrl(QUrl(f"{server.url}/campaigns"))
 
-        def login_server(self, server_id: str, use_saved: bool) -> None:
+        def login_server(self, server_id: str) -> None:
             server = self._server(server_id)
             if server is None:
                 return
             self.current_server_id = server.id
-            self.pending_login_id = server.id if use_saved else ""
-            self.fill_saved = bool(use_saved)
             self._touch(server.id)
             path = "/auth/login" if server.oidc_issuer else "/login"
             self.view.setUrl(QUrl(f"{server.url}{path}"))
@@ -596,8 +605,6 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
                 QMessageBox.warning(self, title, str(exc))
                 return
             self.current_server_id = server.id
-            self.pending_login_id = ""
-            self.fill_saved = True
             self.statusBar().showMessage(f"Added {server.name}.", 8000)
             self.view.setUrl(QUrl(f"{self.local_origin}/campaigns"))
 
@@ -618,7 +625,6 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
             self.loopback = receiver
             self.browser_server_id = server.id
             self.current_server_id = server.id
-            self.fill_saved = True
             QTimer.singleShot(BROWSER_LOGIN_SECONDS * 1000, lambda: self._browser_timeout(receiver))
             if not QDesktopServices.openUrl(
                 QUrl(browser_login_url(server.url, redirect_uri, state))
@@ -651,8 +657,6 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
             server = self._server(self.browser_server_id)
             if server is None:
                 return
-            self.pending_login_id = server.id
-            self.fill_saved = True
             self.view.setUrl(QUrl(f"{server.url}/desktop/session?{urlencode({'code': code})}"))
 
         def open_invite(self, invite_url: str) -> None:
@@ -665,39 +669,43 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
             self.invite_origin = origin_of(value)
             self.invite_probed = set()
             self.current_server_id = ""
-            self.pending_login_id = ""
-            self.fill_saved = True
             self.view.setUrl(QUrl(value))
 
         def _page_loaded(self, ok: bool) -> None:
             if not ok:
+                self.escape_label.setText(urlsplit(origin_of(self.view.url().toString())).netloc)
+                self.escape_bar.show()
                 return
             page_origin = origin_of(self.view.url().toString())
             if not page_origin:
+                self.escape_bar.show()
                 return
             if page_origin == self.local_origin:
+                self.escape_bar.hide()
                 self.current_server_id = ""
-                self.pending_login_id = ""
                 self.invite_pending = False
                 self.invite_origin = ""
-                self.fill_saved = True
+                self.page.runJavaScript(
+                    "window.__cygnusDesktop === true",
+                    self._ensure_desktop_bridge,
+                )
                 return
             self.page.runJavaScript(return_button_script(url))
+            self.page.runJavaScript(
+                "(() => {"
+                " const top = document.getElementById('desktop-slot');"
+                " if (top && !top.hidden && top.querySelector('a')) return true;"
+                " const side = document.getElementById('desktop-slot-sidebar');"
+                " return !!(side && !side.hidden && side.querySelector('a'));"
+                "})()",
+                lambda has_controls, origin=page_origin: self._set_device_bar(origin, has_controls),
+            )
             if self.invite_pending and page_origin != self.invite_origin:
                 self._probe_invite(page_origin)
             server = self._server_at(page_origin)
             if server is not None:
                 self.current_server_id = server.id
-                if not self._is_login_path(self.view.url().toString()):
-                    self.pending_login_id = ""
-                self.fill_saved = True
                 return
-            login_server = self._login_server()
-            if login_server is None or not login_server.oidc_issuer:
-                return
-            if page_origin != origin_of(login_server.oidc_issuer):
-                return
-            self._fill_login(login_server)
 
         def _server_at(self, page_origin: str):
             try:
@@ -707,32 +715,6 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
             except Exception:  # noqa: BLE001 - a broken list must not break the page
                 return None
             return None
-
-        def _login_server(self):
-            if not self.pending_login_id:
-                return None
-            try:
-                return servers.get(self.pending_login_id)
-            except ServerError:
-                return None
-
-        @staticmethod
-        def _is_login_path(page_url: str) -> bool:
-            return urlsplit(page_url).path.startswith(("/login", "/auth/login", "/auth/callback"))
-
-        def _fill_login(self, server) -> None:
-            if not self.fill_saved:
-                return
-            try:
-                credential = credentials.get(server.url)
-            except Exception as exc:  # noqa: BLE001 - the keyring is local and optional
-                if not self._credential_warning_shown:
-                    self._credential_warning_shown = True
-                    self.statusBar().showMessage(str(exc), 10000)
-                return
-            if credential is None:
-                return
-            self.page.runJavaScript(prefill_script(credential.username, credential.password))
 
         def _probe_invite(self, page_origin: str) -> None:
             if page_origin in self.invite_probed:
@@ -772,10 +754,8 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
                 self.statusBar().showMessage(str(exc), 8000)
                 return
             self.current_server_id = server.id
-            self.pending_login_id = ""
             self.invite_pending = False
             self.invite_origin = ""
-            self.fill_saved = True
             self.statusBar().showMessage(f"Added {server.name}.", 8000)
 
     app = QApplication.instance() or QApplication(sys.argv[:1])

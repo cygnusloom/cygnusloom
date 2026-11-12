@@ -10,19 +10,16 @@ wizard. Everything runs on your machine: the app creates a local SQLite database
 as the local administrator, and asks for one language model. There is no identity provider,
 Docker, or Python install.
 
-The same window is a client for Cygnus Loom servers on other machines. Under **Servers** on the
-main menu, add a server by its address (for example `https://table.example.com`) or paste an
+The same window is a client for Cygnus Loom servers on other machines. Under **Play on a
+Server** on the main menu, add a server by its address (for example `https://table.example.com`) or paste an
 Authentik invitation link. Connecting shows the server's own campaigns and accounts in the same
-window; a **Main menu** button in the top bar and the campaign sidebar returns to your local
-campaigns. You can sign in on the server's embedded login pages, or choose **Log in with
+window; a **Return to my device** button in the top bar and the campaign sidebar returns to your
+local campaigns. You can sign in on the server's embedded login pages, or choose **Log in with
 browser** to finish the sign-in in your usual browser and hand the session back to the app.
 
-When you save a login, the identity provider's username and password go to this computer's
-credential store (Windows Credential Manager, macOS Keychain, or the Linux Secret Service), never
-to the game server. The desktop app fills the provider's login form; accounts, passwords, MFA,
-and password reset stay with the identity provider. If the computer has no credential store, the
-app still plays but does not remember passwords. Remote addresses must use HTTPS; plain HTTP is
-accepted only for this machine.
+Server sign-ins live in the app window's cookie jar on this device. Passwords are entered only
+on the identity provider's page; Cygnus Loom never stores them. Remote addresses must use HTTPS;
+plain HTTP is accepted only for this machine.
 
 - Data lives in `%LOCALAPPDATA%\CygnusLoom` on Windows and
   `${XDG_DATA_HOME:-~/.local/share}/cygnusloom` on Linux. The server list lives in

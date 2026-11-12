@@ -39,8 +39,6 @@ for distribution in ("PySide6", "PySide6-Essentials", "PySide6-Addons", "PySide6
 
 hiddenimports = collect_submodules("cygnusloom")
 hiddenimports += collect_submodules("uvicorn")
-# The credential store selects a platform backend at runtime.
-hiddenimports += collect_submodules("keyring")
 hiddenimports += [
     "PySide6.QtNetwork",
     "PySide6.QtWebEngineCore",

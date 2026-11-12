@@ -19,7 +19,6 @@ from cygnusloom.auth.ratelimit import RateLimiter
 from cygnusloom.config import Settings, load_settings
 from cygnusloom.content.library import ContentLibrary
 from cygnusloom.db.session import create_schema, make_engine
-from cygnusloom.desktop_credentials import CredentialStore
 from cygnusloom.llm.catalog import ModelCatalog
 from cygnusloom.llm.fake import FakeProvider
 from cygnusloom.llm.registry import ProviderFactory
@@ -69,9 +68,6 @@ def create_app(
     app.state.limiter = RateLimiter()
     app.state.typing = TypingRegistry()
     app.state.turn_jobs = TurnJobRegistry()
-    # The desktop app's saved server logins. Reading the keyring is lazy, so a normal server
-    # never needs the desktop extra.
-    app.state.credentials = CredentialStore()
     app.state.oidc = (
         None
         if settings.single_player

@@ -1,9 +1,13 @@
 {% extends "base.html" %}
 {% block title %}Campaigns{% endblock %}
 {% block content %}
+  {% if desktop %}
+  <h1 class="play-heading">Play on your Computer</h1>
+  <p class="play-subtitle">These campaigns live on this device.</p>
+  {% endif %}
   <section class="card">
     <div class="heading">
-      <h1>Campaigns</h1>
+      {% if desktop %}<h2>Your campaigns</h2>{% else %}<h1>Campaigns</h1>{% endif %}
       <a class="button" href="/campaigns/new">New campaign</a>
     </div>
     {% if campaigns %}
@@ -46,14 +50,32 @@
     {% endif %}
   </section>
 
+  <section class="card">
+    <h2>Import a campaign</h2>
+    <p class="muted">
+      A campaign file contains the whole event log: characters, maps, notes, objects, and the
+      journal. Importing it creates a new campaign for your account on this server.
+    </p>
+    <form method="post" action="/campaigns/import" enctype="multipart/form-data"
+          class="campaign-import">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label>Campaign file
+        <input type="file" name="file" accept="application/json,.json" required>
+      </label>
+      <button type="submit">Import campaign</button>
+    </form>
+  </section>
+
   {% if desktop %}
+  <h2 class="play-heading">Play on a Server</h2>
+  <p class="play-subtitle">Join a game hosted on another Cygnus Loom server.</p>
   <section class="card" id="servers">
     <div class="heading">
       <h2>Servers</h2>
     </div>
     <p class="muted">
-      Play on another Cygnus Loom server. Your campaigns above stay on this device; a server
-      keeps its own campaigns and accounts.
+      Your computer's campaigns stay on this device; a server keeps its own campaigns and
+      accounts.
     </p>
     {% if servers %}
       <ul class="servers">
@@ -62,7 +84,6 @@
             <div class="server-row">
               <span class="server-name">{{ server.name }}</span>
               <span class="server-url">{{ server.url }}</span>
-              {% if server.account %}<span class="tag">saved login: {{ server.account }}</span>{% endif %}
               <span class="server-actions">
                 <button type="button" class="secondary" data-desktop-connect="{{ server.id }}">Connect</button>
                 <button type="button" class="secondary" data-desktop-login="{{ server.id }}">Log in</button>
@@ -70,34 +91,7 @@
               </span>
             </div>
             <details class="server-settings">
-              <summary>Login and server settings</summary>
-              <form method="post" action="/desktop/servers/{{ server.id }}/login" class="server-login-form">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                <p class="muted">
-                  Saving a password keeps it in this computer's credential store. Cygnus Loom
-                  fills it into the identity provider's login page; the game server never
-                  receives it.
-                </p>
-                <label>Username <input name="username" value="{{ server.account }}" autocomplete="username" required maxlength="120"></label>
-                <label>Password <input type="password" name="password" autocomplete="current-password" required></label>
-                <label class="check">
-                  <input type="checkbox" name="remember" value="1"{% if credentials_available %} checked{% endif %}>
-                  Save the password for this server
-                </label>
-                {% if not credentials_available %}
-                <p class="muted">
-                  This computer has no password store. Uncheck the box and type the password on
-                  the identity provider's page instead.
-                </p>
-                {% endif %}
-                <button type="submit">Save and log in</button>
-              </form>
-              {% if server.account %}
-              <form method="post" action="/desktop/servers/{{ server.id }}/forget" class="server-inline-form">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                <button type="submit" class="secondary">Forget saved password</button>
-              </form>
-              {% endif %}
+              <summary>Server settings</summary>
               <form method="post" action="/desktop/servers/{{ server.id }}/rename" class="server-inline-form">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <label>Name <input name="name" value="{{ server.name }}" required maxlength="120"></label>
@@ -142,22 +136,6 @@
     </p>
   </section>
   {% endif %}
-
-  <section class="card">
-    <h2>Import a campaign</h2>
-    <p class="muted">
-      A campaign file contains the whole event log: characters, maps, notes, objects, and the
-      journal. Importing it creates a new campaign for your account on this server.
-    </p>
-    <form method="post" action="/campaigns/import" enctype="multipart/form-data"
-          class="campaign-import">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <label>Campaign file
-        <input type="file" name="file" accept="application/json,.json" required>
-      </label>
-      <button type="submit">Import campaign</button>
-    </form>
-  </section>
 {% endblock %}
 {% block scripts %}
   {% if desktop %}<script src="/static/desktop.js"></script>{% endif %}

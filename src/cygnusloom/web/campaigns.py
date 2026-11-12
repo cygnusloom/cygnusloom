@@ -151,13 +151,11 @@ def campaigns_page(request: Request) -> Response:
     campaigns = visible_campaigns(request.app.state.engine, user.id)
     store = optional_server_store(request.app.state.settings)
     servers = store.list() if store is not None else []
-    credentials_available = request.app.state.credentials.available() if store is not None else True
     return render(
         request,
         "campaigns.html",
         campaigns=campaigns,
         servers=servers,
-        credentials_available=credentials_available,
     )
 
 

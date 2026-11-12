@@ -1,8 +1,7 @@
 """The desktop app's list of remote Cygnus Loom servers.
 
 The list belongs to this device rather than to any server. It holds addresses, labels, and the
-identity provider's address; passwords live in the operating system's credential store instead
-(see ``desktop_credentials``). Both the local server thread and the Qt window read this file, so
+identity provider's address. Both the local server thread and the Qt window read this file, so
 writes are atomic and serialized in the process.
 """
 
@@ -23,7 +22,6 @@ from urllib.parse import urlsplit, urlunsplit
 FILE_NAME = "servers.json"
 MAX_SERVERS = 50
 MAX_NAME = 120
-MAX_ACCOUNT = 120
 _FORMAT_VERSION = 1
 _LOCK = threading.RLock()
 _LOG = logging.getLogger(__name__)
@@ -35,13 +33,11 @@ class ServerError(Exception):
 
 @dataclass(frozen=True)
 class Server:
-    """One remote server. ``url`` is a normalized origin such as ``https://table.example.com``.
-    ``account`` is the username whose password was saved, for display only."""
+    """One remote server. ``url`` is a normalized origin such as ``https://table.example.com``."""
 
     id: str
     url: str
     name: str
-    account: str = ""
     oidc_issuer: str = ""
     created_at: str = ""
     last_used_at: str = ""
@@ -169,9 +165,6 @@ def _server_from_mapping(row: object) -> Server | None:
         id=server_id,
         url=url,
         name=clean_name(row.get("name") if isinstance(row.get("name"), str) else "", url),
-        account=clean_name(row.get("account") if isinstance(row.get("account"), str) else "", "")[
-            :MAX_ACCOUNT
-        ],
         oidc_issuer=origin_of(
             row.get("oidc_issuer") if isinstance(row.get("oidc_issuer"), str) else ""
         ),
@@ -251,9 +244,6 @@ class ServerStore:
             if len(remaining) == len(servers):
                 raise ServerError("That server is not in the list.")
             self._write(remaining)
-
-    def set_account(self, server_id: str, account: str) -> Server:
-        return self._update(server_id, account=clean_name(account, "")[:MAX_ACCOUNT])
 
     def set_issuer(self, server_id: str, issuer: str) -> Server:
         return self._update(server_id, oidc_issuer=origin_of(issuer))

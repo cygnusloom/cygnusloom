@@ -37,7 +37,6 @@ from cygnusloom.auth.deps import (
     verify_csrf,
 )
 from cygnusloom.db.models import DesktopLogin, User, utcnow
-from cygnusloom.desktop_credentials import CredentialUnavailable
 from cygnusloom.desktop_servers import (
     FILE_NAME,
     ServerError,
@@ -260,55 +259,6 @@ async def open_invite(request: Request) -> Response:
     return _no_store(render(request, "desktop_invite.html", invite_url=invite_url))
 
 
-@router.post("/servers/{server_id}/login")
-async def save_login(request: Request, server_id: str) -> Response:
-    store = server_store(request.app.state.settings)
-    await verify_csrf(request)
-    server = store.get(server_id)
-    form = await request.form()
-    username = form_text(form, "username").strip()
-    password = form_text(form, "password")
-    remember = form_text(form, "remember") == "1"
-    if not username or not password:
-        _flash(request, "Enter both the username and the password.", "error")
-        return RedirectResponse("/campaigns", status_code=303)
-    if remember:
-        try:
-            request.app.state.credentials.save(server.url, username, password)
-        except CredentialUnavailable as exc:
-            _flash(request, str(exc), "error")
-            return RedirectResponse("/campaigns", status_code=303)
-        store.set_account(server.id, username)
-    else:
-        try:
-            request.app.state.credentials.delete(server.url)
-        except CredentialUnavailable:
-            pass
-        store.set_account(server.id, "")
-    query = urlencode(
-        {
-            "desktop_login": server.id,
-            "desktop_remember": "1" if remember else "0",
-        }
-    )
-    return RedirectResponse(f"/campaigns?{query}", status_code=303)
-
-
-@router.post("/servers/{server_id}/forget")
-async def forget_login(request: Request, server_id: str) -> Response:
-    store = server_store(request.app.state.settings)
-    await verify_csrf(request)
-    server = store.get(server_id)
-    try:
-        request.app.state.credentials.delete(server.url)
-    except CredentialUnavailable as exc:
-        _flash(request, str(exc), "error")
-        return RedirectResponse("/campaigns", status_code=303)
-    store.set_account(server.id, "")
-    _flash(request, f"Forgot the saved login for {server.name}.", "info")
-    return RedirectResponse("/campaigns", status_code=303)
-
-
 @router.post("/servers/{server_id}/rename")
 async def rename_server(request: Request, server_id: str) -> Response:
     store = server_store(request.app.state.settings)
@@ -333,10 +283,6 @@ async def remove_server(request: Request, server_id: str) -> Response:
     except ServerError as exc:
         _flash(request, str(exc), "error")
         return RedirectResponse("/campaigns", status_code=303)
-    try:
-        request.app.state.credentials.delete(server.url)
-    except CredentialUnavailable:
-        pass
     _flash(request, f"Removed {server.name} from this computer.", "info")
     return RedirectResponse("/campaigns", status_code=303)
 

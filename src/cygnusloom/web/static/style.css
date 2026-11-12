@@ -120,6 +120,14 @@ button.secondary:hover, button.secondary:focus-visible,
 
 [role="alert"] { color: var(--danger); }
 .muted { color: var(--muted); }
+.play-heading {
+  margin: 1.75rem 0 0.35rem;
+  font-size: clamp(1.8rem, 3vw, 2.6rem);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+.play-heading:first-of-type { margin-top: 0.25rem; }
+.play-subtitle { margin: 0 0 1rem; color: var(--muted); max-width: 60ch; }
 
 .campaigns { list-style: none; padding: 0; }
 .campaigns li { padding: 0.5rem 0; border-bottom: 1px solid var(--border); }
@@ -154,7 +162,6 @@ button.secondary:hover, button.secondary:focus-visible,
 .server-actions { display: flex; flex-wrap: wrap; gap: 0.4rem; flex: none; }
 .server-settings { margin-top: 0.5rem; }
 .server-settings > summary { cursor: pointer; color: var(--muted); font-size: 0.9rem; }
-.server-login-form { max-width: 32rem; margin-top: 0.5rem; }
 .server-inline-form { display: flex; align-items: flex-end; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; }
 .server-inline-form label { flex: 1 1 14rem; margin: 0; }
 .server-add { display: flex; flex-wrap: wrap; gap: 1.5rem; margin-top: 1rem; }

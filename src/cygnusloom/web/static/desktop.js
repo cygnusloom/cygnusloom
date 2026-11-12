@@ -25,7 +25,7 @@
     button.addEventListener("click", () => send("connect", { server: button.dataset.desktopConnect }));
   });
   document.querySelectorAll("[data-desktop-login]").forEach((button) => {
-    button.addEventListener("click", () => send("login", { server: button.dataset.desktopLogin, saved: true }));
+    button.addEventListener("click", () => send("login", { server: button.dataset.desktopLogin }));
   });
   document.querySelectorAll("[data-desktop-browser]").forEach((button) => {
     button.addEventListener("click", () => send("browser", { server: button.dataset.desktopBrowser }));
@@ -38,17 +38,6 @@
       const data = new FormData(addForm);
       send("add", { url: data.get("url"), name: data.get("name") });
     });
-  }
-
-  const params = new URLSearchParams(window.location.search);
-  const loginServer = params.get("desktop_login");
-  if (loginServer) {
-    const saved = params.get("desktop_remember") !== "0";
-    params.delete("desktop_login");
-    params.delete("desktop_remember");
-    const query = params.toString();
-    history.replaceState(null, "", `${location.pathname}${query ? `?${query}` : ""}`);
-    send("login", { server: loginServer, saved });
   }
 
   const invite = document.querySelector("[data-desktop-invite]");
