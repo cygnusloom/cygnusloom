@@ -35,6 +35,8 @@ from cygnusloom.services.music import (
     scene_key,
     validate_manifest,
 )
+from cygnusloom.services.prompts import state_instruction
+from tests.conftest import bundled_library
 from tests.factories import campaign_ready_fast, send_message
 
 
@@ -183,6 +185,15 @@ def test_sorrow_is_for_a_party_with_no_character_left_in_play():
 
 def test_music_cues_are_hidden_from_the_transcript():
     assert is_hidden("music.cued")
+
+
+def test_every_shipped_rule_set_tells_the_gm_to_cue_music():
+    """Music is handled by its own core prompt, not the turn checklist. The GM cues a mood
+    only when the scene changes, and the engine derives combat, social, and night moods."""
+    for rule_set in bundled_library().rule_sets.values():
+        text = state_instruction(rule_set)
+        assert "Background music follows the mood of the scene" in text
+        assert "set_music" in text
 
 
 def test_the_gm_can_cue_music_and_the_page_renders_it(
