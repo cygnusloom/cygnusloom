@@ -1,6 +1,11 @@
 from __future__ import annotations
 
+import logging
+import sys
+import threading
 from pathlib import Path
+
+import pytest
 
 from cygnusloom import cli, desktop, launcher
 
@@ -45,6 +50,78 @@ def test_one_process_holds_the_instance_lock(tmp_path):
 def test_free_port_is_usable():
     port = launcher._free_port("127.0.0.1")
     assert 1 <= port <= 65535
+
+
+@pytest.fixture
+def root_logging():
+    """Restore the process-wide logging setup after a test starts the app's loggers."""
+    root = logging.getLogger()
+    handlers = root.handlers[:]
+    level = root.level
+    access_level = logging.getLogger("uvicorn.access").level
+    yield
+    for handler in root.handlers[:]:
+        if handler not in handlers:
+            root.removeHandler(handler)
+            handler.close()
+    root.handlers[:] = handlers
+    root.setLevel(level)
+    logging.getLogger("uvicorn.access").setLevel(access_level)
+
+
+def test_a_run_logs_to_stdout_and_its_own_file(tmp_path, root_logging, capsys):
+    path = launcher._configure_logging(tmp_path, "INFO")
+
+    logging.getLogger("cygnusloom.test").info("hello from the server")
+    for handler in logging.getLogger().handlers:
+        handler.flush()
+
+    assert path.parent == launcher.logs_dir(tmp_path)
+    assert path.name.startswith(launcher.RUN_LOG_PREFIX)
+    assert "hello from the server" in capsys.readouterr().out
+    assert "hello from the server" in path.read_text(encoding="utf-8")
+
+
+def test_only_the_last_ten_runs_are_kept(tmp_path, root_logging):
+    directory = launcher.logs_dir(tmp_path)
+    directory.mkdir(parents=True)
+    names = [f"run-20200101-0000{index:02d}-000000-1.log" for index in range(12)]
+    for name in names:
+        (directory / name).write_text("old run\n", encoding="utf-8")
+
+    path = launcher._configure_logging(tmp_path, "INFO")
+
+    runs = sorted(directory.glob("run-*.log"))
+    assert len(runs) == launcher.RUN_LOGS_KEPT
+    assert runs[-1] == path
+    assert not (directory / names[0]).exists()
+    assert not (directory / names[2]).exists()
+    assert (directory / names[3]).exists()
+
+
+def test_uncaught_exceptions_are_logged(tmp_path, root_logging, monkeypatch):
+    path = launcher._configure_logging(tmp_path, "INFO")
+    monkeypatch.setattr(sys, "excepthook", sys.excepthook)
+    monkeypatch.setattr(threading, "excepthook", threading.excepthook)
+    launcher._install_exception_logging()
+
+    try:
+        raise ValueError("main boom")
+    except ValueError:
+        sys.excepthook(*sys.exc_info())
+    threading.excepthook(
+        threading.ExceptHookArgs(
+            (ValueError, ValueError("thread boom"), None, threading.current_thread())
+        )
+    )
+    for handler in logging.getLogger().handlers:
+        handler.flush()
+
+    text = path.read_text(encoding="utf-8")
+    assert "CRITICAL cygnusloom.uncaught: uncaught exception" in text
+    assert "ValueError: main boom" in text
+    assert "CRITICAL cygnusloom.uncaught: uncaught exception in thread MainThread" in text
+    assert "ValueError: thread boom" in text
 
 
 class _FakeSettings:

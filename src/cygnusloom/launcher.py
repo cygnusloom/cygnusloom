@@ -14,19 +14,23 @@ import subprocess
 import sys
 import threading
 from collections.abc import MutableMapping
-from logging.handlers import RotatingFileHandler
+from datetime import datetime
 from pathlib import Path
 
 import uvicorn
 from alembic import command as alembic_command
 
+from cygnusloom import __version__
 from cygnusloom.cli import migration_config
 from cygnusloom.desktop import DesktopUnavailable, run_window
 
 APP_TITLE = "Cygnus Loom"
 LOG_FORMAT = "%(asctime)s %(levelname)s %(name)s: %(message)s"
-MAX_LOG_BYTES = 2_000_000
-LOG_BACKUPS = 3
+LOG_DIR_NAME = "logs"
+RUN_LOG_PREFIX = "run-"
+RUN_LOG_SUFFIX = ".log"
+# One log file per run; old runs are discarded so diagnostics stay bounded.
+RUN_LOGS_KEPT = 10
 START_TIMEOUT_SECONDS = 30
 STOP_TIMEOUT_SECONDS = 10
 # Qt/PySide6 require at most this GLIBCXX version. A newer host is backward compatible.
@@ -63,26 +67,87 @@ def _secret_key(root: Path) -> str:
     path.write_text(value, encoding="utf-8")
     try:
         path.chmod(0o600)
-    except OSError:
-        pass
+    except OSError as exc:
+        logging.getLogger(__name__).debug("could not restrict %s to the owner: %s", path, exc)
     return value
 
 
-def _configure_logging(root: Path, level: str) -> None:
-    log_dir = root / "logs"
-    log_dir.mkdir(parents=True, exist_ok=True)
-    handler = RotatingFileHandler(
-        log_dir / "cygnusloom.log",
-        maxBytes=MAX_LOG_BYTES,
-        backupCount=LOG_BACKUPS,
-        encoding="utf-8",
+def logs_dir(root: Path) -> Path:
+    """Where the desktop app keeps one log file per run."""
+    return root / LOG_DIR_NAME
+
+
+def _run_log_path(root: Path) -> Path:
+    """A fresh log file for this run. The fixed-width timestamp keeps name order = run order."""
+    directory = logs_dir(root)
+    directory.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S-%f")
+    return directory / f"{RUN_LOG_PREFIX}{stamp}-{os.getpid()}{RUN_LOG_SUFFIX}"
+
+
+def _prune_run_logs(directory: Path, keep: int = RUN_LOGS_KEPT) -> None:
+    """Keep only the newest ``keep`` run logs. A failed delete is reported, not raised, so a
+    locked file from another process never stops the app from starting."""
+    runs = sorted(directory.glob(f"{RUN_LOG_PREFIX}*{RUN_LOG_SUFFIX}"))
+    for path in runs[: max(0, len(runs) - keep)]:
+        try:
+            path.unlink()
+        except OSError as exc:
+            logging.getLogger(__name__).warning("could not remove the old log %s: %s", path, exc)
+
+
+def _configure_logging(root: Path, level: str) -> Path:
+    """Log this run's backend and page output to a fresh file and to stdout.
+
+    One file per run under ``<data dir>/logs`` (the newest ten runs are kept) makes a past
+    session easy to inspect. The console handler writes to stdout so the lines the server and
+    the web page produce are visible when the app is started from a terminal.
+    """
+    path = _run_log_path(root)
+    handlers: list[logging.Handler] = [logging.FileHandler(path, encoding="utf-8")]
+    # A windowed build may have no console at all; the file still has everything.
+    stream = sys.stdout if sys.stdout is not None else sys.stderr
+    if stream is not None:
+        handlers.append(logging.StreamHandler(stream))
+    logging.basicConfig(
+        level=level.strip().upper(),
+        format=LOG_FORMAT,
+        handlers=handlers,
+        force=True,
     )
-    handlers: list[logging.Handler] = [handler]
-    if sys.stderr is not None:
-        handlers.append(logging.StreamHandler())
-    logging.basicConfig(level=level.strip().upper(), format=LOG_FORMAT, handlers=handlers)
     # The app's own requests are not worth a line each, but failures still are.
     logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
+    _prune_run_logs(path.parent)
+    return path
+
+
+def _install_exception_logging() -> None:
+    """Send uncaught exceptions to the run log.
+
+    A windowed build has no console, so the default stderr traceback would be lost. Qt reports
+    exceptions raised inside its slots through ``sys.excepthook``, and the server runs in a
+    thread, so both hooks are covered.
+    """
+    logger = logging.getLogger("cygnusloom.uncaught")
+
+    def log_uncaught(exc_type, exc_value, exc_tb) -> None:
+        if issubclass(exc_type, KeyboardInterrupt):
+            sys.__excepthook__(exc_type, exc_value, exc_tb)
+            return
+        logger.critical("uncaught exception", exc_info=(exc_type, exc_value, exc_tb))
+
+    def log_thread_uncaught(args: threading.ExceptHookArgs) -> None:
+        if issubclass(args.exc_type, SystemExit):
+            return
+        name = args.thread.name if args.thread is not None else "unknown"
+        logger.critical(
+            "uncaught exception in thread %s",
+            name,
+            exc_info=(args.exc_type, args.exc_value, args.exc_traceback),
+        )
+
+    sys.excepthook = log_uncaught
+    threading.excepthook = log_thread_uncaught
 
 
 def _free_port(host: str) -> int:
@@ -145,7 +210,8 @@ def _library_has_symbol(path: Path, symbol: bytes) -> bool:
     usable, so an unusual system is never blocked by the preflight check."""
     try:
         return symbol in path.read_bytes()
-    except OSError:
+    except OSError as exc:
+        logging.getLogger(__name__).debug("could not read %s: %s", path, exc)
         return True
 
 
@@ -169,8 +235,8 @@ def _show_error(message: str) -> None:
     if sys.platform == "win32":
         try:
             ctypes.windll.user32.MessageBoxW(0, message, APP_TITLE, 0x10)
-        except Exception:  # noqa: BLE001, S110 - a native dialog is best effort
-            pass
+        except Exception:
+            logging.getLogger(__name__).debug("could not show a native error dialog", exc_info=True)
     elif sys.platform.startswith("linux"):
         for command, arguments in (
             ("zenity", ["--error", "--text", message]),
@@ -187,8 +253,10 @@ def _show_error(message: str) -> None:
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
                 )
-            except Exception:  # noqa: BLE001, S110 - a native dialog is best effort
-                pass
+            except Exception:
+                logging.getLogger(__name__).debug(
+                    "could not show a native error dialog with %s", executable, exc_info=True
+                )
             break
     if sys.stderr is not None:
         print(message, file=sys.stderr)
@@ -233,8 +301,8 @@ class _InstanceLock:
             try:
                 self._handle.seek(0)
                 msvcrt.locking(self._handle.fileno(), msvcrt.LK_UNLCK, 1)
-            except OSError:
-                pass
+            except OSError as exc:
+                logging.getLogger(__name__).debug("could not unlock the instance lock: %s", exc)
         self._handle.close()
         self._handle = None
 
@@ -271,8 +339,8 @@ def _read_runtime(root: Path) -> str:
 def _clear_runtime(root: Path) -> None:
     try:
         _runtime_file(root).unlink()
-    except OSError:
-        pass
+    except OSError as exc:
+        logging.getLogger(__name__).debug("could not remove runtime.json: %s", exc)
 
 
 def play(
@@ -294,11 +362,9 @@ def play(
     root.mkdir(parents=True, exist_ok=True, mode=0o700)
     try:
         root.chmod(0o700)
-    except OSError:
-        pass
+    except OSError as exc:
+        logging.getLogger(__name__).debug("could not restrict %s to the owner: %s", root, exc)
     level = (log_level or os.environ.get("CYGNUSLOOM_LOG_LEVEL", "INFO")).strip().upper()
-    _configure_logging(root, level)
-    log = logging.getLogger(__name__)
     lock = _InstanceLock(root / "instance.lock")
     if not lock.acquire():
         running = _read_runtime(root)
@@ -308,6 +374,11 @@ def play(
             else "Cygnus Loom is already running."
         )
         return 0
+    # A second launch that exits above is not a run, so only a real start gets a log file.
+    log_path = _configure_logging(root, level)
+    _install_exception_logging()
+    log = logging.getLogger(__name__)
+    log.info("Cygnus Loom %s starting; data folder %s; log file %s", __version__, root, log_path)
     server: _Server | None = None
     thread: threading.Thread | None = None
     try:
