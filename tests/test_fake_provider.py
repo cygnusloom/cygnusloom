@@ -88,21 +88,47 @@ def test_each_decision_call_takes_the_next_round_then_stops():
     assert _narrate(history) == "Done."
 
 
-def test_a_finished_decision_returns_the_checklist_from_the_system_prompt():
+def test_a_finished_decision_returns_a_finish_state_step_call():
     script = '__FAKE__:{"turns": [{"text": "Narration."}]}'
     messages = [
         {
             "role": "system",
-            "content": "Turn checklist.\n[x] characters: who is here\n[x] movement: where they are",
+            "content": (
+                "Turn checklist. The state step is not finished until every area is checked.\n"
+                "- characters: who is here\n"
+                "- movement: where they are\n\n"
+                "Check each area."
+            ),
         },
         _user(script),
     ]
     reply = _decide(messages)
-    assert reply.tool_requests == ()
-    assert reply.text.splitlines() == [
-        "[x] characters: no change",
-        "[x] movement: no change",
+    assert reply.text == ""
+    assert [request.name for request in reply.tool_requests] == ["finish_state_step"]
+    assert json.loads(reply.tool_requests[0].arguments) == {
+        "characters": "no change",
+        "movement": "no change",
+    }
+
+
+def test_a_rules_list_before_the_checklist_is_not_mistaken_for_it():
+    script = '__FAKE__:{"turns": [{"text": "Narration."}]}'
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "Rules for this campaign.\n"
+                "- attributes: roll 3d6\n"
+                "- movement: a rule, not an area\n\n"
+                "Turn checklist. The state step is not finished until every area is checked.\n"
+                "- characters: who is here\n\n"
+                "Check each area."
+            ),
+        },
+        _user(script),
     ]
+    reply = _decide(messages)
+    assert json.loads(reply.tool_requests[0].arguments) == {"characters": "no change"}
 
 
 def test_a_decision_without_a_checklist_stays_silent():

@@ -695,6 +695,66 @@ class HirelingAdded(GameEvent):
 
 
 @dataclass(frozen=True)
+class NpcHired(GameEvent):
+    """An NPC already in the story joins a player character's company as a hireling. The NPC's
+    name, description, personality, accent, quirks, pronouns, and summary stay as they were; its
+    sheet is replaced by the character options the GM chose for it."""
+
+    kind: ClassVar[str] = "npc.hired"
+
+    name: str
+    employer: str
+    wage: int
+    location: str
+    summary: str = ""
+    stats: dict[str, int] = field(default_factory=dict)
+    templates: dict[str, str] = field(default_factory=dict)
+    features: dict[str, int] = field(default_factory=dict)
+    fields: dict[str, str] = field(default_factory=dict)
+    counters: dict[str, int] = field(default_factory=dict)
+    skills: dict[str, int] = field(default_factory=dict)
+    attack_shock: dict[str, list[int]] = field(default_factory=dict)
+    armor: int = 0
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        character = state.characters[name_key(self.name)]
+        if self.summary:
+            character.summary = self.summary
+        character.kind = PC_KIND
+        character.hireling = True
+        character.employer = self.employer
+        character.wage = self.wage
+        character.location = self.location
+        character.stats = dict(self.stats)
+        character.templates = dict(self.templates)
+        character.features = dict(self.features)
+        character.fields = dict(self.fields)
+        character.counters = dict(self.counters)
+        character.skills = dict(self.skills)
+        character.attack_shock = {name: list(pair) for name, pair in self.attack_shock.items()}
+        character.armor = self.armor
+        # A hireling fights from its character sheet, not an NPC statblock.
+        character.attacks = {}
+        character.attack_flags = {}
+        character.creature = ""
+        character.story_only = False
+        character.important = False
+        character.large_group = False
+        # The old NPC's defense is replaced by the sheet's armor when the hireling is created.
+        character.defense_tracked = False
+        character.equipped_armor = ""
+        character.equipped_armor_value = 0
+        character.equipped_shield = ""
+        character.equipped_shield_value = 0
+        character.shield_bonus = 0
+        character.innate_defense = 0
+        character.defense_adjustment = 0
+
+    def render(self) -> str:
+        return f"{self.name} joins {self.employer}'s company as a hireling."
+
+
+@dataclass(frozen=True)
 class HirelingDismissed(GameEvent):
     """A hireling leaves its employer's company and becomes an ordinary NPC where it stands."""
 

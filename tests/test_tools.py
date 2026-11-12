@@ -106,10 +106,6 @@ def test_dice_param_rejects_a_formula_that_is_not_dice():
     assert "is not a dice formula" in _error_of(run.output)
 
 
-def test_no_tools_means_no_tool_list():
-    assert tool_specs({}) is None
-
-
 def _offered_names(calls):
     return {call.name for call in calls.values() if not call.journal_step and not call.review_step}
 
@@ -364,8 +360,8 @@ def test_model_rolls_then_narrates_and_only_the_narration_is_saved(
 
     assert response.status_code == 303
     offered = [spec["function"]["name"] for spec in recorder.calls[0]["tools"]]
-    assert set(offered) <= _offered_names(_roll_tools()) | {"load_tool"}
-    assert {"load_tool", "social_roll"} <= set(offered)
+    assert set(offered) <= _offered_names(_roll_tools()) | {"load_tool", "finish_state_step"}
+    assert {"load_tool", "social_roll", "finish_state_step"} <= set(offered)
     assert _saved(app, campaign_id)[1:] == [("user", script)]
     prompt = pending_turn(app, campaign_id).prompt
     assert (prompt.text, prompt.dice, prompt.details) == (

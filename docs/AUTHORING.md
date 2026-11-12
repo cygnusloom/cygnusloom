@@ -46,6 +46,25 @@ That tree loads, but it does not yet describe a playable character. Add the
 stats, skills, features, templates, combat, inventory, magic, and other systems
 your game uses.
 
+Core's head may also set the rule set and world the New Campaign form starts on.
+Other rule sets ignore this block, so the choice lives in one place:
+
+```json
+{
+  "type": "rule_set",
+  "id": "core",
+  "name": "Core",
+  "description": "Rules every campaign uses.",
+  "default_campaign": {
+    "rule_set": "worldswithoutnumber",
+    "world_template": "unwritten-world"
+  }
+}
+```
+
+Both ids must name loaded content, and the world must be built for that rule set
+or for no rule set in particular.
+
 ## Core inheritance
 
 A rule set inherits every core definition with the same `type` and `id`. A
@@ -204,11 +223,13 @@ off.
 
 A rule set may define one `checklist` definition: the areas the GM's state step
 must check before it narrates, in the order given. Each item has an `id` and a
-`text`; the GM's reply must mark every item with an `[x] id:` line. An item with
-a `group` belongs to one of the engine's optional tool groups (`advancement`,
-`combat`, `factions`, `magic`, `maps`, `market`) and joins the checklist only
-when the rule set offers a tool in that group. Core defines the base checklist;
-a rule set replaces it by defining its own `checklist` with the same id.
+`text`; the GM finishes the state step by calling the engine's
+`finish_state_step` tool with one short note per item. The notes are internal to
+the state step and never reach the narration. An item with a `group` belongs to
+one of the engine's optional tool groups (`advancement`, `combat`, `factions`,
+`magic`, `maps`, `market`) and joins the checklist only when the rule set offers
+a tool in that group. Core defines the base checklist; a rule set replaces it by
+defining its own `checklist` with the same id.
 
 ```json
 {

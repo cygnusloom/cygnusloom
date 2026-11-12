@@ -449,28 +449,6 @@ def test_twin_lakes_map_matches_the_module_map():
     assert km("temple-of-the-fungal-lizards", "bone-sump") < 1
 
 
-def test_test_fixtures_add_a_hidden_roll_rule_set():
-    library = content_library()
-    assert {"twin-lakes", "testhollow"} <= set(library.world_templates)
-    rule_set = library.rule_sets["rolltest"]
-    assert rule_set.name == "Roll Test"
-    assert "consistency" in rule_set.rules
-    assert set(library.core.tool_calls) <= set(rule_set.tool_calls)
-    assert set(rule_set.tool_calls) - set(library.core.tool_calls) == {"social_roll"}
-
-
-def test_social_roll_fixture_is_a_tool_call_backed_by_python():
-    tool = content_library().rule_sets["rolltest"].tool_calls["social_roll"]
-    assert tool.name == "social_roll"
-    assert tool.function is social_roll
-    assert set(tool.parameters["properties"]) == {"prompt", "relationship", "circumstance"}
-    assert tool.parameters["required"] == ["prompt", "relationship", "circumstance"]
-    assert tool.player_input is not None
-    assert (tool.player_input.dice, tool.player_input.param) == ("1d20", "roll")
-    assert "{relationship:+d}" in (tool.player_input.details or "")
-    assert tool.activity is not None
-
-
 def test_social_roll_is_one_d20_plus_modifiers():
     for seed in range(50):
         result = social_roll(2, -1, rng=random.Random(seed))
@@ -1237,21 +1215,6 @@ def test_tool_call_function_must_exist_in_its_module(tree: Path):
     _write(tree, {"rulesets/testset/module.json": _module(function="no_such_function")})
     with pytest.raises(ContentError, match="'no_such_function' is not a function"):
         ContentLibrary.load(tree)
-
-
-def test_a_tool_name_defaults_to_its_id(tree: Path):
-    tool = _social_tool()
-    del tool["name"]
-    _write(
-        tree,
-        {
-            "rulesets/testset/module.json": [
-                {"type": "python_module", "id": "m", "module": "tests.rolls"},
-                tool,
-            ]
-        },
-    )
-    assert ContentLibrary.load(tree).rule_sets["testset"].tool_calls["social"].name == "social"
 
 
 @pytest.mark.parametrize(

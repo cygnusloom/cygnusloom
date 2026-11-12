@@ -822,6 +822,8 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 .pick-option .choice-detail { display: block; margin-top: 0.2rem; font-size: 0.9em; }
 .pick-option .tag { margin-top: 0.3rem; }
 .advancement-page { max-width: 60rem; margin: 0 auto; }
+.advancement-pending { display: flex; flex-wrap: wrap; gap: 0.4rem 0.75rem; align-items: baseline; margin: 0 0 1rem; }
+.advancement-pending ul { display: flex; flex-wrap: wrap; gap: 0.4rem 0.75rem; margin: 0; padding: 0; list-style: none; }
 .advancement-summary { margin: 1rem 0; padding: 0.9rem 1rem; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); }
 .advancement-summary h2 { margin-top: 0; }
 .advancement-form { display: flex; flex-direction: column; gap: 1rem; }

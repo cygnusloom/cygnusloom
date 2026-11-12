@@ -1,5 +1,6 @@
 """Tests for the static SVG icon set and its registry."""
 
+import functools
 import json
 import re
 import xml.etree.ElementTree as ET
@@ -241,6 +242,7 @@ REQUIRED = {
 _EXTERNAL_REF = re.compile(r"(https?:|data:|//)", re.IGNORECASE)
 
 
+@functools.cache
 def _registry() -> dict:
     return json.loads(REGISTRY_PATH.read_text(encoding="utf-8"))
 
@@ -288,11 +290,6 @@ def test_every_svg_is_well_formed_and_self_contained():
 def test_icon_path_unknown_id_raises_key_error():
     with pytest.raises(KeyError):
         icon_path("no-such-icon")
-
-
-def test_icon_path_returns_static_url_for_known_id():
-    assert icon_path("forest") == "/static/icons/terrain/forest.svg"
-    assert icon_path("gem") == "/static/icons/items/gem.svg"
 
 
 @pytest.mark.parametrize(

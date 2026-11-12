@@ -56,12 +56,16 @@ from cygnusloom.services.names import next_campaign_label
 from cygnusloom.services.prompts import (
     NAME_CHECK_PROMPT,
     SUMMARY_HEADING,
+    checklist_areas,
     state_instruction,
     summary_messages,
     system_parts,
     turn_checklist,
 )
 from cygnusloom.services.tools import (
+    FINISH_STATE_STEP,
+    LOAD_TOOL,
+    checklist_tool_spec,
     state_tool_groups,
     tool_group_names,
     wire_tool_specs,
@@ -1009,9 +1013,11 @@ def tool_definition_parts(
     mode: str = "brief",
     include_groups: set[str] | None = None,
     load_tools: bool = False,
+    checklist: Mapping[str, str] | None = None,
 ) -> list[ContextPart]:
     """Tool definitions are sent beside the messages, so they are recorded as their own parts.
-    The parts use the same wire projection the provider receives."""
+    The parts use the same wire projection the provider receives. `checklist` adds the engine's
+    finish tool for a turn that has a checklist, with one argument per area."""
     specs = (
         wire_tool_specs(
             rule_set.tool_calls,
@@ -1021,10 +1027,17 @@ def tool_definition_parts(
         )
         or []
     )
+    if checklist:
+        specs = [*specs, checklist_tool_spec(checklist)]
     return [
         ContextPart(
             "tool definition",
-            f"Tool '{spec['function']['name']}' from rule set '{rule_set.id}'",
+            f"Tool '{spec['function']['name']}' from "
+            + (
+                "the engine"
+                if spec["function"]["name"] in (LOAD_TOOL, FINISH_STATE_STEP)
+                else f"rule set '{rule_set.id}'"
+            ),
             json.dumps(spec["function"], separators=(",", ":")),
         )
         for spec in specs
@@ -1109,20 +1122,28 @@ def context_usage(
         estimate_tokens(state_instruction(rule_set, world)) if rule_set is not None else 0
     )
     groups = state_tool_groups(state, "") if rule_set is not None else set()
-    tool_tokens = (
-        sum(
-            estimate_tokens(json.dumps(spec, separators=(",", ":")))
-            for spec in wire_tool_specs(
-                rule_set.tool_calls,
-                mode=tool_schema_mode,
-                include_groups=groups,
-                load_tools=True,
-            )
-            or []
-        )
+    checklist_labels = (
+        {
+            area.id: area.text
+            for area in checklist_areas(rule_set.checklist, tool_group_names(rule_set.tool_calls))
+        }
         if rule_set is not None
-        else 0
+        else {}
     )
+    specs = (
+        wire_tool_specs(
+            rule_set.tool_calls,
+            mode=tool_schema_mode,
+            include_groups=groups,
+            load_tools=True,
+        )
+        or []
+        if rule_set is not None
+        else []
+    )
+    if checklist_labels:
+        specs = [*specs, checklist_tool_spec(checklist_labels)]
+    tool_tokens = sum(estimate_tokens(json.dumps(spec, separators=(",", ":"))) for spec in specs)
     message_tokens = sum(estimate_tokens(m.content) for m in unsummarized)
     fixed = system_tokens + instruction_tokens
     used = fixed + tool_tokens + message_tokens

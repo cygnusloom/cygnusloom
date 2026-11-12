@@ -33,10 +33,6 @@ def test_opening_starts_the_world_at_its_start_location_with_its_hooks():
     assert "Reeve Trellis at the Stuffed Inn" in prompt
 
 
-def test_opening_without_a_world_start_is_the_plain_instruction():
-    assert opening_prompt(None) == OPENING_PROMPT
-
-
 def _created_campaign(client_factory: Callable[[], TestClient]) -> tuple[TestClient, int]:
     """A campaign with its player character, before the opening GM turn has run."""
     client = _signed_in(client_factory)

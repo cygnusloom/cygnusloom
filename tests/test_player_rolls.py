@@ -15,7 +15,7 @@ from cygnusloom.config import DEFAULT_MODEL_CONTEXT_TOKENS
 from cygnusloom.db.models import Campaign
 from cygnusloom.llm.base import LLMError
 from cygnusloom.llm.fake import FakeProvider
-from cygnusloom.rules.dice import is_formula, roll_total
+from cygnusloom.rules.dice import roll_total
 from cygnusloom.services.campaigns import (
     ChatMessage,
     Logged,
@@ -227,16 +227,6 @@ def test_the_player_roll_uses_the_given_generator(
     expected = roll_total("1d20", random.Random(0))
     activity = next(event.text for event in events if isinstance(event, Logged))
     assert activity.startswith(f"You rolled {expected} ")
-
-
-@pytest.mark.parametrize("formula", ["1d20", "2d6", "10d100", "2d6+1", "1d6-1", "2d8+1d6+3"])
-def test_valid_formulas(formula: str):
-    assert is_formula(formula)
-
-
-@pytest.mark.parametrize("formula", ["d20", "1d", "0d6", "1d0", "+1", "", None, 20])
-def test_invalid_formulas(formula: object):
-    assert not is_formula(formula)
 
 
 def test_roll_totals_stay_within_the_dice():

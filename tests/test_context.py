@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
+import json
 import re
 from collections.abc import Callable
 from typing import Any
@@ -12,7 +13,7 @@ from sqlmodel import Session, func, select
 
 from cygnusloom.config import Settings
 from cygnusloom.db.models import Campaign, Event
-from cygnusloom.llm.base import ChatReply, LLMError
+from cygnusloom.llm.base import ChatReply, LLMError, ToolRequest
 from cygnusloom.rules.context import brief
 from cygnusloom.services.events import CampaignState, Channel, load_state
 from cygnusloom.services.prompts import SUMMARY_PROMPT, SYSTEM_PROMPT, system_parts
@@ -50,6 +51,7 @@ class RecordingProvider:
         self.summaries = 0
         self.summary_reply = "SUMMARY"
         self.fail_after_summary = False
+        self.checklist_calls = 0
 
     async def chat(
         self,
@@ -64,7 +66,26 @@ class RecordingProvider:
         if self.fail_after_summary and self.summaries:
             raise LLMError("the model is down")
         last = str(messages[-1].get("content", "")) if messages else ""
-        if tools is not None and last.startswith(("State management step.", "Turn review step.")):
+        if tools is not None and last.startswith("State management step."):
+            finish = next(
+                (spec for spec in tools if spec["function"]["name"] == "finish_state_step"),
+                None,
+            )
+            if finish is not None:
+                keys = list(finish["function"]["parameters"]["properties"])
+                self.checklist_calls += 1
+                return ChatReply(
+                    text="",
+                    tool_requests=(
+                        ToolRequest(
+                            id=f"checklist-{self.checklist_calls}",
+                            name="finish_state_step",
+                            arguments=json.dumps({key: "no change" for key in keys}),
+                        ),
+                    ),
+                )
+            return ChatReply(text="")
+        if tools is not None and last.startswith("Turn review step."):
             return ChatReply(text=CHECKLIST)
         return ChatReply(text="reply")
 
@@ -201,6 +222,7 @@ def test_the_players_setting_and_story_reach_the_gm(settings: Settings):
     _campaign_id(
         lambda: TestClient(app),
         setting="A heist in a city drowned beneath a clockwork moon.",
+        opening=True,
     )
     opening = provider.calls[0][0]["content"]
     assert "The player asked for this setting and story" in opening
@@ -215,7 +237,7 @@ def test_the_players_setting_and_story_reach_the_gm(settings: Settings):
 def test_a_blank_setting_is_left_out_of_the_prompt(settings: Settings):
     provider = RecordingProvider()
     app = make_app(settings, fake_provider=provider)
-    _campaign_id(lambda: TestClient(app))
+    _campaign_id(lambda: TestClient(app), opening=True)
     assert all(
         "The player asked for this setting and story" not in call[0]["content"]
         for call in provider.calls
@@ -225,7 +247,7 @@ def test_a_blank_setting_is_left_out_of_the_prompt(settings: Settings):
 def test_no_summary_when_the_chat_is_well_inside_the_window(settings: Settings):
     provider = RecordingProvider()
     app = make_app(settings, fake_provider=provider)
-    client, campaign_id = _campaign_id(lambda: TestClient(app))
+    client, campaign_id = _campaign_id(lambda: TestClient(app), opening=True)
     for _ in range(3):
         assert _send(client, campaign_id, "x" * 400).status_code == 303
     assert (
@@ -241,7 +263,7 @@ def test_no_summary_when_the_chat_is_well_inside_the_window(settings: Settings):
 def test_history_is_summarized_at_half_the_window_and_the_tail_is_kept(settings: Settings):
     provider = RecordingProvider()
     app = _small_window_app(settings, provider)
-    client, campaign_id = _campaign_id(lambda: TestClient(app))
+    client, campaign_id = _campaign_id(lambda: TestClient(app), opening=True)
     _send_until_summarized(client, app, campaign_id, sends=8)
 
     state = _state(app, campaign_id)
@@ -266,7 +288,7 @@ def test_long_summary_is_capped_to_a_quarter_of_the_window_keeping_the_newest_te
     provider = RecordingProvider()
     provider.summary_reply = "old detail " * 300 + "NEWEST"
     app = _small_window_app(settings, provider)
-    client, campaign_id = _campaign_id(lambda: TestClient(app))
+    client, campaign_id = _campaign_id(lambda: TestClient(app), opening=True)
     _send_until_summarized(client, app, campaign_id, sends=8)
 
     summary = _state(app, campaign_id).summary
@@ -280,7 +302,7 @@ def test_summary_drops_the_heading_the_model_repeats(settings: Settings):
     provider = RecordingProvider()
     provider.summary_reply = "Summary so far:\n\nThe party met a mushroom sage."
     app = _small_window_app(settings, provider)
-    client, campaign_id = _campaign_id(lambda: TestClient(app))
+    client, campaign_id = _campaign_id(lambda: TestClient(app), opening=True)
     _send_until_summarized(client, app, campaign_id, sends=8)
     assert _state(app, campaign_id).summary == "The party met a mushroom sage."
 
@@ -289,7 +311,7 @@ def test_failed_reply_after_summarizing_keeps_the_summary_and_the_open_turn(sett
     provider = RecordingProvider()
     provider.fail_after_summary = True
     app = _small_window_app(settings, provider)
-    client, campaign_id = _campaign_id(lambda: TestClient(app))
+    client, campaign_id = _campaign_id(lambda: TestClient(app), opening=True)
     statuses = []
     for index in range(8):
         statuses.append(_send(client, campaign_id, f"m{index} " + "x" * 600).status_code)
@@ -308,7 +330,7 @@ def test_failed_reply_after_summarizing_keeps_the_summary_and_the_open_turn(sett
 def test_transcript_keeps_every_message_after_summarizing(settings: Settings):
     provider = RecordingProvider()
     app = _small_window_app(settings, provider)
-    client, campaign_id = _campaign_id(lambda: TestClient(app))
+    client, campaign_id = _campaign_id(lambda: TestClient(app), opening=True)
     sends = 0
     for index in range(8):
         _send(client, campaign_id, f"m{index} " + "x" * 600)

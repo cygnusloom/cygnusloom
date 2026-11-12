@@ -41,6 +41,7 @@ def _target_app(tmp_path, settings: Settings) -> FastAPI:
         database_url=f"sqlite:///{tmp_path / 'target.db'}",
         llm_models=("fake/scripted",),
         llm_default_model="fake/scripted",
+        auto_create_schema=True,
     )
     return make_app(target, FakeProvider())
 

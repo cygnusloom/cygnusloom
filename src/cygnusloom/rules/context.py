@@ -133,6 +133,14 @@ class CoreWorld(Protocol):
         pronouns: str | None = None,
     ) -> dict[str, Any]: ...
 
+    def hire_existing_npc(
+        self,
+        name: str,
+        employer: str,
+        wage: int,
+        character: Mapping[str, Any] | None = None,
+    ) -> dict[str, Any]: ...
+
     def dismiss_hireling(self, name: str, cause: str) -> dict[str, Any]: ...
 
     def move_actor(

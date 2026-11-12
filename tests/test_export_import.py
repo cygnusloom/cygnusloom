@@ -63,6 +63,7 @@ def _target_app(
         database_url=f"sqlite:///{tmp_path / 'target.db'}",
         llm_models=models,
         llm_default_model=models[0],
+        auto_create_schema=True,
     )
     return make_app(target, FakeProvider())
 

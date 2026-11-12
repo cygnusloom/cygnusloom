@@ -36,6 +36,7 @@ CONSOLIDATED_TOOLS = {
     "search_marketplace": frozenset(),
     "transfer_currency": frozenset(),
     "hire_hireling": frozenset({"academia-arcana"}),
+    "hire_existing_npc": frozenset({"academia-arcana"}),
     "dismiss_hireling": frozenset({"academia-arcana"}),
     "search_monster": frozenset({"academia-arcana"}),
 }

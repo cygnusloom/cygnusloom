@@ -249,6 +249,7 @@ def tools_for(
         faction_assets=rules.faction_assets,
         counters=rules.counters,
         advancements=rules.advancements,
+        level_ups=rules.level_ups,
         periods=rules.periods,
         tallies=rules.tallies,
         relations=rules.relations,
@@ -309,6 +310,14 @@ def campaign_ready(
     return client, campaign_id
 
 
+def close_opening(client: TestClient, campaign_id: int) -> None:
+    """Close a campaign's opening with a recorded test reply instead of running the model turn.
+    Use it only when a test reads campaign state and never asserts on the opening narration."""
+    with db(client.app) as session:
+        record(session, campaign_id, ChatGM(content="The opening plays out.", model="test"))
+        session.commit()
+
+
 def campaign_ready_fast(
     client_factory: Callable[[], TestClient],
     *,
@@ -326,9 +335,7 @@ def campaign_ready_fast(
     )
     created = create_character(client, campaign_id, name=name)
     assert created.status_code == 303, created.text
-    with db(client.app) as session:
-        record(session, campaign_id, ChatGM(content="The opening plays out.", model="test"))
-        session.commit()
+    close_opening(client, campaign_id)
     return client, campaign_id
 
 
