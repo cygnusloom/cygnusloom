@@ -1437,16 +1437,26 @@ def _new_form(
     library = request.app.state.content
     # The rule set comes first and decides which worlds are offered, so start from a rule set
     # and a world that fits it. A world with no rule set fits every rule set.
+    configured = library.core.default_campaign
     if rule_set not in library.rule_sets:
-        rule_set = next(iter(library.rule_sets), "")
+        rule_set = (
+            configured.rule_set
+            if configured is not None and configured.rule_set in library.rule_sets
+            else next(iter(library.rule_sets), "")
+        )
     worlds = [
         world
         for world in library.world_templates.values()
         if world.rule_set is None or world.rule_set == rule_set
     ]
     if world_template not in {world.id for world in worlds}:
-        # Prefer a world built for this rule set over a generic one when the form first opens.
-        preferred = [world for world in worlds if world.rule_set == rule_set]
+        # Prefer the configured world, then a world built for this rule set over a generic one
+        # when the form first opens.
+        preferred = []
+        if configured is not None and configured.rule_set == rule_set:
+            preferred = [world for world in worlds if world.id == configured.world_template]
+        if not preferred:
+            preferred = [world for world in worlds if world.rule_set == rule_set]
         world_template = (preferred or worlds)[0].id if worlds else ""
     chosen_rule_set = library.rule_sets.get(rule_set)
     chosen_world = library.world_templates.get(world_template)

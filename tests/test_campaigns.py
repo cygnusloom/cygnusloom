@@ -12,7 +12,7 @@ from sqlmodel import Session, select
 
 from cygnusloom.config import Settings
 from cygnusloom.db.models import Campaign, Event
-from cygnusloom.llm.base import ChatReply, LLMError
+from cygnusloom.llm.base import ChatReply, LLMError, ToolRequest
 from cygnusloom.llm.fake import FakeProvider
 from cygnusloom.services.campaigns import last_activity_text
 from cygnusloom.services.events import Turn
@@ -266,33 +266,30 @@ def test_model_change_applies_to_the_next_message(
 ):
     used: list[str] = []
 
-    checklist = "\n".join(
-        f"[x] {area}: no change"
-        for area in (
-            "characters",
-            "summaries",
-            "movement",
-            "notes",
-            "storylines",
-            "objects",
-            "time",
-            "rules",
-            "advancement",
-            "encounter",
-            "factions",
-            "maps",
-            "market",
-        )
-    )
-
     class Echo:
         name = "echo"
 
         async def chat(self, model, messages, tools=None):
             used.append(model)
-            # A tool-bearing call is the state step or the review; a real model answers the
-            # turn checklist there. Narration gets the plain echo.
-            return ChatReply(text=checklist if tools is not None else f"from {model}")
+            last = str(messages[-1].get("content", "")) if messages else ""
+            if tools is not None and last.startswith("State management step."):
+                finish = next(
+                    (spec for spec in tools if spec["function"]["name"] == "finish_state_step"),
+                    None,
+                )
+                if finish is not None:
+                    keys = list(finish["function"]["parameters"]["properties"])
+                    return ChatReply(
+                        text="",
+                        tool_requests=(
+                            ToolRequest(
+                                id=f"checklist-{len(used)}",
+                                name="finish_state_step",
+                                arguments=json.dumps({key: "no change" for key in keys}),
+                            ),
+                        ),
+                    )
+            return ChatReply(text=f"from {model}")
 
         async def stream(self, model, messages, tools=None):
             yield await self.chat(model, messages, tools)
@@ -344,7 +341,7 @@ def test_new_campaign_form_prefills_the_default_label(
 ):
     client = _signed_in(client_factory)
     page = client.get("/campaigns/new").text
-    assert 'name="label" value="Unwritten Academy #1"' in page
+    assert 'name="label" value="Unwritten World #1"' in page
 
 
 def test_new_campaign_form_asks_for_the_label_last(
@@ -565,7 +562,7 @@ def test_new_campaign_form_marks_third_party_content_and_offers_credits(
     assert re.search(r'<option value="worldswithoutnumber"[^>]*data-third-party="1"', page)
     assert re.search(r'<option value="twin-lakes"[^>]*data-third-party="1"', page)
     assert re.search(r'<option value="academia-arcana"[^>]*data-third-party="0"', page)
-    assert re.search(r'<span data-blurb-credits="rule_set" hidden>', page)
+    assert re.search(r'<span data-blurb-credits="rule_set">', page)
     assert re.search(r'<span data-blurb-credits="world_template" hidden>', page)
     assert page.count('<a href="/license">content credits</a>') == 2
 
@@ -597,8 +594,8 @@ def test_new_campaign_form_starts_on_a_rule_set_and_a_world_that_fits(
 ):
     client = _signed_in(client_factory)
     page = client.get("/campaigns/new").text
-    assert re.search(r'<option value="academia-arcana"[^>]* selected', page)
-    assert re.search(r'<option value="unwritten-academy"[^>]* selected', page)
+    assert re.search(r'<option value="worldswithoutnumber"[^>]* selected', page)
+    assert re.search(r'<option value="unwritten-world"[^>]* selected', page)
 
 
 def test_create_stores_the_chosen_settings(client_factory: Callable[[], TestClient]):
