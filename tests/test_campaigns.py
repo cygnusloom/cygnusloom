@@ -26,6 +26,7 @@ from tests.conftest import (
 from tests.factories import (
     answer,
     campaign_ready_fast,
+    close_opening,
     pending_turn,
     place_pc,
     send_message,
@@ -88,16 +89,27 @@ def _create_character(
 
 
 def _campaign_id(
-    client_factory: Callable[[], TestClient], setting: str = ""
+    client_factory: Callable[[], TestClient],
+    setting: str = "",
+    *,
+    opening: bool = False,
 ) -> tuple[TestClient, int]:
-    """A campaign whose opening GM turn has finished, so players can act."""
+    """A campaign and character ready for play.
+
+    The opening model turn is skipped by default: most tests then read or change campaign
+    state and never look at the opening itself. Pass ``opening=True`` when a test asserts on
+    the opening narration, its journal entry, or the model calls it made.
+    """
     client = _signed_in(client_factory)
     response = _new_campaign(client)
     assert response.status_code == 303
     campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
     created = _create_character(client, campaign_id, setting=setting)
     assert created.status_code == 303
-    _answer(client, campaign_id, "continue")
+    if opening:
+        _answer(client, campaign_id, "continue")
+    else:
+        close_opening(client, campaign_id)
     return client, campaign_id
 
 

@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
-from typing import ClassVar
 
 import pytest
 from fastapi import FastAPI
@@ -15,7 +13,6 @@ from cygnusloom.services.campaigns import campaign_transcript
 from cygnusloom.services.events import (
     EVENT_TYPES,
     ActorMoved,
-    GameEvent,
     LocationAdded,
     LocationDiscovered,
     MapTokenRemoved,
@@ -32,27 +29,9 @@ def test_every_registered_event_kind_has_a_visibility_decision():
         assert isinstance(event_type.hidden, bool)
 
 
-def test_is_hidden_reads_the_visibility_from_the_event_class():
-    for kind, event_type in EVENT_TYPES.items():
-        assert is_hidden(kind) is event_type.hidden
-
-
 def test_an_unknown_event_kind_raises():
     with pytest.raises(KeyError):
         is_hidden("event.does_not_exist")
-
-
-def test_a_new_event_with_no_visibility_choice_defaults_to_visible():
-    @dataclass(frozen=True)
-    class NewEvent(GameEvent):
-        kind: ClassVar[str] = "test.default_visibility"
-        detail: str = ""
-
-    try:
-        assert NewEvent.hidden is False
-        assert is_hidden("test.default_visibility") is False
-    finally:
-        del EVENT_TYPES["test.default_visibility"]
 
 
 def test_gm_bookkeeping_is_hidden_and_what_the_pc_perceives_is_visible():

@@ -15,11 +15,11 @@ import httpx
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlalchemy import Engine, event
+from sqlalchemy import Engine, create_engine, event
 
 from cygnusloom.config import Settings
 from cygnusloom.content.library import DATA_DIR, ContentLibrary
-from cygnusloom.db.session import make_engine
+from cygnusloom.db.session import create_schema, make_engine
 from cygnusloom.llm.fake import FakeProvider
 from cygnusloom.services.prompts import narrate_instruction
 from cygnusloom.web import app as web_app
@@ -56,6 +56,19 @@ def bundled_library() -> ContentLibrary:
     """The shipped content without the test-only fixtures, loaded once per process. The library
     is immutable, so tests that only read it can share one load."""
     return ContentLibrary.load()
+
+
+@functools.cache
+def schema_template() -> Path:
+    """An empty database with the current schema, made once per worker. Each test copies it
+    instead of running the same DDL again."""
+    root = Path(tempfile.mkdtemp(prefix="cygnusloom-schema-"))
+    atexit.register(shutil.rmtree, root, ignore_errors=True)
+    path = root / "template.db"
+    engine = create_engine(f"sqlite:///{path}")
+    create_schema(engine)
+    engine.dispose()
+    return path
 
 
 # The narration prompt for the rolltest rule set, which has no penalty item.
@@ -128,13 +141,16 @@ def block_live_models(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
 
 @pytest.fixture
 def settings(tmp_path) -> Settings:
+    database = tmp_path / "test.db"
+    shutil.copy2(schema_template(), database)
     return Settings(
-        database_url=f"sqlite:///{tmp_path / 'test.db'}",
+        database_url=f"sqlite:///{database}",
         secret_key=SECRET,
         llm_models=("fake/scripted", "ollama/test-model"),
         llm_default_model="fake/scripted",
         test_login=True,
         base_url="http://testserver",
+        auto_create_schema=False,
     )
 
 

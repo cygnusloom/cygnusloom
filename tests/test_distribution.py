@@ -54,15 +54,14 @@ def test_distributions_exclude_untracked_runtime_and_private_files(tmp_path: Pat
         path.write_text("private fixture\n", encoding="utf-8")
 
     dist = tmp_path / "dist"
-    for target in ("sdist", "wheel"):
-        result = subprocess.run(
-            ["uv", "build", "--offline", f"--{target}", "--out-dir", str(dist)],
-            cwd=project,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        assert result.returncode == 0, result.stderr
+    result = subprocess.run(
+        ["uv", "build", "--offline", "--out-dir", str(dist)],
+        cwd=project,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
     (archive,) = dist.glob("*.tar.gz")
     with tarfile.open(archive, "r:gz") as source:
         paths = {PurePosixPath(*PurePosixPath(name).parts[1:]) for name in source.getnames()}

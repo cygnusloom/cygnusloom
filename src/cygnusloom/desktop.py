@@ -304,8 +304,13 @@ class LoopbackReceiver:
         server.daemon_threads = True
         with self._lock:
             self._server = server
+            # Poll quickly so closing the sign-in window does not wait on the default
+            # half-second sleep.
             self._thread = threading.Thread(
-                target=server.serve_forever, name="cygnus-loopback", daemon=True
+                target=server.serve_forever,
+                kwargs={"poll_interval": 0.05},
+                name="cygnus-loopback",
+                daemon=True,
             )
             self._thread.start()
         host, port = server.server_address[:2]

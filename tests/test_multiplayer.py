@@ -603,8 +603,9 @@ def test_a_running_turn_is_shown_to_every_page(
 
 
 def test_the_live_stream_carries_ai_activity_and_the_streamed_reply(
-    client_factory: Callable[[], TestClient],
+    client_factory: Callable[[], TestClient], monkeypatch: pytest.MonkeyPatch
 ):
+    monkeypatch.setattr(campaigns_web, "EVENT_POLL_SECONDS", 0.01)
     owner = signed_in_client(client_factory, OWNER)
     campaign_id = create_campaign(owner)
     assert create_character(owner, campaign_id, name="Ada").status_code == 303
@@ -662,8 +663,9 @@ def test_the_turn_stream_records_activity_and_the_partial_reply(
 
 
 def test_the_live_stream_carries_typing_without_a_campaign_event(
-    client_factory: Callable[[], TestClient],
+    client_factory: Callable[[], TestClient], monkeypatch: pytest.MonkeyPatch
 ):
+    monkeypatch.setattr(campaigns_web, "EVENT_POLL_SECONDS", 0.01)
     owner, _guest, campaign_id, _ = _joined_campaign(client_factory)
     app = owner.app
     guest_id = _account(app, GUEST).id

@@ -122,6 +122,9 @@ from cygnusloom.web.rendering import render, render_fragment
 from cygnusloom.web.turn_jobs import TurnJob, TurnJobRegistry
 from cygnusloom.web.typing import Typer, TypingRegistry
 
+# How long the live campaign stream waits before checking for a new snapshot.
+EVENT_POLL_SECONDS = 1.0
+
 router = APIRouter(prefix="/campaigns")
 
 
@@ -765,7 +768,7 @@ async def _event_lines(engine: Any, campaign_id: int, typing: TypingRegistry) ->
                     last_payload = payload
                     heartbeat = 0
                     yield f"data: {payload}\n\n"
-                    await asyncio.sleep(1.0)
+                    await asyncio.sleep(EVENT_POLL_SECONDS)
                     continue
         except SQLAlchemyError:
             # The database may be gone. End the stream; the page's next action tells the player.
@@ -774,7 +777,7 @@ async def _event_lines(engine: Any, campaign_id: int, typing: TypingRegistry) ->
         if heartbeat >= 15:
             heartbeat = 0
             yield ": keep-alive\n\n"
-        await asyncio.sleep(1.0)
+        await asyncio.sleep(EVENT_POLL_SECONDS)
 
 
 @router.get("/{campaign_id}/map")

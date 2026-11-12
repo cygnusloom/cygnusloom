@@ -475,7 +475,9 @@ class InfoHandler(http.server.BaseHTTPRequestHandler):
 
 def test_probe_server_uses_plain_http_without_an_ssl_context(monkeypatch):
     server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), InfoHandler)
-    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread = threading.Thread(
+        target=server.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True
+    )
     thread.start()
     monkeypatch.setattr(
         desktop_web.httpx,

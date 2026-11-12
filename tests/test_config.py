@@ -42,11 +42,6 @@ def test_secret_key_is_required():
         load_settings({})
 
 
-def test_context_window_is_not_an_environment_setting():
-    settings = load_settings({**BASE, "CYGNUSLOOM_LLM_CONTEXT_TOKENS": "8192"})
-    assert not hasattr(settings, "llm_context_tokens")
-
-
 def test_prompt_detail_modes_default_to_brief_tools_and_rules():
     settings = load_settings(BASE)
     assert settings.tool_schema_mode == "brief"

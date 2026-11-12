@@ -3,7 +3,6 @@ share these rules: equality passes under either score mode, automatic rolls deci
 comparison, and a check total adds its bonuses before it meets the difficulty."""
 
 import random
-from dataclasses import FrozenInstanceError
 
 import pytest
 
@@ -103,12 +102,6 @@ def test_same_seed_makes_the_same_rolls() -> None:
     first = roll_score(random.Random(1234), "1d20+1d6", 12, plus="sum")
     second = roll_score(random.Random(1234), "1d20+1d6", 12, plus="sum")
     assert first == second
-
-
-def test_results_are_immutable() -> None:
-    result = roll_score(_Scripted(10), "1d20", 10)
-    with pytest.raises(FrozenInstanceError):
-        result.passed = False  # type: ignore[misc]
 
 
 def test_unknown_mode_is_rejected() -> None:

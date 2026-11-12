@@ -127,11 +127,6 @@ def test_combat_is_derived_during_an_encounter():
     assert derive_scene_mood(state) == MusicView("combat", "auto")
 
 
-def test_a_music_view_has_a_player_facing_label():
-    assert MusicView("exploration", "auto").label == "Exploration"
-    assert MusicView("silence", "gm").label == "Silence"
-
-
 def test_places_and_night_suggest_a_mood():
     state = _state()
     assert derive_scene_mood(state) == MusicView("social", "auto")

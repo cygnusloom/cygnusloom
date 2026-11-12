@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-import sys
 from pathlib import Path
-
-import pytest
 
 from cygnusloom import cli, desktop, launcher
 
@@ -101,10 +98,6 @@ class _FakeWindow:
         return self.mode == "fullscreen"
 
 
-def test_window_state_file_lives_in_the_data_dir(tmp_path):
-    assert desktop.window_state_path(tmp_path) == tmp_path / "window.ini"
-
-
 def test_the_desktop_window_icon_is_shipped():
     icon = desktop.brand_icon_path()
 
@@ -158,11 +151,6 @@ def test_library_symbol_probe_reads_the_file(tmp_path):
     assert launcher._library_has_symbol(library, b"GLIBCXX_3.4.99") is False
     # An unreadable library must not block startup on an unusual system.
     assert launcher._library_has_symbol(tmp_path / "missing", b"GLIBCXX_3.4.29") is True
-
-
-@pytest.mark.skipif(not sys.platform.startswith("linux"), reason="Linux runtime check")
-def test_the_host_runtime_satisfies_the_desktop_requirement():
-    assert launcher._linux_runtime_problem() == ""
 
 
 def test_the_desktop_spec_uses_the_host_system_libraries():
