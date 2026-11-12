@@ -1026,6 +1026,7 @@ def _player_lines(state: CampaignState, pcs: Sequence[Character]) -> list[str]:
         else:
             lines.append(f"Player character: {pc.name}, at {pc.location}.")
             lines.extend(_place_here_lines(state, pc.location, "NPCs here", "Objects here"))
+            lines.extend(_known_here_lines(state, pc.location))
         return lines
 
     lines = ["Player characters:"]
@@ -1063,7 +1064,47 @@ def _player_lines(state: CampaignState, pcs: Sequence[Character]) -> list[str]:
                 f"Objects at {pc.location}",
             )
         )
+        lines.extend(_known_here_lines(state, pc.location))
     return lines
+
+
+def _known_here_lines(state: CampaignState, location: str) -> list[str]:
+    """The player's current notes on the people in this scene. The GM sees what the Characters
+    page shows, so a stale summary or relationship can be refreshed when this turn changes it."""
+    known = [
+        knowledge
+        for npc in _npcs_at(state, location)
+        if (knowledge := state.known.get(name_key(npc.name))) is not None
+    ]
+    if not known:
+        return []
+    lines = ["What the player knows of the people here:"]
+    for knowledge in sorted(known, key=lambda item: item.name.casefold()):
+        detail = (
+            f'summary "{_excerpt(knowledge.summary, 160)}"'
+            if knowledge.summary
+            else "no player-facing summary yet"
+        )
+        detail += (
+            f'; relationship "{_excerpt(knowledge.relationship, 120)}"'
+            if knowledge.relationship
+            else "; no relationship recorded"
+        )
+        lines.append(f"- {knowledge.name}: {detail}.")
+    lines.append(
+        "When this action changes what the player knows of anyone here, refresh their summary "
+        "with describe_character and their relationship or whereabouts with update_npc_knowledge "
+        "in this step."
+    )
+    return lines
+
+
+def _excerpt(text: str, limit: int) -> str:
+    """One line of text, cut to `limit` characters with an ellipsis when it is longer."""
+    text = " ".join(text.split())
+    if len(text) <= limit:
+        return text
+    return text[: limit - 1].rstrip() + "…"
 
 
 def _npc_state_name(npc: Character) -> str:

@@ -58,9 +58,11 @@ from cygnusloom.services.prompts import (
     state_instruction,
     summary_messages,
     system_parts,
+    turn_checklist,
 )
 from cygnusloom.services.tools import (
     state_tool_groups,
+    tool_group_names,
     wire_tool_specs,
 )
 from cygnusloom.services.views import present_rules_text, world_state_text
@@ -1041,6 +1043,9 @@ def context_usage(
         **(rule_set.attached_rules if rule_set else {}),
         **world_rules,
     }
+    checklist = (
+        turn_checklist(tool_group_names(rule_set.tool_calls))[0] if rule_set is not None else ""
+    )
     system = system_parts(
         campaign.rule_set,
         {**(rule_set.rules if rule_set else {}), **(unattached_world_rules or {})},
@@ -1065,6 +1070,7 @@ def context_usage(
         present_rules_text(state, all_rules),
         campaign.setting,
         rule_info_mode=rule_info_mode,
+        checklist=checklist,
     )
     system_tokens = sum(part.tokens for part in system)
     instruction_tokens = (

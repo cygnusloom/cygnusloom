@@ -259,6 +259,12 @@ def tool_groups(name: str) -> set[str]:
     return {group for group, names in TOOL_GROUPS.items() if name in names}
 
 
+def tool_group_names(tool_calls: Mapping[str, ToolCall]) -> set[str]:
+    """Every optional group a rule set's tools belong to, so the turn checklist covers all of
+    the rule set's general areas and no others."""
+    return {group for tool in tool_calls.values() for group in tool_groups(tool.name)}
+
+
 def state_tool_groups(
     state: Any,
     text: str,

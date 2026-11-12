@@ -1480,6 +1480,9 @@ class StateStepMade(GameEvent):
     requests: list[dict[str, str]]
     messages: list[dict[str, Any]]
     context: list[dict[str, str]]
+    # False when the state step must continue, such as a reply that did not include the turn
+    # checklist yet. Older logs have no field and always finish their step.
+    final: bool = True
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         turn = _open_turn(state)
@@ -1487,7 +1490,7 @@ class StateStepMade(GameEvent):
         turn.messages.extend(self.messages)
         turn.context.extend(_parts(self.context))
         turn.queue = [ToolRequest(**request) for request in self.requests]
-        if not self.requests:
+        if not self.requests and self.final:
             turn.narrating = True
             turn.speech = []
 

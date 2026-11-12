@@ -73,6 +73,38 @@ def test_meeting_an_npc_records_what_the_player_knows(
     assert brin.personality
 
 
+def test_the_gm_sees_the_current_cards_of_the_people_in_the_scene(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    client, campaign_id = _campaign_id(client_factory)
+    _place_pc(client, campaign_id, "Glowcap Ring")
+    summary = "A sharp-eyed forager who trades mushroom caps and gossip."
+    _tool(app, campaign_id, "describe_character", {"name": "Brin Gallowcap", "summary": summary})
+    _tool(
+        app,
+        campaign_id,
+        "update_npc_knowledge",
+        {"name": "Brin Gallowcap", "relationship": "friendly, owes a debt"},
+    )
+
+    text = world.world_state_text(_state(app, campaign_id), NO_CAMPAIGN)
+    assert "What the player knows of the people here:" in text
+    assert f'summary "{summary}"' in text
+    assert 'relationship "friendly, owes a debt"' in text
+    assert "refresh their summary with describe_character" in text
+
+
+def test_the_gm_sees_when_a_person_in_the_scene_has_no_summary_yet(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    client, campaign_id = _campaign_id(client_factory)
+    _place_pc(client, campaign_id, "Glowcap Ring")
+    text = world.world_state_text(_state(app, campaign_id), NO_CAMPAIGN)
+    assert "What the player knows of the people here:" in text
+    assert "no player-facing summary yet" in text
+    assert "no relationship recorded" in text
+
+
 def test_a_secret_in_an_npc_description_is_not_shown_to_the_player(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
@@ -108,6 +140,7 @@ def test_a_secret_in_an_npc_description_is_not_shown_to_the_player(
     characters = _characters_section(page)
     assert "A flour-dusted baker with a quick laugh." in characters
     assert "secretly the cult" not in characters
+    assert "A baker. He is secretly the cult's leader." not in characters
 
 
 def test_an_npc_coming_to_the_player_is_remembered(
@@ -304,6 +337,7 @@ def test_characters_page_shows_known_people_and_their_last_known_place(
     assert summary in characters
     known = _state(app, campaign_id).known[name_key("Brin Gallowcap")]
     assert known.personality
+    # A written summary is the card body; the meeting traits are the fallback when it is absent.
     assert known.personality not in characters
     for quirk in known.quirks:
         assert quirk not in characters
