@@ -622,7 +622,6 @@ class MusicCue:
     day-part it was chosen for, so a cue expires when the scene moves on."""
 
     mood: str
-    intensity: int
     source: str = "gm"
     scene: str = ""
 

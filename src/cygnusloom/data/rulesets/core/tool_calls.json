@@ -1377,20 +1377,10 @@
             "silence"
           ],
           "description": "The mood of the current scene: calm, exploration, tension, combat, victory, sorrow, mystery, horror, social, or silence."
-        },
-        "intensity": {
-          "type": "integer",
-          "enum": [
-            1,
-            2,
-            3
-          ],
-          "description": "How strong the mood is: 1 quiet, 2 moderate, 3 intense. Use 3 for a desperate fight, a boss, or a scene at its peak."
         }
       },
       "required": [
-        "mood",
-        "intensity"
+        "mood"
       ]
     }
   },

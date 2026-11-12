@@ -13,10 +13,6 @@
         "combat",
         "tension"
       ],
-      "intensity": [
-        2,
-        3
-      ],
       "tags": [
         "orchestral",
         "drums",
@@ -39,10 +35,6 @@
       "moods": [
         "horror",
         "mystery"
-      ],
-      "intensity": [
-        2,
-        3
       ],
       "tags": [
         "dark",
@@ -67,10 +59,6 @@
         "mystery",
         "horror"
       ],
-      "intensity": [
-        2,
-        3
-      ],
       "tags": [
         "arcane",
         "choir",
@@ -93,10 +81,6 @@
       "moods": [
         "calm",
         "social"
-      ],
-      "intensity": [
-        1,
-        2
       ],
       "tags": [
         "piano",
@@ -121,10 +105,6 @@
         "sorrow",
         "calm"
       ],
-      "intensity": [
-        1,
-        2
-      ],
       "tags": [
         "emotional",
         "strings",
@@ -147,10 +127,6 @@
       "moods": [
         "victory",
         "exploration"
-      ],
-      "intensity": [
-        2,
-        3
       ],
       "tags": [
         "epic",
@@ -175,10 +151,6 @@
         "tension",
         "combat"
       ],
-      "intensity": [
-        2,
-        3
-      ],
       "tags": [
         "drums",
         "dark",
@@ -201,10 +173,6 @@
       "moods": [
         "exploration",
         "calm"
-      ],
-      "intensity": [
-        1,
-        2
       ],
       "tags": [
         "rpg",
@@ -229,10 +197,6 @@
         "combat",
         "horror"
       ],
-      "intensity": [
-        3,
-        3
-      ],
       "tags": [
         "boss",
         "rpg",
@@ -255,10 +219,6 @@
       "moods": [
         "horror",
         "mystery"
-      ],
-      "intensity": [
-        2,
-        3
       ],
       "tags": [
         "rpg",
@@ -283,10 +243,6 @@
         "social",
         "calm"
       ],
-      "intensity": [
-        1,
-        1
-      ],
       "tags": [
         "village",
         "rpg",
@@ -310,10 +266,6 @@
         "calm",
         "exploration"
       ],
-      "intensity": [
-        1,
-        1
-      ],
       "tags": [
         "rpg",
         "acoustic",
@@ -336,10 +288,6 @@
       "moods": [
         "combat",
         "tension"
-      ],
-      "intensity": [
-        2,
-        3
       ],
       "tags": [
         "rpg",
@@ -365,10 +313,6 @@
         "mystery",
         "exploration"
       ],
-      "intensity": [
-        1,
-        2
-      ],
       "tags": [
         "fantasy",
         "folk",
@@ -391,10 +335,6 @@
       "moods": [
         "combat",
         "tension"
-      ],
-      "intensity": [
-        3,
-        3
       ],
       "tags": [
         "orchestral",
@@ -419,10 +359,6 @@
         "combat",
         "tension"
       ],
-      "intensity": [
-        2,
-        3
-      ],
       "tags": [
         "orchestral",
         "driving",
@@ -446,10 +382,6 @@
         "exploration",
         "calm"
       ],
-      "intensity": [
-        1,
-        2
-      ],
       "tags": [
         "wonder",
         "strings",
@@ -471,10 +403,6 @@
       "duration": 179.02,
       "moods": [
         "combat"
-      ],
-      "intensity": [
-        2,
-        3
       ],
       "tags": [
         "boss",
@@ -499,10 +427,6 @@
         "combat",
         "tension"
       ],
-      "intensity": [
-        2,
-        3
-      ],
       "tags": [
         "rpg",
         "drums",
@@ -524,10 +448,6 @@
       "duration": 113.33,
       "moods": [
         "exploration"
-      ],
-      "intensity": [
-        1,
-        2
       ],
       "tags": [
         "rpg",
@@ -552,10 +472,6 @@
         "exploration",
         "mystery"
       ],
-      "intensity": [
-        1,
-        2
-      ],
       "tags": [
         "rpg",
         "cold",
@@ -578,10 +494,6 @@
       "moods": [
         "exploration",
         "victory"
-      ],
-      "intensity": [
-        2,
-        2
       ],
       "tags": [
         "rpg",
@@ -606,10 +518,6 @@
         "mystery",
         "tension"
       ],
-      "intensity": [
-        1,
-        2
-      ],
       "tags": [
         "rpg",
         "night",
@@ -632,10 +540,6 @@
       "moods": [
         "horror",
         "mystery"
-      ],
-      "intensity": [
-        2,
-        3
       ],
       "tags": [
         "rpg",
@@ -660,10 +564,6 @@
         "exploration",
         "calm"
       ],
-      "intensity": [
-        1,
-        2
-      ],
       "tags": [
         "rpg",
         "adventure",
@@ -686,10 +586,6 @@
       "moods": [
         "exploration",
         "mystery"
-      ],
-      "intensity": [
-        1,
-        2
       ],
       "tags": [
         "rpg",
@@ -714,10 +610,6 @@
         "combat",
         "tension"
       ],
-      "intensity": [
-        2,
-        3
-      ],
       "tags": [
         "rpg",
         "drums",
@@ -740,10 +632,6 @@
       "moods": [
         "tension",
         "combat"
-      ],
-      "intensity": [
-        2,
-        3
       ],
       "tags": [
         "rpg",
@@ -768,10 +656,6 @@
         "social",
         "calm"
       ],
-      "intensity": [
-        1,
-        1
-      ],
       "tags": [
         "rpg",
         "warm",
@@ -794,10 +678,6 @@
       "moods": [
         "mystery",
         "tension"
-      ],
-      "intensity": [
-        1,
-        2
       ],
       "tags": [
         "fantasy",
@@ -822,10 +702,6 @@
         "exploration",
         "victory"
       ],
-      "intensity": [
-        2,
-        2
-      ],
       "tags": [
         "fantasy",
         "folk",
@@ -848,10 +724,6 @@
       "moods": [
         "sorrow",
         "calm"
-      ],
-      "intensity": [
-        1,
-        2
       ],
       "tags": [
         "melancholy",
@@ -876,10 +748,6 @@
         "sorrow",
         "calm"
       ],
-      "intensity": [
-        1,
-        2
-      ],
       "tags": [
         "intimate",
         "piano",
@@ -902,10 +770,6 @@
       "moods": [
         "sorrow",
         "calm"
-      ],
-      "intensity": [
-        1,
-        1
       ],
       "tags": [
         "contemplative",
@@ -930,10 +794,6 @@
         "victory",
         "exploration"
       ],
-      "intensity": [
-        2,
-        3
-      ],
       "tags": [
         "orchestral",
         "brass",
@@ -956,10 +816,6 @@
       "moods": [
         "social",
         "calm"
-      ],
-      "intensity": [
-        1,
-        1
       ],
       "tags": [
         "warm",
@@ -984,10 +840,6 @@
         "horror",
         "mystery"
       ],
-      "intensity": [
-        2,
-        3
-      ],
       "tags": [
         "dark",
         "ritual",
@@ -1010,10 +862,6 @@
       "moods": [
         "mystery",
         "sorrow"
-      ],
-      "intensity": [
-        1,
-        2
       ],
       "tags": [
         "mysterious",
@@ -1038,10 +886,6 @@
         "exploration",
         "victory"
       ],
-      "intensity": [
-        2,
-        3
-      ],
       "tags": [
         "adventurous",
         "brass",
@@ -1064,10 +908,6 @@
       "moods": [
         "tension",
         "combat"
-      ],
-      "intensity": [
-        2,
-        3
       ],
       "tags": [
         "fantasy",

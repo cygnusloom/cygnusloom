@@ -1858,38 +1858,30 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
             self.engine, self.campaign_id, setting, value
         )
 
-    def set_music(self, mood: str, intensity: int) -> dict[str, Any]:
+    def set_music(self, mood: str) -> dict[str, Any]:
         """Set the background-music mood for the current scene. The browser chooses a track
         from the licensed pack; the GM never needs the catalog."""
         if mood not in MOODS:
             raise InvalidInput(f"mood must be one of: {', '.join(MOODS)}")
-        if intensity not in (1, 2, 3):
-            raise InvalidInput("intensity must be 1, 2, or 3")
         with session_scope(self.engine) as db:
             state = load_state(db, self.campaign_id)
             scene = scene_key(state)
             cue = state.music
-            if (
-                cue is not None
-                and cue.mood == mood
-                and cue.intensity == intensity
-                and cue.scene == scene
-            ):
+            if cue is not None and cue.mood == mood and cue.scene == scene:
                 # The same cue in the same scene is already in the log. This keeps a model that
                 # repeats the call from filling the transcript with identical events.
-                return {"mood": mood, "intensity": intensity}
+                return {"mood": mood}
             record(
                 db,
                 self.campaign_id,
                 MusicCued(
                     mood=mood,
-                    intensity=intensity,
                     source="gm",
                     scene=scene,
                 ),
             )
             db.commit()
-        return {"mood": mood, "intensity": intensity}
+        return {"mood": mood}
 
     def record_settings(self, facts: list[dict[str, str]]) -> dict[str, Any]:
         with session_scope(self.engine) as db:

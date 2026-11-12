@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from cygnusloom.content.library import ClockRules
-from cygnusloom.services.state import PC_KIND, CampaignState, Character, name_key
+from cygnusloom.services.state import CampaignState, Character, name_key
 
 # The moods the GM may choose. Keep this list small: it is shown in the tool schema and the
 # prompt, and a large vocabulary makes the model guess.
@@ -45,7 +45,6 @@ MOOD_LABELS = {
     "social": "Social",
     "silence": "Silence",
 }
-INTENSITIES = (1, 2, 3)
 ALLOWED_LICENSES = frozenset(
     {
         "CC0-1.0",
@@ -70,7 +69,6 @@ class MusicView:
     """The music state a page should render."""
 
     mood: str
-    intensity: int
     source: str
 
     @property
@@ -93,32 +91,22 @@ def derive_scene_mood(state: CampaignState, clock_rules: ClockRules | None = Non
     """The mood the scene itself implies. This is the fallback and the hard override for combat
     and death, whether or not the GM has cued anything."""
     if state.encounter is not None:
-        in_danger = any(
-            character.kind == PC_KIND
-            and (
-                character.dead
-                or character.defeated
-                or character.dying_hours is not None
-                or character.dying_rounds is not None
-            )
-            for character in state.characters.values()
-        )
-        return MusicView("combat", 3 if in_danger else 2, "auto")
+        return MusicView("combat", "auto")
 
     pcs = state.pcs()
     if pcs and all(
         pc.out_of_play or pc.dying_hours is not None or pc.dying_rounds is not None for pc in pcs
     ):
-        return MusicView("sorrow", 2, "auto")
+        return MusicView("sorrow", "auto")
 
     icon = _location_icon(state, state.pc())
     if icon in SOCIAL_ICONS:
-        return MusicView("social", 1, "auto")
+        return MusicView("social", "auto")
     if icon in MYSTERY_ICONS:
-        return MusicView("mystery", 2, "auto")
+        return MusicView("mystery", "auto")
     if _is_night(state, clock_rules):
-        return MusicView("tension", 1, "auto")
-    return MusicView("exploration", 1, "auto")
+        return MusicView("tension", "auto")
+    return MusicView("exploration", "auto")
 
 
 def music_view(
@@ -132,13 +120,8 @@ def music_view(
     derived = derive_scene_mood(state, clock_rules)
     cue = state.music
     if state.encounter is not None:
-        if (
-            cue is not None
-            and cue.scene == scene_key(state)
-            and cue.mood == "combat"
-            and cue.intensity in INTENSITIES
-        ):
-            return MusicView("combat", max(derived.intensity, cue.intensity), "gm")
+        if cue is not None and cue.scene == scene_key(state) and cue.mood == "combat":
+            return MusicView("combat", "gm")
         return derived
     if derived.mood == "sorrow":
         return derived
@@ -146,8 +129,8 @@ def music_view(
         if cue.mood == "combat":
             # Combat is over; the cue belongs to the fight, not to the scene after it.
             return derived
-        if cue.mood in MOODS and cue.intensity in INTENSITIES:
-            return MusicView(cue.mood, cue.intensity, cue.source)
+        if cue.mood in MOODS:
+            return MusicView(cue.mood, cue.source)
     return derived
 
 
@@ -193,14 +176,6 @@ def validate_manifest(data: Any, *, music_dir: Path = MUSIC_DIR) -> list[str]:
             unknown = [mood for mood in moods if mood not in MOODS]
             if unknown:
                 problems.append(f"{label} has unknown moods: {', '.join(map(str, unknown))}")
-        intensity = track.get("intensity")
-        if (
-            not isinstance(intensity, list)
-            or len(intensity) != 2
-            or not all(isinstance(value, int) for value in intensity)
-            or not 1 <= intensity[0] <= intensity[1] <= 3
-        ):
-            problems.append(f"{label} intensity must be [low, high] within 1 to 3")
         if not isinstance(track.get("loop"), bool):
             problems.append(f"{label} loop must be true or false")
         file_name = str(track.get("file") or "")

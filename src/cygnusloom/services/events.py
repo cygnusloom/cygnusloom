@@ -508,14 +508,12 @@ class MusicCued(GameEvent):
     channel: ClassVar[Channel] = Channel.INTERNAL
 
     mood: str
-    intensity: int
     source: str = "gm"
     scene: str = ""
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         state.music = MusicCue(
             mood=self.mood,
-            intensity=self.intensity,
             source=self.source,
             scene=self.scene,
         )

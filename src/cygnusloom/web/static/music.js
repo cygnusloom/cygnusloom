@@ -53,7 +53,6 @@
   let userEnabled = readBool(ENABLED_KEY, root.dataset.musicDefaultEnabled !== "0");
   let volume = readNumber(VOLUME_KEY, DEFAULT_VOLUME);
   let mood = root.dataset.musicMood || "silence";
-  let intensity = Number(root.dataset.musicIntensity || 1);
   let source = root.dataset.musicSource || "auto";
   let manifest = null;
   let manifestPromise = null;
@@ -80,12 +79,8 @@
     const file = String(track.file || "");
     return file.startsWith("/") ? file : `/static/music/${encodeURIComponent(file)}`;
   };
-  const trackFits = (track, nextMood, nextIntensity) =>
-    Array.isArray(track.moods) &&
-    track.moods.includes(nextMood) &&
-    Array.isArray(track.intensity) &&
-    nextIntensity >= track.intensity[0] &&
-    nextIntensity <= track.intensity[1];
+  const trackFits = (track, nextMood) =>
+    Array.isArray(track.moods) && track.moods.includes(nextMood);
 
   // The widget shows what is playing under its controls. The text scrolls when it does not fit;
   // the second copy in the markup makes the loop seamless.
@@ -262,13 +257,10 @@
     return manifestPromise;
   };
 
-  const pickTrack = (nextMood, nextIntensity) => {
+  const pickTrack = (nextMood) => {
     if (!manifest) return null;
     const byMood = (wanted) => manifest.tracks.filter((track) => track.moods.includes(wanted));
-    let pool = byMood(nextMood).filter(
-      (track) => nextIntensity >= track.intensity[0] && nextIntensity <= track.intensity[1],
-    );
-    if (!pool.length) pool = byMood(nextMood);
+    let pool = byMood(nextMood);
     for (const fallback of FALLBACKS[nextMood] || []) {
       if (pool.length) break;
       pool = byMood(fallback);
@@ -358,7 +350,7 @@
 
     next.addEventListener("ended", () => {
       if (current?.audio !== next || next.loop) return;
-      const following = pickTrack(mood, intensity);
+      const following = pickTrack(mood);
       if (following) fadeTo(following);
     });
   };
@@ -369,7 +361,7 @@
       stop();
       return;
     }
-    if (current && trackFits(current.track, mood, intensity) && !current.audio.paused) {
+    if (current && trackFits(current.track, mood) && !current.audio.paused) {
       syncAudible();
       syncControls();
       return;
@@ -377,7 +369,7 @@
     // Start in the caller's gesture when the pack is already loaded: some browsers only allow
     // audible playback from the event handler itself.
     if (manifest) {
-      const track = pickTrack(mood, intensity);
+      const track = pickTrack(mood);
       if (track) fadeTo(track);
       return;
     }
@@ -385,7 +377,7 @@
     loadManifest().then((data) => {
       starting = false;
       if (!data || !userEnabled || mood === "silence") return;
-      const track = pickTrack(mood, intensity);
+      const track = pickTrack(mood);
       if (track) fadeTo(track);
     });
   };
@@ -394,7 +386,7 @@
     if (!userEnabled || mood === "silence") return;
     const advance = () => {
       if (!userEnabled || mood === "silence") return;
-      const following = pickTrack(mood, intensity);
+      const following = pickTrack(mood);
       if (following) fadeTo(following);
     };
     if (manifest) advance();
@@ -403,24 +395,16 @@
     });
   };
 
-  const applyState = (nextMood, nextIntensity, nextSource) => {
+  const applyState = (nextMood, nextSource) => {
     const moodChanged = nextMood !== mood;
-    const intensityChanged = nextIntensity !== intensity;
     mood = typeof nextMood === "string" && nextMood ? nextMood : "exploration";
-    intensity = clamp(Number(nextIntensity) || 1, 1, 3);
     source = normalise(nextSource);
     syncControls();
     if (!userEnabled || mood === "silence") {
       stop();
       return;
     }
-    if (
-      current &&
-      !moodChanged &&
-      !intensityChanged &&
-      trackFits(current.track, mood, intensity) &&
-      !current.audio.paused
-    ) {
+    if (current && !moodChanged && trackFits(current.track, mood) && !current.audio.paused) {
       syncControls();
       return;
     }

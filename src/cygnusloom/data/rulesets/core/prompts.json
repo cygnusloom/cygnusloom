@@ -36,6 +36,6 @@
     "type": "prompt",
     "id": "music",
     "step": "state",
-    "text": "Background music follows the mood of the scene. Use set_music when the mood changes, at most once per turn, with the closest mood and an intensity from 1 to 3. Use silence for a deliberate pause. Do not call it every turn, do not call it for an out-of-character message or a rules question, and never mention music, the tool, or its result in the narration. Combat changes the music automatically; when the party camps, journeys, or settles into a town, cue the new mood. The same mood may last many turns without another call."
+    "text": "Background music follows the mood of the scene. Use set_music when the mood changes, at most once per turn, with the closest mood. Use silence for a deliberate pause. Do not call it every turn, do not call it for an out-of-character message or a rules question, and never mention music, the tool, or its result in the narration. Combat changes the music automatically; when the party camps, journeys, or settles into a town, cue the new mood. The same mood may last many turns without another call."
   }
 ]

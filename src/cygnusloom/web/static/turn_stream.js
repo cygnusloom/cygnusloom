@@ -395,11 +395,9 @@
     // the current track when it still fits.
     if (freshPlay.dataset.musicMood) {
       currentPlay.dataset.musicMood = freshPlay.dataset.musicMood;
-      currentPlay.dataset.musicIntensity = freshPlay.dataset.musicIntensity;
       currentPlay.dataset.musicSource = freshPlay.dataset.musicSource;
       window.applyMusicState?.(
         freshPlay.dataset.musicMood,
-        Number(freshPlay.dataset.musicIntensity || 1),
         freshPlay.dataset.musicSource || "auto",
       );
     }

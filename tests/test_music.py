@@ -107,6 +107,7 @@ def test_the_bundled_pack_is_valid_and_covers_every_mood_but_silence():
     covered = {mood for track in manifest["tracks"] for mood in track["moods"]}
     assert set(MOODS) - covered == {"silence"}
     assert len(manifest["tracks"]) >= 40
+    assert all("intensity" not in track for track in manifest["tracks"])
     for mood in MOODS:
         if mood == "silence":
             continue
@@ -116,55 +117,55 @@ def test_the_bundled_pack_is_valid_and_covers_every_mood_but_silence():
     assert total < 100 * 1024 * 1024
 
 
-def test_combat_is_derived_and_intensifies_when_a_player_is_in_danger():
+def test_combat_is_derived_during_an_encounter():
     state = _state(encounter=Encounter(map="Camp", location="Mossbell Hollow"))
 
-    assert derive_scene_mood(state) == MusicView("combat", 2, "auto")
+    assert derive_scene_mood(state) == MusicView("combat", "auto")
     state.characters[name_key("Ada")].defeated = True
-    assert derive_scene_mood(state) == MusicView("combat", 3, "auto")
+    assert derive_scene_mood(state) == MusicView("combat", "auto")
 
 
 def test_a_music_view_has_a_player_facing_label():
-    assert MusicView("exploration", 1, "auto").label == "Exploration"
-    assert MusicView("silence", 1, "gm").label == "Silence"
+    assert MusicView("exploration", "auto").label == "Exploration"
+    assert MusicView("silence", "gm").label == "Silence"
 
 
 def test_places_and_night_suggest_a_mood():
     state = _state()
-    assert derive_scene_mood(state) == MusicView("social", 1, "auto")
+    assert derive_scene_mood(state) == MusicView("social", "auto")
 
     state.places[name_key("Mossbell Hollow")] = Place(
         name="Mossbell Hollow", description="", icon="forest"
     )
     clock = ClockRules(parts=("morning", "night"), stale_days=1)
     state.clock = Clock(day=1, part=1)
-    assert derive_scene_mood(state, clock) == MusicView("tension", 1, "auto")
+    assert derive_scene_mood(state, clock) == MusicView("tension", "auto")
 
 
 def test_a_gm_cue_lasts_for_its_scene_and_expires_when_the_scene_moves():
     state = _state()
-    state.music = MusicCue("social", 1, "gm", scene=scene_key(state))
-    assert music_view(state) == MusicView("social", 1, "gm")
+    state.music = MusicCue("social", "gm", scene=scene_key(state))
+    assert music_view(state) == MusicView("social", "gm")
 
     state.clock = Clock(day=2, part=0)
-    assert music_view(state) != MusicView("social", 1, "gm")
+    assert music_view(state) != MusicView("social", "gm")
 
 
 def test_combat_overrides_a_stale_cue_and_silence_is_kept():
     state = _state()
-    state.music = MusicCue("social", 1, "gm", scene=scene_key(state))
+    state.music = MusicCue("social", "gm", scene=scene_key(state))
     state.encounter = Encounter(map="Camp", location="Mossbell Hollow")
-    assert music_view(state) == MusicView("combat", 2, "auto")
+    assert music_view(state) == MusicView("combat", "auto")
 
     state.encounter = None
-    state.music = MusicCue("silence", 1, "gm", scene=scene_key(state))
-    assert music_view(state) == MusicView("silence", 1, "gm")
+    state.music = MusicCue("silence", "gm", scene=scene_key(state))
+    assert music_view(state) == MusicView("silence", "gm")
 
 
 def test_a_combat_cue_does_not_linger_after_the_encounter():
     state = _state(encounter=Encounter(map="Camp", location="Mossbell Hollow"))
-    state.music = MusicCue("combat", 3, "gm", scene=scene_key(state))
-    assert music_view(state) == MusicView("combat", 3, "gm")
+    state.music = MusicCue("combat", "gm", scene=scene_key(state))
+    assert music_view(state) == MusicView("combat", "gm")
 
     state.encounter = None
     assert music_view(state).mood != "combat"
@@ -173,7 +174,7 @@ def test_a_combat_cue_does_not_linger_after_the_encounter():
 def test_sorrow_is_for_a_party_with_no_character_left_in_play():
     state = _state()
     state.characters[name_key("Ada")].dead = True
-    assert music_view(state) == MusicView("sorrow", 2, "auto")
+    assert music_view(state) == MusicView("sorrow", "auto")
 
     replacement = _character(name="Bram")
     state.characters[name_key("Bram")] = replacement
@@ -192,16 +193,15 @@ def test_the_gm_can_cue_music_and_the_page_renders_it(
     response = send_message(
         client,
         campaign_id,
-        _tool_script("set_music", {"mood": "tension", "intensity": 2}),
+        _tool_script("set_music", {"mood": "tension"}),
     )
 
     assert response.status_code == 303
     cues = _music_events(app, campaign_id)
     assert cues and cues[-1].mood == "tension"
-    assert cues[-1].intensity == 2
     page = client.get(f"/campaigns/{campaign_id}").text
     assert 'data-music-mood="tension"' in page
-    assert 'data-music-intensity="2"' in page
+    assert "data-music-intensity" not in page
     assert 'data-music-manifest="/static/music/manifest.json"' in page
     assert "data-music-mood-label>Tension<" in page
 
@@ -214,7 +214,7 @@ def test_an_unknown_mood_is_refused_without_recording_a_cue(
     response = send_message(
         client,
         campaign_id,
-        _tool_script("set_music", {"mood": "dance", "intensity": 2}),
+        _tool_script("set_music", {"mood": "dance"}),
     )
 
     assert response.status_code == 303
@@ -226,7 +226,7 @@ def test_repeating_the_same_cue_in_the_same_scene_does_not_fill_the_log(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     client, campaign_id = campaign_ready_fast(client_factory)
-    script = _tool_script("set_music", {"mood": "tension", "intensity": 2})
+    script = _tool_script("set_music", {"mood": "tension"})
 
     assert send_message(client, campaign_id, script).status_code == 303
     assert send_message(client, campaign_id, script).status_code == 303
