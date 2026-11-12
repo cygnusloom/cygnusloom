@@ -251,7 +251,7 @@
   {
     "type": "tool_call",
     "id": "move_actor",
-    "description": "Move the player character or an NPC to another existing location. Use it when someone travels or is sent somewhere. Travel follows the routes in the location descriptions: send the player character only to a place reached by a route from where they are, and never to a place they have not heard of, unless something forces them there (a trap, a teleporter, or some other force). A forced move discovers the place on arrival. The player character starts unplaced, so on the first turn create the place where the story begins and move the player character there. Moving the player character to a place discovers it. Leave location out to send an NPC into the wind: it is at no location until a later move brings it back. The player character cannot go into the wind. Always give the mode. Use overland for a journey across open country or between distant sites, which takes travel time and needs a route. Use in_settlement for a walk within one settlement, station, or site, which takes time at the travel speed. Use in_dungeon for a move through a building, ship, or ruin, which takes no clock time. The result reports the time charged. Moving to a place with a local map also places the mover and any traveling hirelings on it, and the result reports their cells.",
+    "description": "Move the player character or an NPC to another existing location. Use it when someone travels or is sent somewhere. Travel follows the routes in the location descriptions: send the player character only to a place reached by a route from where they are, and never to a place they have not heard of, unless something forces them there (a trap, a teleporter, or some other force). A forced move discovers the place on arrival. The player character starts unplaced, so on the first turn create the place where the story begins and move the player character there. Moving the player character to a place discovers it. Leave location out to send an NPC into the wind: it is at no location until a later move brings it back, so first add a note on the NPC saying where it went and what it is doing. The player character cannot go into the wind. Always give the mode. Use overland for a journey across open country or between distant sites, which takes travel time and needs a route. Use in_settlement for a walk within one settlement, station, or site, which takes time at the travel speed. Use in_dungeon for a move through a building, ship, or ruin, which takes no clock time. The result reports the time charged. Moving to a place with a local map also places the mover and any traveling hirelings on it, and the result reports their cells.",
     "travel": true,
     "parameters": {
       "properties": {
@@ -261,7 +261,7 @@
         },
         "location": {
           "type": "string",
-          "description": "The name of the location to move them to. It must already exist. Omit it only to send an NPC into the wind."
+          "description": "The name of the location to move them to. It must already exist. Omit it only to send an NPC into the wind; first add a note on the NPC saying where it went and what it is doing, so a later turn can bring it back."
         },
         "mode": {
           "type": "string",
@@ -1474,7 +1474,7 @@
   {
     "type": "tool_call",
     "id": "place_map_token",
-    "description": "Place a token on a local map outside an encounter: the player character, an NPC at that place, or a prop such as a barrel, cart, or boat. The token shows where it stands and keeps its cell when an encounter starts on the same map. Moving to a place with a local map already places the mover on it; use this tool to change that arrival cell or to move a character within the map. Placing the same token again moves it; do this whenever the scene moves a character within the map, in the same state step and before the narration. The result reports the new cell and, when the token moved, the cell it left. A character must already be at the map's location. The cell must be on the map, free of another token, and not blocked by an object. During an encounter, use place_participant instead.",
+    "description": "Place a token on a local map outside an encounter: the player character, an NPC at that place, or a prop such as a barrel, cart, or boat. The token shows where it stands and keeps its cell when an encounter starts on the same map. Moving to a place with a local map already places the mover on it; use this tool to change that arrival cell or to move a character within the map. Placing the same token again moves it; do this whenever the scene moves a character within the map, in the same state step and before the narration. A token shows where a character stands, not where they are: moving a token does not move the character between places, so use move_actor when they leave, and remove_map_token when their token should go. The result reports the new cell and, when the token moved, the cell it left. A character must already be at the map's location. The cell must be on the map, free of another token, and not blocked by an object. During an encounter, use place_participant instead.",
     "parameters": {
       "properties": {
         "map": {

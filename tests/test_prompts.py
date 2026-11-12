@@ -195,6 +195,20 @@ def test_state_prompt_keeps_character_summaries_current():
     assert "keep the summary brief and free of GM-only secrets" in text
 
 
+def test_state_prompt_keeps_the_scene_cast_moving_and_recallable():
+    text = state_instruction(rules_for())
+    assert "Keep the cast moving, even the NPCs who belong to a place" in text
+    assert "review its cast and use your judgment" in text
+    assert "keep an NPC where they are, move them elsewhere in the area" in text
+    assert "into the wind with move_actor and no location" in text
+    assert "A map token is not a location" in text
+    assert "when an NPC leaves, call move_actor" in text
+    assert "add a note on that NPC saying where they went" in text
+    assert "so a later turn can recall them" in text
+    assert "update_npc_knowledge" in text
+    assert "delete one who matters little and will not return" in text
+
+
 def test_the_state_step_requires_the_turn_checklist():
     text = state_instruction(rules_for())
     assert "turn checklist" in STATE_CLOSING
@@ -205,8 +219,9 @@ def test_the_state_step_requires_the_turn_checklist():
 
 def test_turn_checklist_covers_core_areas_and_the_rule_sets_optional_groups():
     text, keys = turn_checklist(rules_for().checklist, {"combat", "market"})
-    assert keys[:8] == (
+    assert keys[:9] == (
         "characters",
+        "cast",
         "summaries",
         "movement",
         "notes",
@@ -219,6 +234,7 @@ def test_turn_checklist_covers_core_areas_and_the_rule_sets_optional_groups():
     assert "market" in keys
     assert "magic" not in keys
     assert "player-facing summary says what this action changed" in text
+    assert "where each one can be found again" in text
     assert "finish_state_step" in text
     for key in keys:
         assert f"- {key}:" in text
@@ -226,8 +242,9 @@ def test_turn_checklist_covers_core_areas_and_the_rule_sets_optional_groups():
 
 def test_checklist_areas_drop_groups_the_rule_set_does_not_offer():
     areas = checklist_areas(rules_for().checklist, {"combat"})
-    assert [area.id for area in areas][:8] == [
+    assert [area.id for area in areas][:9] == [
         "characters",
+        "cast",
         "summaries",
         "movement",
         "notes",

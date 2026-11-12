@@ -8,6 +8,10 @@
         "text": "new or met people, and anyone who left, fell, or died"
       },
       {
+        "id": "cast",
+        "text": "the scene's cast: who stays or moves about, who leaves or goes into the wind, and where each one can be found again"
+      },
+      {
         "id": "summaries",
         "text": "the player-facing summary and relationship of the player character, every hireling, and everyone the player knows"
       },

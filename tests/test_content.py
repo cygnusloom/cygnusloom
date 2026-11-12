@@ -433,6 +433,15 @@ def test_create_region_asks_for_varied_shapes_cut_to_the_ground():
     assert "cut to fit" in tool.description
 
 
+def test_a_map_token_is_not_a_location_move():
+    library = bundled_library()
+    token = library.core.tool_calls["place_map_token"]
+    assert "moving a token does not move the character between places" in token.description
+    assert "remove_map_token when their token should go" in token.description
+    move = library.core.tool_calls["move_actor"]
+    assert "add a note on the NPC saying where it went" in move.description
+
+
 def test_twin_lakes_map_matches_the_module_map():
     """The module's map has no scale bar. It gives travel times instead: Dunston is one hour
     from Isthmus Town, and the White Tower Fens are two hours from either. At four kilometres
