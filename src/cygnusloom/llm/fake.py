@@ -45,6 +45,7 @@ JOURNAL_REVIEW_MARKER = "Journal and review step."
 REVIEW_MARKER = "Turn review step."
 REVISION_MARKER = "The last narration was set aside because:"
 NARRATION_RETRY_MARKER = "Your last reply was empty or was a tool call"
+_CHECKLIST_PROMPT_ITEM = re.compile(r"^\[x\]\s+([a-z][a-z0-9_-]*):", re.MULTILINE)
 _decoder = json.JSONDecoder()
 _WORDS = re.compile(r"\s*\S+|\s+")
 
@@ -238,8 +239,10 @@ def _current_turn(messages: list[dict[str, Any]]) -> tuple[int, dict[str, Any]] 
 def _respond(messages: list[dict[str, Any]], decision: bool) -> ChatReply:
     current = _current_turn(messages)
     if current is None:
-        # Decisions stay silent so the narration is the only text the model produces.
-        return ChatReply(text="" if decision else _echo(messages))
+        # A decision with no script still answers the engine's turn checklist, so an opening
+        # without a directive does not look like a model that ignored it. Without a checklist
+        # in the prompt, decisions stay silent so the narration is the only text produced.
+        return ChatReply(text=_checklist_from_prompt(messages) if decision else _echo(messages))
     turn_index, turn = current
     if "error" in turn:
         raise LLMError(str(turn["error"]))
@@ -263,9 +266,18 @@ def _respond(messages: list[dict[str, Any]], decision: bool) -> ChatReply:
     if done >= len(rounds):
         if _is_ooc(messages):
             return ChatReply(text=str(turn.get("ooc", "")))
-        return ChatReply(text="")
+        return ChatReply(text=_checklist_from_prompt(messages))
     prefix = f"fake_{turn_index}_{done}"
     return ChatReply(text="", tool_requests=_tool_requests(rounds[done], prefix))
+
+
+def _checklist_from_prompt(messages: list[dict[str, Any]]) -> str:
+    """A checked-off turn checklist copied from the system prompt, or empty when the prompt has
+    none. The engine validates the state step's final reply against the same items."""
+    if not messages or messages[0].get("role") != "system":
+        return ""
+    keys = [match.group(1) for match in _CHECKLIST_PROMPT_ITEM.finditer(messages[0]["content"])]
+    return "\n".join(f"[x] {key}: no change" for key in keys)
 
 
 def _is_ooc(messages: list[dict[str, Any]]) -> bool:

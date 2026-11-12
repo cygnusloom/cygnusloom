@@ -85,11 +85,13 @@ from cygnusloom.services.prompts import (
     TURN_REVIEW_INSTRUCTION,
     journal_instruction,
     journal_review_instruction,
+    missing_checklist_items,
     narrate_instruction,
     opening_prompt,
     speech_instruction,
     state_instruction,
     system_parts,
+    turn_checklist,
 )
 from cygnusloom.services.tools import (
     LOAD_TOOL,
@@ -101,6 +103,7 @@ from cygnusloom.services.tools import (
     ToolRun,
     run_tool,
     state_tool_groups,
+    tool_group_names,
     wire_tool_specs,
 )
 from cygnusloom.services.views import present_rules_text, world_state_text
@@ -166,6 +169,9 @@ REVIEW_UNDONE_NOTE = "the narration did not match the record"
 HEARTBEAT_SECONDS = 15.0
 HEARTBEAT_MESSAGE = "Still working..."
 JOURNAL_ROUNDS = 3
+# A state-step reply that leaves out part of the turn checklist is asked for again this many
+# times. The turn is never blocked on it: after the retries the story goes on.
+CHECKLIST_RETRIES = 2
 # Once the prompt reaches this share of the context window, older history is summarized.
 COMPRESS_AT = 0.5
 # After a summary, the newest messages worth up to this share of the window stay verbatim.
@@ -252,6 +258,16 @@ def _add_instruction(
 ) -> None:
     messages.append({"role": "system", "content": text})
     context.append(ContextPart("system", source, text))
+
+
+def _checklist_retry(missing: Sequence[str]) -> str:
+    return (
+        "The state step is not finished: the turn checklist is missing "
+        + ", ".join(missing)
+        + ". Reply with the complete checklist now, one [x] line for every area in the system "
+        'prompt, and use "no change" where nothing changed. Make any change you missed with the '
+        "right tool before you reply."
+    )
 
 
 def _add_speech(
@@ -457,6 +473,9 @@ class _Run:
     rule_info_mode: str = "brief"
     # Groups the model asked for with load_tool during this turn.
     extra_groups: set[str] = field(default_factory=set)
+    # The areas every state step must check, and the keys its final reply must mark.
+    checklist: str = ""
+    checklist_keys: tuple[str, ...] = ()
 
     @property
     def tool_calls(self) -> Mapping[str, ToolCall]:
@@ -578,6 +597,7 @@ def _start_run(
     metered = MeteredProvider(provider, meter)
     world = library.world_content(campaign.world_template, campaign.rule_set)
     template = library.world_templates.get(campaign.world_template)
+    checklist, checklist_keys = turn_checklist(tool_group_names(rule_set.tool_calls))
     return _Run(
         engine=engine,
         campaign_id=campaign.id or 0,
@@ -607,6 +627,8 @@ def _start_run(
         player_id=player_id,
         tool_schema_mode=getattr(settings, "tool_schema_mode", "brief"),
         rule_info_mode=getattr(settings, "rule_info_mode", "brief"),
+        checklist=checklist,
+        checklist_keys=checklist_keys,
     )
 
 
@@ -898,6 +920,7 @@ async def _begin(run: _Run, turn: Turn) -> AsyncIterator[TurnEvent]:
             present_text,
             run.setting,
             rule_info_mode=run.rule_info_mode,
+            checklist=run.checklist,
         )
     )
     prompt_tokens += estimate_tokens(state_text)
@@ -947,6 +970,7 @@ async def _begin(run: _Run, turn: Turn) -> AsyncIterator[TurnEvent]:
         present_text,
         run.setting,
         rule_info_mode=run.rule_info_mode,
+        checklist=run.checklist,
     )
     conversation = [
         *(ContextPart(m.role, _campaigns()._message_source(m), m.content) for m in history),
@@ -1600,14 +1624,52 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
             yield event
         step = replied[0]
         if not step.tool_requests:
+            # A turn begun before the checklist existed keeps playing without one.
+            checklist_active = any(part.source == "Turn checklist" for part in turn.context)
+            retries = sum(1 for part in turn.context if part.source == "Checklist retry")
+            missing = (
+                missing_checklist_items(step.text, run.checklist_keys) if checklist_active else []
+            )
+            if missing and retries < CHECKLIST_RETRIES:
+                retry = _checklist_retry(missing)
+                context: list[ContextPart] = []
+                if step.text.strip():
+                    context.append(
+                        ContextPart(
+                            "assistant",
+                            f"GM state step (round {round_no}), incomplete checklist",
+                            step.text,
+                        )
+                    )
+                context.append(ContextPart("system", "Checklist retry", retry))
+                _record(
+                    run.engine,
+                    run.campaign_id,
+                    StateStepMade(
+                        requests=[],
+                        messages=[{"role": "system", "content": retry}],
+                        context=_dicts(context),
+                        final=False,
+                    ),
+                )
+                continue
             messages: list[dict[str, Any]] = []
-            context: list[ContextPart] = []
+            context = []
             if step.text.strip():
                 context.append(
                     ContextPart(
                         "assistant",
                         f"GM state step (round {round_no}), not shown to the narration",
                         step.text,
+                    )
+                )
+            if missing:
+                logger.warning("state step ended without checklist items: %s", ", ".join(missing))
+                context.append(
+                    ContextPart(
+                        "system",
+                        "Checklist incomplete",
+                        "Missing: " + ", ".join(missing) + ".",
                     )
                 )
             if turn.speech:

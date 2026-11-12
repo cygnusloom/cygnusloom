@@ -20,6 +20,24 @@ from tests.conftest import is_journal_messages, is_review_messages, make_app
 from tests.test_campaigns import _campaign_id, _send, _set_model
 
 METER_RE = re.compile(r'<span class="muted">([\d,]+) / 65,536</span>')
+CHECKLIST = "\n".join(
+    f"[x] {area}: no change"
+    for area in (
+        "characters",
+        "summaries",
+        "movement",
+        "notes",
+        "storylines",
+        "objects",
+        "time",
+        "rules",
+        "advancement",
+        "encounter",
+        "factions",
+        "maps",
+        "market",
+    )
+)
 
 
 class RecordingProvider:
@@ -45,6 +63,9 @@ class RecordingProvider:
             return ChatReply(text=self.summary_reply)
         if self.fail_after_summary and self.summaries:
             raise LLMError("the model is down")
+        last = str(messages[-1].get("content", "")) if messages else ""
+        if tools is not None and last.startswith(("State management step.", "Turn review step.")):
+            return ChatReply(text=CHECKLIST)
         return ChatReply(text="reply")
 
     async def stream(

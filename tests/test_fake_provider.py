@@ -88,6 +88,28 @@ def test_each_decision_call_takes_the_next_round_then_stops():
     assert _narrate(history) == "Done."
 
 
+def test_a_finished_decision_returns_the_checklist_from_the_system_prompt():
+    script = '__FAKE__:{"turns": [{"text": "Narration."}]}'
+    messages = [
+        {
+            "role": "system",
+            "content": "Turn checklist.\n[x] characters: who is here\n[x] movement: where they are",
+        },
+        _user(script),
+    ]
+    reply = _decide(messages)
+    assert reply.tool_requests == ()
+    assert reply.text.splitlines() == [
+        "[x] characters: no change",
+        "[x] movement: no change",
+    ]
+
+
+def test_a_decision_without_a_checklist_stays_silent():
+    script = '__FAKE__:{"turns": [{"text": "Narration."}]}'
+    assert _decide([{"role": "system", "content": "No checklist."}, _user(script)]).text == ""
+
+
 def test_directive_may_be_followed_by_text():
     assert _narrate([_user('__FAKE__:{"turns": [{"text": "ok"}]} thanks')]) == "ok"
 

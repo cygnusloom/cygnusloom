@@ -266,12 +266,33 @@ def test_model_change_applies_to_the_next_message(
 ):
     used: list[str] = []
 
+    checklist = "\n".join(
+        f"[x] {area}: no change"
+        for area in (
+            "characters",
+            "summaries",
+            "movement",
+            "notes",
+            "storylines",
+            "objects",
+            "time",
+            "rules",
+            "advancement",
+            "encounter",
+            "factions",
+            "maps",
+            "market",
+        )
+    )
+
     class Echo:
         name = "echo"
 
         async def chat(self, model, messages, tools=None):
             used.append(model)
-            return ChatReply(text=f"from {model}")
+            # A tool-bearing call is the state step or the review; a real model answers the
+            # turn checklist there. Narration gets the plain echo.
+            return ChatReply(text=checklist if tools is not None else f"from {model}")
 
         async def stream(self, model, messages, tools=None):
             yield await self.chat(model, messages, tools)

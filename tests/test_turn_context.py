@@ -65,6 +65,8 @@ def test_reply_context_lists_the_system_prompt_tools_and_the_message(
     reply_id = _message_ids(app, campaign_id, "assistant")[-1]
 
     parts = _context(app, campaign_id, reply_id)
+    # The state step's final checklist is internal prose, not a step of the player-facing turn.
+    parts = [part for part in parts if not part.source.startswith("GM state step")]
 
     sources = [part.source for part in parts]
     assert sources[0] == "Base prompt"
@@ -96,10 +98,20 @@ def test_recorded_system_text_is_exactly_what_the_model_received(
     base = [
         part for part in parts[: sources.index("This message (player)")] if part.role == "system"
     ]
-    final_call = [
+    calls = [
         call for call in without_journal(recorder.calls) if not is_review_messages(call["messages"])
-    ][-1]["messages"]
-    assert final_call[0] == {"role": "system", "content": "\n\n".join(p.content for p in base)}
+    ]
+    final_call = calls[-1]["messages"]
+    state_call = next(
+        call["messages"]
+        for call in reversed(calls)
+        if any(
+            message["role"] == "system"
+            and str(message["content"]).startswith("State management step.")
+            for message in call["messages"]
+        )
+    )
+    assert state_call[0] == {"role": "system", "content": "\n\n".join(p.content for p in base)}
     assert final_call[-1] == {"role": "system", "content": NARRATE_TEXT}
     assert all(message["content"] != STATE_INSTRUCTION for message in final_call)
 
@@ -120,6 +132,7 @@ def test_context_shows_history_and_this_turns_tool_rounds(
     reply_id = _message_ids(app, campaign_id, "assistant")[-1]
 
     parts = _context(app, campaign_id, reply_id)
+    parts = [part for part in parts if not part.source.startswith("GM state step")]
 
     sources = [part.source for part in parts]
     assert f"Message #{first_user} (player)" in sources
@@ -238,7 +251,11 @@ def test_transcript_covers_only_this_round(client_factory: Callable[[], TestClie
     _answer(client, campaign_id, "roll")
     reply_id = _message_ids(app, campaign_id, "assistant")[-1]
 
-    entries = _transcript(app, campaign_id, reply_id)
+    entries = [
+        entry
+        for entry in _transcript(app, campaign_id, reply_id)
+        if not entry.source.startswith("GM state step")
+    ]
 
     assert [entry.source for entry in entries] == [
         "This message (player)",
