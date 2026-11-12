@@ -24,7 +24,7 @@
     "id": "player_roll_save",
     "world_method": "roll_save",
     "rename": {"character": "name", "save": "stat", "cause": "reason"},
-    "description": "Ask the player to roll a saving throw for their own character, then record the d20 they rolled against the character's Physical, Evasion, Mental, or Luck save. Use it instead of roll_save for the player character: the player presses the roll button and the result is final. A failure is recorded; apply what it costs yourself.",
+    "description": "Ask the player to roll a saving throw for their own character, then record the d20 they rolled against the character's Physical, Evasion, Mental, or Luck save. Use it instead of roll_save for the player character: the player presses the roll button and the result is final. A failure is recorded; apply what it costs yourself. A returned reaction has already been applied by the engine; narrate its outcome rather than asking the player to roll again for it.",
     "player_input": {
       "dice": "1d20",
       "param": "natural",

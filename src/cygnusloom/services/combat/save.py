@@ -174,6 +174,11 @@ def player_save(
                 score=result.score,
                 passed=result.passed,
                 cause=cause,
+                reaction=(
+                    triggered.text
+                    if triggered is not None and triggered.reaction.uses <= 0
+                    else ""
+                ),
             ),
         )
         if triggered is not None:
@@ -205,6 +210,9 @@ def player_save(
             score=result.score,
             passed=result.passed,
             status=defeat_status(pc, combat.defeat),
+            reaction=(
+                triggered.text if triggered is not None and triggered.reaction.uses <= 0 else ""
+            ),
         ),
     )
     if triggered is not None:

@@ -700,7 +700,7 @@ def test_a_check_reaction_can_reroll_a_failed_social_check(client_factory):
 
     assert result["success"] is True
     assert result["roll"] == 12
-    assert result["reaction"] == "Cultured rerolls the failed social check."
+    assert result["reaction"] == "Cultured already rerolled the failed social check."
     with Session(client.app.state.engine) as db:
         character = load_state(db, campaign_id).characters[name_key(PC)]
     assert character.reaction_uses == {"rest:focus_cultured_2:cultured-reroll": 1}
@@ -726,14 +726,14 @@ def test_a_rest_recharges_cultured_and_the_character_panel_shows_it(client_facto
     assert "ready" in sheet()
 
     used = tools.roll_check("skill", PC, skill="convince", stat="cha", roll=2, difficulty=12)
-    assert used["reaction"] == "Cultured rerolls the failed social check."
+    assert used["reaction"] == "Cultured already rerolled the failed social check."
     assert "1/1 used" in sheet()
 
     tools.rest("night", reason="camp")
     assert "ready" in sheet()
 
     again = tools.roll_check("skill", PC, skill="convince", stat="cha", roll=2, difficulty=12)
-    assert again["reaction"] == "Cultured rerolls the failed social check."
+    assert again["reaction"] == "Cultured already rerolled the failed social check."
 
 
 def test_impostor_rerolls_a_disguise_check_once_per_hour(client_factory):
@@ -753,7 +753,7 @@ def test_impostor_rerolls_a_disguise_check_once_per_hour(client_factory):
     )
 
     assert result["success"] is True
-    assert result["reaction"] == "Impostor rerolls the failed check to maintain the disguise."
+    assert result["reaction"] == "Impostor already rerolled the failed check to maintain the disguise."
     with Session(client.app.state.engine) as db:
         character = load_state(db, campaign_id).characters[name_key(PC)]
     assert character.reaction_uses == {"hour:focus_impostor:impostor-reroll": 1}
@@ -780,7 +780,7 @@ def test_impostor_rerolls_a_disguise_check_once_per_hour(client_factory):
         difficulty=12,
         cause="maintaining a disguise",
     )
-    assert recharged["reaction"] == "Impostor rerolls the failed check to maintain the disguise."
+    assert recharged["reaction"] == "Impostor already rerolled the failed check to maintain the disguise."
 
 
 def test_rider_rerolls_a_failed_ride_check_once_per_hour(client_factory):
@@ -792,7 +792,7 @@ def test_rider_rerolls_a_failed_ride_check_once_per_hour(client_factory):
     result = tools.roll_check("skill", PC, skill="ride", stat="dex", roll=2, difficulty=12)
 
     assert result["success"] is True
-    assert result["reaction"] == "Rider rerolls the failed Ride check."
+    assert result["reaction"] == "Rider already rerolled the failed Ride check."
 
 
 def test_poisoner_rerolls_a_failed_poison_save(client_factory):
@@ -804,7 +804,7 @@ def test_poisoner_rerolls_a_failed_poison_save(client_factory):
     result = tools.player_save(roll=1, stat="save_physical", cause="a poisoned blade")
 
     assert result["passed"] is True
-    assert result["reaction"] == "Poisoner rerolls the failed save against poison."
+    assert result["reaction"] == "Poisoner already rerolled the failed save against poison."
 
 
 def test_trapmaster_shares_one_hourly_reroll_between_checks_and_saves(client_factory):
@@ -816,7 +816,7 @@ def test_trapmaster_shares_one_hourly_reroll_between_checks_and_saves(client_fac
     check = tools.roll_check(
         "skill", PC, skill="notice", stat="int", roll=2, difficulty=12, cause="a trap"
     )
-    assert check["reaction"] == "Trapmaster rerolls the failed check involving a trap."
+    assert check["reaction"] == "Trapmaster already rerolled the failed check involving a trap."
 
     # The check spent the shared use, so the trap save is not rerolled.
     save = tools.player_save(roll=1, stat="save_physical", cause="a trap")
@@ -825,7 +825,7 @@ def test_trapmaster_shares_one_hourly_reroll_between_checks_and_saves(client_fac
 
     tools.advance_time(hours=1)
     recharged = tools.player_save(roll=1, stat="save_physical", cause="a trap")
-    assert recharged["reaction"] == "Trapmaster rerolls the failed save involving a trap."
+    assert recharged["reaction"] == "Trapmaster already rerolled the failed save involving a trap."
 
 
 def test_wwn_skill_check_prompts_for_the_players_own_dice(client_factory):

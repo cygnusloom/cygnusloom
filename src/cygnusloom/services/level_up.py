@@ -27,7 +27,14 @@ from cygnusloom.rules.context import ToolContext
 from cygnusloom.services import hireling_levels
 from cygnusloom.services.advancements import learnable_features
 from cygnusloom.services.common import InvalidInput, session_scope
-from cygnusloom.services.events import PC_KIND, Character, load_state, name_key
+from cygnusloom.services.events import (
+    PC_KIND,
+    Character,
+    FeatureLearned,
+    load_state,
+    name_key,
+    record,
+)
 from cygnusloom.services.world import WorldTools
 
 # What the page shows when a level or a pool of picks is ready.
@@ -849,12 +856,35 @@ def debug_grant(
     kind: str,
     name: str,
     amount: int = 0,
+    feature: str = "",
 ) -> None:
-    """Give the player character XP or an Advancement from the debug panel.
+    """Give a character XP, an Advancement, or a feature from the debug panel.
 
     This is an explicit tester control, not a GM tool: it writes the counter directly through
-    the normal world tool, outside a GM turn, so the turn review never sees it.
+    the normal world tool, outside a GM turn, so the turn review never sees it. A feature may
+    go to any character, including an NPC, so NPC class abilities can be tried out.
     """
+    if kind == "feature":
+        found = rule_set.character.features.get(feature)
+        if found is None:
+            raise InvalidInput(f"there is no feature named {feature!r}")
+        with session_scope(engine) as db:
+            state = load_state(db, campaign_id)
+            character = state.characters.get(name_key(name))
+            if character is None:
+                raise InvalidInput(f"there is no character called {name!r}")
+            record(
+                db,
+                campaign_id,
+                FeatureLearned(
+                    name=character.name,
+                    feature=found.id,
+                    feature_name=found.name,
+                    cause="debug grant",
+                ),
+            )
+            db.commit()
+        return
     ctx = tool_context(engine, campaign_id, rule_set, world)
     if kind == "xp":
         level_rules = next(iter(rule_set.level_ups.values()), None)
@@ -870,4 +900,4 @@ def debug_grant(
             raise InvalidInput("this rule set has no Advancements")
         ctx.world.adjust_counter(name, advancement_rules.counter, 1)
         return
-    raise InvalidInput("kind must be 'xp' or 'advancement'")
+    raise InvalidInput("kind must be 'xp', 'advancement', or 'feature'")

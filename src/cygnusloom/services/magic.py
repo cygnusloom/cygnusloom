@@ -268,6 +268,9 @@ def roll_save(
             score=result.score,
             passed=result.passed,
             cause=reason,
+            reaction=(
+                triggered.text if triggered is not None and triggered.reaction.uses <= 0 else ""
+            ),
         ),
     )
     if triggered is not None:

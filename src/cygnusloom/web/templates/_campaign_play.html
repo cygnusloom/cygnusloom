@@ -398,6 +398,17 @@
                 <button type="submit">Grant an {{ debug_advancement.label }}</button>
               </form>
               {% endif %}
+              {% if debug_features %}
+              <form method="post" action="/campaigns/{{ campaign.id }}/debug/grant">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="kind" value="feature">
+                <p>Teach a feature outside a GM turn, including to an NPC, so its abilities can be tried out. This grants the feature itself; it does not train the skills or apply the modifiers the feature would grant at character creation.</p>
+                <label>Character <input name="name" value="{{ player_name }}" required></label>
+                <label>Feature <input name="feature" list="debug-features" required placeholder="focus_lucky"></label>
+                <datalist id="debug-features">{% for feature_id, feature_name in debug_features %}<option value="{{ feature_id }}">{{ feature_name }}</option>{% endfor %}</datalist>
+                <button type="submit">Teach feature</button>
+              </form>
+              {% endif %}
               {% if debug_injection %}
               <p><strong>Pending injection:</strong>
                 {% if debug_injection.mode == "tool" %}

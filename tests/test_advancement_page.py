@@ -7,10 +7,12 @@ from collections.abc import Callable
 from dataclasses import replace
 
 from fastapi.testclient import TestClient
+from sqlmodel import Session
 
 from cygnusloom.config import Settings
 from cygnusloom.llm.fake import FakeProvider
 from cygnusloom.rules import wwn
+from cygnusloom.services.events import load_state, name_key
 from tests.conftest import csrf_token, make_app
 from tests.factories import tools_for
 from tests.test_academia_arcana import (
@@ -34,6 +36,7 @@ from tests.test_wwn_advancement import (
 from tests.test_wwn_advancement import (
     _campaign as _wwn_campaign,
 )
+from tests.test_wwn_combat import BASE_STATS
 
 
 def _page(client: TestClient, campaign_id: int) -> str:
@@ -417,3 +420,34 @@ def test_the_debug_panel_awards_experience_without_a_gm_turn(
 
     assert response.status_code == 303
     assert _counter(app, campaign_id, "xp") == 3
+
+
+def test_the_debug_panel_teaches_a_feature_to_an_npc(
+    settings: Settings, fake: FakeProvider
+) -> None:
+    app = make_app(replace(settings, debug_panel=True), fake_provider=fake)
+    client_factory = lambda: TestClient(app)
+    _app, campaign_id = _wwn_campaign(client_factory, class_id="warrior")
+    client = _signed_in(client_factory)
+    tools = _world_tools(app, campaign_id)
+    tools.create_location("Yard", "A muddy yard.", discovered=True)
+    tools.create_npc(
+        "Foe", "Yard", "A lucky rival.", character={"stats": BASE_STATS}, force=True
+    )
+    token = csrf_token(client, f"/campaigns/{campaign_id}")
+
+    response = client.post(
+        f"/campaigns/{campaign_id}/debug/grant",
+        data={
+            "csrf_token": token,
+            "name": "Foe",
+            "kind": "feature",
+            "feature": "focus_lucky",
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    with Session(app.state.engine) as db:
+        foe = load_state(db, campaign_id).characters[name_key("Foe")]
+    assert foe.features["focus_lucky"] == 1

@@ -222,6 +222,10 @@ def roll_check(
             success=result.passed,
             cause=cause,
             armor_penalty=armor_penalty,
+            # A limited reaction records its use on its own event, which the Log shows.
+            reaction=(
+                triggered.text if triggered is not None and triggered.reaction.uses <= 0 else ""
+            ),
         ),
     )
     if triggered is not None:

@@ -995,6 +995,7 @@ async def grant_debug_advancement(request: Request, campaign_id: int) -> Respons
             form_text(form, "kind"),
             form_text(form, "name"),
             amount,
+            form_text(form, "feature"),
         )
     except ValueError:
         return _campaign_page(request, user, campaign_id, 400, "experience must be a number")
@@ -1594,6 +1595,11 @@ def _campaign_page(
         if rule_set is not None
         else []
     )
+    debug_features = (
+        sorted((feature.id, feature.name) for feature in rule_set.character.features.values())
+        if rule_set is not None and settings.debug_panel
+        else []
+    )
     inventory_rules = rule_set.inventory if rule_set is not None else None
     magic = rule_set.magic if rule_set is not None else None
     spec = rule_set.character if rule_set else NO_CHARACTER
@@ -1790,6 +1796,7 @@ def _campaign_page(
         ),
         "debug_stats": [(stat.id, stat.name) for stat in spec.stats.values()],
         "debug_tools": debug_tools,
+        "debug_features": debug_features,
         "debug_xp": debug_xp,
         "debug_advancement": debug_advancement,
         "debug_injection": world.state.debug_injection,

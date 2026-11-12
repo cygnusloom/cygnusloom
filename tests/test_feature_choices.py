@@ -15,7 +15,12 @@ from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.events import (
     PC_KIND,
     Character,
+    CharacterSaved,
+    CheckMade,
     FeatureLearned,
+    FeatureUsed,
+    decode,
+    events_since,
     load_state,
     name_key,
     record,
@@ -97,7 +102,7 @@ def test_diplomatic_grace_rerolls_ones_on_a_social_check(client_factory):
 
 
 def test_lucky_rolls_checks_and_saves_twice(client_factory):
-    _client, _campaign_id, tools = _wwn_campaign(
+    client, campaign_id, tools = _wwn_campaign(
         client_factory,
         choices={"pick-feature-class_focus_any-0": "focus_lucky"},
     )
@@ -113,6 +118,12 @@ def test_lucky_rolls_checks_and_saves_twice(client_factory):
     assert "Lucky" in result["reaction"]
     assert save["passed"] is True
     assert "Lucky" in save["reaction"]
+    with Session(client.app.state.engine) as db:
+        events = [decode(row) for row in events_since(db, campaign_id)]
+    (made,) = [event for event in events if event.kind == CheckMade.kind]
+    (saved,) = [event for event in events if event.kind == CharacterSaved.kind]
+    assert "Lucky" in made.render()
+    assert "Lucky" in saved.render()
 
 
 def test_unobtrusive_step_shares_one_hourly_reroll_between_its_checks():
@@ -171,6 +182,14 @@ def test_empowered_sorcery_rerolls_a_spell_damage_die(client_factory):
 
     assert result["original"] == 3
     assert result["rerolled"] == 12
+    with Session(client.app.state.engine) as db:
+        (used,) = [
+            decode(row)
+            for row in events_since(db, campaign_id)
+            if row.kind == FeatureUsed.kind
+        ]
+    assert "Empowered Sorcery" in used.render()
+    assert "12" in used.render()
 
 
 def test_inexorable_effect_forces_an_enemy_save_reroll_once_per_scene(client_factory):
@@ -217,6 +236,13 @@ def test_an_npc_with_lucky_rerolls_its_own_save(client_factory):
 
     assert result["passed"] is True
     assert "Lucky" in result["reaction"]
+    with Session(client.app.state.engine) as db:
+        (saved,) = [
+            decode(row)
+            for row in events_since(db, campaign_id)
+            if row.kind == CharacterSaved.kind
+        ]
+    assert "Lucky" in saved.render()
 
 
 def test_an_npc_can_use_the_art_tools_with_its_own_features(client_factory):

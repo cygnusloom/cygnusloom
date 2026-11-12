@@ -51,7 +51,7 @@
         "effect": {"op": "reroll", "keep": "worse"},
         "uses": 1,
         "reset": "hour",
-        "text": "Inexorable Effect forces a successful enemy save to reroll."
+        "text": "Inexorable Effect forced a successful enemy save to reroll."
       }
     ]
   },
@@ -512,7 +512,7 @@
         "uses": 1,
         "reset": "hour",
         "shared": "unobtrusive-step",
-        "text": "Unobtrusive Step rerolls the failed Sneak check."
+        "text": "Unobtrusive Step already rerolled the failed Sneak check."
       },
       {
         "id": "unobtrusive-impersonate",
@@ -522,7 +522,7 @@
         "uses": 1,
         "reset": "hour",
         "shared": "unobtrusive-step",
-        "text": "Unobtrusive Step rerolls the failed impersonation check."
+        "text": "Unobtrusive Step already rerolled the failed impersonation check."
       }
     ]
   }

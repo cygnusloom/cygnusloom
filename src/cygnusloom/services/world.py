@@ -89,6 +89,7 @@ from cygnusloom.services.events import (
     ExecutionPrepared,
     ExecutionTaken,
     FeatureChoiceMade,
+    FeatureUsed,
     GrappleEnded,
     GrappleStarted,
     Harmed,
@@ -1295,6 +1296,22 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
             if caster.features.get("art_empowered_sorcery", 0) <= 0:
                 raise InvalidInput(f"{caster.name} does not have Empowered Sorcery")
             rerolled = roll_total(dice, self.rng, plus=self.plus)
+            took = (
+                f"rerolls {dice} from {original} to {rerolled}"
+                if original is not None
+                else f"rerolls {dice} for {rerolled}"
+            )
+            record(
+                db,
+                self.campaign_id,
+                FeatureUsed(
+                    name=caster.name,
+                    feature="art_empowered_sorcery",
+                    feature_name="Empowered Sorcery",
+                    text=took,
+                ),
+            )
+            db.commit()
             return {
                 "character": caster.name,
                 "dice": dice,

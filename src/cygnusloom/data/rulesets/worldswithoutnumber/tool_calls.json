@@ -3,7 +3,7 @@
     "type": "tool_call",
     "id": "roll_check",
     "bind": {"check": "skill"},
-    "description": "Ask the player to roll a skill check for their character: 2d6 plus the skill's level plus the attribute's modifier against a difficulty, 8 by default. An untrained skill counts as -1. Call it whenever an action is uncertain and a skill applies, such as climbing (Exert), spotting an ambush (Notice), or casting a spell under pressure (Magic). Higher difficulties mean harder tasks: 10 is skilled work and 12 or more is formidable. A total equal to or above the difficulty succeeds. Write the prompt the player sees, in the GM's voice, inviting the roll. The player presses the roll button; the engine adds the modifiers and records the result.",
+    "description": "Ask the player to roll a skill check for their character: 2d6 plus the skill's level plus the attribute's modifier against a difficulty, 8 by default. An untrained skill counts as -1. Call it whenever an action is uncertain and a skill applies, such as climbing (Exert), spotting an ambush (Notice), or casting a spell under pressure (Magic). Higher difficulties mean harder tasks: 10 is skilled work and 12 or more is formidable. A total equal to or above the difficulty succeeds. Write the prompt the player sees, in the GM's voice, inviting the roll. The player presses the roll button; the engine adds the modifiers and records the result. A returned reaction has already been applied by the engine; narrate its outcome rather than asking the player to roll again for it.",
     "parameters": {
       "properties": {
         "prompt": {

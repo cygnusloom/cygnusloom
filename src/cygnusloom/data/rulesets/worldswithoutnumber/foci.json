@@ -289,7 +289,7 @@
         "effect": {"op": "reroll", "keep": "better"},
         "uses": 1,
         "reset": "rest",
-        "text": "Cultured rerolls the failed social check."
+        "text": "Cultured already rerolled the failed social check."
       }
     ]
   },
@@ -433,7 +433,7 @@
         "trigger": "check",
         "when": {"skills": ["convince"]},
         "effect": {"op": "reroll_ones"},
-        "text": "Diplomatic Grace rerolls 1s on the social check."
+        "text": "Diplomatic Grace already rerolled 1s on the social check."
       }
     ]
   },
@@ -577,7 +577,7 @@
         "uses": 1,
         "reset": "hour",
         "shared": "impostor-reroll",
-        "text": "Impostor rerolls the failed check to maintain the disguise."
+        "text": "Impostor already rerolled the failed check to maintain the disguise."
       },
       {
         "id": "impostor-save",
@@ -590,7 +590,7 @@
         "uses": 1,
         "reset": "hour",
         "shared": "impostor-reroll",
-        "text": "Impostor rerolls the failed save to maintain the disguise."
+        "text": "Impostor already rerolled the failed save to maintain the disguise."
       }
     ]
   },
@@ -624,31 +624,31 @@
         "id": "lucky-check",
         "trigger": "check",
         "effect": {"op": "reroll", "keep": "better"},
-        "text": "Lucky rolls the check twice and keeps the better result."
+        "text": "Lucky already rolled the check twice and kept the better result."
       },
       {
         "id": "lucky-save",
         "trigger": "save",
         "effect": {"op": "reroll", "keep": "better"},
-        "text": "Lucky rolls the save twice and keeps the better result."
+        "text": "Lucky already rolled the save twice and kept the better result."
       },
       {
         "id": "lucky-reaction",
         "trigger": "reaction",
         "effect": {"op": "reroll", "keep": "better"},
-        "text": "Lucky rolls the reaction twice and keeps the better result."
+        "text": "Lucky already rolled the reaction twice and kept the better result."
       },
       {
         "id": "lucky-attack",
         "trigger": "attack",
         "effect": {"op": "reroll", "keep": "better"},
-        "text": "Lucky rolls the attack twice and keeps the better result."
+        "text": "Lucky already rolled the attack twice and kept the better result."
       },
       {
         "id": "lucky-damage",
         "trigger": "damage",
         "effect": {"op": "reroll", "keep": "better"},
-        "text": "Lucky rolls the damage twice and keeps the better result."
+        "text": "Lucky already rolled the damage twice and kept the better result."
       }
     ]
   },
@@ -785,7 +785,7 @@
         "effect": {"op": "reroll", "keep": "better"},
         "uses": 1,
         "reset": "day",
-        "text": "Elf rerolls the failed check with the chosen skill."
+        "text": "Elf already rerolled the failed check with the chosen skill."
       }
     ]
   },
@@ -925,7 +925,7 @@
           "cause_contains": ["poison", "venom", "toxin"]
         },
         "effect": {"op": "reroll", "keep": "better"},
-        "text": "Poisoner rerolls the failed save against poison."
+        "text": "Poisoner already rerolled the failed save against poison."
       }
     ]
   },
@@ -1006,7 +1006,7 @@
         "effect": {"op": "reroll", "keep": "better"},
         "uses": 1,
         "reset": "hour",
-        "text": "Rider rerolls the failed Ride check."
+        "text": "Rider already rerolled the failed Ride check."
       }
     ]
   },
@@ -1109,7 +1109,7 @@
         "trigger": "check",
         "when": {"skill_choice": "focus_specialist:skill"},
         "effect": {"op": "best_of", "dice": 3, "keep": 2},
-        "text": "Specialist rolls 3d6 and keeps the best 2."
+        "text": "Specialist already rolled 3d6 and kept the best 2."
       }
     ]
   },
@@ -1142,7 +1142,7 @@
         "trigger": "check",
         "when": {"skill_choice": "focus_specialist_2:skill"},
         "effect": {"op": "best_of", "dice": 4, "keep": 2},
-        "text": "Specialist rolls 4d6 and keeps the best 2."
+        "text": "Specialist already rolled 4d6 and kept the best 2."
       }
     ]
   },
@@ -1217,7 +1217,7 @@
         "uses": 1,
         "reset": "hour",
         "shared": "trapmaster-reroll",
-        "text": "Trapmaster rerolls the failed check involving a trap."
+        "text": "Trapmaster already rerolled the failed check involving a trap."
       },
       {
         "id": "trapmaster-save",
@@ -1230,7 +1230,7 @@
         "uses": 1,
         "reset": "hour",
         "shared": "trapmaster-reroll",
-        "text": "Trapmaster rerolls the failed save involving a trap."
+        "text": "Trapmaster already rerolled the failed save involving a trap."
       }
     ]
   },
@@ -1343,7 +1343,7 @@
         "id": "well-met",
         "trigger": "reaction",
         "effect": {"op": "add_total", "amount": 1},
-        "text": "Well Met improves the reaction roll by 1."
+        "text": "Well Met already improved the reaction roll by 1."
       }
     ]
   },
@@ -1367,7 +1367,7 @@
         "effect": {"op": "set_reaction", "to": "as friendly and helpful as their nature and the situation permit"},
         "uses": 1,
         "reset": "week",
-        "text": "Well Met makes the reaction as friendly and helpful as is plausible."
+        "text": "Well Met already made the reaction as friendly and helpful as is plausible."
       }
     ]
   },

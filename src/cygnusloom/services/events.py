@@ -2664,6 +2664,8 @@ class SaveRolled(GameEvent):
     passed: bool
     status: str = ""
     critical: bool = False
+    # A feature reaction that changed the save and leaves no use to record, such as Lucky.
+    reaction: str = ""
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         character = state.characters[name_key(self.name)]
@@ -2684,6 +2686,8 @@ class SaveRolled(GameEvent):
             text += f" {self.name} is broken, and the GM decides whether it is defeated or flees."
         elif not self.passed:
             text += f" {self.name} is {self.status}."
+        if self.reaction:
+            text += f" {self.reaction}"
         return text
 
 
@@ -3590,6 +3594,27 @@ class FactionTurnTaken(GameEvent):
 
 
 @dataclass(frozen=True)
+class FeatureUsed(GameEvent):
+    """A feature changed something outside a roll, such as Empowered Sorcery rerolling a
+    spell's damage dice. A reaction on a roll shows its own text on that roll instead."""
+
+    kind: ClassVar[str] = "character.feature_used"
+
+    name: str
+    feature: str
+    feature_name: str
+    text: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        return None
+
+    def render(self) -> str:
+        return f"{self.name} uses {self.feature_name}: {self.text}" if self.text else (
+            f"{self.name} uses {self.feature_name}."
+        )
+
+
+@dataclass(frozen=True)
 class FeatureLearned(GameEvent):
     """A character learns a feature, such as a spell, that the rule set's Advancements teach."""
 
@@ -3811,6 +3836,8 @@ class CharacterSaved(GameEvent):
     score: int
     passed: bool
     cause: str = ""
+    # A feature reaction that changed the save and leaves no use to record, such as Lucky.
+    reaction: str = ""
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         return None
@@ -3818,7 +3845,10 @@ class CharacterSaved(GameEvent):
     def render(self) -> str:
         result = "succeeds" if self.passed else "fails"
         text = f"{self.name} rolls {self.roll} on a {self.stat.upper()} save of {self.score} and {result}"
-        return f"{text} ({self.cause})." if self.cause else f"{text}."
+        text = f"{text} ({self.cause})" if self.cause else text
+        if self.reaction:
+            return f"{text}. {self.reaction}"
+        return f"{text}."
 
 
 @dataclass(frozen=True)
@@ -3904,6 +3934,9 @@ class CheckMade(GameEvent):
     cause: str = ""
     # What worn armor took off the roll, or 0 when nothing did.
     armor_penalty: int = 0
+    # A feature reaction that changed the roll and leaves no use to record, such as Lucky
+    # rolling it twice. A limited reaction shows its use on its own event instead.
+    reaction: str = ""
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         return None
@@ -3926,6 +3959,8 @@ class CheckMade(GameEvent):
         )
         if self.cause:
             text = f"{text} ({self.cause})"
+        if self.reaction:
+            return f"{text}. {self.reaction}"
         return f"{text}."
 
 
