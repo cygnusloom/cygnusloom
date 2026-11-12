@@ -56,6 +56,58 @@ def resolve_stat(spec: CharacterSpec, stat: str) -> str:
         ) from None
 
 
+def _check_reaction_pending(
+    name: str,
+    triggered: Any,
+    check: CheckRules,
+    skill: str,
+    skill_name: str,
+    skill_level: int,
+    stat: str,
+    stat_name: str,
+    result: Any,
+    bonus: int,
+    difficulty: int,
+    cause: str,
+    armor_penalty: int,
+    *,
+    dice: str,
+    ones: list[int] | None = None,
+) -> dict[str, Any]:
+    """What the player's roll prompt needs to finish a reroll reaction."""
+    effect = triggered.reaction.effect
+    return {
+        "kind": "check",
+        "name": name,
+        "feature": triggered.feature.id,
+        "feature_name": triggered.feature.name,
+        "reaction": triggered.reaction.id,
+        "shared": triggered.reaction.shared,
+        "reset": triggered.reaction.reset,
+        "uses": triggered.reaction.uses,
+        "text": triggered.text,
+        "sheet": triggered.reaction.sheet or triggered.text,
+        "optional": triggered.reaction.optional,
+        "effect": effect["op"],
+        "keep": effect.get("keep", "better"),
+        "dice": dice,
+        "ones": list(ones or []),
+        "check": check.label,
+        "skill": skill,
+        "skill_name": skill_name,
+        "skill_level": skill_level,
+        "stat": stat,
+        "stat_name": stat_name,
+        "bonus": bonus,
+        "difficulty": difficulty,
+        "original_roll": result.roll,
+        "original_total": result.total,
+        "original_success": result.passed,
+        "cause": cause,
+        "armor_penalty": armor_penalty,
+    }
+
+
 def _best_of_die(dice: str) -> str:
     """The single die a best-of check rolls several times, such as "1d6" for a "2d6" check.
     Empty when the check's dice are not a simple handful of one die."""
@@ -82,6 +134,8 @@ def roll_check(
     features: Mapping[str, Feature] | None = None,
     roll: int | None = None,
     dice_values: list[int] | None = None,
+    use_optional: bool = True,
+    player_rolls_reaction: bool = False,
 ) -> dict[str, Any]:
     """Roll `check` for a character and record what it made. The roll is the check's dice plus the
     skill's level (or the check's untrained penalty when the character has no level in it), the
@@ -158,11 +212,63 @@ def roll_check(
             roll=rolled, total=total, difficulty=target, passed=total >= target
         )
     triggered = reactions.match_check(
-        found, spec, features, check, skill_id, stat_id, result.total, result.passed, cause
+        found,
+        spec,
+        features,
+        check,
+        skill_id,
+        stat_id,
+        result.total,
+        result.passed,
+        cause,
+        use_optional,
     )
+    pending: dict[str, Any] | None = None
     if triggered is not None:
         effect = triggered.reaction.effect
-        if effect["op"] == "reroll":
+        if player_rolls_reaction and effect["op"] == "reroll":
+            pending = _check_reaction_pending(
+                found.name,
+                triggered,
+                check,
+                skill_id,
+                skill_name,
+                skill_level,
+                stat_id,
+                stat_name,
+                result,
+                bonus,
+                target,
+                cause,
+                armor_penalty,
+                dice=check.dice,
+            )
+        elif player_rolls_reaction and effect["op"] == "reroll_ones":
+            die = _best_of_die(check.dice)
+            ones = [value for value in rolled_values if value == 1] if die else []
+            if ones:
+                sides = int(die[2:])
+                pending = _check_reaction_pending(
+                    found.name,
+                    triggered,
+                    check,
+                    skill_id,
+                    skill_name,
+                    skill_level,
+                    stat_id,
+                    stat_name,
+                    result,
+                    bonus,
+                    target,
+                    cause,
+                    armor_penalty,
+                    dice=f"{len(ones)}d{sides}",
+                    ones=ones,
+                )
+            else:
+                # No 1 was rolled, so there is nothing to reroll.
+                triggered = None
+        elif effect["op"] == "reroll":
             rerolled = resolution.roll_check(
                 rng,
                 check.dice,
@@ -222,16 +328,21 @@ def roll_check(
             success=result.passed,
             cause=cause,
             armor_penalty=armor_penalty,
-            # A limited reaction records its use on its own event, which the Log shows.
+            # A limited reaction records its use on its own event, which the Log shows. A
+            # reaction waiting for the player's own roll adds its text to that roll instead.
             reaction=(
-                triggered.text if triggered is not None and triggered.reaction.uses <= 0 else ""
+                triggered.text
+                if triggered is not None
+                and pending is None
+                and triggered.reaction.uses <= 0
+                else ""
             ),
         ),
     )
-    if triggered is not None:
+    if triggered is not None and pending is None:
         reactions.use(db, campaign_id, found, triggered)
     db.commit()
-    return {
+    payload: dict[str, Any] = {
         "name": found.name,
         "check": check.label,
         "skill": skill_id,
@@ -246,5 +357,9 @@ def roll_check(
         "success": result.passed,
         "armor_penalty": armor_penalty,
         "cause": cause,
-        **({"reaction": triggered.text} if triggered is not None else {}),
+        **({"reaction": triggered.text} if triggered is not None and pending is None else {}),
     }
+    if pending is not None:
+        pending["initial"] = dict(payload)
+        payload["reaction_pending"] = pending
+    return payload

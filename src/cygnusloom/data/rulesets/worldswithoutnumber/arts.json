@@ -514,7 +514,8 @@
         "reset": "hour",
         "shared": "unobtrusive-step",
         "text": "Unobtrusive Step already rerolled the failed Sneak check.",
-        "sheet": "Reroll a failed Sneak check."
+        "sheet": "Reroll a failed Sneak check.",
+        "optional": true
       },
       {
         "id": "unobtrusive-impersonate",
@@ -525,7 +526,8 @@
         "reset": "hour",
         "shared": "unobtrusive-step",
         "text": "Unobtrusive Step already rerolled the failed impersonation check.",
-        "sheet": "Reroll a failed check to impersonate someone."
+        "sheet": "Reroll a failed check to impersonate someone.",
+        "optional": true
       }
     ]
   }

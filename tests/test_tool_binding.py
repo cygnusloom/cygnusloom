@@ -362,7 +362,7 @@ def test_wwn_binds_the_tools_it_used_to_wrap():
     for call_id in WWN_BOUND:
         assert calls[call_id].world_method is not None
         assert calls[call_id].function is None
-    assert calls["roll_check"].bind == {"check": "skill"}
+    assert calls["roll_check"].bind == {"check": "skill", "player_rolls_reaction": True}
     assert calls["set_ac"].rename == {"ac": "armor"}
     # roll_save now uses the shared canonical argument names, so it needs no mapping.
     assert calls["roll_save"].world_method == "roll_save"
@@ -373,6 +373,7 @@ def test_wwn_binds_the_tools_it_used_to_wrap():
     assert calls["add_strain"].bind == {"stat": "strain"}
     assert calls["player_attack"].player_input.param == "attack_roll"
     assert calls["player_roll_save"].player_input.param == "natural"
+    assert calls["player_roll_save"].bind == {"player_rolls_reaction": True}
     assert calls["roll_starting_silver"].world_method == "roll_currency"
     assert calls["roll_starting_silver"].bind == {
         "dice": "3d6",

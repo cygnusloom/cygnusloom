@@ -213,6 +213,45 @@ def match_move(
     return min(candidates, key=lambda item: (item[0], item[1]))[2]
 
 
+def offered_check(
+    character: Character,
+    spec: CharacterSpec,
+    extra: Mapping[str, Feature] | None,
+    check: CheckRules,
+    skill: str,
+    stat: str,
+    cause: str = "",
+) -> tuple[str, ...]:
+    """The optional check reactions that could apply, as feature names, so the roll prompt
+    can ask the player whether to use one. Success and total filters wait for the roll."""
+    names: list[str] = []
+    for feature in _features(character, spec, extra):
+        for reaction in feature.reactions:
+            if (
+                reaction.trigger != "check"
+                or not reaction.optional
+                or not _available(character, feature, reaction)
+                or reaction.effect.get("op") == "best_of"
+            ):
+                continue
+            when = reaction.when
+            if not _cause_matches(reaction, cause):
+                continue
+            if when.get("checks") and check.id not in when["checks"]:
+                continue
+            if when.get("skills") and skill not in when["skills"]:
+                continue
+            if when.get("skill_choice") and not _chosen_skill(
+                character, when["skill_choice"], skill
+            ):
+                continue
+            if when.get("stats") and stat not in when["stats"]:
+                continue
+            if feature.name not in names:
+                names.append(feature.name)
+    return tuple(names)
+
+
 def match_check(
     character: Character,
     spec: CharacterSpec,
@@ -223,12 +262,16 @@ def match_check(
     total: int,
     success: bool,
     cause: str = "",
+    use_optional: bool = True,
 ) -> Triggered | None:
-    """The reaction a check triggers, the most specific first."""
+    """The reaction a check triggers, the most specific first. An optional reaction fires
+    only when the player allowed it in the roll prompt."""
     candidates: list[tuple[int, int, Triggered]] = []
     for order, feature in enumerate(_features(character, spec, extra)):
         for reaction in feature.reactions:
             if reaction.trigger != "check" or not _available(character, feature, reaction):
+                continue
+            if reaction.optional and not use_optional:
                 continue
             if reaction.effect.get("op") == "best_of":
                 continue
@@ -270,6 +313,33 @@ def match_check(
     return min(candidates, key=lambda item: (item[0], item[1]))[2]
 
 
+def offered_save(
+    character: Character,
+    spec: CharacterSpec,
+    extra: Mapping[str, Feature] | None,
+    stat: str,
+    cause: str = "",
+) -> tuple[str, ...]:
+    """The optional save reactions that could apply, as feature names."""
+    names: list[str] = []
+    for feature in _features(character, spec, extra):
+        for reaction in feature.reactions:
+            if (
+                reaction.trigger != "save"
+                or not reaction.optional
+                or not _available(character, feature, reaction)
+            ):
+                continue
+            when = reaction.when
+            if not _cause_matches(reaction, cause):
+                continue
+            if when.get("stats") and stat not in when["stats"]:
+                continue
+            if feature.name not in names:
+                names.append(feature.name)
+    return tuple(names)
+
+
 def match_save(
     character: Character,
     spec: CharacterSpec,
@@ -278,12 +348,16 @@ def match_save(
     total: int,
     success: bool,
     cause: str = "",
+    use_optional: bool = True,
 ) -> Triggered | None:
-    """The reaction a saving throw triggers, the most specific first."""
+    """The reaction a saving throw triggers, the most specific first. An optional reaction
+    fires only when the player allowed it in the roll prompt."""
     candidates: list[tuple[int, int, Triggered]] = []
     for order, feature in enumerate(_features(character, spec, extra)):
         for reaction in feature.reactions:
             if reaction.trigger != "save" or not _available(character, feature, reaction):
+                continue
+            if reaction.optional and not use_optional:
                 continue
             when = reaction.when
             if not _within_total(reaction, total) or not _cause_matches(reaction, cause):

@@ -223,6 +223,10 @@ class Reaction:
     # What the character sheet says the reaction does, in the present tense. Falls back to
     # `text` when the reaction does not supply its own sheet wording.
     sheet: str = ""
+    # A reaction the rules let the player choose to use, such as one that costs Effort. The
+    # player confirms it before it spends a use; automatic reactions such as Lucky fire by
+    # themselves.
+    optional: bool = False
     # Reactions with the same `shared` name spend one pool of uses, such as a Focus that can
     # reroll either a check or a save once before it recharges.
     shared: str = ""
@@ -1292,7 +1296,18 @@ def _feature_reactions(entries: object, label: str) -> tuple[Reaction, ...]:
             raise ContentError(f"{label}: each reaction must be an object")
         _check_reaction_keys(
             entry,
-            {"id", "trigger", "when", "effect", "uses", "reset", "text", "sheet", "shared"},
+            {
+                "id",
+                "trigger",
+                "when",
+                "effect",
+                "uses",
+                "reset",
+                "text",
+                "sheet",
+                "optional",
+                "shared",
+            },
             f"{label}: reaction",
         )
         ident = required_text(entry, "id", f"{label}: reaction")
@@ -1326,6 +1341,9 @@ def _feature_reactions(entries: object, label: str) -> tuple[Reaction, ...]:
         sheet = entry.get("sheet", "")
         if not isinstance(sheet, str):
             raise ContentError(f"{label}: reaction {ident} 'sheet' must be text")
+        optional = entry.get("optional", False)
+        if not isinstance(optional, bool):
+            raise ContentError(f"{label}: reaction {ident} 'optional' must be true or false")
         shared = entry.get("shared", "")
         if not isinstance(shared, str):
             raise ContentError(f"{label}: reaction {ident} 'shared' must be text")
@@ -1341,6 +1359,7 @@ def _feature_reactions(entries: object, label: str) -> tuple[Reaction, ...]:
                 reset=reset,
                 text=text,
                 sheet=sheet,
+                optional=optional,
                 shared=shared,
             )
         )

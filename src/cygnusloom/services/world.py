@@ -54,7 +54,7 @@ from cygnusloom.content.library import (
 from cygnusloom.content.lookup import AmbiguousId, resolve_id
 from cygnusloom.rules.dice import is_formula, max_total, roll_total
 from cygnusloom.services import advancements as advancements_service
-from cygnusloom.services import aid, combat, custom_features, encounters, morale
+from cygnusloom.services import aid, combat, custom_features, encounters, morale, reactions
 from cygnusloom.services import attacks as attack_modifiers
 from cygnusloom.services import checks as checks_service
 from cygnusloom.services import clock as clock_service
@@ -85,6 +85,7 @@ from cygnusloom.services.dungeon import roll_reaction as roll_reaction_service
 from cygnusloom.services.events import (
     PC_KIND,
     CharacterSaved,
+    CheckMade,
     CurrencyChanged,
     ExecutionPrepared,
     ExecutionTaken,
@@ -102,10 +103,13 @@ from cygnusloom.services.events import (
     ProjectStarted,
     ReactionUsed,
     Recovered,
+    SaveRolled,
     SkillChanged,
     Surprised,
     TotalDefenseTaken,
     current,
+    decode,
+    events_since,
     load_state,
     name_key,
     record,
@@ -141,6 +145,91 @@ from cygnusloom.services.world_places import PlacesMixin
 from cygnusloom.services.world_support import *
 from cygnusloom.services.world_support import _initialize_generated_defense, _required
 from cygnusloom.services.world_travel import TravelMixin
+
+
+def _last_successful_save(db: Session, campaign_id: int, name: str, stat: str) -> Any:
+    """The most recent save this character made against `stat`, if it succeeded."""
+    for row in reversed(events_since(db, campaign_id)):
+        event = decode(row)
+        if event.kind not in (CharacterSaved.kind, SaveRolled.kind):
+            continue
+        if getattr(event, "stat", "") != stat:
+            continue
+        if name_key(getattr(event, "name", "")) != name_key(name):
+            continue
+        return event if event.passed else None
+    return None
+
+
+def _finish_reaction_check(pending: Mapping[str, Any], total: int) -> dict[str, Any]:
+    """Apply the player's reroll to a check and return the result to record."""
+    bonus = int(pending["bonus"])
+    difficulty = int(pending["difficulty"])
+    original_roll = int(pending["original_roll"])
+    original_total = int(pending["original_total"])
+    original_success = bool(pending["original_success"])
+    if pending.get("effect") == "reroll_ones":
+        final_roll = original_roll - len(pending.get("ones") or []) + total
+        final_total = final_roll + bonus
+        final_success = final_total >= difficulty
+    else:
+        new_total = total + bonus
+        new_success = new_total >= difficulty
+        keep = str(pending.get("keep", "better"))
+        better = (new_success and not original_success) or (
+            new_success == original_success and new_total > original_total
+        )
+        worse = (original_success and not new_success) or (
+            new_success == original_success and new_total < original_total
+        )
+        if (keep == "better" and better) or (keep == "worse" and worse):
+            final_roll, final_total, final_success = total, new_total, new_success
+        else:
+            final_roll, final_total, final_success = (
+                original_roll,
+                original_total,
+                original_success,
+            )
+    return {
+        "name": str(pending.get("name", "")),
+        "check": str(pending.get("check", "Skill Check")),
+        "skill": str(pending.get("skill", "")),
+        "skill_name": str(pending.get("skill_name", "")),
+        "skill_level": int(pending.get("skill_level", 0)),
+        "stat": str(pending.get("stat", "")),
+        "stat_name": str(pending.get("stat_name", "")),
+        "roll": final_roll,
+        "bonus": bonus,
+        "total": final_total,
+        "difficulty": difficulty,
+        "success": final_success,
+        "armor_penalty": int(pending.get("armor_penalty", 0)),
+        "cause": str(pending.get("cause", "")),
+    }
+
+
+def _finish_reaction_save(pending: Mapping[str, Any], total: int) -> dict[str, Any]:
+    """Apply the player's reroll to a save and return the result to record."""
+    score = int(pending["score"])
+    original_roll = int(pending["original_roll"])
+    original_success = bool(pending["original_success"])
+    new_success = total >= score
+    keep = str(pending.get("keep", "better"))
+    better = (new_success and not original_success) or (
+        new_success == original_success and total > original_roll
+    )
+    worse = (original_success and not new_success) or (
+        new_success == original_success and total < original_roll
+    )
+    final_roll = total if (keep == "better" and better) or (keep == "worse" and worse) else original_roll
+    return {
+        "name": str(pending.get("name", "")),
+        "stat": str(pending.get("stat", "")),
+        "roll": final_roll,
+        "score": score,
+        "passed": final_roll >= score,
+        "cause": str(pending.get("cause", "")),
+    }
 
 
 @dataclass(frozen=True)
@@ -798,6 +887,8 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
         features: Mapping[str, Feature] | None = None,
         roll: int | None = None,
         dice_values: list[int] | None = None,
+        use_optional: bool = True,
+        player_rolls_reaction: bool = False,
     ) -> dict[str, Any]:
         try:
             check_id = resolve_id(
@@ -831,7 +922,101 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 features=features if features is not None else self.features,
                 roll=roll,
                 dice_values=dice_values,
+                use_optional=use_optional,
+                player_rolls_reaction=player_rolls_reaction,
             )
+
+    def optional_check_reactions(
+        self, name: str, check: str, skill: str = "", stat: str = "", cause: str = ""
+    ) -> list[str]:
+        """The optional check reactions to offer on a player's roll prompt."""
+        with session_scope(self.engine) as db:
+            character = load_state(db, self.campaign_id).characters.get(name_key(name))
+            rules = self.checks.get(check)
+            if character is None or rules is None:
+                return []
+            return list(
+                reactions.offered_check(
+                    character, self.character, self.features, rules, skill, stat, cause
+                )
+            )
+
+    def optional_save_reactions(
+        self, name: str, stat: str, cause: str = ""
+    ) -> list[str]:
+        """The optional save reactions to offer on a player's roll prompt."""
+        with session_scope(self.engine) as db:
+            character = load_state(db, self.campaign_id).characters.get(name_key(name))
+            if character is None:
+                return []
+            stat = magic_service.save_stat_id(self.character, stat)
+            return list(
+                reactions.offered_save(character, self.character, self.features, stat, cause)
+            )
+
+    def resolve_reaction(
+        self, pending: Mapping[str, Any], total: int, dice: Sequence[int] = ()
+    ) -> dict[str, Any]:
+        """Finish a check or save reaction with the player's own reroll and record it."""
+        with session_scope(self.engine) as db:
+            state = load_state(db, self.campaign_id)
+            character = state.characters.get(name_key(str(pending.get("name", ""))))
+            if character is None:
+                raise InvalidInput("the character with that reaction is no longer here")
+            feature_id = str(pending.get("feature", ""))
+            moved = custom_features.merged_features(self.character, character)
+            feature = moved.get(feature_id) or self.features.get(feature_id)
+            reaction = (
+                next((item for item in feature.reactions if item.id == pending["reaction"]), None)
+                if feature is not None
+                else None
+            )
+            if feature is None or reaction is None:
+                raise InvalidInput("that reaction is no longer available")
+            triggered = reactions.Triggered(feature, reaction, str(pending.get("text", "")))
+            if pending.get("kind") == "save":
+                result = _finish_reaction_save(pending, total)
+                record(
+                    db,
+                    self.campaign_id,
+                    CharacterSaved(
+                        name=character.name,
+                        stat=str(pending["stat"]),
+                        roll=int(result["roll"]),
+                        score=int(result["score"]),
+                        passed=bool(result["passed"]),
+                        cause=str(pending.get("cause", "")),
+                        reaction=triggered.text,
+                    ),
+                )
+            else:
+                result = _finish_reaction_check(pending, total)
+                record(
+                    db,
+                    self.campaign_id,
+                    CheckMade(
+                        name=character.name,
+                        check=str(pending.get("check", "Skill Check")),
+                        skill=str(pending.get("skill", "")),
+                        skill_name=str(pending.get("skill_name", "")),
+                        skill_level=int(pending.get("skill_level", 0)),
+                        skill_bonus=int(pending.get("skill_level", 0)),
+                        stat=str(pending.get("stat", "")),
+                        stat_name=str(pending.get("stat_name", "")),
+                        roll=int(result["roll"]),
+                        bonus=int(result["bonus"]),
+                        total=int(result["total"]),
+                        difficulty=int(result["difficulty"]),
+                        success=bool(result["success"]),
+                        cause=str(pending.get("cause", "")),
+                        armor_penalty=int(pending.get("armor_penalty", 0)),
+                        reaction=triggered.text,
+                    ),
+                )
+            reactions.use(db, self.campaign_id, character, triggered)
+            db.commit()
+            result["reaction"] = triggered.text
+            return result
 
     def raise_skill(self, name: str, skill: str, level: int, cause: str = "") -> dict[str, Any]:
         skill = checks_service.resolve_skill(self.character, skill)
@@ -1347,19 +1532,25 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
             key = "hour:art_inexorable_effect:inexorable-effect"
             if caster.reaction_uses.get(key, 0) >= 1:
                 raise InvalidInput("Inexorable Effect is already used this scene")
+            previous = _last_successful_save(db, self.campaign_id, enemy.name, stat)
+            if previous is None:
+                raise InvalidInput(
+                    "Inexorable Effect needs an enemy save that just succeeded"
+                )
             rules = _required(self.combat, "combat")
             result = combat.resolve_save(
                 rules, current(enemy, stat), rng=self.rng, plus=self.plus
             )
+            worse = min(int(previous.roll), result.roll)
             record(
                 db,
                 self.campaign_id,
                 CharacterSaved(
                     name=enemy.name,
                     stat=stat,
-                    roll=result.roll,
+                    roll=worse,
                     score=result.score,
-                    passed=result.passed,
+                    passed=worse >= result.score,
                     cause=f"Inexorable Effect: {reason}".strip(),
                 ),
             )
@@ -1380,13 +1571,21 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 "character": caster.name,
                 "target": enemy.name,
                 "stat": stat,
-                "roll": result.roll,
+                "original": previous.roll,
+                "rerolled": result.roll,
+                "roll": worse,
                 "score": result.score,
-                "passed": result.passed,
+                "passed": worse >= result.score,
             }
 
     def roll_save(
-        self, name: str, stat: str, reason: str, natural: int | None = None
+        self,
+        name: str,
+        stat: str,
+        reason: str,
+        natural: int | None = None,
+        use_optional: bool = True,
+        player_rolls_reaction: bool = False,
     ) -> dict[str, Any]:
         stat = magic_service.save_stat_id(self.character, stat)
         with session_scope(self.engine) as db:
@@ -1402,6 +1601,8 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 plus=self.plus,
                 natural=natural,
                 features=self.features,
+                use_optional=use_optional,
+                player_rolls_reaction=player_rolls_reaction,
             )
 
     def place_names(self) -> list[str]:

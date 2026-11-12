@@ -476,6 +476,8 @@ def _prompt_shown(ask: Ask) -> PromptShown:
         dice=ask.dice,
         details=ask.details,
         choices=[_choice_fields(choice) for choice in ask.choices],
+        optional=list(ask.optional),
+        reaction=dict(ask.reaction or {}),
         move=ask.move,
         band=ask.band,
         roll=ask.roll,
@@ -1962,8 +1964,12 @@ async def _answer(
     """Give the waiting tool the player's answer, record its result, then carry the reply on. A
     choice runs the move band's chosen effects instead of the tool again, since the roll already
     happened. A tool that answers with a band's choices pauses here for the player to pick one."""
+    turn = _turn(_state(run.engine, run.campaign_id))
+    if turn.prompt is not None and turn.prompt.reaction:
+        async for event in _answer_reaction(run, turn, turn.prompt, answer):
+            yield event
+        return
     if isinstance(answer, ChoiceAnswer):
-        turn = _turn(_state(run.engine, run.campaign_id))
         request = turn.queue[0]
         prompt = turn.prompt
         if prompt is None or not prompt.choices:
@@ -1977,12 +1983,11 @@ async def _answer(
         for entry in _flush(run):
             yield entry
     elif answer is not None:
-        turn = _turn(_state(run.engine, run.campaign_id))
         request = turn.queue[0]
         result = await run_tool(run.tool_calls, request, answer, ctx=run.ctx)
-        if isinstance(result, Ask) and result.choices:
-            # The roll reached a band the player must choose within. The tool result is recorded
-            # when they pick, so the queue and the prompt stay until then.
+        if isinstance(result, Ask):
+            # The roll reached a band or a reaction that needs the player. The tool result is
+            # recorded when they answer, so the queue and the prompt stay until then.
             _record(run.engine, run.campaign_id, _prompt_shown(result))
             for entry in _flush(run):
                 yield entry
@@ -2003,6 +2008,54 @@ async def _answer(
                     player_id=run.player_id,
                 ),
             )
+    async for event in _carry_on(run):
+        yield event
+
+
+async def _answer_reaction(
+    run: _Run, turn: Turn, prompt: Ask, answer: RollAnswer | TextAnswer | ChoiceAnswer | None
+) -> AsyncIterator[TurnEvent]:
+    """Finish a check or save reaction with the player's own decision and roll."""
+    pending = dict(prompt.reaction or {})
+    request = turn.queue[0]
+    if isinstance(answer, ChoiceAnswer):
+        if answer.choice == "decline":
+            initial = dict(pending.get("initial") or {})
+            _record(
+                run.engine,
+                run.campaign_id,
+                _tool_ran(turn.rounds, request, ToolRun(json.dumps(initial), None)),
+            )
+            for entry in _flush(run):
+                yield entry
+        elif answer.choice == "use":
+            dice = str(pending.get("dice", ""))
+            original = pending.get("original_total", pending.get("original_roll", ""))
+            details = f"First result: {original}." if original != "" else ""
+            ask = Ask(
+                text=f"{pending.get('feature_name', 'The ability')}: roll {dice} for the reroll.",
+                dice=dice,
+                details=details or None,
+                reaction=pending,
+            )
+            _record(run.engine, run.campaign_id, _prompt_shown(ask))
+            for entry in _flush(run):
+                yield entry
+            yield Prompt(ask.text, ask.dice, ask.details)
+            return
+        else:
+            raise InvalidInput("choose whether to use the reaction")
+    elif isinstance(answer, RollAnswer):
+        final = run.ctx.world.resolve_reaction(pending, answer.total, answer.dice)
+        _record(
+            run.engine,
+            run.campaign_id,
+            _tool_ran(turn.rounds, request, ToolRun(json.dumps(final), None)),
+        )
+        for entry in _flush(run):
+            yield entry
+    else:
+        raise InvalidInput("roll the reaction dice")
     async for event in _carry_on(run):
         yield event
 
@@ -2148,6 +2201,7 @@ async def resume_turn(
     campaign_id: int,
     action: str,
     text: str = "",
+    use_optional: bool = False,
     rng: random.Random | None = None,
 ) -> AsyncIterator[TurnEvent]:
     """Continue an open reply with the player's answer, using the campaign's current model.
@@ -2181,7 +2235,7 @@ async def resume_turn(
             values, total = roll_values(
                 turn.prompt.dice, rng, plus=rule_set.plus
             )
-            answer = RollAnswer(total=total, dice=tuple(values))
+            answer = RollAnswer(total=total, dice=tuple(values), use_optional=use_optional)
         elif action == "choice":
             if not turn.prompt.choices:
                 raise InvalidInput("there is no choice to make")

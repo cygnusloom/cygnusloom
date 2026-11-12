@@ -737,6 +737,63 @@ def test_a_rest_recharges_cultured_and_the_character_panel_shows_it(client_facto
     assert again["reaction"] == "Cultured already rerolled the failed social check."
 
 
+def test_a_reroll_prompts_the_player_to_roll_again(client_factory):
+    _client, _campaign_id, tools = _wwn_campaign(
+        client_factory, choices={"pick-feature-class_focus_any-0": "focus_lucky"}
+    )
+    request = ToolRequest(
+        id="call_1",
+        name="roll_check",
+        arguments=json.dumps(
+            {
+                "prompt": "Search the boards for a trap.",
+                "character": PC,
+                "skill": "notice",
+                "stat": "int",
+                "difficulty": 9,
+                "cause": "checking a trap",
+            }
+        ),
+    )
+
+    ask = asyncio.run(
+        run_tool(
+            WWN.tool_calls,
+            request,
+            RollAnswer(total=2, dice=(1, 1)),
+            ctx=SimpleNamespace(world=tools),
+        )
+    )
+
+    assert isinstance(ask, Ask)
+    assert ask.dice == "2d6"
+    assert ask.reaction is not None
+    assert ask.reaction["feature"] == "focus_lucky"
+
+
+def test_an_optional_reaction_waits_for_the_players_consent(client_factory):
+    client, campaign_id, tools = _wwn_campaign(client_factory)
+    feature = WWN.character.features["focus_cultured_2"]
+    tools = replace(tools, rng=Rolls(6, 6))
+    _learn(client.app, campaign_id, feature.id, feature.name)
+
+    assert "Cultured" in tools.optional_check_reactions(PC, "skill", "convince", "cha")
+    declined = tools.roll_check(
+        "skill", PC, skill="convince", stat="cha", roll=2, difficulty=12, use_optional=False
+    )
+    assert declined["success"] is False
+    assert "reaction" not in declined
+    with Session(client.app.state.engine) as db:
+        character = load_state(db, campaign_id).characters[name_key(PC)]
+    assert character.reaction_uses == {}
+
+    allowed = tools.roll_check(
+        "skill", PC, skill="convince", stat="cha", roll=2, difficulty=12, use_optional=True
+    )
+    assert allowed["success"] is True
+    assert "Cultured" in allowed["reaction"]
+
+
 def test_the_sheet_lists_each_reaction_on_its_own_line(client_factory):
     client, campaign_id, _tools = _wwn_campaign(client_factory)
     feature = WWN.character.features["focus_trapmaster"]
@@ -822,6 +879,26 @@ def test_poisoner_rerolls_a_failed_poison_save(client_factory):
 
     assert result["passed"] is True
     assert result["reaction"] == "Poisoner already rerolled the failed save against poison."
+
+
+def test_an_optional_save_reaction_waits_for_the_players_consent(client_factory):
+    client, campaign_id, tools = _wwn_campaign(client_factory)
+    feature = WWN.character.features["focus_poisoner"]
+    _learn(client.app, campaign_id, feature.id, feature.name)
+    tools = replace(tools, rng=Rolls(20))
+
+    assert "Poisoner" in tools.optional_save_reactions(PC, "save_physical", "a poisoned blade")
+    declined = tools.roll_save(
+        PC, "save_physical", "a poisoned blade", natural=1, use_optional=False
+    )
+    assert declined["passed"] is False
+    assert "reaction" not in declined
+
+    allowed = tools.roll_save(
+        PC, "save_physical", "a poisoned blade", natural=1, use_optional=True
+    )
+    assert allowed["passed"] is True
+    assert "Poisoner" in allowed["reaction"]
 
 
 def test_trapmaster_shares_one_hourly_reroll_between_checks_and_saves(client_factory):

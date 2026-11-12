@@ -343,6 +343,10 @@ class PlayerInput:
     dice_param: str | None = None
     # A function parameter that receives the individual dice the engine rolled.
     dice_values_param: str | None = None
+    # Which optional reactions the prompt offers: "check" or "save".
+    optional: str = ""
+    # The function parameter that receives whether the player allowed them.
+    optional_param: str | None = None
     # A string argument naming a move or check. The engine knows that move's or check's dice and
     # asks the player to roll them. The total reaches the function as `param`.
     move_param: str | None = None
@@ -8750,6 +8754,8 @@ def _check_player_input(
             "dice",
             "dice_param",
             "dice_values_param",
+            "optional",
+            "optional_param",
             "move_param",
             "check_param",
             "weapon_param",
@@ -8762,6 +8768,8 @@ def _check_player_input(
     dice = data.get("dice")
     dice_param = data.get("dice_param")
     dice_values_param = data.get("dice_values_param")
+    optional = data.get("optional", "")
+    optional_param = data.get("optional_param")
     move_param = data.get("move_param")
     check_param = data.get("check_param")
     weapon_param = data.get("weapon_param")
@@ -8816,6 +8824,25 @@ def _check_player_input(
             raise ContentError(
                 f"{label}: function does not accept parameter {dice_values_param!r}"
             )
+    if optional not in ("", "check", "save"):
+        raise ContentError(f"{label}: 'player_input.optional' must be 'check' or 'save'")
+    if optional_param is not None:
+        if not isinstance(optional_param, str) or not optional_param:
+            raise ContentError(
+                f"{label}: 'player_input.optional_param' must name a function parameter"
+            )
+        if optional_param in parameters["properties"]:
+            raise ContentError(
+                f"{label}: 'player_input.optional_param' must not be a schema parameter"
+            )
+        if optional_param not in accepted:
+            raise ContentError(
+                f"{label}: function does not accept parameter {optional_param!r}"
+            )
+    if bool(optional) != bool(optional_param):
+        raise ContentError(
+            f"{label}: 'player_input.optional' and 'optional_param' must be set together"
+        )
     if weapon_param is not None:
         schema = parameters["properties"].get(weapon_param)
         if not isinstance(schema, dict) or schema.get("type") != "string":
@@ -8866,6 +8893,8 @@ def _check_player_input(
         dice=dice,
         dice_param=dice_param,
         dice_values_param=dice_values_param,
+        optional=optional,
+        optional_param=optional_param,
         move_param=move_param,
         check_param=check_param,
         weapon_param=weapon_param,

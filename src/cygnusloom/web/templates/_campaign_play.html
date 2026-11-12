@@ -92,12 +92,14 @@
                       <button type="submit">Roll {{ pending.prompt.dice }}</button>
                     </form>
                     {% endif %}
+                    {% if not pending.prompt.reaction %}
                     <form method="post" action="/campaigns/{{ campaign.id }}/pending/stream" data-pending-action>
                       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                       <input type="hidden" name="kind" value="text">
                       <textarea name="content" rows="2" required maxlength="8000" placeholder="Or describe what you do instead"></textarea>
                       <button type="submit">Send</button>
                     </form>
+                    {% endif %}
                     {% else %}
                     <p class="muted">{{ pending.player_name or 'Another player' }} must answer the GM.</p>
                     {% endif %}

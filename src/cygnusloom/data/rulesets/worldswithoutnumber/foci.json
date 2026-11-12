@@ -290,7 +290,8 @@
         "uses": 1,
         "reset": "rest",
         "text": "Cultured already rerolled the failed social check.",
-        "sheet": "Reroll a failed social check."
+        "sheet": "Reroll a failed social check.",
+        "optional": true
       }
     ]
   },
@@ -579,7 +580,8 @@
         "reset": "hour",
         "shared": "impostor-reroll",
         "text": "Impostor already rerolled the failed check to maintain the disguise.",
-        "sheet": "Reroll a failed check made to maintain a disguise."
+        "sheet": "Reroll a failed check made to maintain a disguise.",
+        "optional": true
       },
       {
         "id": "impostor-save",
@@ -593,7 +595,8 @@
         "reset": "hour",
         "shared": "impostor-reroll",
         "text": "Impostor already rerolled the failed save to maintain the disguise.",
-        "sheet": "Reroll a failed save made to maintain a disguise."
+        "sheet": "Reroll a failed save made to maintain a disguise.",
+        "optional": true
       }
     ]
   },
@@ -929,7 +932,8 @@
           "cause_contains": ["poison", "venom", "toxin"]
         },
         "effect": {"op": "reroll", "keep": "better"},
-        "text": "Poisoner already rerolled the failed save against poison."
+        "text": "Poisoner already rerolled the failed save against poison.",
+        "optional": true
       }
     ]
   },
@@ -1223,7 +1227,8 @@
         "reset": "hour",
         "shared": "trapmaster-reroll",
         "text": "Trapmaster already rerolled the failed check involving a trap.",
-        "sheet": "Reroll a failed check involving a trap, snare, or hazard."
+        "sheet": "Reroll a failed check involving a trap, snare, or hazard.",
+        "optional": true
       },
       {
         "id": "trapmaster-save",
@@ -1237,7 +1242,8 @@
         "reset": "hour",
         "shared": "trapmaster-reroll",
         "text": "Trapmaster already rerolled the failed save involving a trap.",
-        "sheet": "Reroll a failed save involving a trap, snare, or hazard."
+        "sheet": "Reroll a failed save involving a trap, snare, or hazard.",
+        "optional": true
       }
     ]
   },

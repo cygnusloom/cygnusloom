@@ -226,6 +226,8 @@ def roll_save(
     plus: str,
     natural: int | None = None,
     features: Mapping[str, Feature] | None = None,
+    use_optional: bool = True,
+    player_rolls_reaction: bool = False,
 ) -> dict[str, Any]:
     """A save against a stat, recorded with its reason. The engine rolls unless the player's own
     roll is passed as `natural`. A failure only records the result; the GM applies what it
@@ -247,9 +249,34 @@ def roll_save(
         )
     result = resolve_save(combat, current(character, stat), rng=rng, roll=natural, plus=plus)
     triggered = reactions.match_save(
-        character, spec, features, stat, result.roll, result.passed, reason
+        character, spec, features, stat, result.roll, result.passed, reason, use_optional
     )
-    if triggered is not None:
+    pending: dict[str, Any] | None = None
+    if triggered is not None and player_rolls_reaction:
+        effect = triggered.reaction.effect
+        if effect["op"] == "reroll":
+            pending = {
+                "kind": "save",
+                "name": character.name,
+                "feature": triggered.feature.id,
+                "feature_name": triggered.feature.name,
+                "reaction": triggered.reaction.id,
+                "shared": triggered.reaction.shared,
+                "reset": triggered.reaction.reset,
+                "uses": triggered.reaction.uses,
+                "text": triggered.text,
+                "sheet": triggered.reaction.sheet or triggered.text,
+                "optional": triggered.reaction.optional,
+                "effect": "reroll",
+                "keep": effect.get("keep", "better"),
+                "dice": f"1d{combat.check_sides}",
+                "stat": stat,
+                "score": result.score,
+                "original_roll": result.roll,
+                "original_success": result.passed,
+                "cause": reason,
+            }
+    if triggered is not None and pending is None:
         result = reactions.apply_save_effect(
             triggered,
             result,
@@ -269,20 +296,27 @@ def roll_save(
             passed=result.passed,
             cause=reason,
             reaction=(
-                triggered.text if triggered is not None and triggered.reaction.uses <= 0 else ""
+                triggered.text
+                if triggered is not None
+                and pending is None
+                and triggered.reaction.uses <= 0
+                else ""
             ),
         ),
     )
-    if triggered is not None:
+    if triggered is not None and pending is None:
         reactions.use(db, campaign_id, character, triggered)
     db.commit()
-    payload = {
+    payload: dict[str, Any] = {
         "name": character.name,
         "stat": stat,
         "roll": result.roll,
         "score": result.score,
         "passed": result.passed,
     }
-    if triggered is not None:
+    if triggered is not None and pending is None:
         payload["reaction"] = triggered.text
+    if pending is not None:
+        pending["initial"] = dict(payload)
+        payload["reaction_pending"] = pending
     return payload

@@ -195,6 +195,10 @@ class Ask:
     band: str = ""
     roll: int = 0
     total: int = 0
+    # Optional reactions the player may allow on this roll, as feature names.
+    optional: tuple[str, ...] = ()
+    # A reaction waiting on the player's choice or reroll, with the first roll's details.
+    reaction: Mapping[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -202,6 +206,8 @@ class RollAnswer:
     total: int
     # The individual dice, when the engine rolled them, so a feature can reroll 1s.
     dice: tuple[int, ...] = ()
+    # Whether the player allowed the optional reactions offered with the prompt.
+    use_optional: bool = False
 
 
 @dataclass(frozen=True)
@@ -580,10 +586,31 @@ async def run_tool(
         shown = dict(arguments)
         if tool.player_input.dice_param:
             shown[tool.player_input.dice_param] = dice
+        optional: tuple[str, ...] = ()
+        if ctx is not None and tool.player_input.optional == "check":
+            check = str(arguments.get("check") or tool.bind.get("check", ""))
+            optional = tuple(
+                ctx.world.optional_check_reactions(
+                    str(arguments.get("character", "")),
+                    check,
+                    str(arguments.get("skill", "")),
+                    str(arguments.get("stat", "")),
+                    str(arguments.get("cause", "")),
+                )
+            )
+        elif ctx is not None and tool.player_input.optional == "save":
+            optional = tuple(
+                ctx.world.optional_save_reactions(
+                    str(arguments.get("character", "")),
+                    str(arguments.get("save", "")),
+                    str(arguments.get("cause", "")),
+                )
+            )
         return Ask(
             text=arguments[PROMPT_ARGUMENT],
             dice=dice,
             details=_details(tool, shown),
+            optional=optional,
         )
     prompt_text = str(arguments.get(PROMPT_ARGUMENT, ""))
     details = _details(tool, arguments)
@@ -596,11 +623,18 @@ async def run_tool(
         arguments.pop(tool.player_input.dice_param, None)
     if tool.player_input.dice_values_param is not None:
         arguments[tool.player_input.dice_values_param] = list(answer.dice)
+    if tool.player_input.optional_param is not None:
+        arguments[tool.player_input.optional_param] = answer.use_optional
     if tool.player_input.param is not None:
         arguments[tool.player_input.param] = answer.total
     if tool.player_input.weapon_roll_param is not None:
         arguments[tool.player_input.weapon_roll_param] = answer.total
     result = await _call(tool, arguments, ctx)
+    # A check or save reaction that rerolls waits for the player's own roll, not the engine's.
+    payload = _json_object(result.output)
+    pending = payload.get("reaction_pending") if isinstance(payload, dict) else None
+    if isinstance(pending, dict):
+        return _reaction_ask(details, pending)
     # A move band may offer the player a cost to choose. The roll has happened, so the engine
     # asks which one the player picks instead of ending the tool here. The band's own text is
     # shown with the prompt, so the player reads the outcome they are choosing within.
@@ -621,6 +655,35 @@ async def run_tool(
                 total=_whole(payload.get("total")),
             )
     return result
+
+
+def _reaction_ask(details: str, pending: Mapping[str, Any]) -> Ask:
+    """The prompt a player sees when a check or save reaction can reroll."""
+    feature = str(pending.get("feature_name", "the ability"))
+    kind = "save" if pending.get("kind") == "save" else "check"
+    original = pending.get("original_total", pending.get("original_roll", ""))
+    original_text = f"First result: {original}." if original != "" else ""
+    if pending.get("optional"):
+        text = f"{feature} can reroll that failed {kind}. Use it?"
+        choice_text = str(pending.get("sheet") or pending.get("text", ""))
+        return Ask(
+            text=text,
+            dice="",
+            details=details,
+            choices=(
+                {"id": "use", "label": f"Use {feature}", "text": choice_text},
+                {"id": "decline", "label": "Decline", "text": "Keep the first result."},
+            ),
+            reaction=pending,
+        )
+    dice = str(pending.get("dice", ""))
+    text = f"{feature}: roll {dice} for the reroll."
+    return Ask(
+        text=text,
+        dice=dice,
+        details=" ".join(part for part in (original_text, details) if part),
+        reaction=pending,
+    )
 
 
 def _unknown_tool(tool_calls: Mapping[str, ToolCall], name: str) -> str:

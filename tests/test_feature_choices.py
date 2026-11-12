@@ -3,6 +3,7 @@ and a choice-bound reaction follows the skill the player picked."""
 
 from __future__ import annotations
 
+import json
 import random
 from dataclasses import asdict, replace
 
@@ -99,6 +100,86 @@ def test_diplomatic_grace_rerolls_ones_on_a_social_check(client_factory):
 
     assert result["roll"] == 7
     assert "Diplomatic Grace" in result["reaction"]
+
+
+def test_a_check_reroll_waits_for_the_players_own_roll(client_factory):
+    client, campaign_id, tools = _wwn_campaign(
+        client_factory,
+        choices={"pick-feature-class_focus_any-0": "focus_lucky"},
+    )
+    check = next(iter(WWN.checks))
+
+    first = tools.roll_check(
+        check, "Wren", skill="notice", stat="wis", difficulty=8, roll=2,
+        player_rolls_reaction=True,
+    )
+
+    assert "reaction_pending" in first
+    json.dumps(first)
+    pending = first["reaction_pending"]
+    assert pending["dice"] == "2d6"
+    assert pending["optional"] is False
+    final = tools.resolve_reaction(pending, total=12, dice=(6, 6))
+
+    assert final["roll"] == 12
+    assert final["success"] is True
+    assert "Lucky" in final["reaction"]
+    with Session(client.app.state.engine) as db:
+        made = [
+            decode(row)
+            for row in events_since(db, campaign_id)
+            if row.kind == CheckMade.kind
+        ]
+    assert [event.roll for event in made] == [2, 12]
+    assert "Lucky" in made[-1].render()
+
+
+def test_an_optional_reroll_asks_before_spending_its_use(client_factory):
+    client, campaign_id, tools = _wwn_campaign(client_factory)
+    feature = WWN.character.features["focus_cultured_2"]
+    with Session(client.app.state.engine) as db:
+        record(
+            db,
+            campaign_id,
+            FeatureLearned(name="Wren", feature=feature.id, feature_name=feature.name),
+        )
+        db.commit()
+    check = next(iter(WWN.checks))
+
+    first = tools.roll_check(
+        check, "Wren", skill="convince", stat="cha", difficulty=12, roll=2,
+        player_rolls_reaction=True,
+    )
+
+    assert first["reaction_pending"]["optional"] is True
+    with Session(client.app.state.engine) as db:
+        assert load_state(db, campaign_id).characters[name_key("Wren")].reaction_uses == {}
+    final = tools.resolve_reaction(first["reaction_pending"], total=12, dice=(6, 6))
+    assert final["success"] is True
+    with Session(client.app.state.engine) as db:
+        uses = load_state(db, campaign_id).characters[name_key("Wren")].reaction_uses
+    assert uses == {"rest:focus_cultured_2:cultured-reroll": 1}
+
+
+def test_a_reroll_ones_reaction_asks_for_the_replacement_dice(client_factory):
+    _client, _campaign_id, tools = _wwn_campaign(
+        client_factory,
+        choices={"pick-feature-class_focus_any-0": "focus_diplomatic_grace"},
+    )
+    check = next(iter(WWN.checks))
+
+    first = tools.roll_check(
+        check, "Wren", skill="convince", stat="cha", difficulty=10, roll=3,
+        dice_values=[1, 2], player_rolls_reaction=True,
+    )
+
+    pending = first["reaction_pending"]
+    assert pending["effect"] == "reroll_ones"
+    assert pending["ones"] == [1]
+    assert pending["dice"] == "1d6"
+    final = tools.resolve_reaction(pending, total=5, dice=(5,))
+    assert final["roll"] == 7
+    assert "Diplomatic Grace" in final["reaction"]
 
 
 def test_lucky_rolls_checks_and_saves_twice(client_factory):
@@ -207,14 +288,55 @@ def test_inexorable_effect_forces_an_enemy_save_reroll_once_per_scene(client_fac
         db.commit()
     tools.create_location("Yard", "A quiet yard.")
     tools.create_npc("Foe", "Yard", "A rival.", character={"stats": BASE_STATS}, force=True)
+    with Session(client.app.state.engine) as db:
+        record(
+            db,
+            campaign_id,
+            CharacterSaved(
+                name="Foe",
+                stat="save_physical",
+                roll=18,
+                score=15,
+                passed=True,
+                cause="a spell",
+            ),
+        )
+        db.commit()
     tools = replace(tools, rng=Rolls(1))
 
     result = tools.inexorable_effect("Foe", "save_physical", "a spell")
 
     assert result["character"] == "Wren"
+    assert result["original"] == 18
+    assert result["rerolled"] == 1
     assert result["passed"] is False
     with pytest.raises(InvalidInput, match="already used"):
         tools.inexorable_effect("Foe", "save_physical", "a spell")
+
+
+def test_a_save_reroll_waits_for_the_players_own_roll(client_factory):
+    client, campaign_id, tools = _wwn_campaign(
+        client_factory,
+        choices={"pick-feature-class_focus_any-0": "focus_lucky"},
+    )
+
+    first = tools.roll_save(
+        "Wren", "save_physical", "a spell", natural=1, player_rolls_reaction=True
+    )
+
+    pending = first["reaction_pending"]
+    assert pending["dice"] == "1d20"
+    final = tools.resolve_reaction(pending, total=20, dice=(20,))
+    assert final["passed"] is True
+    assert "Lucky" in final["reaction"]
+    with Session(client.app.state.engine) as db:
+        saved = [
+            decode(row)
+            for row in events_since(db, campaign_id)
+            if row.kind == CharacterSaved.kind
+        ]
+    assert [event.roll for event in saved] == [1, 20]
+    assert "Lucky" in saved[-1].render()
 
 
 def test_an_npc_with_lucky_rerolls_its_own_save(client_factory):
@@ -259,6 +381,18 @@ def test_an_npc_can_use_the_art_tools_with_its_own_features(client_factory):
                 campaign_id,
                 FeatureLearned(name="Foe", feature=feature, feature_name=name),
             )
+        record(
+            db,
+            campaign_id,
+            CharacterSaved(
+                name="Wren",
+                stat="save_physical",
+                roll=18,
+                score=15,
+                passed=True,
+                cause="a spell",
+            ),
+        )
         db.commit()
     tools = replace(tools, rng=Rolls(6, 6, 1))
 
@@ -271,6 +405,8 @@ def test_an_npc_can_use_the_art_tools_with_its_own_features(client_factory):
     assert sorcery["rerolled"] == 12
     assert inexorable["character"] == "Foe"
     assert inexorable["target"] == "Wren"
+    assert inexorable["original"] == 18
+    assert inexorable["passed"] is False
 
 
 def test_specialist_turns_checks_with_its_chosen_skill_into_best_of_three():

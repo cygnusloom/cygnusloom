@@ -1654,6 +1654,10 @@ class PromptShown(GameEvent):
     details: str | None = None
     # Each choice is {"id", "label", "text"} from the move band the roll reached.
     choices: list[dict[str, str]] = field(default_factory=list)
+    # Optional reactions the player may allow, as feature names.
+    optional: list[str] = field(default_factory=list)
+    # A reaction waiting on the player's choice or reroll, with the first roll's details.
+    reaction: dict[str, Any] = field(default_factory=dict)
     move: str = ""
     band: str = ""
     roll: int = 0
@@ -1669,6 +1673,8 @@ class PromptShown(GameEvent):
             band=self.band,
             roll=self.roll,
             total=self.total,
+            optional=tuple(self.optional),
+            reaction=self.reaction or None,
         )
 
 

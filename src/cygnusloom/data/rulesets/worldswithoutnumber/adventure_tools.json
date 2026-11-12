@@ -23,6 +23,7 @@
     "type": "tool_call",
     "id": "player_roll_save",
     "world_method": "roll_save",
+    "bind": {"player_rolls_reaction": true},
     "rename": {"character": "name", "save": "stat", "cause": "reason"},
     "description": "Ask the player to roll a saving throw for their own character, then record the d20 they rolled against the character's Physical, Evasion, Mental, or Luck save. Use it instead of roll_save for the player character: the player presses the roll button and the result is final. A failure is recorded; apply what it costs yourself. A returned reaction has already been applied by the engine; narrate its outcome rather than asking the player to roll again for it.",
     "player_input": {
@@ -57,7 +58,7 @@
     "type": "tool_call",
     "id": "empowered_sorcery",
     "world_method": "empowered_sorcery",
-    "description": "Use the Empowered Sorcery art to reroll a variable die in a spell's effect, such as its damage dice. Pass the spell's dice and the total already rolled; the player may choose either total. Record the Effort commitment separately.",
+    "description": "Use the Empowered Sorcery art to reroll a variable die in a spell's effect, such as its damage dice. Pass the spell's dice and the total already rolled; the caster may choose either total. If the caster is the player character, ask the player before calling this; an NPC's choice is the GM's. Record the Effort commitment separately.",
     "parameters": {
       "properties": {
         "dice": {
@@ -80,7 +81,7 @@
     "type": "tool_call",
     "id": "inexorable_effect",
     "world_method": "inexorable_effect",
-    "description": "Use the Inexorable Effect art after an enemy succeeds on a save: reroll that save and use the new result, which is the worse outcome for the enemy. The art is once per scene and requires the player character to have it. Record the Effort commitment separately.",
+    "description": "Use the Inexorable Effect art after an enemy succeeds on a save: reroll that save and use the new result, which is the worse outcome for the enemy. The art is once per scene and requires the caster to have it. If the caster is the player character, ask the player before calling this; an NPC's choice is the GM's. Record the Effort commitment separately.",
     "parameters": {
       "properties": {
         "target": {

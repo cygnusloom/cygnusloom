@@ -1277,6 +1277,7 @@ async def post_pending_stream(request: Request, campaign_id: int) -> Response:
     form = await request.form()
     action = form_text(form, "kind")
     text = form_text(form, "content")
+    use_optional = form_text(form, "use_optional") == "1"
     events = resume_turn(
         request.app.state.engine,
         request.app.state.providers,
@@ -1287,6 +1288,7 @@ async def post_pending_stream(request: Request, campaign_id: int) -> Response:
         campaign_id,
         action,
         text,
+        use_optional,
     )
     try:
         job = _start_turn_job(request, campaign_id, events)
