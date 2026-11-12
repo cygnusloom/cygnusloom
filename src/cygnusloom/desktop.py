@@ -94,10 +94,39 @@ def return_button_script(local_url: str) -> str:
       const local = {json.dumps(local)};
       if (location.origin === new URL(local).origin) return;
       if (!/^https?:$/.test(location.protocol)) return;
+      if (window.__cygnusReturnInstalled) return;
+      window.__cygnusReturnInstalled = true;
       const href = local + '/campaigns?desktop_home=1';
       const goHome = (event) => {{
         event.preventDefault();
         console.log('cygnus-desktop:' + JSON.stringify({{ action: 'home' }}));
+      }};
+      const openExternal = (event) => {{
+        const anchor = event.target && event.target.closest
+          ? event.target.closest('a[href]')
+          : null;
+        if (!anchor) return;
+        let target;
+        try {{
+          target = new URL(anchor.href, location.href);
+        }} catch (error) {{
+          return;
+        }}
+        if (target.origin === location.origin) return;
+        if (target.origin === new URL(local).origin) return;
+        if (!/^https?:$/.test(target.protocol) && target.protocol !== 'mailto:') return;
+        event.preventDefault();
+        event.stopPropagation();
+        console.log(
+          'cygnus-desktop:' + JSON.stringify({{ action: 'external', url: target.href }})
+        );
+      }};
+      let guardInstalled = false;
+      const installGuard = () => {{
+        if (guardInstalled || window.__cygnusExternalGuard) return;
+        guardInstalled = true;
+        window.__cygnusExternalGuard = true;
+        document.addEventListener('click', openExternal, true);
       }};
       const fill = (attempt = 0) => {{
         const top = document.getElementById('desktop-slot');
@@ -106,6 +135,8 @@ def return_button_script(local_url: str) -> str:
           setTimeout(() => fill(attempt + 1), 100);
           return;
         }}
+        if (!top && !side) return;
+        installGuard();
         if (top) {{
           const link = document.createElement('a');
           link.className = 'desktop-home';
@@ -154,21 +185,34 @@ def desktop_sentinel_script(local_origin: str) -> str:
     return f"if (location.origin === {json.dumps(local_origin)}) window.__cygnusDesktop = true;"
 
 
+def desktop_bridge_ready_script() -> str:
+    """Answer a local page that asks for the desktop bridge.
+
+    The document-creation sentinel normally sets this before ``desktop.js`` runs. If a navigation
+    loses that injection, the page sends a handshake and this answer repairs it without a reload.
+    """
+    return "window.__cygnusDesktop = true;window.dispatchEvent(new Event('cygnus-desktop-ready'));"
+
+
 def parse_desktop_action(payload: object) -> tuple[str, str] | None:
     """Validate one action from a menu: ``(action, value)``."""
     if not isinstance(payload, dict):
         return None
     action = payload.get("action")
     server = payload.get("server")
-    invite = payload.get("url")
+    url = payload.get("url")
     if action == "connect" and isinstance(server, str) and server:
         return ("connect", server)
     if action == "login" and isinstance(server, str) and server:
         return ("login", server)
     if action == "browser" and isinstance(server, str) and server:
         return ("browser", server)
-    if action == "invite" and isinstance(invite, str) and invite:
-        return ("invite", invite)
+    if action == "invite" and isinstance(url, str) and url:
+        return ("invite", url)
+    if action == "external" and isinstance(url, str) and url:
+        scheme = urlsplit(url).scheme.lower()
+        if scheme in ("http", "https", "mailto"):
+            return ("external", url)
     if action == "home":
         return ("home", "")
     return None
@@ -371,7 +415,6 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
             self.invite_replies: set[Any] = set()
             self.add_replies: set[Any] = set()
             self.loopback: LoopbackReceiver | None = None
-            self._local_reloads = 0
             self.setWindowTitle(title)
             self.setWindowIcon(icon)
             self.view = QWebEngineView(self)
@@ -453,19 +496,6 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
                 QUrl(f"{self.local_origin}/campaigns?desktop_home={secrets.token_urlsafe(6)}")
             )
 
-        def _ensure_desktop_bridge(self, has_bridge: object) -> None:
-            if origin_of(self.view.url().toString()) != self.local_origin:
-                return
-            if has_bridge:
-                self._local_reloads = 0
-                return
-            if self._local_reloads >= 1:
-                return
-            self._local_reloads += 1
-            self.view.setUrl(
-                QUrl(f"{self.local_origin}/campaigns?desktop_home={secrets.token_urlsafe(6)}")
-            )
-
         def _set_device_bar(self, origin: str, has_desktop_controls: object) -> None:
             if origin != origin_of(self.view.url().toString()):
                 return
@@ -484,9 +514,17 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
             self.page.scripts().insert(script)
 
         def _desktop_action(self, payload: object) -> None:
+            if isinstance(payload, dict) and payload.get("action") == "hello":
+                if origin_of(self.page.url().toString()) == self.local_origin:
+                    self.page.runJavaScript(desktop_bridge_ready_script())
+                return
             action = parse_desktop_action(payload)
             if action is not None and action[0] == "home":
                 self.go_home()
+                return
+            if action is not None and action[0] == "external":
+                if self._is_trusted_page():
+                    QDesktopServices.openUrl(QUrl(action[1]))
                 return
             if origin_of(self.page.url().toString()) != self.local_origin:
                 return
@@ -505,6 +543,18 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
                 self.login_with_browser(value)
             elif name == "invite":
                 self.open_invite(value)
+
+        def _is_trusted_page(self) -> bool:
+            origin = origin_of(self.page.url().toString())
+            if origin == self.local_origin:
+                return True
+            try:
+                return any(
+                    origin in (origin_of(server.url), origin_of(server.oidc_issuer))
+                    for server in servers.list()
+                )
+            except Exception:  # noqa: BLE001 - a broken list must not break the page
+                return False
 
         def _title_changed(self, text: str) -> None:
             self.setWindowTitle(text or title)
@@ -672,11 +722,16 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
             self.view.setUrl(QUrl(value))
 
         def _page_loaded(self, ok: bool) -> None:
-            if not ok:
-                self.escape_label.setText(urlsplit(origin_of(self.view.url().toString())).netloc)
-                self.escape_bar.show()
-                return
             page_origin = origin_of(self.view.url().toString())
+            if not ok:
+                # Rejecting an external link emits loadFinished(False) while the current page
+                # stays put. Do not show the escape bar for a page we are still on.
+                if page_origin == self.local_origin:
+                    self.escape_bar.hide()
+                elif self._server_at(page_origin) is None:
+                    self.escape_label.setText(urlsplit(page_origin).netloc if page_origin else "")
+                    self.escape_bar.show()
+                return
             if not page_origin:
                 self.escape_bar.show()
                 return
@@ -685,12 +740,10 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
                 self.current_server_id = ""
                 self.invite_pending = False
                 self.invite_origin = ""
-                self.page.runJavaScript(
-                    "window.__cygnusDesktop === true",
-                    self._ensure_desktop_bridge,
-                )
+                # The document-creation sentinel normally does this. Repeat it after load so
+                # a page that lost the injection still gets a working menu, without reloading.
+                self.page.runJavaScript(desktop_bridge_ready_script())
                 return
-            self.page.runJavaScript(return_button_script(url))
             self.page.runJavaScript(
                 "(() => {"
                 " const top = document.getElementById('desktop-slot');"

@@ -158,6 +158,11 @@ def test_the_return_script_fills_both_prepared_slots():
     assert "local + '/campaigns?desktop_home=1'" in script
     assert "Return to my device" in script
     assert "action: 'home'" in script
+    assert "action: 'external'" in script
+    assert "a[href]" in script
+    assert "stopPropagation" in script
+    assert "__cygnusReturnInstalled" in script
+    assert "__cygnusExternalGuard" in script
     assert "DOMContentLoaded" in script
     assert "attempt < 20" in script
 
@@ -174,6 +179,13 @@ def test_the_desktop_sentinel_is_limited_to_the_local_app():
 
     assert 'location.origin === "http://127.0.0.1:8123"' in script
     assert "__cygnusDesktop" in script
+
+
+def test_the_desktop_bridge_can_answer_a_late_handshake():
+    script = desktop.desktop_bridge_ready_script()
+
+    assert "window.__cygnusDesktop = true" in script
+    assert "cygnus-desktop-ready" in script
 
 
 def test_clicked_links_stay_in_the_app_during_an_invite():
@@ -226,6 +238,15 @@ def test_desktop_actions_are_parsed_and_validated():
     assert desktop.parse_desktop_action(
         {"action": "invite", "url": "https://idp.example.com/if/flow/x"}
     ) == ("invite", "https://idp.example.com/if/flow/x")
+    assert desktop.parse_desktop_action(
+        {"action": "external", "url": "https://example.com/page"}
+    ) == ("external", "https://example.com/page")
+    assert desktop.parse_desktop_action(
+        {"action": "external", "url": "mailto:ada@example.com"}
+    ) == ("external", "mailto:ada@example.com")
+    assert (
+        desktop.parse_desktop_action({"action": "external", "url": "javascript:alert(1)"}) is None
+    )
     assert desktop.parse_desktop_action({"action": "connect"}) is None
     assert desktop.parse_desktop_action({"action": "unknown", "server": "abc"}) is None
     assert desktop.parse_desktop_action("not a dict") is None
@@ -296,6 +317,18 @@ def test_desktop_mode_adds_the_server_list_to_the_main_menu(tmp_path, monkeypatc
     assert "data-play-panel" in page.text
     assert "/static/play_tabs.js" in page.text
     assert "/static/desktop.js" in page.text
+
+    script = client.get("/static/desktop.js")
+    assert script.status_code == 200
+    assert 'post("hello")' in script.text
+    assert "cygnus-desktop-ready" in script.text
+    assert 'post("external"' in script.text
+    assert "__cygnusExternalGuard" in script.text
+    assert 'addEventListener("click", openExternal, true)' in script.text
+
+    # Local pages outside the campaign menu still need the bridge and link guard.
+    license_page = client.get("/license")
+    assert "/static/desktop.js" in license_page.text
 
     token = csrf_token(client, "/campaigns")
     response = client.post(
@@ -382,6 +415,7 @@ def test_the_desktop_menu_without_desktop_mode_has_no_server_list(client: TestCl
     assert "Play on a server" not in page.text
     assert "/static/play_tabs.js" not in page.text
     assert "/static/desktop.js" not in page.text
+    assert "/static/desktop.js" not in client.get("/license").text
 
 
 def test_adding_a_server_rejects_a_non_cygnus_address(tmp_path, monkeypatch):
