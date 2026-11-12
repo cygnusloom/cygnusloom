@@ -261,8 +261,11 @@ def test_the_character_tab_shows_the_hirelings_sheet(client_factory):
 
     page = client.get(f"/campaigns/{campaign_id}").text
 
-    assert "Hirelings you play" in page
-    assert f"{HIRELING}" in page
+    assert 'class="tab-list character-tab-list"' in page
+    assert 'aria-controls="panel-sheet-pc"' in page
+    assert 'aria-controls="panel-sheet-1"' in page
+    assert 'id="panel-sheet-1"' in page
+    assert f">{HIRELING}</button>" in page
     assert "Stats:" in page
 
 

@@ -722,6 +722,7 @@ def test_a_rest_recharges_cultured_and_the_character_panel_shows_it(client_facto
         return page[page.index('id="panel-character"') : page.index('id="panel-inventory"')]
 
     assert "Cultured" in sheet()
+    assert "Reroll a failed social check." in sheet()
     assert "1 per rest" in sheet()
     assert "ready" in sheet()
 
@@ -747,8 +748,9 @@ def test_the_sheet_lists_each_reaction_on_its_own_line(client_factory):
 
     assert '<ul class="reaction-list">' in block
     assert block.count("<li>") == 2
-    assert "Trapmaster already rerolled the failed check involving a trap." in block
-    assert "Trapmaster already rerolled the failed save involving a trap." in block
+    assert "Reroll a failed check involving a trap, snare, or hazard." in block
+    assert "Reroll a failed save involving a trap, snare, or hazard." in block
+    assert "already" not in block
 
 
 def test_impostor_rerolls_a_disguise_check_once_per_hour(client_factory):

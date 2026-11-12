@@ -289,7 +289,8 @@
         "effect": {"op": "reroll", "keep": "better"},
         "uses": 1,
         "reset": "rest",
-        "text": "Cultured already rerolled the failed social check."
+        "text": "Cultured already rerolled the failed social check.",
+        "sheet": "Reroll a failed social check."
       }
     ]
   },
@@ -577,7 +578,8 @@
         "uses": 1,
         "reset": "hour",
         "shared": "impostor-reroll",
-        "text": "Impostor already rerolled the failed check to maintain the disguise."
+        "text": "Impostor already rerolled the failed check to maintain the disguise.",
+        "sheet": "Reroll a failed check made to maintain a disguise."
       },
       {
         "id": "impostor-save",
@@ -590,7 +592,8 @@
         "uses": 1,
         "reset": "hour",
         "shared": "impostor-reroll",
-        "text": "Impostor already rerolled the failed save to maintain the disguise."
+        "text": "Impostor already rerolled the failed save to maintain the disguise.",
+        "sheet": "Reroll a failed save made to maintain a disguise."
       }
     ]
   },
@@ -785,7 +788,8 @@
         "effect": {"op": "reroll", "keep": "better"},
         "uses": 1,
         "reset": "day",
-        "text": "Elf already rerolled the failed check with the chosen skill."
+        "text": "Elf already rerolled the failed check with the chosen skill.",
+        "sheet": "Reroll a failed check using your chosen skill."
       }
     ]
   },
@@ -1006,7 +1010,8 @@
         "effect": {"op": "reroll", "keep": "better"},
         "uses": 1,
         "reset": "hour",
-        "text": "Rider already rerolled the failed Ride check."
+        "text": "Rider already rerolled the failed Ride check.",
+        "sheet": "Reroll a failed Ride check."
       }
     ]
   },
@@ -1217,7 +1222,8 @@
         "uses": 1,
         "reset": "hour",
         "shared": "trapmaster-reroll",
-        "text": "Trapmaster already rerolled the failed check involving a trap."
+        "text": "Trapmaster already rerolled the failed check involving a trap.",
+        "sheet": "Reroll a failed check involving a trap, snare, or hazard."
       },
       {
         "id": "trapmaster-save",
@@ -1230,7 +1236,8 @@
         "uses": 1,
         "reset": "hour",
         "shared": "trapmaster-reroll",
-        "text": "Trapmaster already rerolled the failed save involving a trap."
+        "text": "Trapmaster already rerolled the failed save involving a trap.",
+        "sheet": "Reroll a failed save involving a trap, snare, or hazard."
       }
     ]
   },
@@ -1367,7 +1374,8 @@
         "effect": {"op": "set_reaction", "to": "as friendly and helpful as their nature and the situation permit"},
         "uses": 1,
         "reset": "week",
-        "text": "Well Met already made the reaction as friendly and helpful as is plausible."
+        "text": "Well Met already made the reaction as friendly and helpful as is plausible.",
+        "sheet": "Treat a poor reaction roll as friendly and helpful, as far as their nature and the situation permit."
       }
     ]
   },

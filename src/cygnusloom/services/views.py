@@ -1489,7 +1489,7 @@ def _reaction_links(spec: CharacterSpec, character: Character) -> tuple[Reaction
         ReactionLink(
             feature=feature.id,
             name=feature.name,
-            text=reaction_effect_text(reaction, feature),
+            text=reaction.sheet or reaction_effect_text(reaction, feature),
             uses=reaction.uses,
             used=character.reaction_uses.get(
                 f"{reaction.reset}:{feature.id}:{reaction.shared or reaction.id}", 0

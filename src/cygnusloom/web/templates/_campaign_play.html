@@ -259,26 +259,31 @@
               </div>
               {% endif %}
             </div>
-            <div class="tab-panel" role="tabpanel" id="panel-character" aria-labelledby="tab-character" hidden>
-              {% if scene.pc_sheet %}
-              <p><strong>{{ scene.pc_sheet.name }}</strong></p>
-              {% with sheet_view=scene.pc_sheet %}{% include "_character_sheet.html" %}{% endwith %}
-              {% else %}
-              <p class="muted">No character sheet yet.</p>
-              {% endif %}
+            <div class="tab-panel character-panel" role="tabpanel" id="panel-character" aria-labelledby="tab-character" hidden>
               {% if scene.hireling_sheets %}
-              <section class="hireling-sheets" aria-labelledby="hireling-sheets-title">
-                <h3 id="hireling-sheets-title">Hirelings you play</h3>
+              <div class="tab-list character-tab-list" role="tablist" aria-label="Character sheets">
+                <button type="button" class="tab" role="tab" id="tab-sheet-pc" aria-controls="panel-sheet-pc" aria-selected="true">{{ scene.pc_sheet.name if scene.pc_sheet else "Character" }}</button>
                 {% for hireling in scene.hireling_sheets %}
-                <details class="hireling-sheet"{% if not hireling.dead %} open{% endif %}>
-                  <summary><strong>{{ hireling.name }}</strong>{% if hireling.employer %} <span class="muted">(hired by {{ hireling.employer }})</span>{% endif %}{% if hireling.location %} <span class="muted">· {{ hireling.location }}</span>{% endif %}{% if hireling.dead %} <span class="muted">· dead</span>{% endif %}</summary>
-                  {% with sheet_view=hireling %}{% include "_character_sheet.html" %}{% endwith %}
-                </details>
+                <button type="button" class="tab" role="tab" id="tab-sheet-{{ loop.index }}" aria-controls="panel-sheet-{{ loop.index }}" aria-selected="false" tabindex="-1">{{ hireling.name }}{% if hireling.dead %} <span class="muted">(dead)</span>{% endif %}</button>
                 {% endfor %}
-              </section>
+              </div>
               {% endif %}
+              <div class="tab-panel character-sheet-panel" id="panel-sheet-pc"{% if scene.hireling_sheets %} role="tabpanel" aria-labelledby="tab-sheet-pc"{% endif %}>
+                {% if scene.pc_sheet %}
+                <p><strong>{{ scene.pc_sheet.name }}</strong></p>
+                {% with sheet_view=scene.pc_sheet %}{% include "_character_sheet.html" %}{% endwith %}
+                {% else %}
+                <p class="muted">No character sheet yet.</p>
+                {% endif %}
+              </div>
+              {% for hireling in scene.hireling_sheets %}
+              <div class="tab-panel character-sheet-panel" role="tabpanel" id="panel-sheet-{{ loop.index }}" aria-labelledby="tab-sheet-{{ loop.index }}" hidden>
+                <p class="muted">{% if hireling.employer %}Hired by {{ hireling.employer }}{% endif %}{% if hireling.location %} · {{ hireling.location }}{% endif %}{% if hireling.dead %} · dead{% endif %}</p>
+                {% with sheet_view=hireling %}{% include "_character_sheet.html" %}{% endwith %}
+              </div>
+              {% endfor %}
               {% if advancement_available %}
-              <p><a class="button" href="/campaigns/{{ campaign.id }}/advancement">{{ "Level up" if advancement_due else "Advancement" }}</a></p>
+              <p class="character-advancement"><a class="button" href="/campaigns/{{ campaign.id }}/advancement">{{ "Level up" if advancement_due else "Advancement" }}</a></p>
               {% endif %}
             </div>
             {% if factions %}

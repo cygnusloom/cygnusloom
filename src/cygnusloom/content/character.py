@@ -218,7 +218,11 @@ class Reaction:
     effect: Mapping[str, Any]
     uses: int = 0
     reset: str = ""
+    # What the Log says when the reaction fires, in the past tense, so the GM knows it is done.
     text: str = ""
+    # What the character sheet says the reaction does, in the present tense. Falls back to
+    # `text` when the reaction does not supply its own sheet wording.
+    sheet: str = ""
     # Reactions with the same `shared` name spend one pool of uses, such as a Focus that can
     # reroll either a check or a save once before it recharges.
     shared: str = ""
@@ -1288,7 +1292,7 @@ def _feature_reactions(entries: object, label: str) -> tuple[Reaction, ...]:
             raise ContentError(f"{label}: each reaction must be an object")
         _check_reaction_keys(
             entry,
-            {"id", "trigger", "when", "effect", "uses", "reset", "text", "shared"},
+            {"id", "trigger", "when", "effect", "uses", "reset", "text", "sheet", "shared"},
             f"{label}: reaction",
         )
         ident = required_text(entry, "id", f"{label}: reaction")
@@ -1319,6 +1323,9 @@ def _feature_reactions(entries: object, label: str) -> tuple[Reaction, ...]:
         text = entry.get("text", "")
         if not isinstance(text, str):
             raise ContentError(f"{label}: reaction {ident} 'text' must be text")
+        sheet = entry.get("sheet", "")
+        if not isinstance(sheet, str):
+            raise ContentError(f"{label}: reaction {ident} 'sheet' must be text")
         shared = entry.get("shared", "")
         if not isinstance(shared, str):
             raise ContentError(f"{label}: reaction {ident} 'shared' must be text")
@@ -1333,6 +1340,7 @@ def _feature_reactions(entries: object, label: str) -> tuple[Reaction, ...]:
                 uses=uses,
                 reset=reset,
                 text=text,
+                sheet=sheet,
                 shared=shared,
             )
         )
