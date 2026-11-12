@@ -3,18 +3,22 @@
 {% block content %}
   {% if desktop %}
   <h1 class="visually-hidden">Campaigns</h1>
-  <div class="play-tabs" role="tablist" aria-label="Play mode">
+  <div class="play-tabs" role="tablist" aria-label="Play mode" data-play-initial="{{ play_tab }}">
     <button class="play-tab" id="tab-device" type="button" role="tab"
-            aria-selected="true" aria-controls="panel-device" data-play-tab="device">
+            aria-selected="{{ 'true' if play_tab == 'device' else 'false' }}"
+            aria-controls="panel-device" tabindex="{{ '0' if play_tab == 'device' else '-1' }}"
+            data-play-tab="device">
       Play on my device
     </button>
     <button class="play-tab" id="tab-server" type="button" role="tab"
-            aria-selected="false" aria-controls="panel-server" tabindex="-1" data-play-tab="server">
+            aria-selected="{{ 'true' if play_tab == 'server' else 'false' }}"
+            aria-controls="panel-server" tabindex="{{ '0' if play_tab == 'server' else '-1' }}"
+            data-play-tab="server">
       Play on a server
     </button>
   </div>
   <div class="play-panel" id="panel-device" role="tabpanel" aria-labelledby="tab-device"
-       data-play-panel="device">
+       data-play-panel="device"{% if play_tab != 'device' %} hidden{% endif %}>
   {% endif %}
   <section class="card">
     <div class="heading">
@@ -81,7 +85,7 @@
   </div>
 
   <div class="play-panel" id="panel-server" role="tabpanel" aria-labelledby="tab-server"
-       data-play-panel="server" hidden>
+       data-play-panel="server"{% if play_tab != 'server' %} hidden{% endif %}>
   <section class="card" id="servers">
     <div class="heading">
       <h2>Servers</h2>
@@ -102,6 +106,10 @@
                 <button type="button" class="secondary" data-desktop-login="{{ server.id }}">Log in</button>
                 <button type="button" class="secondary" data-desktop-browser="{{ server.id }}">Log in with browser</button>
               </span>
+              {% set connected = server.last_used_at|time_ago %}
+              {% if connected %}
+              <span class="server-seen">Last connected {{ connected }}</span>
+              {% endif %}
             </div>
             <details class="server-settings">
               <summary>Server settings</summary>

@@ -1,13 +1,22 @@
-/* Large tabs for the desktop main menu. The selected tab survives form redirects. */
+/* Large tabs for the desktop main menu. The choice survives app restarts.
+ *
+ * The local server gets a new port each launch, so localStorage/sessionStorage cannot
+ * carry a choice across launches: storage is scoped to scheme, host, and port. Cookies
+ * ignore the port but are shared by the Qt profile, which makes them the right home for
+ * this preference.
+ */
 (() => {
+  const list = document.querySelector(".play-tabs");
   const tabs = Array.from(document.querySelectorAll("[data-play-tab]"));
   const panels = Array.from(document.querySelectorAll("[data-play-panel]"));
-  if (!tabs.length || !panels.length) return;
-  const STORAGE_KEY = "cygnus.playTab";
+  if (!list || !tabs.length || !panels.length) return;
+  const COOKIE = "cygnus_play_tab";
+  const MAX_AGE = 60 * 60 * 24 * 365;
 
   function remembered() {
     try {
-      return sessionStorage.getItem(STORAGE_KEY) || "";
+      const match = document.cookie.match(/(?:^|;\s*)cygnus_play_tab=([^;]*)/);
+      return match ? decodeURIComponent(match[1]) : "";
     } catch (error) {
       return "";
     }
@@ -15,9 +24,9 @@
 
   function remember(name) {
     try {
-      sessionStorage.setItem(STORAGE_KEY, name);
+      document.cookie = `${COOKIE}=${encodeURIComponent(name)}; Path=/; Max-Age=${MAX_AGE}; SameSite=Lax`;
     } catch (error) {
-      // A restricted browser can still switch tabs for this page.
+      // A browser that blocks cookies can still switch tabs for this page.
     }
   }
 
@@ -49,5 +58,8 @@
 
   const hash = location.hash.replace(/^#/, "");
   const validHash = tabs.some((tab) => tab.dataset.playTab === hash);
-  select(validHash ? hash : remembered() || "device", false);
+  const initial = validHash
+    ? hash
+    : remembered() || list.dataset.playInitial || "device";
+  select(initial, false);
 })();

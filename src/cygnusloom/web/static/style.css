@@ -193,6 +193,7 @@ button.secondary:hover, button.secondary:focus-visible,
 .server-name { flex: 1 1 auto; font-weight: 600; }
 .server-url { color: var(--muted); font-size: 0.9rem; overflow-wrap: anywhere; }
 .server-actions { display: flex; flex-wrap: wrap; gap: 0.4rem; flex: none; }
+.server-seen { flex: 1 1 100%; color: var(--muted); font-size: 0.85rem; }
 .server-settings { margin-top: 0.5rem; }
 .server-settings > summary { cursor: pointer; color: var(--muted); font-size: 0.9rem; }
 .server-inline-form { display: flex; align-items: flex-end; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; }
