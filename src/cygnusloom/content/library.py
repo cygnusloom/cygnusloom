@@ -1977,6 +1977,14 @@ class Capabilities:
 
 
 @dataclass(frozen=True)
+class DefaultCampaign:
+    """The rule set and world the New Campaign form starts on, from core's head."""
+
+    rule_set: str
+    world_template: str
+
+
+@dataclass(frozen=True)
 class RuleSet:
     """One loaded rule set. The shared systems are grouped into capability objects; the read-only
     aliases below keep older consumers working without flattening the model back into a union."""
@@ -1991,6 +1999,8 @@ class RuleSet:
     plus: str
     # Options shared by every character in a campaign, such as the omen.
     campaign: CampaignSpec
+    # The rule set and world the New Campaign form starts on, when core declares them.
+    default_campaign: DefaultCampaign | None = None
     # The scale of encounter maps, or None when the rule set has no grid: its encounters have no
     # movement limit.
     grid: EncounterGrid | None = None
@@ -2228,6 +2238,25 @@ class ContentLibrary:
             for d in rule_set_dirs
             if d.name != CORE_RULE_SET and _has_definitions(d)
         }
+        configured = core.default_campaign
+        if configured is not None:
+            if configured.rule_set not in rule_sets:
+                raise ContentError(
+                    f"{CORE_RULE_SET}: default_campaign names unknown rule set "
+                    f"{configured.rule_set!r}"
+                )
+            if configured.world_template not in worlds:
+                raise ContentError(
+                    f"{CORE_RULE_SET}: default_campaign names unknown world "
+                    f"{configured.world_template!r}"
+                )
+            world_rule_set = worlds[configured.world_template].rule_set
+            if world_rule_set is not None and world_rule_set != configured.rule_set:
+                raise ContentError(
+                    f"{CORE_RULE_SET}: default_campaign world "
+                    f"{configured.world_template!r} is built for {world_rule_set!r}, not "
+                    f"{configured.rule_set!r}"
+                )
         for world in worlds.values():
             if world.rule_set is not None and world.rule_set not in rule_sets:
                 raise ContentError(f"{world.id}: world names unknown rule set {world.rule_set!r}")
@@ -3829,6 +3858,19 @@ def _merge_defaults(
     return merged
 
 
+def _load_default_campaign(data: Mapping[str, Any], label: str) -> DefaultCampaign | None:
+    """The optional `default_campaign` block on core's head: the rule set and world the New
+    Campaign form starts on."""
+    if "default_campaign" not in data:
+        return None
+    block_label = f"{label}: default_campaign"
+    block = check_object_keys(data["default_campaign"], {"rule_set", "world_template"}, block_label)
+    return DefaultCampaign(
+        rule_set=required_text(block, "rule_set", block_label),
+        world_template=required_text(block, "world_template", block_label),
+    )
+
+
 def _load_rule_set(
     directory: Path,
     core_definitions: list[Definition],
@@ -3920,6 +3962,7 @@ def _build_rule_set(
             "npc_hp_stat",
             "table_genres",
             "capabilities",
+            "default_campaign",
         },
         label,
     )
@@ -4165,6 +4208,7 @@ def _build_rule_set(
         character=character,
         plus=_plus_mode(head.data, label),
         campaign=campaign,
+        default_campaign=_load_default_campaign(head.data, label),
         grid=grid,
         combat=combat,
         conditions=conditions,

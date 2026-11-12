@@ -344,7 +344,7 @@ def test_new_campaign_form_prefills_the_default_label(
 ):
     client = _signed_in(client_factory)
     page = client.get("/campaigns/new").text
-    assert 'name="label" value="Unwritten Academy #1"' in page
+    assert 'name="label" value="Unwritten World #1"' in page
 
 
 def test_new_campaign_form_asks_for_the_label_last(
@@ -565,7 +565,7 @@ def test_new_campaign_form_marks_third_party_content_and_offers_credits(
     assert re.search(r'<option value="worldswithoutnumber"[^>]*data-third-party="1"', page)
     assert re.search(r'<option value="twin-lakes"[^>]*data-third-party="1"', page)
     assert re.search(r'<option value="academia-arcana"[^>]*data-third-party="0"', page)
-    assert re.search(r'<span data-blurb-credits="rule_set" hidden>', page)
+    assert re.search(r'<span data-blurb-credits="rule_set">', page)
     assert re.search(r'<span data-blurb-credits="world_template" hidden>', page)
     assert page.count('<a href="/license">content credits</a>') == 2
 
@@ -597,8 +597,8 @@ def test_new_campaign_form_starts_on_a_rule_set_and_a_world_that_fits(
 ):
     client = _signed_in(client_factory)
     page = client.get("/campaigns/new").text
-    assert re.search(r'<option value="academia-arcana"[^>]* selected', page)
-    assert re.search(r'<option value="unwritten-academy"[^>]* selected', page)
+    assert re.search(r'<option value="worldswithoutnumber"[^>]* selected', page)
+    assert re.search(r'<option value="unwritten-world"[^>]* selected', page)
 
 
 def test_create_stores_the_chosen_settings(client_factory: Callable[[], TestClient]):
