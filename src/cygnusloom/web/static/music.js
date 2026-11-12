@@ -196,6 +196,8 @@
       syncControls();
       return;
     }
+    // Silent playback still needs the player's next gesture to become audible.
+    watchGestures();
     pendingGesture = true;
     audio.volume = volume;
     audio.muted = true;
@@ -230,6 +232,9 @@
     pendingGesture = false;
     starting = false;
     refusals = 0;
+    // Nothing is waiting on a gesture while music is off or silent. Turning it back on happens
+    // from the music controls, whose own click is the gesture that allows sound.
+    ignoreGestures();
     syncControls();
   };
 
@@ -314,6 +319,7 @@
         pendingGesture = false;
         current = { audio: next, track };
         nowPlaying = track;
+        if (!next.muted) ignoreGestures();
         syncControls();
         const step = (now) => {
           if (token !== fadeToken) return;
@@ -420,6 +426,8 @@
     pendingGesture = false;
     start();
     syncAudible();
+    // The gesture did its job; stop watching until a track is refused again.
+    if (current && !current.audio.paused && !current.audio.muted) ignoreGestures();
   };
 
   const toggle = () => {
@@ -462,9 +470,26 @@
     gestureSeen = true;
     unlock();
   };
-  for (const type of ["pointerdown", "keydown", "touchstart"]) {
-    document.addEventListener(type, onGesture, { capture: true, passive: true });
-  }
+  // The watchdog runs only while a gesture could still be needed. Once music plays audibly, a
+  // global listener on every click and key press would re-run the widget sync for nothing - a
+  // measurable cost while typing in a long campaign - so it detaches until keepSilent re-arms it.
+  const GESTURE_TYPES = ["pointerdown", "keydown", "touchstart"];
+  let watchingGestures = false;
+  const watchGestures = () => {
+    if (watchingGestures) return;
+    watchingGestures = true;
+    for (const type of GESTURE_TYPES) {
+      document.addEventListener(type, onGesture, { capture: true, passive: true });
+    }
+  };
+  const ignoreGestures = () => {
+    if (!watchingGestures) return;
+    watchingGestures = false;
+    for (const type of GESTURE_TYPES) {
+      document.removeEventListener(type, onGesture, true);
+    }
+  };
+  watchGestures();
 
   // Phones fold the widget into one small button that opens the whole panel.
   const musicWidget = document.querySelector("[data-music-widget]");
