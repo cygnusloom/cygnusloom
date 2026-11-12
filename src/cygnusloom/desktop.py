@@ -705,6 +705,7 @@ def run_window(url: str, title: str, data_dir: Path) -> int:
             server = self._server_at(page_origin)
             if server is not None:
                 self.current_server_id = server.id
+                self._touch(server.id)
                 return
 
         def _server_at(self, page_origin: str):

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Mapping
+from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -16,6 +17,7 @@ from cygnusloom import SOURCE_URL, WEBSITE_URL, __version__, content_credits
 from cygnusloom.auth.deps import current_user, get_csrf, is_admin_user
 from cygnusloom.auth.oidc import account_management_url
 from cygnusloom.services.accounts import decode_roles
+from cygnusloom.services.campaigns import last_activity_text
 from cygnusloom.web.icons import icon_path, item_icon_id, place_icon_path
 
 TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
@@ -74,6 +76,20 @@ def link_compendium(text: str, links: Mapping[str, str] | None) -> Markup:
 templates.env.filters["markdown"] = render_markdown
 templates.env.filters["roles"] = decode_roles
 templates.env.filters["compendium_links"] = link_compendium
+
+
+def time_ago(value: object) -> str:
+    """A stored ISO timestamp as '5 minutes ago (2026-11-12)', or an empty string."""
+    if not isinstance(value, str) or not value.strip():
+        return ""
+    try:
+        when = datetime.fromisoformat(value)
+    except ValueError:
+        return ""
+    return last_activity_text(when)
+
+
+templates.env.filters["time_ago"] = time_ago
 
 
 def render(request: Request, name: str, status_code: int = 200, **context: Any) -> Response:

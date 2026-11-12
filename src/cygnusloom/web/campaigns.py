@@ -151,11 +151,17 @@ def campaigns_page(request: Request) -> Response:
     campaigns = visible_campaigns(request.app.state.engine, user.id)
     store = optional_server_store(request.app.state.settings)
     servers = store.list() if store is not None else []
+    # The desktop app chooses a new local port each launch, so this choice lives in a
+    # cookie: cookies ignore the port and survive restarts of the app.
+    play_tab = request.cookies.get("cygnus_play_tab", "device")
+    if play_tab not in ("device", "server"):
+        play_tab = "device"
     return render(
         request,
         "campaigns.html",
         campaigns=campaigns,
         servers=servers,
+        play_tab=play_tab,
     )
 
 

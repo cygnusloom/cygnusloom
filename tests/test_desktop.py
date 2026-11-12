@@ -3,6 +3,7 @@ from __future__ import annotations
 import http.server
 import json
 import os
+import re
 import ssl
 import threading
 import urllib.error
@@ -283,9 +284,17 @@ def test_desktop_mode_adds_the_server_list_to_the_main_menu(tmp_path, monkeypatc
     assert "Servers" in page.text
     assert "Add by invitation link" in page.text
     assert "data-desktop-add" in page.text
-    assert "Play on your Computer" in page.text
-    assert "Play on a Server" in page.text
-    assert page.text.index("Play on your Computer") < page.text.index("Play on a Server")
+    assert "Play on my device" in page.text
+    assert "Play on a server" in page.text
+    assert page.text.index("Play on my device") < page.text.index("Play on a server")
+    assert 'data-play-initial="device"' in page.text
+    assert re.search(r'id="tab-device"[^>]*aria-selected="true"', page.text)
+    assert re.search(r'id="tab-server"[^>]*aria-selected="false"', page.text)
+    assert re.search(r'id="panel-server"[^>]*hidden', page.text)
+    assert not re.search(r'id="panel-device"[^>]*hidden', page.text)
+    assert "data-play-tab" in page.text
+    assert "data-play-panel" in page.text
+    assert "/static/play_tabs.js" in page.text
     assert "/static/desktop.js" in page.text
 
     token = csrf_token(client, "/campaigns")
@@ -302,6 +311,7 @@ def test_desktop_mode_adds_the_server_list_to_the_main_menu(tmp_path, monkeypatc
     assert "Tuesday table" in response.text
     assert "table.example.com" in response.text
     assert "Added Tuesday table." in response.text
+    assert "Last connected" in response.text
     server = ServerStore(tmp_path / "servers.json").list()[0]
     assert server.name == "Tuesday table"
     assert server.oidc_issuer == "https://idp.example.com"
@@ -315,12 +325,62 @@ def test_desktop_mode_adds_the_server_list_to_the_main_menu(tmp_path, monkeypatc
     assert len(ServerStore(tmp_path / "servers.json").list()) == 1
 
 
+def test_the_desktop_menu_remembers_the_last_play_tab(tmp_path):
+    settings = desktop_settings(tmp_path)
+    app = make_app(settings)
+    client = TestClient(app)
+
+    client.cookies.set("cygnus_play_tab", "server")
+    page = client.get("/campaigns")
+    assert 'data-play-initial="server"' in page.text
+    assert re.search(r'id="tab-server"[^>]*aria-selected="true"', page.text)
+    assert re.search(r'id="tab-device"[^>]*aria-selected="false"', page.text)
+    assert re.search(r'id="panel-device"[^>]*hidden', page.text)
+    assert not re.search(r'id="panel-server"[^>]*hidden', page.text)
+
+    # A stale or unknown preference is not trusted.
+    client.cookies.set("cygnus_play_tab", "nonsense")
+    page = client.get("/campaigns")
+    assert 'data-play-initial="device"' in page.text
+    assert re.search(r'id="panel-server"[^>]*hidden', page.text)
+
+
+def test_the_desktop_menu_lists_servers_by_last_connect(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        desktop_web, "probe_server", lambda url: desktop_web.ServerInfo(version="4.2.0")
+    )
+    settings = desktop_settings(tmp_path)
+    app = make_app(settings)
+    client = TestClient(app)
+    token = csrf_token(client, "/campaigns")
+
+    for url, name in (
+        ("https://first.example.com", "First table"),
+        ("https://second.example.com", "Second table"),
+    ):
+        response = client.post(
+            "/desktop/servers", data={"csrf_token": token, "url": url, "name": name}
+        )
+        assert response.status_code == 200
+
+    store = ServerStore(tmp_path / "servers.json")
+    first = store.find_by_url("https://first.example.com")
+    assert first is not None
+    store.touch(first.id)
+
+    page = client.get("/campaigns")
+    assert page.text.index("First table") < page.text.index("Second table")
+    assert page.text.count("Last connected") == 2
+
+
 def test_the_desktop_menu_without_desktop_mode_has_no_server_list(client: TestClient):
+    client.cookies.set("cygnus_play_tab", "server")
     page = client.get("/campaigns")
 
     assert "Add by invitation link" not in page.text
-    assert "Play on your Computer" not in page.text
-    assert "Play on a Server" not in page.text
+    assert "Play on my device" not in page.text
+    assert "Play on a server" not in page.text
+    assert "/static/play_tabs.js" not in page.text
     assert "/static/desktop.js" not in page.text
 
 
