@@ -1829,20 +1829,25 @@ class MapTokenPlaced(GameEvent):
 
 @dataclass(frozen=True)
 class MapTokenRemoved(GameEvent):
-    """A token is taken off a local map outside an encounter."""
+    """A token is taken off a local map outside an encounter. The player's Log shows their own
+    token; an NPC's or prop's removal is left to the narration."""
 
     kind: ClassVar[str] = "map.token_removed"
     hidden: ClassVar[bool] = True
 
     map: str
     name: str
+    # BACKWARDS-COMPATIBILITY: 4 -- older records have no flag and keep their Log line.
+    quiet: bool = False
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         encounter_map = state.maps.get(name_key(self.map))
         if encounter_map is not None:
             encounter_map.tokens.pop(name_key(self.name), None)
 
-    def render(self) -> str:
+    def render(self) -> str | None:
+        if self.quiet:
+            return None
         return f"{self.name} removed from {self.map}."
 
 

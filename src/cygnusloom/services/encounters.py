@@ -839,7 +839,15 @@ def remove_map_token(db: Session, campaign_id: int, map_name: str, name: str) ->
         raise InvalidInput(f"there is no token named {name!r} on {entry.name}")
     character = state.characters.get(key)
     display = character.name if character is not None else name
-    record(db, campaign_id, MapTokenRemoved(map=entry.name, name=display))
+    record(
+        db,
+        campaign_id,
+        MapTokenRemoved(
+            map=entry.name,
+            name=display,
+            quiet=character is None or character.kind != PC_KIND,
+        ),
+    )
     db.commit()
     return {"removed": display, "map": entry.name}
 

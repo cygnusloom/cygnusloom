@@ -198,6 +198,16 @@ def test_an_npc_token_movement_is_left_to_the_narration(
     state = open_campaign(client.app, campaign_id)
     assert state.maps[name_key(MAP)].tokens[name_key("Nib")] == (5, 4)
 
+    _call(client.app, campaign_id, "remove_map_token", {"map": MAP, "name": "Nib"})
+    state = open_campaign(client.app, campaign_id)
+    assert name_key("Nib") not in state.maps[name_key(MAP)].tokens
+    lines = [
+        item.content
+        for item in campaign_transcript(client.app.state.engine, state.owner_id, campaign_id)
+        if item.role == "log"
+    ]
+    assert not [line for line in lines if "Nib removed from" in line]
+
 
 def test_an_npc_move_is_left_to_the_narration(
     client_factory: Callable[[], TestClient],
