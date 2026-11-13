@@ -24,6 +24,7 @@ from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.conditions import end_condition
 from cygnusloom.services.events import (
     PC_KIND,
+    CounterChanged,
     Recovered,
     RestTaken,
     load_state,
@@ -142,6 +143,28 @@ def take_rest(
                 )
     if rest.full and rest.clears:
         clear_items(db, campaign_id, [c.name for c in recovering], rest.clears)
+    if rest.clear_counters and spec is not None:
+        for target in recovering:
+            for counter_id in rest.clear_counters:
+                rules = spec.counters.get(counter_id)
+                if rules is None:
+                    continue
+                before = target.counters.get(counter_id, rules.initial)
+                after = rules.minimum
+                if before == after:
+                    continue
+                record(
+                    db,
+                    campaign_id,
+                    CounterChanged(
+                        name=target.name,
+                        counter=counter_id,
+                        label=rules.label,
+                        before=before,
+                        after=after,
+                        cause=f"a {rest.id} rest",
+                    ),
+                )
     for target in recovering:
         call_hook(
             hooks,

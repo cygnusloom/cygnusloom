@@ -124,6 +124,12 @@ def advance_to(
                 ),
             )
             result.setdefault("deaths", []).append(character.name)
+    # Timers are generic: a torch's light, a poison, or any other clock-bound effect.
+    from cygnusloom.services.timers import expire_timers
+
+    expired = expire_timers(db, campaign_id, new)
+    if expired:
+        result["timers_ended"] = expired
     if clock_rules.wage_currency:
         for _ in range(before.day + 1, new.day + 1):
             pay_wages(db, campaign_id, clock_rules.wage_currency)

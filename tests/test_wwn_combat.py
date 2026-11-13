@@ -546,6 +546,17 @@ def test_damage_adds_the_weapon_attribute_and_damage_bonus_stat(client_factory):
     assert result["harm"] == {"hp": expected}
 
 
+def test_placing_a_participant_in_the_same_cell_is_a_no_op(client_factory):
+    _app, _campaign_id, tools = _fight(client_factory)
+    _foe(tools)
+    tools.place_participant(PC, 0, 0)
+
+    again = tools.place_participant(PC, 0, 0)
+
+    assert again["cost"] == 0
+    assert again["note"] == f"{PC} is already at column 0, row 0."
+
+
 def test_a_thrown_weapon_at_range_does_no_shock(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, hp=20, armor=13)
@@ -613,6 +624,49 @@ def test_damage_and_shock_modifiers_reach_the_attack(client_factory):
     )
     # A hit adds the damage modifier, but Shock never adds to a hit's rolled damage.
     assert hit["raw"] == 5 + attribute + 1 + 3
+
+
+def test_armsmaster_adds_stab_to_melee_damage_and_shock(client_factory):
+    app, campaign_id, tools = _fight(
+        client_factory, {"pick-feature-class_focus_warrior-0": "focus_armsmaster"}
+    )
+    pc = _pc(app, campaign_id)
+    assert "focus_armsmaster" in pc.features
+    stab = _raise(tools, "stab")
+    _foe(tools, hp=20, armor=13)
+    _make_room(tools)
+    tools.give_item(PC, WAR_AXE, damage="1d10")
+    take_turn(tools, PC)
+    feature = _feature(WAR_AXE)
+    attribute = _modifier(pc, "str")
+
+    missed = tools.player_attack(FOE, WAR_AXE, attack_roll=2)
+    assert missed["hit"] is False
+    assert missed["harm"] == {"hp": feature.shock + attribute + stab}
+
+    next_turn(tools, PC)
+    hit = tools.player_attack(FOE, WAR_AXE, attack_roll=20, damage_roll=5)
+    assert hit["raw"] == 5 + attribute + 1 + stab
+    [_, event] = _struck(app, campaign_id)
+    assert "+1 Stab" in event.render()
+
+
+def test_deadeye_adds_shoot_to_ranged_damage(client_factory):
+    app, campaign_id, tools = _fight(
+        client_factory, {"pick-feature-class_focus_warrior-0": "focus_deadeye"}
+    )
+    pc = _pc(app, campaign_id)
+    assert "focus_deadeye" in pc.features
+    shoot = _raise(tools, "shoot")
+    _foe(tools, hp=20, armor=13)
+    _make_room(tools)
+    tools.give_item(PC, BOW, damage="1d8")
+    take_turn(tools, PC)
+
+    result = tools.player_attack(FOE, BOW, attack_roll=20, damage_roll=5)
+    assert result["raw"] == 5 + _modifier(pc, "dex") + 1 + shoot
+    event = _struck(app, campaign_id)[-1]
+    assert "+1 Shoot" in event.render()
 
 
 def test_an_unarmed_strike_adds_punch_skill_and_attribute_to_damage(client_factory):

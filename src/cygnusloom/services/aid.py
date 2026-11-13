@@ -10,8 +10,15 @@ from typing import Any
 from sqlmodel import Session
 
 from cygnusloom.content.character import CharacterSpec
-from cygnusloom.content.library import CombatRules, ConditionRules, InventoryRules
+from cygnusloom.content.library import (
+    ClockRules,
+    CombatRules,
+    ConditionRules,
+    InventoryRules,
+    Marketplace,
+)
 from cygnusloom.services import inventory as inventory_service
+from cygnusloom.services import timers as timers_service
 from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.conditions import end_condition
 from cygnusloom.services.events import (
@@ -84,6 +91,8 @@ def use_item(
     plus: str,
     spec: CharacterSpec | None = None,
     ignore_ready: bool = False,
+    clock_rules: ClockRules | None = None,
+    marketplace: Marketplace | None = None,
 ) -> dict[str, Any]:
     """Spend one use of a consumable the character carries. An aid item the rule set lists may be
     used on a dying character, and using it stabilizes them. Any other item is spent on the holder.
@@ -102,6 +111,30 @@ def use_item(
     result = inventory_service.use_item(
         db, campaign_id, inventory, name, item, charged_kind, ignore_ready=ignore_ready
     )
+    feature = None
+    if spec is not None:
+        feature = next(
+            (entry for entry in spec.features.values() if same_item_name(entry.name, item)),
+            None,
+        )
+    timer_hours = feature.timer_hours if feature is not None else 0
+    timer_label = feature.timer_label if feature is not None else ""
+    if not timer_hours and marketplace is not None:
+        listed = next(
+            (entry for entry in marketplace.items if same_item_name(entry.name, item)), None
+        )
+        if listed is not None:
+            timer_hours, timer_label = listed.timer_hours, listed.timer_label
+    if timer_hours > 0 and clock_rules is not None:
+        result["timer"] = timers_service.start_timer(
+            db,
+            campaign_id,
+            clock_rules,
+            name,
+            str(result.get("item") or item),
+            hours=timer_hours,
+            label=timer_label,
+        )
     if aid and combat is not None:
         result["stabilized"] = stabilize(
             db,

@@ -1141,6 +1141,33 @@
   },
   {
     "type": "tool_call",
+    "id": "set_character_field",
+    "description": "Set or clear one of the rule set's character fields, such as a student's College after the school's colleges are known. Use the field's name or id. The value appears on the character sheet and in the world state immediately. Set force true only for a story-only field the rule set does not define.",
+    "parameters": {
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The character's name."
+        },
+        "field": {
+          "type": "string",
+          "description": "The field to set, such as College, Major, or ambition."
+        },
+        "value": {
+          "type": "string",
+          "description": "The new value; an empty value clears the field."
+        },
+        "force": {
+          "type": "boolean",
+          "default": false,
+          "description": "Allow a field the rule set does not define."
+        }
+      },
+      "required": ["name", "field", "value"]
+    }
+  },
+  {
+    "type": "tool_call",
     "id": "delete_npc",
     "description": "Remove an NPC from the campaign. Use it for a temporary NPC who matters little to the story, such as a passing stranger, a hired guard, or a monster from a fight, once they have left the scene or the encounter they were in has ended. Keep NPCs the story may bring back, and remove an NPC who leaves the story or dies only when they are no longer needed. Notes about them are kept. The player character cannot be removed.",
     "parameters": {
@@ -2051,6 +2078,10 @@
           "default": false,
           "description": "True when something breaks the rest."
         },
+        "advance_clock": {
+          "type": "boolean",
+          "description": "Whether the rest moves the clock. Leave it out normally; pass false when travel already advanced the clock over this night."
+        },
         "reason": {
           "type": "string",
           "description": "What the party was doing."
@@ -2162,6 +2193,49 @@
         "receiver",
         "item"
       ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "set_timer",
+    "description": "Start, refresh, or end a timed effect on a character, such as a torch's light, a poison, or a spell's duration. Items with a timer start it automatically when used, so this tool is for a timer the story starts or ends directly. A timer ends when the campaign clock reaches its stated time and is then shown as ended in the Log. Set force true to replace a different timer under the same key or to end a timer that is not running.",
+    "parameters": {
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The character the timer belongs to."
+        },
+        "item": {
+          "type": "string",
+          "description": "The item or effect being timed, such as 'Torch' or 'Poison'."
+        },
+        "action": {
+          "type": "string",
+          "enum": ["start", "end"],
+          "default": "start",
+          "description": "Start or refresh the timer, or end it early."
+        },
+        "hours": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1,
+          "description": "How many campaign hours the timer lasts when started."
+        },
+        "label": {
+          "type": "string",
+          "description": "What the timer represents, such as 'Light' or 'Poisoned'."
+        },
+        "key": {
+          "type": "string",
+          "description": "Optional stable identifier; defaults to the item's name."
+        },
+        "force": {
+          "type": "boolean",
+          "default": false,
+          "description": "Replace a different timer under the same key, or tolerate ending a timer that is not running."
+        }
+      },
+      "required": ["name", "item"]
     }
   },
   {

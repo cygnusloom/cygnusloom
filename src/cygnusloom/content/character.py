@@ -198,6 +198,18 @@ class DefenseFloor:
 
 
 @dataclass(frozen=True)
+class WeaponBonus:
+    """A feature's automatic bonus to attacks made with one skill. `skill` is the weapon skill the
+    bonus applies to, and its level is added to damage and/or Shock. An empty skill applies to
+    every weapon."""
+
+    skill: str = ""
+    hit: bool = False
+    damage: bool = True
+    shock: bool = True
+
+
+@dataclass(frozen=True)
 class FeaturePick:
     """A structured choice a feature requires, such as the attribute for Developed Attribute.
     `choices` limits the pick and `exclude` removes options; an empty `choices` means every stat
@@ -298,6 +310,12 @@ class Feature:
     repeatable: bool = False
     # Extra maximum hit points this feature adds for every character level, such as Die Hard's 2.
     level_hp_bonus: int = 0
+    # How many hours a timer one use of this item starts for, or 0 when it starts no timer.
+    timer_hours: int = 0
+    # What the timer represents, such as “Light” or “Poisoned”.
+    timer_label: str = ""
+    # Automatic bonuses this feature adds to attacks with a weapon skill.
+    weapon_bonuses: tuple[WeaponBonus, ...] = ()
     # Whether the feature steadies its holder when mortally wounded, stopping the dying clock.
     stabilizes: bool = False
     # The structured choices the feature asks the player to make.
@@ -1082,6 +1100,11 @@ def load_feature(
     stabilizes = data.get("stabilizes", False)
     if not isinstance(stabilizes, bool):
         raise ContentError(f"{label}: 'stabilizes' must be a boolean")
+    timer_hours = _amount(data, "timer_hours", label)
+    timer_label = data.get("timer_label", "")
+    if not isinstance(timer_label, str):
+        raise ContentError(f"{label}: 'timer_label' must be text")
+    weapon_bonuses = _weapon_bonuses(data.get("weapon_bonus", []), skills, label)
     if shock and "shock_ac" not in data:
         raise ContentError(f"{label}: 'shock' needs a 'shock_ac'")
     icon = data.get("icon")
@@ -1130,10 +1153,37 @@ def load_feature(
         repeatable=repeatable,
         level_hp_bonus=level_hp_bonus,
         stabilizes=stabilizes,
+        timer_hours=timer_hours,
+        timer_label=timer_label,
+        weapon_bonuses=weapon_bonuses,
         picks=_feature_picks(data.get("picks", []), stats, skills, label),
         icon=resolved,
         looks_like=looks_like,
     )
+
+
+def _weapon_bonuses(value: object, skills: Collection[str], label: str) -> tuple[WeaponBonus, ...]:
+    """The automatic attack bonuses a feature grants."""
+    if not isinstance(value, list):
+        raise ContentError(f"{label}: 'weapon_bonus' must be a list")
+    found: list[WeaponBonus] = []
+    for entry in value:
+        if not isinstance(entry, Mapping):
+            raise ContentError(f"{label}: each 'weapon_bonus' entry must be an object")
+        skill = entry.get("skill", "")
+        if not isinstance(skill, str):
+            raise ContentError(f"{label}: a 'weapon_bonus' skill must be text")
+        if skill and skills and skill not in skills:
+            raise ContentError(f"{label}: 'weapon_bonus' names no skill ({skill!r})")
+        hit = entry.get("hit", False)
+        damage = entry.get("damage", True)
+        shock = entry.get("shock", True)
+        if not all(isinstance(value, bool) for value in (hit, damage, shock)):
+            raise ContentError(f"{label}: a 'weapon_bonus' hit, damage, and shock must be booleans")
+        if not (hit or damage or shock):
+            raise ContentError(f"{label}: a 'weapon_bonus' must add to hit, damage, or Shock")
+        found.append(WeaponBonus(skill=skill, hit=hit, damage=damage, shock=shock))
+    return tuple(found)
 
 
 def _feature_picks(
@@ -3891,9 +3941,10 @@ def kind_label(kind: str) -> str:
     return f"Second {label}" if base != kind else label
 
 
-def describe(spec: CharacterSpec, sheet: Sheet) -> str:
+def describe(spec: CharacterSpec, sheet: Sheet, *, show_all_counters: bool = True) -> str:
     """The character as the GM and the player read it, one line per part. Empty parts are left
-    out."""
+    out. A player sheet shows every counter, including the zero-valued tracks; an NPC shows only
+    the counters stored on its own record."""
     lines: list[str] = []
     if sheet.stats:
         lines.append(
@@ -3908,9 +3959,15 @@ def describe(spec: CharacterSpec, sheet: Sheet) -> str:
             "Skills: "
             + ", ".join(f"{_skill_name(spec, s)} {level}" for s, level in sheet.skills.items())
         )
-    for counter_id, value in sheet.counters.items():
-        if counter_id in spec.counters:
-            lines.append(f"{spec.counters[counter_id].label}: {value}")
+    counter_ids = (
+        list(spec.counters)
+        if show_all_counters
+        else [counter_id for counter_id in sheet.counters if counter_id in spec.counters]
+    )
+    for counter_id in counter_ids:
+        rules = spec.counters[counter_id]
+        value = sheet.counters.get(counter_id, rules.initial)
+        lines.append(f"{rules.label}: {value}")
     for field_id, value in sheet.fields.items():
         known = _known_features(spec, field_id, value)
         if known:

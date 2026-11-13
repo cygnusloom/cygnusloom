@@ -295,7 +295,7 @@
             <div class="tab-panel" role="tabpanel" id="panel-projects" aria-labelledby="tab-projects" hidden>
               <ul>
                 {% for project in projects %}
-                <li><strong>{{ project.name }}</strong> <span class="muted">{{ project.kind }}</span>
+                <li><strong>{{ project.name }}</strong> <span class="muted">{{ project.kind_label or project.kind }}</span>
                   <br>{{ project.goal }}
                   <br><span class="muted">{{ project.progress }} / {{ project.target }}{% if project.completed %} · complete{% elif project.abandoned %} · abandoned{% endif %}{% if project.owner %} · {{ project.owner }}{% endif %}</span>
                   {% if project.notes %}

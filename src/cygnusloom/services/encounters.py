@@ -1197,6 +1197,22 @@ def place_participant(
         )
     cost = 0
     previous = encounter.cells.get(key)
+    if previous == (column, row):
+        # A repeated placement, such as a retried tool call, is the same position; do not add a
+        # second Log line or spend movement on it.
+        cells = dict(encounter.cells)
+        cells[key] = (column, row)
+        result: dict[str, Any] = {
+            "placed": character.name,
+            "map": entry.name,
+            "column": column,
+            "row": row,
+            "cost": 0,
+            "moves_left": _moves_left(encounter, grid),
+            "note": f"{character.name} is already at column {column}, row {row}.",
+        }
+        result.update(_map_space(entry, cells, encounter_objects or {}))
+        return result
     if previous is not None:
         # A route around obstacles is required at any time, but moves are charged only on the
         # participant's own turn.
@@ -1376,6 +1392,8 @@ def end_turn(db: Session, campaign_id: int, name: str, by_player: bool) -> dict[
 
 def _status(character: Character, combat: CombatRules | None) -> str:
     if character.defeated:
+        if character.stable:
+            return "stable"
         return defeat_status(character, combat.defeat if combat else {})
     if character.fled:
         return "fled"

@@ -207,6 +207,9 @@ def roll_check(
         )
     else:
         rolled = whole_number(roll, "roll", 0, 1000)
+        if not rolled_values and re.fullmatch(r"\s*(?:1)?d\d+\s*", check.dice):
+            # A single die's reported face is the whole roll, so the Log can still show the dice.
+            rolled_values = [rolled]
         total = rolled + bonus
         result = resolution.CheckResult(
             roll=rolled, total=total, difficulty=target, passed=total >= target
@@ -334,7 +337,7 @@ def roll_check(
             rolls=rolled_values,
             breakdown=roll_breakdown(
                 check.dice,
-                rolled_values if roll is None else [],
+                rolled_values,
                 [
                     (skill_name, skill_bonus) if skill_name else ("", 0),
                     (stat_name, stat_bonus) if stat_name else ("", 0),

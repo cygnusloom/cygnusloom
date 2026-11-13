@@ -49,6 +49,8 @@ class TravelMixin:
         plan = journey_service.plan_days(
             rules, terrain, road=road, weather=weather, days=days, travelers=travelers
         )
+        with session_scope(self.engine) as db:
+            start_clock = load_state(db, self.campaign_id).clock
         moved = self.move_actor(character, location=destination)
         with session_scope(self.engine) as db:
             events = journey_service.roll_day_events(
@@ -67,6 +69,10 @@ class TravelMixin:
             # Commit the events before the clock advances, so the log keeps move, events, clock.
             db.commit()
         clock = self.advance_time(hours=plan.elapsed_hours)
+        parts = self.clock_rules.parts if self.clock_rules is not None else ("night",)
+        night_part = parts.index("night") if "night" in parts else len(parts) - 1
+        first_night = start_clock.day if start_clock.part < night_part else start_clock.day + 1
+        nights = [{"day": first_night + offset, "part": "night"} for offset in range(days)]
         return {
             "character": character,
             "destination": destination,
@@ -110,6 +116,12 @@ class TravelMixin:
                 "water, and warm sleep.",
             },
             "events": events,
+            "nights_count": len(nights),
+            "nights": nights,
+            "nights_note": (
+                "The travel clock already covers these nights. Narrate them, and when the party "
+                "camps call rest with advance_clock false so the same hours are not charged twice."
+            ),
         }
 
     def move_actor(
@@ -192,6 +204,18 @@ class TravelMixin:
             actor = _character_named(state, name)
             where = _place_named(state, location)
             origin = state.places.get(name_key(actor.location)) if actor.location else None
+            if actor.location is not None and name_key(actor.location) == name_key(where.name):
+                return {
+                    "moved": actor.name,
+                    "location": where.name,
+                    "watches": 0,
+                    "terrain": "",
+                    "fatigue": False,
+                    "lost_watches": 0,
+                    "journey": [],
+                    "journey_events": [],
+                    "note": f"{actor.name} is already at {where.name}.",
+                }
             authored = _authored_route(state, origin, where)
             if authored is not None:
                 # The world's route supplies the path, distance, terrain, and vast; only the

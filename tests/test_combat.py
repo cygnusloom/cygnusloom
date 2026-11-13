@@ -42,6 +42,7 @@ from cygnusloom.services.events import (
     EncounterEnded,
     MaxChanged,
     PcAdded,
+    SaveRolled,
     Struck,
     current,
     decode,
@@ -1364,6 +1365,12 @@ def test_a_player_character_who_passes_the_save_stands(client_factory):
     pc = _character(app, campaign_id, PC)
     assert pc.save_due is None
     assert pc.defeated is False
+    with _db(app) as db:
+        saves = [
+            decode(row) for row in events_since(db, campaign_id) if row.kind == SaveRolled.kind
+        ]
+    assert saves[-1].status == ""
+    assert "is dead" not in saves[-1].render()
 
 
 def test_a_player_save_is_refused_when_none_is_owed(client_factory):

@@ -14,6 +14,7 @@ from cygnusloom.services.events import (
     EVENT_TYPES,
     Channel,
     ChatPlayer,
+    CurrencyChanged,
     GameEvent,
     Harmed,
     LocationAdded,
@@ -54,6 +55,17 @@ def test_a_roll_breakdown_names_every_modifier():
     assert shock == "Shock 2 +1 Dexterity = 3 vs Shock AC 15"
     assert breakdown_text(roll_breakdown("", [], [("Shock", 3)], 3)) == "Shock 3"
     assert breakdown_text(None) == ""
+
+
+def test_currency_lines_name_the_unit():
+    assert (
+        CurrencyChanged(name="Wren", feature="gold_pieces", amount=-1, cause="a lantern").render()
+        == "Wren pays 1 gold piece for a lantern."
+    )
+    assert (
+        CurrencyChanged(name="Wren", feature="gold_pieces", amount=4, cause="a purse").render()
+        == "Wren gains 4 gold pieces from a purse."
+    )
 
 
 def test_harm_lines_read_stat_ids_as_words():

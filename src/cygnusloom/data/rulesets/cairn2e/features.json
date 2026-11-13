@@ -519,7 +519,9 @@
     "name": "Torch",
     "looks_like": "torch-item",
     "description": "A pitch-soaked torch.",
-    "uses": 3
+    "uses": 3,
+    "timer_hours": 1,
+    "timer_label": "Light"
   },
   {
     "type": "feature",
