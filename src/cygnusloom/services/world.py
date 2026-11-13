@@ -743,8 +743,9 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
     ) -> dict[str, Any]:
         """Start, refresh, or end a generic timer on a character. Items with `timer_hours` start
         their timer automatically when used; this tool is for a timer the story starts or ends
-        directly. `force` replaces a different timer under the same key, or tolerates ending one
-        that is not there."""
+        directly. A redundant start for the same item and ending is ignored. `force` replaces a
+        different timer under the same key, changes a label, or tolerates ending one that is not
+        there."""
         clock_rules = _required(self.clock_rules, "time")
         with session_scope(self.engine) as db:
             if action == "end":
