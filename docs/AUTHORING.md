@@ -371,6 +371,14 @@ A tool names exactly one handler: a `world_method` on `WorldTools`, or a
 `rename` maps schema names to method names. `enum_from` generates choices from
 the rule set's own data.
 
+A tool with `player_input` pauses for the player's roll or free-form answer; its
+`dice` or `dice_param` says what they roll, and `param` names the function
+argument that receives the total. `player_input.precheck` may name a
+`WorldTools` method that refuses the request before the player is asked, so an
+impossible request reaches the GM instead of becoming a roll that fails. The
+core `player_attack` uses it to check the turn, the attack budget, and the
+attack's reach before showing the roll prompt.
+
 Python-backed tools are trusted code. The loader checks the signature against
 the schema, but content can import a Python module.
 

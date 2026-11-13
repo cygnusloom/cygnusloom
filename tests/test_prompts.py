@@ -185,6 +185,17 @@ def test_narration_keeps_player_choices_to_the_message_or_its_clear_implication(
     assert "An NPC's words or actions do not choose for them" in text
 
 
+def test_narration_does_not_turn_an_order_to_another_character_into_an_attack():
+    """The player's order to a hireling or second player character is not the action. Outside
+    that character's turn the narration says they hold, because the record has no attack."""
+    text = narrate_instruction(CAIRN)
+    assert "the order is not the action" in text
+    assert "only the character whose turn is running acts" in text
+    assert "never narrate the attack or move the log does not record" in text
+    assert "a player-controlled hireling or second" in TURN_REVIEW_INSTRUCTION
+    assert "the player's order is not the action either" in TURN_REVIEW_INSTRUCTION
+
+
 def test_the_state_and_narration_share_the_player_agency_rule():
     state = state_instruction(rules_for())
     told = narrate_instruction(CAIRN)

@@ -858,6 +858,143 @@ def player_attack(
     supplies its reach and ranged bands; without one the attack is melee at the rule set's reach.
     When the target lies beyond the reach, `range_band` names the band to use, or the nearest one
     that covers the distance is chosen."""
+    prepared = _prepare_player_attack(
+        db,
+        campaign_id,
+        target,
+        weapon,
+        combat,
+        modifier,
+        spec=spec,
+        weapon_feature=weapon_feature,
+        damage_roll=damage_roll,
+        range_band=range_band,
+        dual_wield=dual_wield,
+        force=force,
+        character=character,
+        cell_feet=cell_feet,
+    )
+    state, pc, struck = prepared.state, prepared.pc, prepared.struck
+    raw = damage_roll if damage_roll is not None else roll_total(prepared.dice, rng, plus=plus)
+    if spec is not None and reactions.has_trigger(pc, spec, None, "damage"):
+        second = roll_total(prepared.dice, rng, plus=plus)
+        raw = max(raw, second)
+    if dual_wield:
+        raw += combat.dual_wield_damage_bonus
+    raw += prepared.bonuses.damage
+    # The hit is rolled after the damage, so a roll_vs_defense rule set draws its dice in the same
+    # order it always has.
+    to_hit: int | None = None
+    natural: int | None = None
+    if combat.hit_mode == "roll_vs_defense":
+        natural = (
+            attack_roll if attack_roll is not None else roll_total(combat.check_die, rng, plus=plus)
+        )
+        if spec is not None and reactions.has_trigger(pc, spec, None, "attack"):
+            natural = max(natural, roll_total(combat.check_die, rng, plus=plus))
+        to_hit = (
+            natural
+            + prepared.bonuses.to_hit
+            + hit_modifier
+            + prepared.range_penalty
+            + prepared.dual_penalty
+            + _condition_attack_modifier(pc, conditions)
+        )
+    result = _strike(
+        db,
+        campaign_id,
+        combat,
+        rng,
+        struck,
+        pc.name,
+        prepared.weapon,
+        raw,
+        modifier=modifier_name(modifier),
+        plus=plus,
+        to_hit=to_hit,
+        natural=natural,
+        shock=prepared.bonuses.shock,
+        shock_ac=prepared.bonuses.shock_ac,
+        spec=spec,
+    )
+    if state.encounter is not None:
+        _mark_attack(db, campaign_id, pc.name)
+    placement = {"range": prepared.distance.as_dict()} if prepared.distance.cells else {}
+    return {**result, **placement}
+
+
+def player_attack_check(
+    db: Session,
+    campaign_id: int,
+    target: str,
+    weapon: str,
+    combat: CombatRules,
+    modifier: str = "",
+    *,
+    spec: CharacterSpec | None = None,
+    weapon_feature: Feature | None = None,
+    range_band: str = "",
+    dual_wield: bool = False,
+    force: bool = False,
+    character: str = "",
+    cell_feet: int | None = None,
+) -> None:
+    """Refuse a player attack the same way `player_attack` would, without rolling or recording
+    anything. The engine calls it before showing the player's roll prompt, so an attack outside
+    the character's turn, at a spent budget, out of reach, or with a weapon they cannot use is
+    refused to the GM instead of being offered to the player as a roll that would fail."""
+    _prepare_player_attack(
+        db,
+        campaign_id,
+        target,
+        weapon,
+        combat,
+        modifier,
+        spec=spec,
+        weapon_feature=weapon_feature,
+        range_band=range_band,
+        dual_wield=dual_wield,
+        force=force,
+        character=character,
+        cell_feet=cell_feet,
+    )
+
+
+@dataclass(frozen=True)
+class _PreparedAttack:
+    """A player attack that passed every check: who strikes whom with what, before any dice."""
+
+    state: CampaignState
+    pc: Character
+    struck: Character
+    weapon: str
+    dice: str
+    bonuses: WeaponBonuses
+    distance: ranges.AttackDistance
+    range_penalty: int
+    dual_penalty: int
+
+
+def _prepare_player_attack(
+    db: Session,
+    campaign_id: int,
+    target: str,
+    weapon: str,
+    combat: CombatRules,
+    modifier: str,
+    *,
+    spec: CharacterSpec | None,
+    weapon_feature: Feature | None,
+    damage_roll: int | None = None,
+    range_band: str = "",
+    dual_wield: bool = False,
+    force: bool = False,
+    character: str = "",
+    cell_feet: int | None = None,
+) -> _PreparedAttack:
+    """Every check `player_attack` makes before it rolls: the attacker may act now, carries the
+    weapon, and can reach the target. Both the attack and its prompt check share it, so the
+    player is only asked to roll for an attack that can happen."""
     state = load_state(db, campaign_id)
     _no_initiative_pending(state)
     pc = _player_character(state, character)
@@ -878,10 +1015,6 @@ def player_attack(
     name = _weapon_name(weapon)
     dice = _attack_dice(pc, name, modifier, combat)
     _require_impaired(struck, modifier_name(modifier), combat)
-    raw = damage_roll if damage_roll is not None else roll_total(dice, rng, plus=plus)
-    if spec is not None and reactions.has_trigger(pc, spec, None, "damage"):
-        second = roll_total(dice, rng, plus=plus)
-        raw = max(raw, second)
     bonuses = _player_bonuses(combat, pc, name, spec, weapon_feature)
     distance = ranges.check_attack(
         state,
@@ -906,47 +1039,17 @@ def player_attack(
         if not (combat.dual_wield_hit_penalty or combat.dual_wield_damage_bonus):
             raise InvalidInput("this rule set has no dual-wielding action")
         dual_penalty = combat.dual_wield_hit_penalty
-        raw += combat.dual_wield_damage_bonus
-    raw += bonuses.damage
-    # The hit is rolled after the damage, so a roll_vs_defense rule set draws its dice in the same
-    # order it always has.
-    to_hit: int | None = None
-    natural: int | None = None
-    if combat.hit_mode == "roll_vs_defense":
-        natural = (
-            attack_roll if attack_roll is not None else roll_total(combat.check_die, rng, plus=plus)
-        )
-        if spec is not None and reactions.has_trigger(pc, spec, None, "attack"):
-            natural = max(natural, roll_total(combat.check_die, rng, plus=plus))
-        to_hit = (
-            natural
-            + bonuses.to_hit
-            + hit_modifier
-            + range_penalty
-            + dual_penalty
-            + _condition_attack_modifier(pc, conditions)
-        )
-    result = _strike(
-        db,
-        campaign_id,
-        combat,
-        rng,
-        struck,
-        pc.name,
-        name,
-        raw,
-        modifier=modifier_name(modifier),
-        plus=plus,
-        to_hit=to_hit,
-        natural=natural,
-        shock=bonuses.shock,
-        shock_ac=bonuses.shock_ac,
-        spec=spec,
+    return _PreparedAttack(
+        state=state,
+        pc=pc,
+        struck=struck,
+        weapon=name,
+        dice=dice,
+        bonuses=bonuses,
+        distance=distance,
+        range_penalty=range_penalty,
+        dual_penalty=dual_penalty,
     )
-    if state.encounter is not None:
-        _mark_attack(db, campaign_id, pc.name)
-    placement = {"range": distance.as_dict()} if distance.cells else {}
-    return {**result, **placement}
 
 
 def _condition_attack_modifier(
@@ -1059,13 +1162,14 @@ def _require_turn(state: CampaignState, actor: Character, force: bool) -> None:
         if actor.kind == PC_KIND and upcoming and name_key(upcoming) == name_key(actor.name):
             return
         raise InvalidInput(
-            f"no one is taking a turn, so {actor.name} cannot attack: begin the next turn first, "
-            "or pass force true when the story needs an action outside the turn order"
+            f"no one is taking a turn, so {actor.name} cannot attack: begin the next turn "
+            "first, or pass force true when the story needs an action outside the turn order"
         )
     if name_key(encounter.acting) != name_key(actor.name):
         raise InvalidInput(
-            f"it is {encounter.acting}'s turn, not {actor.name}'s: press End your turn first, or "
-            "pass force true when the story needs an action outside the turn order"
+            f"it is {encounter.acting}'s turn, not {actor.name}'s: {actor.name} holds until "
+            "their own turn; the player presses End your turn to pass it, or pass force true "
+            "when the story needs an action outside the turn order"
         )
 
 

@@ -265,11 +265,12 @@
     "type": "tool_call",
     "id": "player_attack",
     "extends": "core:tool_call/player_attack",
-    "description": "Ask the player to roll their attack with a carried weapon or unarmed, then record the d20. The engine adds the weapon skill, the best weapon attribute, the attack bonus, and a Warrior's Killing Blow, rolls damage, and applies Shock on a miss when the target's AC is low enough. Use it for the player character; the player presses the roll button and the result is final. An attack is refused unless the player character is taking their turn; their turn starts automatically when it comes up. Pass force true only for an action the story needs outside the turn order. On the encounter map, the weapon's melee reach or ranged band and a clear line of sight are enforced: pass range_band for a ranged shot, or leave it out to let the engine choose the band for the distance.",
+    "description": "Ask the player to roll their attack with a carried weapon or unarmed, then record the d20. The engine adds the weapon skill, the best weapon attribute, the attack bonus, and a Warrior's Killing Blow, rolls damage, and applies Shock on a miss when the target's AC is low enough. Use it for the player character; the player presses the roll button and the result is final. An attack is refused unless the player character is taking their turn; their turn starts automatically when it comes up. When the player orders a different character to attack, such as a hireling, and it is not that character's turn, do not call this tool for them: say plainly that the character holds until their turn, and resolve the attack when their turn comes. Pass force true only for an action the story needs outside the turn order. On the encounter map, the weapon's melee reach or ranged band and a clear line of sight are enforced: pass range_band for a ranged shot, or leave it out to let the engine choose the band for the distance.",
     "player_input": {
       "dice": "1d20",
       "param": "attack_roll",
-      "details": "{weapon} against {target}: roll 1d20 and add your attack bonus. The engine rolls damage."
+      "details": "{weapon} against {target}: roll 1d20 and add your attack bonus. The engine rolls damage.",
+      "precheck": "player_attack_check"
     },
     "parameters": {
       "properties": {
