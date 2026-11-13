@@ -30,8 +30,7 @@ from cygnusloom.services.events import (
     token_label,
     token_labels,
 )
-from cygnusloom.services.prompts import turn_checklist
-from cygnusloom.services.tools import ToolRun, run_tool, tool_group_names
+from cygnusloom.services.tools import ToolRun, run_tool
 from cygnusloom.services.world import WorldTools
 from tests.conftest import content_library, csrf_token
 from tests.factories import (
@@ -50,7 +49,7 @@ from tests.factories import (
 )
 from tests.test_character_creation import _cairn_campaign, _complete_form
 from tests.test_combat import _tools
-from tests.test_tools import _script
+from tests.test_tools import _recording_provider, _script
 
 LIBRARY = content_library()
 CAIRN_GRID = LIBRARY.rule_sets["cairn2e"].grid
@@ -496,47 +495,41 @@ def test_an_npc_turn_is_not_an_out_of_character_message(
     assert "an attack happens only when you call attack" in state.turn.text
 
 
-def test_a_state_step_note_that_claims_an_attack_must_resolve_it(
+def test_an_npc_turn_checklist_reminds_the_gm_about_attacks_and_movement(
     client_factory: Callable[[], TestClient],
-    fake: Any,
 ):
-    """A state step that writes an attack into its notes without calling attack leaves the
-    narration free to invent harm the record does not hold. The checklist sends it back."""
+    """The turn checklist is a set of reminders. An NPC's encounter turn adds the attack and
+    movement areas to the prompt and the finish tool so the GM considers them before narrating."""
     client, campaign_id = _encounter_with(client_factory, columns=10, rows=10, cairn=True)
-    app = client.app
-    rule_set = LIBRARY.rule_sets["cairn2e"]
-    _, keys = turn_checklist(rule_set.checklist, tool_group_names(rule_set.tool_calls))
-    claimed = {key: "no change" for key in keys}
-    claimed["rules"] = "Pip's hatchet attack on Ada resolved as a miss; no harm dealt."
-    claimed["encounter"] = "Pip's turn spent on one attack that missed; turn passes to Ada."
-    corrected = {key: "no change" for key in keys}
-    corrected["encounter"] = "Pip holds the gate and does not attack."
+    recorder = _recording_provider()
+    client.app.state.providers = lambda model_id: (recorder, model_id)
     script = _script(
         {"text": "Pip waits by the gate."},
-        {
-            "rounds": [
-                [{"name": "finish_state_step", "arguments": claimed}],
-                [{"name": "finish_state_step", "arguments": corrected}],
-            ],
-            "text": "Pip holds the gate.",
-        },
+        {"text": "Pip shifts his feet."},
     )
     assert send_message(client, campaign_id, script).status_code == 303
 
     lines = _npc_turn_stream(client, campaign_id, "Pip")
 
     assert lines[-1]["type"] == "saved"
-    retries = [
-        str(message.get("content", ""))
-        for call in fake.calls
-        for message in call
-        if message.get("role") == "system"
-        and "encounter record shows no attack this turn by Pip" in str(message.get("content", ""))
+    npc_calls = [
+        call
+        for call in recorder.calls
+        if any(
+            message.get("role") == "user"
+            and "Pip's turn in the encounter" in str(message.get("content", ""))
+            for message in call["messages"]
+        )
     ]
-    assert retries, "the state step should be asked to resolve the attack it claimed"
-    state = _state(app, campaign_id)
-    assert state.turn is None
-    assert state.encounter is not None and state.encounter.attacked == 0
+    assert npc_calls
+    call = npc_calls[0]
+    prompt = str(call["messages"][0].get("content", ""))
+    assert "- attack:" in prompt
+    assert "- tactical_move:" in prompt
+    finish = next(
+        spec for spec in call["tools"] if spec["function"]["name"] == "finish_state_step"
+    )
+    assert {"attack", "tactical_move"} <= set(finish["function"]["parameters"]["properties"])
 
 
 def test_an_out_of_character_npc_turn_still_ends_when_the_reply_finishes(

@@ -1808,6 +1808,8 @@ class ChecklistItem:
     text: str
     # The optional tool group that adds this area, or "" when every rule set checks it.
     group: str = ""
+    # When the area applies: "" for every state step, or "npc_turn" for the GM's turn of an NPC.
+    when: str = ""
 
 
 @dataclass(frozen=True)
@@ -5874,7 +5876,7 @@ def _load_checklist(definitions: list[Definition], template: str) -> ChecklistRu
         item_label = f"{label}: items[{index}]"
         if not isinstance(raw, Mapping):
             raise ContentError(f"{item_label}: must be an object")
-        item = check_object_keys(raw, {"id", "text", "group"}, item_label)
+        item = check_object_keys(raw, {"id", "text", "group", "when"}, item_label)
         ident = required_text(item, "id", item_label)
         if not CHECKLIST_KEY.fullmatch(ident):
             raise ContentError(
@@ -5888,8 +5890,16 @@ def _load_checklist(definitions: list[Definition], template: str) -> ChecklistRu
         if group and group not in TOOL_GROUPS:
             groups = ", ".join(sorted(TOOL_GROUPS))
             raise ContentError(f"{item_label}: 'group' must be one of {groups}")
+        when = _optional_text(item, "when", item_label) or ""
+        if when not in ("", "npc_turn"):
+            raise ContentError(f"{item_label}: 'when' must be 'npc_turn' or left out")
         items.append(
-            ChecklistItem(id=ident, text=required_text(item, "text", item_label), group=group)
+            ChecklistItem(
+                id=ident,
+                text=required_text(item, "text", item_label),
+                group=group,
+                when=when,
+            )
         )
     return ChecklistRules(items=tuple(items))
 

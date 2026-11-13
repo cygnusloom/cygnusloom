@@ -20,6 +20,18 @@
         "text": "where the player character and every NPC is, and any move this action makes"
       },
       {
+        "id": "attack",
+        "group": "combat",
+        "when": "npc_turn",
+        "text": "the acting NPC's attack action: whether they attack, and the attack tool result"
+      },
+      {
+        "id": "tactical_move",
+        "group": "combat",
+        "when": "npc_turn",
+        "text": "the acting NPC's movement: whether they move, and the place_participant result"
+      },
+      {
         "id": "notes",
         "text": "settled facts, clues, promises, debts, secrets, and changes to people or places"
       },
