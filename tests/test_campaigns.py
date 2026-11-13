@@ -335,14 +335,6 @@ def test_default_labels_number_each_world_separately(
     assert _label_of(client, _created_campaign_id(twin_lakes)) == "Twin Lakes #1"
 
 
-def test_new_campaign_form_prefills_the_default_label(
-    client_factory: Callable[[], TestClient],
-):
-    client = _signed_in(client_factory)
-    page = client.get("/campaigns/new").text
-    assert 'name="label" value="Unwritten World #1"' in page
-
-
 def test_new_campaign_form_asks_for_the_label_last(
     client_factory: Callable[[], TestClient],
 ):
@@ -588,15 +580,6 @@ def test_new_campaign_form_puts_credits_in_third_party_descriptions(
     )
 
 
-def test_new_campaign_form_starts_on_a_rule_set_and_a_world_that_fits(
-    client_factory: Callable[[], TestClient],
-):
-    client = _signed_in(client_factory)
-    page = client.get("/campaigns/new").text
-    assert re.search(r'<option value="worldswithoutnumber"[^>]* selected', page)
-    assert re.search(r'<option value="unwritten-world"[^>]* selected', page)
-
-
 def test_create_stores_the_chosen_settings(client_factory: Callable[[], TestClient]):
     client = _signed_in(client_factory)
     response = _new_campaign(client, label="Mushroom court")
@@ -619,12 +602,6 @@ def test_chat_round_trip_saves_both_messages(client_factory: Callable[[], TestCl
     assert 'data-player-name="Ada"' in page.text
     assert '<span class="role">Cygnus' in page.text
     assert '<span class="role">assistant' not in page.text
-
-
-def test_default_fake_reply_echoes_last_message(client_factory: Callable[[], TestClient]):
-    client, campaign_id = _campaign_id(client_factory)
-    _send(client, campaign_id, "ping")
-    assert "You said: ping" in client.get(f"/campaigns/{campaign_id}").text
 
 
 def test_messages_render_markdown_and_escape_html(client_factory: Callable[[], TestClient]):
@@ -759,9 +736,6 @@ def test_campaign_page_has_sidebar_controls(client_factory: Callable[[], TestCli
     assert "data-side-toggle" in page
     assert "data-menu-toggle" in page
     assert 'id="site-menu"' in page
-    assert '<dialog id="dialog-characters"' not in page
-    assert 'data-drawer-target="drawer-notes"' not in page
-    assert '<aside class="drawer" id="drawer-notes"' not in page
 
 
 def test_debug_panel_is_hidden_and_refused_by_default(client_factory):

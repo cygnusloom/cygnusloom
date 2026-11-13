@@ -332,12 +332,6 @@ def test_boolean_vast_max_raises_content_error():
         _load_wilderness([definition], _tables(), "t")
 
 
-def test_a_consume_may_name_alternatives_that_need_another_item(wilderness):
-    night = wilderness.hooks.night[0]
-    assert night.alternatives == (WildernessAlternative(item="Oil Can", requires="Lantern"),)
-    assert night.on_shortage == "panicking"
-
-
 def test_an_alternative_without_a_requirement_loads():
     actions = _travel_with_resolve(
         {

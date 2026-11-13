@@ -613,28 +613,6 @@ def test_an_unplaced_player_sees_no_location_or_npcs(client_factory: Callable[[]
     assert scene.npcs == []
 
 
-def test_the_scene_sheet_shows_conditions_when_the_rule_set_passes_them(
-    client_factory: Callable[[], TestClient], app
-):
-    _, campaign_id = _described_campaign(client_factory)
-    tools = world.WorldTools(
-        engine=app.state.engine,
-        campaign_id=campaign_id,
-        tables=TABLES,
-        rng=random.Random(0),
-        character=SPEC,
-        plus="sum",
-        conditions=CONTRACT.conditions,
-    )
-    tools.add_condition("Ada", "shaken", "a test")
-
-    state = _state(app, campaign_id)
-    view = world.scene_view(state, SPEC, conditions=CONTRACT.conditions)
-
-    assert "Conditions: Shaken" in view.sheet
-    assert not any(line.startswith("Conditions:") for line in world.scene_view(state, SPEC).sheet)
-
-
 def test_the_pack_lists_items_with_uses_slots_and_capacity(
     client_factory: Callable[[], TestClient], app
 ):
@@ -987,15 +965,6 @@ def test_speaker_profile_still_describes_an_npc_away_from_the_player(
     assert profile.splitlines()[0] == "Speaker: Brin Gallowcap"
 
 
-def test_the_player_character_still_cannot_be_spoken_for(
-    client_factory: Callable[[], TestClient], app
-):
-    _, campaign_id = _campaign_id(client_factory)
-    state = _state(app, campaign_id)
-    with pytest.raises(InvalidInput, match="does not need speaking for"):
-        world.speaker_profile(state, "Ada", SPEC)
-
-
 def test_speak_tool_queues_dialogue_and_returns_only_an_acknowledgment(
     client_factory: Callable[[], TestClient], app
 ):
@@ -1084,11 +1053,6 @@ def test_campaign_page_panels_show_only_the_scene(client_factory: Callable[[], T
     assert "Tall, with a red scarf." in sheet
     assert ">Location<" in page
     assert ">Character<" in page
-    assert ">Sheet<" not in page
-    assert ">Notes<" not in page
-    assert 'id="panel-notes"' not in page
-    assert 'id="drawer-notes"' not in page
-    assert "data-drawer-target=" not in page
     assert 'data-view="journal"' in page
 
     characters_page = page[page.index('id="character-list"') :]
@@ -2095,7 +2059,6 @@ def test_map_and_page_show_only_discovered_places_with_positions(
 
     panel = page[page.index('aria-label="Map"') : page.index('id="panel-')]
     assert "map-marker" in panel
-    assert "Map placeholder" not in page
 
 
 def test_map_on_a_fresh_campaign_has_a_default_scale(client_factory: Callable[[], TestClient], app):

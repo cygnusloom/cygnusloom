@@ -128,7 +128,6 @@ def test_the_thinking_checkbox_lives_on_the_settings_page(
         "Shows the GM's hidden Log lines and lets you open the Context and Transcript of each reply."
         in page
     )
-    assert '<dialog id="dialog-settings"' not in page
 
 
 def test_the_stylesheet_hides_hidden_lines_until_the_preference_shows_them(

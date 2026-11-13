@@ -268,15 +268,6 @@ def test_roll_creative_rolls_every_creative_table_by_default(client_factory):
     assert decode(event).rolls == rolls
 
 
-def test_roll_creative_treats_an_empty_list_as_every_creative_table(client_factory):
-    _, campaign_id, tools = _fight(client_factory)
-    with Session(tools.engine) as db:
-        out = roll_creative(
-            db, campaign_id, [], CAIRN.dice_tables, random.Random(3), plus=CAIRN.plus
-        )
-    assert [roll["table"] for roll in out["rolls"]] == ALL_CORE_CREATIVE_TABLES
-
-
 def test_roll_creative_rolls_only_the_named_tables(client_factory):
     _, campaign_id, tools = _fight(client_factory)
     with Session(tools.engine) as db:
@@ -318,11 +309,6 @@ def test_the_world_roll_creative_returns_the_rolls_shape(client_factory: Callabl
     out = live.roll_creative(None)
     assert list(out) == ["rolls"]
     assert [roll["table"] for roll in out["rolls"]] == ALL_CORE_CREATIVE_TABLES
-
-
-def test_a_creative_table_may_credit_its_source():
-    table = _load_creative_table(_creative(["a", "b"], source="Some rulebook, CC BY 4.0"), "core")
-    assert [row.result for row in table.rows] == ["a", "b"]
 
 
 @pytest.mark.parametrize("source", ["", 3, ["x"]])

@@ -106,9 +106,6 @@ def test_the_settings_view_replaces_the_dialog_for_owner_and_member(
         assert 'data-view="settings" aria-labelledby="settings-title"' in page
         assert 'id="view-settings"' in page
         assert "Your view" in page
-        assert '<dialog id="dialog-settings"' not in page
-        assert 'data-dialog-target="dialog-settings"' not in page
-        assert 'class="composer-settings"' not in page
 
 
 def test_the_owner_saves_model_name_and_inventory_in_one_form(

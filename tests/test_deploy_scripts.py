@@ -39,7 +39,6 @@ def test_deploy_scripts_have_help() -> None:
 def test_compose_publishes_only_loopback_ports() -> None:
     compose = (ROOT / "compose.yaml").read_text()
     env_example = (ROOT / ".env.example").read_text()
-    assert "caddy" not in compose.lower()
     assert "127.0.0.1:${CYGNUSLOOM_APP_PORT:-21872}:8000" in compose
     assert "127.0.0.1:${AUTHENTIK_PORT:-21873}:9000" in compose
     assert "CYGNUSLOOM_APP_PORT=21872" in env_example

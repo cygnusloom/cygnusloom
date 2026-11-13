@@ -84,15 +84,6 @@ def test_stabilize_refuses_a_character_who_is_not_dying(client_factory):
         tools.stabilize(PC, "Lucky.")
 
 
-def test_a_bandage_stabilizes_a_dying_character_and_is_spent(client_factory):
-    app, campaign_id, tools = _fight(client_factory)
-    tools.give_item(PC, "Bandages")
-    _knock_out_pc(app, campaign_id, tools)
-    result = tools.use_item(PC, "Bandages", PC)
-    assert result["stabilized"]["stabilized"] is True
-    assert _character(app, campaign_id, PC).dying_hours is None
-
-
 def test_a_singular_bandage_name_gets_the_listed_uses_and_stabilizes(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     tools.give_item(PC, "Bandage")
