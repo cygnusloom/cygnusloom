@@ -51,6 +51,7 @@ def test_setup_page_shows_the_presets(tmp_path):
     assert "Ollama" in page.text
     assert "DeepSeek" in page.text
     assert "Scripted demo" in page.text
+    assert 'data-prefilled="0"' in page.text
 
 
 def test_setup_saves_the_first_model_as_default(tmp_path):

@@ -20,10 +20,13 @@
   <div class="play-panel" id="panel-device" role="tabpanel" aria-labelledby="tab-device"
        data-play-panel="device"{% if play_tab != 'device' %} hidden{% endif %}>
   {% endif %}
+  {% if setup_visible %}
+    {% include "_setup_wizard.html" %}
+  {% endif %}
   <section class="card">
     <div class="heading">
       {% if desktop %}<h2>Your campaigns</h2>{% else %}<h1>Campaigns</h1>{% endif %}
-      <a class="button" href="/campaigns/new">New campaign</a>
+      {% if not setup_required %}<a class="button" href="/campaigns/new">New campaign</a>{% endif %}
     </div>
     {% if campaigns %}
       <ul class="campaigns">
