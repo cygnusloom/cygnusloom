@@ -14,7 +14,7 @@
     <span class="muted">{{ participant.number }}.</span>
     <strong>{{ participant.name }}</strong>
     {% if participant.creature %}<span class="muted">{{ participant.creature }}</span>{% endif %}
-    {% if participant.is_pc %}<span class="muted">(you)</span>{% endif %}
+    {% if participant.is_hireling %}<span class="muted">(hireling)</span>{% elif participant.is_pc %}<span class="muted">(you)</span>{% endif %}
     {% if participant.side %}<span class="roster-side">{{ participant.side }}</span>{% endif %}
     {% if participant.status %}<span class="roster-status">{{ participant.status }}</span>{% endif %}
     {% if participant.hp is not none %}<span class="roster-hp{% if participant.hp == 0 %} empty{% endif %}">HP {{ participant.hp }}/{{ participant.hp_max }}</span>{% endif %}
@@ -36,8 +36,8 @@
     <span class="muted">{{ participant.number }}.</span>
     <strong>{{ participant.name }}</strong>
     {% if participant.creature %}<span class="muted">{{ participant.creature }}</span>{% endif %}
-    {% if participant.is_pc %}<span class="muted">(you)</span>{% endif %}
-    {% if participant.cell %}<span class="muted">column {{ participant.cell[0] }}, row {{ participant.cell[1] }}</span>{% else %}<span class="muted">not yet placed</span>{% endif %}
+    {% if participant.is_hireling %}<span class="muted">(hireling)</span>{% elif participant.is_pc %}<span class="muted">(you)</span>{% endif %}
+    {% if participant.cell %}<span class="muted">column {{ participant.cell[0] + 1 }}, row {{ participant.cell[1] + 1 }}</span>{% else %}<span class="muted">not yet placed</span>{% endif %}
     {% if participant.status %}<span class="roster-status">{{ participant.status }}</span>{% endif %}
   </li>
   {% endfor %}

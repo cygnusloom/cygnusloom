@@ -673,7 +673,7 @@ def test_the_local_map_roster_marks_placed_and_unplaced_characters(
         {"map": MAP, "name": "Pip", "column": 2, "row": 1},
     )
     page = client.get(f"/campaigns/{campaign_id}").text
-    assert "column 2, row 1" in page
+    assert "column 3, row 2" in page
     assert "not yet placed" in page
 
 

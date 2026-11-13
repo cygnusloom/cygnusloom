@@ -430,6 +430,11 @@
           "type": "string",
           "description": "The name of the character being attacked."
         },
+        "nonlethal": {
+          "type": "boolean",
+          "default": false,
+          "description": "Strike to subdue rather than kill: a target brought down is unconscious, not dead. Only an unarmed attack or a club or staff may be nonlethal."
+        },
         "force": {
           "type": "boolean",
           "default": false,
@@ -457,6 +462,11 @@
         "weapon": {
           "type": "string",
           "description": "The weapon or means of attack, such as 'longsword'. It must be carried, or 'unarmed' for fists."
+        },
+        "nonlethal": {
+          "type": "boolean",
+          "default": false,
+          "description": "Strike to subdue rather than kill: a target brought down is unconscious, not dead. Only an unarmed attack or a club or staff may be nonlethal."
         },
         "force": {
           "type": "boolean",

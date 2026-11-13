@@ -219,7 +219,7 @@ def player_save(
         reactions.use(db, campaign_id, pc, triggered)
     db.commit()
     if not result.passed:
-        death.on_critical_save_failed(db, campaign_id, combat, pc.name)
+        death.on_critical_save_failed(db, campaign_id, combat, pc.name, spec=spec)
     elif conditions and rng is not None:
         for cid in list(pc.conditions):
             if cid in combat.fatal_conditions and cid in conditions:

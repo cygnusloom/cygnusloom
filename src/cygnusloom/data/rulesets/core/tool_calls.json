@@ -1028,6 +1028,16 @@
                 "type": "string",
                 "description": "The damage dice, such as '1d8' or '1d6+1d6'."
               },
+              "shock": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Optional. The Shock the attack does on a miss, when the rule set has Shock. It needs shock_ac."
+              },
+              "shock_ac": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Optional. The highest armor the attack's Shock reaches through. Required when shock is given."
+              },
               "flags": {
                 "type": "array",
                 "items": {
@@ -2171,6 +2181,11 @@
         "target": {
           "type": "string",
           "description": "Only for a Bandage used on a dying character: that character's name. Leave it out otherwise."
+        },
+        "automatic": {
+          "type": "boolean",
+          "default": false,
+          "description": "Spend the item from the pack even when it is stowed, for an automatic use such as a day's rations or water. Leave it out when the character deliberately takes the item in hand."
         }
       },
       "required": [

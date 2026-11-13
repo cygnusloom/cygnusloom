@@ -700,7 +700,9 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
             db.commit()
             return result
 
-    def use_item(self, name: str, item: str, target: str | None = None) -> dict[str, Any]:
+    def use_item(
+        self, name: str, item: str, target: str | None = None, automatic: bool = False
+    ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             found = _character_named(load_state(db, self.campaign_id), name)
             held = next((entry for entry in found.items if same_item_name(entry.name, item)), None)
@@ -721,6 +723,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 else "",
                 plus=self.plus,
                 spec=self.character,
+                ignore_ready=automatic,
             )
             db.commit()
             return result
@@ -1736,6 +1739,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
         shock_modifier: int = 0,
         count: int = 0,
         force: bool = False,
+        nonlethal: bool = False,
     ) -> dict[str, Any]:
         attacks = count or self.attacks_per_action(attacker)
         if attacks > 1 and targets is None:
@@ -1747,6 +1751,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                     "hit_modifier": hit_modifier,
                     "damage_modifier": damage_modifier,
                     "shock_modifier": shock_modifier,
+                    "nonlethal": nonlethal,
                 }
                 for _ in range(attacks)
             ]
@@ -1770,6 +1775,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 spec=self.character,
                 force=force,
                 cell_feet=self._cell_feet(),
+                nonlethal=nonlethal,
             )
 
     def _cell_feet(self) -> int | None:
@@ -1824,6 +1830,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
         dual_wield: bool = False,
         force: bool = False,
         character: str = "",
+        nonlethal: bool = False,
     ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return combat.player_attack(
@@ -1848,6 +1855,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 force=force,
                 character=character,
                 cell_feet=self._cell_feet(),
+                nonlethal=nonlethal,
             )
 
     def attack_dice(self, weapon: str, modifier: str = "") -> str:
@@ -2233,7 +2241,14 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
     def harm_character(self, name: str, stat: str, amount: int, cause: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return combat.harm_character(
-                db, self.campaign_id, name, stat, amount, cause, self._rules()
+                db,
+                self.campaign_id,
+                name,
+                stat,
+                amount,
+                cause,
+                self._rules(),
+                spec=self.character,
             )
 
     def set_debug_stat(self, name: str, stat: str, remaining: int) -> dict[str, Any]:

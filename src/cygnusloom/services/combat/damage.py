@@ -130,14 +130,17 @@ def _harm_stat(combat: CombatRules) -> str | None:
 
 
 def _defeat_after_harm(
-    combat: CombatRules, target: Character, harm: Mapping[str, int]
+    combat: CombatRules, target: Character, harm: Mapping[str, int], *, nonlethal: bool = False
 ) -> tuple[bool, str]:
     """Whether this harm took a stat the rule set leaves a character defeated at 0 down to 0, and
-    where that defeat leaves the character."""
+    where that defeat leaves the character. A nonlethal blow uses the rule set's nonlethal label,
+    such as `unconscious`, instead of the ordinary defeat label."""
     if target.invincible:
         return False, ""
     for stat in combat.defeat_at_zero:
         if current(target, stat) - harm.get(stat, 0) <= 0:
+            if nonlethal:
+                return True, combat.defeat.get("nonlethal", "unconscious")
             return True, defeat_status(target, combat.defeat)
     return False, ""
 
@@ -236,14 +239,12 @@ def recover_character(
     character = state.characters.get(name_key(name))
     if character is None:
         raise InvalidInput(f"there is no character named {name!r}")
-    if character.kind != PC_KIND:
-        raise InvalidInput(f"{character.name} is not a player character and cannot be recovered")
     if character.dead:
         raise InvalidInput(f"{character.name} is dead and cannot be recovered")
     if character.dying_hours is not None or character.dying_rounds is not None:
         raise InvalidInput(f"{character.name} is still dying; stabilize them first")
     if not character.defeated:
-        raise InvalidInput(f"{character.name} is not {combat.defeat['player_character']}")
+        raise InvalidInput(f"{character.name} is not {defeat_status(character, combat.defeat)}")
     record(
         db,
         campaign_id,
@@ -300,6 +301,8 @@ def harm_character(
     amount: int,
     cause: str,
     combat: CombatRules,
+    *,
+    spec: CharacterSpec | None = None,
 ) -> dict[str, Any]:
     """Harm a player character outside combat, such as from a fall or poison. Only the rule set's
     outside-harm stats can take it. Harm that takes the overflow stat to 0 defeats the character."""
@@ -346,7 +349,12 @@ def harm_character(
     if defeats and (character.kind == PC_KIND or character.important):
         if at_zero:
             death.begin_dying(
-                db, campaign_id, combat, character.name, cause=f"outside combat, with {stat} at 0"
+                db,
+                campaign_id,
+                combat,
+                character.name,
+                cause=f"outside combat, with {stat} at 0",
+                spec=spec,
             )
         else:
             record(

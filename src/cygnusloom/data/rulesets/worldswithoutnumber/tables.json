@@ -213,15 +213,17 @@
     ]
   },
   {
-    "type": "table",
+    "type": "dice_table",
     "id": "site_wandering_check",
-    "options": [
-      "An encounter comes",
-      "All is quiet: only the wind",
-      "All is quiet: a distant drip",
-      "All is quiet: old dust settles",
-      "All is quiet: a beam creaks",
-      "All is quiet: nothing stirs"
+    "name": "Site wandering check",
+    "dice": "1d6",
+    "rows": [
+      ["1", "An encounter comes"],
+      ["2", "All is quiet: only the wind"],
+      ["3", "All is quiet: a distant drip"],
+      ["4", "All is quiet: old dust settles"],
+      ["5", "All is quiet: a beam creaks"],
+      ["6", "All is quiet: nothing stirs"]
     ]
   }
 ]

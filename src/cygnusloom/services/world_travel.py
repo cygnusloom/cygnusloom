@@ -66,7 +66,7 @@ class TravelMixin:
             )
             # Commit the events before the clock advances, so the log keeps move, events, clock.
             db.commit()
-        clock = self.advance_time(hours=plan.hours)
+        clock = self.advance_time(hours=plan.elapsed_hours)
         return {
             "character": character,
             "destination": destination,
@@ -79,7 +79,8 @@ class TravelMixin:
             "speed_mph": plan.speed_mph,
             "miles_per_day": plan.miles_per_day,
             "miles": plan.miles,
-            "hours": plan.hours,
+            "hours": plan.elapsed_hours,
+            "travel_hours": plan.hours,
             "move": moved,
             "clock": clock,
             "supplies": {

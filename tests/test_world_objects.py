@@ -17,9 +17,10 @@ from cygnusloom.services.events import (
     decode,
     events_since,
     load_state,
+    name_key,
 )
 from cygnusloom.services.objects import visible_objects
-from tests.test_combat import CAIRN, PC, YARD, _character, _fight
+from tests.test_combat import CAIRN, MAP, PC, YARD, _character, _fight
 from tests.test_inventory import CAPACITY, _fill, _used
 
 CURRENCY = CAIRN.marketplace.currency
@@ -96,6 +97,20 @@ def test_taking_an_item_puts_it_in_the_inventory(client_factory: Callable[[], Te
     assert _visible(app, campaign_id) == []
     [placed] = _events(app, campaign_id, ObjectPlaced)
     assert placed.item_text == ""
+
+
+def test_taking_an_object_takes_its_token_off_the_map(
+    client_factory: Callable[[], TestClient],
+):
+    app, campaign_id, tools = _fight(client_factory)
+    tools.end_encounter()
+    tools.place_object(YARD, "a lacquered box", False, "a test", item="Lacquered box")
+    tools.place_map_token(MAP, "a lacquered box", 2, 2)
+    tools.take_object("a lacquered box", PC, "a test")
+    with Session(app.state.engine) as db:
+        state = load_state(db, campaign_id)
+    assert name_key("a lacquered box") not in state.maps[name_key(MAP)].tokens
+    assert _visible(app, campaign_id) == []
 
 
 def test_taking_an_object_records_an_event(client_factory: Callable[[], TestClient]):

@@ -169,3 +169,21 @@ narration.
 | Morale | An allied NPC was not checked when the PC fell | Prompt now requires a check for every NPC side, including allies |
 | Site turns | A six-turn search advanced one part (six hours) instead of one hour | Prompt now forbids `parts` for site turns and states the cost explicitly |
 | Refusals | New engine refusals had no story override | `move_actor`, `set_map_cells`, `place_participant`, and `stabilize` now take `force`; the GM is told to use it only when the story requires it |
+| Sites | `site_wandering_check` was stored as a plain table, so `roll_tables` could not find it | Fixed: it is a `1d6` dice table with numbered rows |
+| Objects | Taking an object left its prop token on the local map | Fixed: `take_object` removes the matching map token |
+| Factions | `create_faction(points=10)` recorded 0, and a tally-less faction refused point changes | Fixed: starting points survive the no-tally branch; tally-less factions keep points in their own event |
+| Logs | Harm and recovery lines printed raw stat ids such as `EFFORT_HIGH` | Fixed: abbreviations stay uppercase, longer ids read as words (`Effort High`) |
+| UI | Prepared spells were not shown; only the whole spell list appeared | Fixed: the sheet has a **Prepared** line built from the prepared mark |
+| Combat | A defeated NPC was always dead, with no way to strike to subdue | Fixed: `attack` and `player_attack` take `nonlethal`; a nonlethal defeat is unconscious and does not start the dying clock |
+| Recovery | `recover_character` refused important NPCs and hireling-like characters | Fixed: the tool now recovers any living, non-dying character; nonlethal knockout wakes the same way |
+| Features | Die Hard was only a note | Fixed: features can declare `stabilizes`, and the engine stops the dying clock for a character who has one |
+| Factions | `adjust_faction_points` failed on a WWN faction with `the tally '' is no longer in this rule set` | Fixed by the tally-less faction store above |
+| UI | Map roster coordinates were 0-based while the Log was 1-based | Fixed: the roster shows the same 1-based column and row as the Log |
+| UI | The time strip showed only Day and part | Fixed: it shows the hour within a part when parts are longer than one hour |
+| UI | A hireling on the roster was tagged `(you)` | Fixed: it is tagged `(hireling)` |
+| UI | No Projects panel, even after projects started | Fixed: a Projects tab lists kind, goal, progress / target, owner, notes, and completion |
+| Travel | Two travel days advanced only 20 hours, so the party arrived the same calendar day | Fixed: each travel day advances a whole day (`clock_hours_per_day`, 24 for WWN), while distance still uses the source's ten marching hours |
+| Items | `use_item` refused stowed rations on a journey | Fixed: `use_item` takes `automatic`, which spends a stowed consumable for an automatic use |
+| Advancement | Pick placeholders read `Choose a art` and `Choose a spells` | Fixed: the placeholder is `Choose <label>` |
+| NPCs | `update_npc_knowledge` refused a hireling as `the player character` | Fixed: a hireling can have what the player knows recorded |
+| NPCs | Armed NPCs were created without Shock because the attack schema had no `shock` or `shock_ac` | Fixed: `update_npc` exposes both, and the WWN prompt requires them for weapon attacks |

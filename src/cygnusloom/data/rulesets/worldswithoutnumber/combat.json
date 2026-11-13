@@ -11,7 +11,8 @@
       "player_character": "mortally wounded",
       "player_character_dead": "dead",
       "important_npc": "mortally wounded",
-      "npc": "dead"
+      "npc": "dead",
+      "nonlethal": "unconscious"
     },
     "outside_harm": ["hp"],
     "healing_stat": "hp",

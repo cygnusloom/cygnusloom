@@ -12,6 +12,11 @@
   {% for ability in sheet_view.abilities %}{% if not loop.first %} · {% endif %}{% if ability.entry %}<a href="#{{ ability.entry }}" data-view-link="compendium">{{ ability.name }}</a>{% else %}{{ ability.name }}{% endif %}{% endfor %}
 </p>
 {% endif %}
+{% if sheet_view.prepared %}
+<p class="compendium-links"><strong>Prepared:</strong>
+  {% for spell in sheet_view.prepared %}{% if not loop.first %} · {% endif %}{% if spell.entry %}<a href="#{{ spell.entry }}" data-view-link="compendium">{{ spell.name }}</a>{% else %}{{ spell.name }}{% endif %}{% endfor %}
+</p>
+{% endif %}
 {% if sheet_view.reactions %}
 <div class="compendium-links reaction-block">
   <p><strong>Reactions:</strong></p>

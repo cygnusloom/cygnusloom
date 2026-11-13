@@ -1381,6 +1381,35 @@ def test_a_night_rest_eats_a_days_rations(client_factory):
     assert after.marks.get("privation_food") is None
 
 
+def test_a_rest_uses_the_food_list_from_the_hooks_options(client_factory):
+    """The rule set's food and water items are content, not Python constants."""
+    app, campaign_id = _campaign(client_factory, class_id="warrior")
+    tools = _world_tools(app, campaign_id)
+    tools.drop_item(NAME, "Rations, One Week")
+    tools.give_item(NAME, "Daily Ration")
+    options = dict(WWN.hooks.options)
+    options["food_items"] = ["Daily Ration"]
+    options["water_items"] = ["Daily Ration"]
+    custom = replace(tools, hooks=replace(WWN.hooks, options=options))
+    assert any(i.name == "Daily Ration" for i in _pc(app, campaign_id).items)
+
+    result = custom.rest("night", reason="a test")
+
+    assert not any(i.name == "Daily Ration" for i in _pc(app, campaign_id).items)
+    assert result["held_back"] == []
+
+
+def test_a_rest_refuses_missing_food_and_water_lists(client_factory):
+    app, campaign_id = _campaign(client_factory, class_id="warrior")
+    tools = _world_tools(app, campaign_id)
+    options = dict(WWN.hooks.options)
+    options["food_items"] = []
+    custom = replace(tools, hooks=replace(WWN.hooks, options=options))
+
+    with pytest.raises(InvalidInput, match="food_items"):
+        custom.rest("night", reason="a test")
+
+
 def test_a_night_rest_begun_after_midnight_ends_the_same_morning():
     """The night part is the six hours before morning. Resting two hours into it ends four
     hours later at the next morning, not a day and four hours later."""

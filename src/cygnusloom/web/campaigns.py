@@ -1830,6 +1830,10 @@ def _campaign_page(
         "advancement_due": advancement_due,
         "advancement_available": advancement_available,
         "factions": faction_views(world.state, rule_set.tallies if rule_set else {}),
+        "projects": sorted(
+            world.state.projects.values(),
+            key=lambda project: (project.completed, project.name.casefold()),
+        ),
         "models": request.app.state.catalog.specs(),
         "credit_price": credit_price,
         "credit_balance": credit_balance,

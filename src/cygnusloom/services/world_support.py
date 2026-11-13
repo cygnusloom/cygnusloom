@@ -1756,7 +1756,9 @@ def update_npc_knowledge(
     NPC need not have been met yet: a rumor can put someone in the player's mind, with whatever
     was told. `location` is the place the player now knows the NPC to be."""
     state = load_state(db, campaign_id)
-    npc = _npc_named(state, name)
+    npc = _character_named(state, name)
+    if npc.kind != NPC_KIND and not npc.hireling:
+        raise InvalidInput(f"{npc.name} is the player character, not an NPC")
     if all(
         value is None
         for value in (description, personality, accent, quirks, pronouns, relationship, location)

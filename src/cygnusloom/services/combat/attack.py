@@ -238,6 +238,7 @@ def _strike(
     shock: int = 0,
     shock_ac: int = 0,
     no_shock: bool = False,
+    nonlethal: bool = False,
     spec: CharacterSpec | None = None,
     hit_breakdown: dict[str, Any] | None = None,
     damage_breakdown: dict[str, Any] | None = None,
@@ -309,7 +310,7 @@ def _strike(
                             target=shock_ac,
                             target_label="Shock AC",
                         )
-            defeats, status = _defeat_after_harm(combat, target, harm)
+            defeats, status = _defeat_after_harm(combat, target, harm, nonlethal=nonlethal)
             record(
                 db,
                 campaign_id,
@@ -334,8 +335,8 @@ def _strike(
             _record_shield_bash(db, campaign_id, attacker, weapon)
             db.commit()
             if defeats:
-                if target.kind == PC_KIND or target.important:
-                    death.begin_dying(db, campaign_id, combat, target.name)
+                if not nonlethal and (target.kind == PC_KIND or target.important):
+                    death.begin_dying(db, campaign_id, combat, target.name, spec=spec)
                 _end_if_one_side_left(db, campaign_id)
             return {
                 "target": target.name,
@@ -354,7 +355,7 @@ def _strike(
     if target.invincible:
         # The whole hit is absorbed, so the log reads as a blow turned aside rather than a miss.
         damage = Damage(absorbed=raw, harm={}, save=None)
-    defeats, status = _defeat_after_harm(combat, target, damage.harm)
+    defeats, status = _defeat_after_harm(combat, target, damage.harm, nonlethal=nonlethal)
     record(
         db,
         campaign_id,
@@ -377,8 +378,8 @@ def _strike(
     )
     _record_shield_bash(db, campaign_id, attacker, weapon)
     db.commit()
-    if defeats and (target.kind == PC_KIND or target.important):
-        death.begin_dying(db, campaign_id, combat, target.name)
+    if defeats and not nonlethal and (target.kind == PC_KIND or target.important):
+        death.begin_dying(db, campaign_id, combat, target.name, spec=spec)
     result: dict[str, Any] = {
         "target": target.name,
         "raw": raw,
@@ -436,6 +437,7 @@ def attack(
     spec: CharacterSpec | None = None,
     force: bool = False,
     cell_feet: int | None = None,
+    nonlethal: bool = False,
 ) -> dict[str, Any]:
     """An NPC's attack. Under the auto hit mode it always hits, so the attack's damage is the roll.
     A modifier rolls its own dice instead of the attack's. An attack with Blast hits every target in
@@ -612,6 +614,7 @@ def attack(
         shock=shock,
         shock_ac=shock_ac,
         no_shock=not distance.melee,
+        nonlethal=nonlethal,
         spec=spec,
         hit_breakdown=hit_breakdown,
         damage_breakdown=damage_breakdown,
@@ -870,6 +873,7 @@ def resolve_attacks(
                 modifier=modifier_name(entry.get("modifier")),
                 dice=dice or source.attacks[name],
                 ignores_armor=flags.ignores_armor,
+                nonlethal=bool(entry.get("nonlethal", False)),
                 hit_bonus=_stat_bonus(combat, source, combat.hit_bonus_stat)
                 + int(entry.get("hit_modifier", 0))
                 + distance.penalty
@@ -923,6 +927,7 @@ def resolve_attacks(
         hit_bonus=chosen.hit_bonus,
         shock=chosen.shock,
         shock_ac=chosen.shock_ac,
+        nonlethal=chosen.nonlethal,
         spec=spec,
     )
     if state.encounter is not None:
@@ -939,6 +944,7 @@ class PlannedAttack:
     modifier: str
     dice: str
     ignores_armor: bool = False
+    nonlethal: bool = False
     hit_bonus: int = 0
     damage_bonus: int = 0
     shock: int = 0
@@ -983,6 +989,7 @@ def _strike_each(
                 hit_bonus=attack.hit_bonus,
                 shock=attack.shock,
                 shock_ac=attack.shock_ac,
+                nonlethal=attack.nonlethal,
                 spec=spec,
             )
         )
@@ -1021,6 +1028,7 @@ def player_attack(
     force: bool = False,
     character: str = "",
     cell_feet: int | None = None,
+    nonlethal: bool = False,
 ) -> dict[str, Any]:
     """A player character's hit. The engine rolls the damage unless the player's roll is passed as
     `damage_roll`. The hit mode decides whether it lands. A group takes only impaired attacks.
@@ -1147,6 +1155,7 @@ def player_attack(
         natural=natural,
         shock=shock,
         shock_ac=shock_ac,
+        nonlethal=nonlethal,
         spec=spec,
         hit_breakdown=hit_breakdown,
         damage_breakdown=damage_breakdown,

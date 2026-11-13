@@ -29,6 +29,8 @@ class DayPlan:
     miles_per_day: float
     miles: float
     hours: int
+    # The whole days the journey takes on the campaign clock, including camps and rest.
+    elapsed_hours: int
     food: int
     water: int
     firewood: int
@@ -74,6 +76,7 @@ def plan_days(
         miles_per_day=miles_per_day,
         miles=miles,
         hours=journey.day_hours * days,
+        elapsed_hours=journey.clock_hours_per_day * days,
         food=days * travelers * journey.food_per_traveler_day,
         water=days * travelers * journey.water_per_traveler_day,
         firewood=days * journey.firewood_per_day,

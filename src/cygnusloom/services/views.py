@@ -154,6 +154,8 @@ class CharacterSheetView:
     hp: int | None = None
     hp_max: int | None = None
     abilities: tuple[FeatureLink, ...] = ()
+    # The spells the character prepared for the day, when the rule set marks them.
+    prepared: tuple[FeatureLink, ...] = ()
     reactions: tuple[ReactionLink, ...] = ()
     dead: bool = False
     location: str = ""
@@ -299,11 +301,14 @@ class MapPattern:
 
 @dataclass(frozen=True)
 class TimeView:
-    """The campaign day and the part of that day, shown beside the map."""
+    """The campaign day, the part of that day, and the hour within the part, shown beside the
+    map."""
 
     day: int
     part: str
     night: bool
+    hour: int = 0
+    hours_per_part: int = 1
 
 
 @dataclass(frozen=True)
@@ -548,6 +553,8 @@ def time_view(state: CampaignState, clock: ClockRules | None) -> TimeView | None
         day=state.clock.day,
         part=clock.parts[index],
         night=index == len(clock.parts) - 1,
+        hour=state.clock.hour,
+        hours_per_part=clock.hours_per_part,
     )
 
 
@@ -830,6 +837,7 @@ def scene_view(
             hp=points[0] if points is not None else None,
             hp_max=points[1] if points is not None else None,
             abilities=abilities,
+            prepared=_prepared_links(spec, pc, ability_entries),
             reactions=reactions,
             dead=pc.dead,
             location=pc.location or "",
@@ -1556,6 +1564,31 @@ def _feature_links(
     )
 
 
+def _prepared_links(
+    spec: CharacterSpec, character: Character, ability_entries: Mapping[str, str]
+) -> tuple[FeatureLink, ...]:
+    """The features a character set aside for the day. Worlds Without Number records prepared
+    spells in the `prepared` mark as feature ids."""
+    chosen = character.marks.get("prepared")
+    if not isinstance(chosen, list):
+        return ()
+    links = []
+    for feature_id in chosen:
+        feature = spec.features.get(str(feature_id))
+        if feature is None:
+            continue
+        links.append(
+            FeatureLink(
+                id=feature.id,
+                name=feature.name,
+                entry=ability_entries.get(feature.id)
+                or ability_entries.get(name_key(feature.name))
+                or "",
+            )
+        )
+    return tuple(links)
+
+
 def _reaction_links(spec: CharacterSpec, character: Character) -> tuple[ReactionLink, ...]:
     """The limited reactions a character has, with their remaining uses."""
     effective = custom_features.merged_features(spec, character)
@@ -1622,6 +1655,7 @@ def _hireling_sheets(
                 hp=points[0] if points is not None else None,
                 hp_max=points[1] if points is not None else None,
                 abilities=_feature_links(spec, character, ability_entries),
+                prepared=_prepared_links(spec, character, ability_entries),
                 reactions=_reaction_links(spec, character),
                 dead=character.dead,
                 location=character.location or "",

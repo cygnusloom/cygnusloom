@@ -26,6 +26,7 @@ from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.events import (
     CharacterDying,
     CharacterSaved,
+    CharacterStabilized,
     ChatGM,
     EncounterTurnBegun,
     EncounterTurnEnded,
@@ -660,6 +661,44 @@ def test_a_hit_that_takes_an_npc_to_zero_defeats_it_as_dead(client_factory):
     assert npc.defeated is True
     assert npc.dead is False
     assert _events(app, campaign_id, CharacterDying.kind) == []
+
+
+def test_a_nonlethal_hit_leaves_the_npc_unconscious_not_dead(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _foe(tools, hp=2, armor=10)
+    take_turn(tools, PC)
+
+    result = replace(tools, rng=Rolls(2, 20)).player_attack(FOE, UNARMED, nonlethal=True)
+    assert result["defeated"] is True
+
+    [event] = _struck(app, campaign_id)
+    assert (event.defeats, event.status) == (True, "unconscious")
+    npc = _character(app, campaign_id, FOE)
+    assert npc.defeated is True
+    assert npc.dead is False
+    assert _events(app, campaign_id, CharacterDying.kind) == []
+
+    tools.recover_character(FOE, "They shake their head and sit up.", "A split lip.")
+    assert _character(app, campaign_id, FOE).defeated is False
+
+
+def test_die_hard_stabilizes_a_mortally_wounded_character(client_factory):
+    app, campaign_id, tools = _fight(
+        client_factory, choices={"pick-feature-class_focus_any-0": "focus_die_hard"}
+    )
+    _foe(tools, hp=10)
+    tools.set_debug_stat(PC, "hp", 1)
+    take_turn(tools, FOE)
+
+    result = replace(tools, rng=Rolls(1, 20)).attack(FOE, "Claw", PC)
+    assert result["defeated"] is True
+
+    pc = _pc(app, campaign_id)
+    assert pc.defeated is True
+    assert pc.dying_hours is None
+    assert _events(app, campaign_id, CharacterDying.kind) == []
+    [stabilized] = _events(app, campaign_id, CharacterStabilized.kind)
+    assert stabilized.by == "Die Hard"
 
 
 def test_a_hit_that_takes_a_pc_to_zero_leaves_them_mortally_wounded(client_factory):

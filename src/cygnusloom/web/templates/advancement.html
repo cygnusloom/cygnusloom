@@ -139,9 +139,12 @@
         <legend>{{ pick.label }}: {{ pick.available }} pick{{ "" if pick.available == 1 else "s" }} available</legend>
         {% if pick.options %}
           <p class="panel-hint">Choose up to {{ pick.available }}. Every option explains what it grants; leave a pick blank to save it for later.</p>
+          {% set pick_label = pick.label|lower %}
+          {% set pick_plural = pick_label.endswith("s") and not (pick_label.endswith("us") or pick_label.endswith("ss") or pick_label.endswith("is")) %}
+          {% set pick_article = "" if pick_plural else ("an " if pick_label[0] in "aeiou" else "a ") %}
           {% for index in range(pick.available) %}
           <div data-feature-pick-row>
-            {% call pick_control("pick-" ~ pick.id ~ "-" ~ index, pick.label ~ " " ~ (index + 1), "Choose the " ~ pick.label|lower ~ " this pick learns.", "data-feature-choice", empty="Choose a " ~ pick.label|lower, roll=false, clear_label="No choice") %}
+            {% call pick_control("pick-" ~ pick.id ~ "-" ~ index, pick.label ~ " " ~ (index + 1), "Choose the " ~ pick_label ~ " this pick learns.", "data-feature-choice", empty="Choose " ~ pick_article ~ pick_label, roll=false, clear_label="No choice") %}
               <option value="">No choice</option>
               {% for option in pick.options %}
               <option value="{{ option.id }}" data-title="{{ option.name }}" data-description="{{ option.description or '' }}" data-rank="{{ option.rank }}" data-repeatable="{{ 'true' if option.repeatable else 'false' }}">{{ option.name }}{% if option.rank %} (rank {{ option.rank }}){% endif %}</option>
