@@ -42,6 +42,7 @@ from cygnusloom.services.events import (
     Encounter,
     EncounterEnded,
     EncounterMap,
+    EncounterOrderAdjusted,
     EncounterStarted,
     EncounterTurnBegun,
     EncounterTurnEnded,
@@ -62,6 +63,7 @@ from cygnusloom.services.events import (
     hit_points,
     load_state,
     name_key,
+    out_of_fight,
     record,
     token_labels,
 )
@@ -897,11 +899,10 @@ def start_encounter(
             map=entry.name,
             location=entry.location,
             rolls_initiative=rolls_initiative and sides is None,
+            side_initiative=sides is not None,
         ),
     )
     db.commit()
-    if sides is not None and load_state(db, campaign_id).encounter.order:
-        roll_side_initiative(db, campaign_id, combat, character, rng)
     result: dict[str, Any] = {
         "started": "encounter",
         "map": entry.name,
@@ -962,6 +963,7 @@ def _side_rolls(
                 "roll": roll,
                 "bonus": bonus,
                 "total": roll + bonus,
+                "party": any(member.kind == PC_KIND for member in members),
                 "members": [member.name for member in members],
             }
         )
@@ -969,13 +971,14 @@ def _side_rolls(
 
 
 def _roll_order(rolls: list[dict[str, Any]], tie: str) -> list[dict[str, Any]]:
-    """The sides from highest total to lowest. A tie goes to the party when `tie` is "party",
-    and to the other side when it is "foes"; otherwise the order they joined breaks it."""
+    """The sides from highest total to lowest. A tie goes to the side with a player character when
+    `tie` is "party", and to the other side when it is "foes"; otherwise the order they joined
+    breaks it."""
     party_first = tie == "party"
 
     def key(entry: tuple[int, dict[str, Any]]) -> tuple[int, int, int]:
         index, roll = entry
-        party = roll["side"] == PARTY_SIDE
+        party = bool(roll["party"])
         return (-roll["total"], 0 if party == party_first else 1, index)
 
     return [roll for _, roll in sorted(enumerate(rolls), key=key)]
@@ -990,8 +993,8 @@ def roll_side_initiative(
 ) -> dict[str, Any]:
     """Roll once for each side and set round one's order. The side with the highest total acts
     first, ties go the way the rule set says, and each side adds the best `bonus_stat` modifier
-    among its members. No player character rolls a save of their own. Call it once the
-    participants have joined; until then they act in the order they joined."""
+    among its members. No player character rolls a save of their own. Call it once every
+    participant has joined and before the first turn; until then no turn may begin."""
     rules = side_initiative(combat)
     if rules is None:
         raise InvalidInput("this rule set rolls initiative for each character, not for sides")
@@ -1005,7 +1008,7 @@ def roll_side_initiative(
         raise InvalidInput("initiative is rolled only at the start of an encounter")
     rolls = _side_rolls(state, encounter, rules, character, rng)
     order = [name for entry in _roll_order(rolls, rules.tie) for name in entry["members"]]
-    record(db, campaign_id, InitiativeSettled(order=order))
+    record(db, campaign_id, InitiativeSettled(order=order, sides=True))
     db.commit()
     return {"initiative": "sides", "rolls": rolls, "order": order}
 
@@ -1080,6 +1083,49 @@ def remove_participant(
     if initiative_order is not None:
         settle_initiative(db, campaign_id, initiative_order)
     return {"removed": character.name}
+
+
+def adjust_turn_order(
+    db: Session,
+    campaign_id: int,
+    order: Sequence[str] | None = None,
+    current: str | None = None,
+) -> dict[str, Any]:
+    """Change the encounter's turn order, or whose turn is running now. `order` must list every
+    participant exactly once in the new sequence; `current` makes that participant the one taking
+    their turn. The GM uses this only for a rules-driven exception or a correction."""
+    state = load_state(db, campaign_id)
+    encounter = _encounter(state)
+    if order is None and not current:
+        raise InvalidInput(
+            "give every participant's name in the new order, the participant whose turn "
+            "should be current, or both"
+        )
+    names = list(encounter.order)
+    if order is not None:
+        if isinstance(order, str) or not all(isinstance(entry, str) for entry in order):
+            raise InvalidInput("order must be a list of participant names")
+        keys = [name_key(_participant(state, entry).name) for entry in order]
+        if len(set(keys)) != len(keys) or set(keys) != {name_key(name) for name in encounter.order}:
+            raise InvalidInput("order must list every participant in the encounter exactly once")
+        names = [state.characters[key].name for key in keys]
+    target = ""
+    if current:
+        character = _participant(state, current)
+        if out_of_fight(character):
+            raise InvalidInput(f"{character.name} is out of the fight")
+        target = character.name
+    if encounter.order and encounter.up >= len(encounter.order):
+        next_name = target
+    else:
+        next_name = target or encounter.order[encounter.up]
+    record(
+        db,
+        campaign_id,
+        EncounterOrderAdjusted(order=names, next=next_name, current=target),
+    )
+    db.commit()
+    return {"order": names, "next": next_name, "current": target or encounter.acting}
 
 
 def place_participant(
@@ -1169,10 +1215,10 @@ def place_participant(
 
 def _initiative_window(encounter: Encounter) -> bool:
     """Whether round one is still waiting for its initiative rolls. Once a turn has begun, the
-    order is fixed, so a participant who joins later does not roll."""
+    order is fixed, so a participant who joins later does not roll. A settled order reopens when a
+    player character joins before the first turn, so they roll and the order is set again."""
     return (
         encounter.rolls_initiative
-        and not encounter.settled
         and encounter.round == 1
         and encounter.up == 0
         and encounter.acting is None
@@ -1193,7 +1239,10 @@ def awaiting_initiative(state: CampaignState) -> list[str]:
 
 
 def initiative_open(state: CampaignState) -> bool:
-    """Whether no one may act until the player characters have rolled for initiative."""
+    """Whether no one may act until the player characters or the sides have rolled initiative."""
+    encounter = state.encounter
+    if encounter is not None and encounter.side_initiative and not encounter.settled:
+        return True
     return bool(awaiting_initiative(state))
 
 
@@ -1213,7 +1262,10 @@ def settle_initiative(db: Session, campaign_id: int, initiative_order: Initiativ
             entries.append((name, None))
     if not any(passed is not None for _, passed in entries):
         return
-    record(db, campaign_id, InitiativeSettled(order=initiative_order(entries)))
+    order = initiative_order(entries)
+    if encounter.settled and order == encounter.order:
+        return
+    record(db, campaign_id, InitiativeSettled(order=order))
     db.commit()
 
 
@@ -1224,7 +1276,9 @@ def begin_turn(db: Session, campaign_id: int, name: str) -> Character:
     encounter = _encounter(state)
     if initiative_open(state):
         waiting = ", ".join(awaiting_initiative(state))
-        raise InvalidInput(f"initiative is not set yet; {waiting} must roll for it first")
+        if waiting:
+            raise InvalidInput(f"initiative is not set yet; {waiting} must roll for it first")
+        raise InvalidInput("initiative is not set yet; roll it before the first turn")
     if state.turn is not None:
         raise InvalidInput("the GM is still answering; wait for the reply to finish")
     if encounter.acting is not None:
@@ -1434,6 +1488,8 @@ def encounter_view(
         "round": encounter.round,
         "acting": encounter.acting,
         "has_acted": encounter.attacked > 0 or encounter.moved > 0,
+        "settled": encounter.settled,
+        "side_initiative": encounter.side_initiative,
         "awaiting_initiative": awaiting_initiative(state),
         "attacks_left": _attacks_left(encounter, combat),
         "attacks_per_turn": combat.attacks_per_turn if combat is not None else None,

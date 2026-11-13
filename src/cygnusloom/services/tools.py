@@ -74,6 +74,7 @@ TOOL_GROUPS: dict[str, frozenset[str]] = {
             "end_encounter",
             "add_participant",
             "remove_participant",
+            "adjust_encounter_order",
             "roll_initiative",
             "check_morale",
             "surrender",

@@ -979,6 +979,23 @@ def test_passing_player_characters_act_first_in_round_one(client_factory, roll, 
     assert _state(app, campaign_id).encounter.order[0] == first
 
 
+def test_a_failed_initiative_save_loses_only_the_first_round(client_factory):
+    app, campaign_id, tools = _fight(client_factory, rolled=False)
+    _foe(tools, "Grave Thing")
+    tools.player_initiative(20)
+    state = _state(app, campaign_id)
+    assert state.encounter is not None
+    assert state.encounter.order == ["Grave Thing", PC]
+    take_turn(tools, "Grave Thing")
+    with _db(app) as db:
+        encounters.end_turn(db, campaign_id, "Grave Thing", by_player=False)
+    state = _state(app, campaign_id)
+    assert state.encounter is not None
+    # The failed save cost the first round, not the fight: round two starts with the party.
+    assert state.encounter.round == 2
+    assert state.encounter.acting == PC
+
+
 def test_a_roll_for_initiative_is_refused_when_none_is_owed(client_factory):
     _, _, tools = _fight(client_factory)
     with pytest.raises(InvalidInput, match="no one is rolling for initiative"):
@@ -1209,6 +1226,8 @@ def test_another_player_character_can_attack_by_name(client_factory):
         db.commit()
     tools.add_participant("Wren")
     tools.give_item("Wren", "Sword", damage="1d8")
+    # A player character who joins before the first turn rolls for initiative too.
+    assert tools.player_initiative(1)["character"] == "Wren"
     take_turn(tools, "Wren")
 
     result = replace(tools, rng=Rolls(4)).player_attack("Bo", "Sword", character="Wren")

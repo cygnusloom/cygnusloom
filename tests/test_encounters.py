@@ -24,6 +24,7 @@ from cygnusloom.services.events import (
     Character,
     ChatGM,
     Encounter,
+    ParticipantLeft,
     group_by_side,
     record,
     speaker_name,
@@ -235,6 +236,55 @@ def test_only_one_encounter_runs_and_participants_join_in_order(
     )
     refused = _call(app, campaign_id, "start_encounter", {"map": "Other Green"})
     assert "already in progress" in refused["error"]
+
+
+def test_the_gm_can_reorder_the_encounter_and_keep_the_next_turn(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _encounter_with(client_factory)
+    app = client.app
+    result = _call(app, campaign_id, "adjust_encounter_order", {"order": ["Ada", "Pip"]})
+    assert result["order"] == ["Ada", "Pip"]
+    assert result["next"] == "Pip"
+    state = _encounter(app, campaign_id)
+    assert state.encounter is not None
+    assert state.encounter.order == ["Ada", "Pip"]
+    assert state.encounter.order[state.encounter.up] == "Pip"
+
+
+def test_the_gm_can_set_whose_turn_is_running(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _encounter_with(client_factory)
+    app = client.app
+    _begin(app, campaign_id, "Pip")
+    result = _call(app, campaign_id, "adjust_encounter_order", {"current": "Ada"})
+    assert result["current"] == "Ada"
+    state = _encounter(app, campaign_id)
+    assert state.encounter is not None
+    assert state.encounter.acting == "Ada"
+    assert state.encounter.order[state.encounter.up] == "Ada"
+    assert state.turn is not None and state.turn.actor is None
+
+
+def test_an_order_change_names_every_participant_once(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _encounter_with(client_factory)
+    app = client.app
+    assert "every participant" in _call(app, campaign_id, "adjust_encounter_order", {})["error"]
+    assert (
+        "exactly once"
+        in _call(app, campaign_id, "adjust_encounter_order", {"order": ["Ada"]})["error"]
+    )
+    assert (
+        "exactly once"
+        in _call(app, campaign_id, "adjust_encounter_order", {"order": ["Ada", "Ada"]})["error"]
+    )
+    assert (
+        "no character named"
+        in _call(app, campaign_id, "adjust_encounter_order", {"current": "Nobody"})["error"]
+    )
 
 
 def test_participant_off_the_encounter_location_gets_a_warning(
@@ -975,6 +1025,35 @@ def _npc(name: str) -> Character:
     )
 
 
+def test_removing_a_participant_does_not_open_a_failed_first_round_turn():
+    state = CampaignState()
+    for name in ("Ada", "Pip", "Bo"):
+        state.characters[name.casefold()] = Character(
+            kind=PC_KIND if name != "Pip" else NPC_KIND,
+            name=name,
+            location=None,
+            description="",
+            personality="",
+            accent="",
+            quirks=[],
+        )
+    state.encounter = Encounter(
+        map="Green",
+        location="Hollow",
+        order=["Ada", "Pip", "Bo"],
+        sides={"ada": "party", "pip": "foes", "bo": "party"},
+        up=1,
+        initiative={"ada": True, "bo": False},
+    )
+
+    ParticipantLeft(name="Pip").apply(state, 1)
+
+    assert state.encounter is not None
+    assert state.encounter.round == 2
+    assert state.encounter.order == ["Ada", "Bo"]
+    assert state.encounter.order[state.encounter.up] == "Ada"
+
+
 def test_composer_speaks_for_the_acting_pc_or_hireling_and_otherwise_the_pc():
     pc = Character(
         kind=PC_KIND,
@@ -1001,7 +1080,7 @@ def test_composer_speaks_for_the_acting_pc_or_hireling_and_otherwise_the_pc():
     assert speaker_name(CampaignState()) is None
 
 
-def test_group_by_side_keeps_the_party_first_and_the_next_turn():
+def test_group_by_side_keeps_the_side_order_and_the_next_turn():
     state = CampaignState()
     for name in ("Pip", "Ada", "Bo", "Cy"):
         state.characters[name.casefold()] = _npc(name)
@@ -1020,7 +1099,7 @@ def test_group_by_side_keeps_the_party_first_and_the_next_turn():
     assert encounter.order[encounter.up] == "Bo"
 
 
-def test_group_by_side_puts_a_new_side_after_the_ones_already_there():
+def test_group_by_side_can_keep_the_side_order_the_initiative_set():
     encounter = Encounter(
         map="Green",
         location="Hollow",
@@ -1028,6 +1107,24 @@ def test_group_by_side_puts_a_new_side_after_the_ones_already_there():
         sides={"wolf": "beasts", "ada": "party", "hound": "wardens"},
     )
 
-    group_by_side(encounter, keep_turn=False)
+    group_by_side(encounter, keep_turn=False, party_first=False)
 
-    assert encounter.order == ["Ada", "Wolf", "Hound"]
+    assert encounter.order == ["Wolf", "Ada", "Hound"]
+
+
+def test_group_by_side_finds_the_party_under_its_own_side_name():
+    encounter = Encounter(
+        map="Yard",
+        location="Dyeworks",
+        order=["Marn", "Quail", "Gull", "Hesta"],
+        sides={
+            "marn": "The Factor's Men",
+            "quail": "The Vanes",
+            "gull": "The Factor's Men",
+            "hesta": "The Vanes",
+        },
+    )
+
+    group_by_side(encounter, keep_turn=False, party={"the vanes"})
+
+    assert encounter.order == ["Quail", "Hesta", "Marn", "Gull"]

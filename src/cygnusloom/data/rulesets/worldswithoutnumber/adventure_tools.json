@@ -184,7 +184,7 @@
     "type": "tool_call",
     "id": "roll_initiative",
     "world_method": "roll_side_initiative",
-    "description": "Roll initiative for each side of the encounter: 1d8 plus the best Dexterity modifier in the side, with ties going to the party. Call it once the participants have joined the encounter and before the first round. No player character makes an individual initiative roll."
+    "description": "Roll initiative for each side of the encounter: 1d8 plus the best Dexterity modifier in the side, with ties going to the party. Call it once every participant has joined and before the first turn, so the narration can use the result. A side then acts as a block in that order, and a late joiner joins their side's block. No player character makes an individual initiative roll."
   },
   {
     "type": "tool_call",

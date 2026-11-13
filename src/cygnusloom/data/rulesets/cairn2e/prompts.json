@@ -68,7 +68,7 @@
   {
     "type": "prompt",
     "id": "encounter_initiative",
-    "text": "In Cairn, initiative is the player's roll: call player_initiative so the player rolls their initiative save."
+    "text": "In Cairn, initiative is the player's roll: call player_initiative so the player rolls their DEX save. A player character who passes acts before the enemies in the first round; one who fails loses that round's turn. Every later round begins with the party, then the enemies."
   },
   {
     "type": "prompt",

@@ -31,6 +31,7 @@ from cygnusloom.services.events import (
     ArmorSet,
     ChatGM,
     CurrencyChanged,
+    EncounterTurnEnded,
     ItemRemoved,
     load_state,
     record,
@@ -360,11 +361,18 @@ def test_side_initiative_asks_no_player_character_for_a_save(
     state = _state(client.app, campaign_id)
     assert state.encounter is not None
     assert state.encounter.rolls_initiative is False
+    assert state.encounter.side_initiative is True
+    assert state.encounter.settled is False
     assert encounters.awaiting_initiative(state) == []
-    assert encounters.initiative_open(state) is False
+    assert encounters.initiative_open(state) is True
+    with Session(client.app.state.engine) as db, pytest.raises(InvalidInput):
+        # The side roll comes before the first turn; joining does not make one.
+        encounters.begin_turn(db, campaign_id, "Wolf")
     with Session(client.app.state.engine) as db:
-        # An NPC's turn may begin without waiting for initiative rolls.
-        assert encounters.begin_turn(db, campaign_id, "Wolf").name == "Wolf"
+        result = encounters.roll_side_initiative(db, campaign_id, SIDE, WWN.character, Rolls(1, 8))
+    assert result["order"] == [PC, "Wolf"]
+    with Session(client.app.state.engine) as db:
+        assert encounters.begin_turn(db, campaign_id, PC).name == PC
 
 
 def test_side_initiative_rolls_once_per_side(
@@ -381,6 +389,63 @@ def test_side_initiative_rolls_once_per_side(
     assert party["roll"] == 8 and party["bonus"] == bonus
     assert foes["roll"] == 1 and foes["bonus"] == 0
     assert result["order"] == [PC, "Wolf"]
+
+
+def test_a_late_joiner_joins_their_sides_block(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id, tools = _side_encounter(client_factory, ("Wolf", 10))
+    with Session(client.app.state.engine) as db:
+        result = encounters.roll_side_initiative(db, campaign_id, SIDE, WWN.character, Rolls(1, 8))
+    assert result["order"] == [PC, "Wolf"]
+    tools.create_monster(
+        "Cub",
+        YARD,
+        description="A small foe.",
+        stats={"hp": 4, "str": 10, "dex": 10, "wil": 10},
+        attacks=[{"name": "Claw", "dice": "1d4"}],
+        force=True,
+    )
+    tools.add_participant("Cub")
+    state = _state(client.app, campaign_id)
+    assert state.encounter is not None
+    assert state.encounter.order == [PC, "Wolf", "Cub"]
+
+
+def test_the_winning_side_stays_first_in_later_rounds(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id, _ = _side_encounter(client_factory, ("Wolf", 10))
+    with Session(client.app.state.engine) as db:
+        result = encounters.roll_side_initiative(db, campaign_id, SIDE, WWN.character, Rolls(8, 1))
+        # The foes won, so the party-first grouping of an ordinary round must not reorder them.
+        assert result["order"][0] == "Wolf"
+        for name in result["order"]:
+            record(db, campaign_id, EncounterTurnEnded(name=name))
+        db.commit()
+    state = _state(client.app, campaign_id)
+    assert state.encounter is not None
+    assert state.encounter.round == 2
+    assert state.encounter.order == result["order"]
+
+
+def test_a_finished_reply_can_roll_the_side_order_when_the_gm_forgot(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id, tools = _side_encounter(client_factory, ("Wolf", 10))
+    state = _state(client.app, campaign_id)
+    assert state.encounter is not None and not state.encounter.settled
+
+    result = replace(tools, combat=SIDE, character=WWN.character).settle_side_initiative()
+
+    assert result is not None and result["initiative"] == "sides"
+    state = _state(client.app, campaign_id)
+    assert state.encounter is not None and state.encounter.settled
+    # Once the roll is made, a later reply leaves it alone.
+    assert (
+        replace(tools, combat=SIDE, character=WWN.character).settle_side_initiative()
+        is None
+    )
 
 
 def test_a_side_uses_the_best_modifier_among_its_members(

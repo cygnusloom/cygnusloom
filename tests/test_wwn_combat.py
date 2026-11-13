@@ -158,7 +158,8 @@ def _fight(
     client_factory: Callable[[], TestClient], choices: dict[str, str] | None = None
 ) -> tuple[FastAPI, int, WorldTools]:
     """A WWN campaign with a mapped yard, an encounter, and the player character joined. WWN
-    rolls initiative for each side as soon as both sides have a member, so no player rolls."""
+    rolls initiative for each side once its combatants have joined; the foe helper makes the
+    roll after adding the first foe."""
     client, campaign_id, tools = _wwn_campaign(client_factory, choices)
     tools.create_location(YARD, "Cobbles around a dry well.")
     tools.move_actor(PC, YARD)
@@ -181,6 +182,7 @@ def _foe(
     attack_bonus: int = 0,
     shock: int = 0,
     shock_ac: int = 0,
+    roll: bool = True,
 ) -> None:
     attack: dict[str, Any] = {"name": "Claw", "dice": "1d6"}
     if shock:
@@ -195,6 +197,11 @@ def _foe(
         force=True,
     )
     tools.add_participant(name)
+    if roll:
+        with Session(tools.engine) as db:
+            encounter = load_state(db, tools.campaign_id).encounter
+        if encounter is not None and not encounter.settled:
+            tools.roll_side_initiative()
 
 
 def _make_room(tools: WorldTools) -> None:
@@ -634,7 +641,14 @@ def test_a_natural_one_always_misses_and_a_natural_twenty_always_hits(client_fac
 
 def test_side_initiative_is_rolled_once_both_sides_have_joined(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    _foe(tools, hp=20)
+    _foe(tools, hp=20, roll=False)
+
+    with Session(app.state.engine) as db:
+        encounter = load_state(db, campaign_id).encounter
+    assert encounter is not None
+    assert not encounter.settled
+
+    tools.roll_side_initiative()
 
     with Session(app.state.engine) as db:
         encounter = load_state(db, campaign_id).encounter
@@ -1065,6 +1079,7 @@ def test_an_npc_created_for_the_story_can_be_armed_and_fight(client_factory):
     assert "update_npc" in joined["warning"]
     armed = tools.update_npc("Gull", attacks=[{"name": "boat hook", "dice": "1d6"}])
     assert armed["armed"] is True
+    tools.roll_side_initiative()
 
     take_turn(tools, "Gull")
 

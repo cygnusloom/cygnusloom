@@ -3,7 +3,7 @@
     "type": "tool_call",
     "id": "add_participant",
     "requires": ["combat"],
-    "description": "Add a character to the encounter in progress, on a side. Player characters default to the party and NPCs to the foes. The turn order keeps each side together: the party first, then the other sides in the order they first appear. A character who is not at the encounter's location is still added, and the result carries a warning to act on. An NPC with no attacks is also warned about: give them attacks with update_npc before their turn if they are meant to fight.",
+    "description": "Add a character to the encounter in progress, on a side. Player characters default to the party and NPCs to the foes. The turn order keeps each side together in the order the rule set's initiative set; when a side-initiative order is already settled, a late joiner joins their side's block. A character who is not at the encounter's location is still added, and the result carries a warning to act on. An NPC with no attacks is also warned about: give them attacks with update_npc before their turn if they are meant to fight.",
     "parameters": {
       "properties": {
         "name": {
@@ -53,6 +53,27 @@
         }
       },
       "required": ["name"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "adjust_encounter_order",
+    "requires": ["combat"],
+    "description": "Adjust the encounter's turn order, or whose turn is running now. Give order as every participant's name in the new sequence, current as the participant whose turn should be open now, or both. Use it only when the rule set's initiative or the story calls for an exception, such as a held or delayed action, choosing a side's order, a surprise round, or correcting a mistake. Never use it in normal play: the turn order stands.",
+    "parameters": {
+      "properties": {
+        "current": {
+          "description": "The participant whose turn should be running now. Leave it out to keep the current turn.",
+          "type": "string"
+        },
+        "order": {
+          "description": "Every participant's name, in the new turn order. Leave it out to keep the current order.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      }
     }
   },
   {
@@ -178,7 +199,7 @@
     "type": "tool_call",
     "id": "start_encounter",
     "requires": ["combat"],
-    "description": "Start an encounter on an encounter map. Its location becomes the encounter's location. Only one encounter can be in progress at a time. Add participants after starting. The player character and NPCs take turns in the order they join.",
+    "description": "Start an encounter on an encounter map. Its location becomes the encounter's location. Only one encounter can be in progress at a time. Add every participant after starting, then settle initiative. Until it is settled, the player character and NPCs are listed in the order they join.",
     "parameters": {
       "properties": {
         "map": {

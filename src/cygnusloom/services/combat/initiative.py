@@ -31,7 +31,9 @@ from cygnusloom.services.events import (
 def _no_initiative_pending(state: CampaignState) -> None:
     if initiative_open(state):
         waiting = ", ".join(awaiting_initiative(state))
-        raise InvalidInput(f"initiative is not set yet; {waiting} must roll for it first")
+        if waiting:
+            raise InvalidInput(f"initiative is not set yet; {waiting} must roll for it first")
+        raise InvalidInput("initiative is not set yet; roll it before acting")
 
 
 def resolve_group_break(

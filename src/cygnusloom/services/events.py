@@ -71,7 +71,9 @@ from cygnusloom.services.state import (  # noqa: F401
     name_key,
     normalize_journal,
     out_of_fight,
+    player_sides,
     same_item_name,
+    side_key,
     speaker_name,
     token_label,
     token_labels,
@@ -2015,10 +2017,15 @@ class EncounterStarted(GameEvent):
     map: str
     location: str
     rolls_initiative: bool = False
+    # Whether the rule set rolls initiative for each side, so the sides act as blocks.
+    side_initiative: bool = False
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         state.encounter = Encounter(
-            map=self.map, location=self.location, rolls_initiative=self.rolls_initiative
+            map=self.map,
+            location=self.location,
+            rolls_initiative=self.rolls_initiative,
+            side_initiative=self.side_initiative,
         )
 
     def render(self) -> str:
@@ -2285,11 +2292,35 @@ class ParticipantJoined(GameEvent):
         encounter = state.encounter
         if encounter is None:
             return
-        encounter.order.append(state.characters[name_key(self.name)].name)
-        encounter.sides[name_key(self.name)] = self.side
-        # In round one the order is set by initiative, so a late joiner waits at the end of it.
+        character = state.characters[name_key(self.name)]
+        key = name_key(character.name)
+        encounter.order.append(character.name)
+        encounter.sides[key] = self.side
+        if encounter.side_initiative and encounter.settled and encounter.round == 1:
+            # A side keeps its block in the settled order, so a late joiner joins its side's
+            # members instead of waiting behind every other side.
+            side = side_key(encounter, character.name)
+            last = max(
+                (
+                    index
+                    for index, name in enumerate(encounter.order)
+                    if name_key(name) != key and side_key(encounter, name) == side
+                ),
+                default=None,
+            )
+            if last is not None:
+                encounter.order.remove(character.name)
+                encounter.order.insert(last + 1, character.name)
+                if last < encounter.up:
+                    encounter.up += 1
+            return
         if encounter.round > 1:
-            group_by_side(encounter)
+            group_by_side(
+                encounter,
+                keep_turn=True,
+                party=player_sides(encounter, state),
+                party_first=not encounter.side_initiative,
+            )
 
     def render(self) -> str:
         return f"{self.name} joins the {self.side} side of the encounter."
@@ -2318,7 +2349,8 @@ class ParticipantLeft(GameEvent):
         if index < encounter.up:
             encounter.up -= 1
         if encounter.order and encounter.up >= len(encounter.order):
-            _next_round(encounter)
+            _next_round(encounter, state)
+        _skip_defeated(encounter, state)
 
     def render(self) -> str:
         return f"{self.name} leaves the encounter."
@@ -2425,7 +2457,7 @@ class EncounterTurnEnded(GameEvent):
         encounter.attacked = 0
         encounter.up += 1
         if encounter.up >= len(encounter.order):
-            _next_round(encounter)
+            _next_round(encounter, state)
         _skip_defeated(encounter, state)
 
     def render(self) -> str:
@@ -2460,6 +2492,8 @@ class InitiativeSettled(GameEvent):
     kind: ClassVar[str] = "encounter.initiative_settled"
 
     order: list[str]
+    # True when the order comes from a roll for each side rather than one for each character.
+    sides: bool = False
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         encounter = state.encounter
@@ -2468,14 +2502,60 @@ class InitiativeSettled(GameEvent):
         encounter.order = list(self.order)
         encounter.up = 0
         encounter.settled = True
+        if self.sides:
+            encounter.side_initiative = True
         # Settling can reorder the sides after a player character already joined and had a turn
         # opened, so clear that provisional turn and let the settled order open the right one.
         encounter.acting = None
         encounter.moved = 0
         encounter.attacked = 0
+        _skip_defeated(encounter, state)
 
     def render(self) -> str:
         return "Initiative is set: " + ", ".join(self.order) + "."
+
+
+@dataclass(frozen=True)
+class EncounterOrderAdjusted(GameEvent):
+    """The GM changed the turn order, whose turn is next, or whose turn is running now. The
+    service validates the participant names before recording it."""
+
+    kind: ClassVar[str] = "encounter.order_adjusted"
+
+    order: list[str]
+    next: str = ""
+    current: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        encounter = state.encounter
+        if encounter is None:
+            return
+        encounter.order = list(self.order)
+        if self.current:
+            character = state.characters[name_key(self.current)]
+            if encounter.acting is None or name_key(encounter.acting) != name_key(character.name):
+                encounter.moved = 0
+                encounter.attacked = 0
+                if character.shield_suspended:
+                    character.armor = max(character.armor, character.shield_suspended_armor)
+                    character.shield_suspended = False
+                    character.shield_suspended_armor = 0
+                if character.total_defense:
+                    character.armor = character.total_defense_armor
+                    character.total_defense = False
+                    character.total_defense_armor = 0
+            encounter.acting = character.name
+            if state.turn is not None:
+                state.turn.actor = character.name if character.kind == NPC_KIND else None
+        if self.current or self.next:
+            target = self.current or self.next
+            encounter.up = encounter.order.index(state.characters[name_key(target)].name)
+
+    def render(self) -> str:
+        order = ", ".join(self.order)
+        if self.current:
+            return f"The turn order is now {order}. It is {self.current}'s turn."
+        return f"The turn order is now {order}."
 
 
 @dataclass(frozen=True)
@@ -3689,8 +3769,10 @@ class FeatureUsed(GameEvent):
         return None
 
     def render(self) -> str:
-        return f"{self.name} uses {self.feature_name}: {self.text}" if self.text else (
-            f"{self.name} uses {self.feature_name}."
+        return (
+            f"{self.name} uses {self.feature_name}: {self.text}"
+            if self.text
+            else (f"{self.name} uses {self.feature_name}.")
         )
 
 

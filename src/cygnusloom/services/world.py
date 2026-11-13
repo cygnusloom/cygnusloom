@@ -83,6 +83,8 @@ from cygnusloom.services.dungeon import dungeon_cycle as dungeon_cycle_service
 from cygnusloom.services.dungeon import dungeon_rules
 from cygnusloom.services.dungeon import roll_reaction as roll_reaction_service
 from cygnusloom.services.events import (
+    FOES_SIDE,
+    PARTY_SIDE,
     PC_KIND,
     CharacterSaved,
     CheckMade,
@@ -1656,19 +1658,64 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
     def add_participant(self, name: str, side: str | None = None) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             result = encounters.add_participant(db, self.campaign_id, name, side)
-        if self.combat is not None and self.combat.initiative is not None:
-            with session_scope(self.engine) as db:
-                state = load_state(db, self.campaign_id)
-                encounter = state.encounter
-                if (
-                    encounter is not None
-                    and not encounter.settled
-                    and len({encounter.sides.get(name_key(n), "") for n in encounter.order}) > 1
-                ):
-                    result["initiative"] = encounters.roll_side_initiative(
-                        db, self.campaign_id, self.combat, self.character, self.rng
-                    )
+        self._resettle_individual_initiative()
         return result
+
+    def _resettle_individual_initiative(self) -> None:
+        """Fold a late joiner into an individual-initiative order that is already settled, as
+        long as the first turn has not begun and every player character has rolled. A late player
+        character blocks this until their own save is recorded."""
+        if self.combat is None or self.combat.initiative is not None:
+            return
+        with session_scope(self.engine) as db:
+            state = load_state(db, self.campaign_id)
+            encounter = state.encounter
+            if encounter is None or not encounter.settled:
+                return
+            if encounter.round != 1 or encounter.up != 0 or encounter.acting is not None:
+                return
+            if encounters.awaiting_initiative(state):
+                return
+            encounters.settle_initiative(db, self.campaign_id, self.combat.initiative_order)
+
+    def settle_side_initiative(self) -> dict[str, Any] | None:
+        """Roll side initiative once the participants have joined. A GM reply calls this when it
+        ends, so a fight set up without an explicit roll still begins in its side order. Does
+        nothing unless the rule set uses side initiative and the encounter is unsettled with at
+        least two sides present."""
+        if self.combat is None or encounters.side_initiative(self.combat) is None:
+            return None
+        with session_scope(self.engine) as db:
+            state = load_state(db, self.campaign_id)
+            encounter = state.encounter
+            if (
+                encounter is None
+                or encounter.settled
+                or not encounter.order
+                or encounter.round > 1
+                or encounter.acting is not None
+            ):
+                return None
+            present = {
+                encounter.sides.get(name_key(name), "")
+                or (PARTY_SIDE if state.characters[name_key(name)].kind == PC_KIND else FOES_SIDE)
+                for name in encounter.order
+            }
+            if len(present) < 2:
+                return None
+            return encounters.roll_side_initiative(
+                db, self.campaign_id, self.combat, self.character, self.rng
+            )
+
+    def adjust_encounter_order(
+        self, order: Sequence[str] | None = None, current: str = ""
+    ) -> dict[str, Any]:
+        """Change the encounter's turn order, or whose turn is running now. Reserved for a
+        rules-driven exception or a correction; the turn order stands in normal play."""
+        with session_scope(self.engine) as db:
+            return encounters.adjust_turn_order(
+                db, self.campaign_id, order=order, current=current or None
+            )
 
     def remove_participant(self, name: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:

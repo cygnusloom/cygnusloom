@@ -1250,8 +1250,9 @@ class CheckRules:
 class InitiativeRules:
     """How a rule set rolls initiative for whole sides rather than for each character. Each side
     rolls `die` once and adds the best modifier of `bonus_stat` among its members. `tie` names the
-    side that acts first when two totals are equal, "party" or "foes". A rule set with `side`
-    false keeps its `initiative_mode` instead."""
+    side that acts first when two totals are equal: "party" means the side holding a player
+    character, and "foes" the other side. A rule set with `side` false keeps its `initiative_mode`
+    instead."""
 
     die: str = "1d8"
     bonus_stat: str = "dex"

@@ -1292,8 +1292,21 @@ def _finish_reply(run: _Run, turn: Turn, reply: str, reasoning: str) -> int:
     """Record the end of the NPC encounter turn a final reply plays out, then the final reply
     itself. Both go through the same driver path, so a resumed or continued reply ends its turn
     too, and a rollback to the reply keeps the turn-end event before it."""
-    if turn.actor is not None:
-        _end_npc_encounter_turn(run, turn.actor)
+    actor = turn.actor
+    # The GM may have adjusted whose turn is running during the reply, so end the NPC actually
+    # taking it, not only the one the reply opened with.
+    with session_scope(run.engine) as db:
+        state = load_state(db, run.campaign_id)
+        encounter = state.encounter
+        if encounter is not None and encounter.acting is not None:
+            acting = state.characters.get(name_key(encounter.acting))
+            if acting is not None and acting.kind == NPC_KIND:
+                actor = acting.name
+    if actor is not None:
+        _end_npc_encounter_turn(run, actor)
+    # A fight the GM set up without calling roll_initiative still gets its side order before the
+    # reply closes and a turn can begin.
+    run.ctx.world.settle_side_initiative()
     event_id = _record(
         run.engine,
         run.campaign_id,

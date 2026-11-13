@@ -1322,6 +1322,11 @@ def _encounter_lines(
         lines.append(
             f"Initiative is not set yet. {waiting} must roll for initiative with player_initiative."
         )
+    if view["side_initiative"] and not view["settled"]:
+        lines.append(
+            "Initiative is not set yet. Roll initiative for the sides with roll_initiative "
+            "before the first turn."
+        )
     if view["acting"] is not None:
         left: list[str] = []
         if view["attacks_left"] is not None:

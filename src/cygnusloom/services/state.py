@@ -579,7 +579,8 @@ class EncounterMap:
 
 @dataclass
 class Encounter:
-    """An encounter in progress on a map. Participants take turns in the order they joined."""
+    """An encounter in progress on a map. Participants take turns in the settled initiative order,
+    or in the order they joined until it is settled."""
 
     map: str
     location: str
@@ -601,6 +602,8 @@ class Encounter:
     sides: dict[str, str] = field(default_factory=dict)
     # Whether round one starts with each player character rolling initiative.
     rolls_initiative: bool = False
+    # Whether the rule set rolls initiative for each side, so its members act as one block.
+    side_initiative: bool = False
     # True once the round one order has been set from the initiative rolls.
     settled: bool = False
     # Initiative rolls that passed, by name_key. A player character missing here has not rolled.
@@ -882,43 +885,88 @@ FOES_SIDE = "foes"
 MORALE_LABELS = {"first": "first casualty", "half": "half casualties"}
 
 
-def _side_key(encounter: Encounter, name: str) -> str:
+def side_key(encounter: Encounter, name: str) -> str:
+    """The side a participant fights on, folded for comparisons."""
     return name_key(encounter.sides.get(name_key(name), ""))
 
 
-def group_by_side(encounter: Encounter, keep_turn: bool = True) -> None:
-    """Keep the order grouped by side: the party first, then the other sides in the order they
-    first appear. With `keep_turn`, the participant whose turn is next keeps it."""
+def player_sides(encounter: Encounter, state: CampaignState) -> set[str]:
+    """The side keys that hold a player character, falling back to the party side when no player
+    character is in the encounter. A side is a group of allies, so a player character's custom side
+    name still counts as the party for the rules that put the party first."""
+    sides = {
+        side_key(encounter, name)
+        for name in encounter.order
+        if state.characters[name_key(name)].kind == PC_KIND
+    }
+    return sides or {name_key(PARTY_SIDE)}
+
+
+def group_by_side(
+    encounter: Encounter,
+    keep_turn: bool = True,
+    party: set[str] | None = None,
+    party_first: bool = True,
+) -> None:
+    """Keep the order grouped by side. With `party_first`, the sides that hold a player character
+    come first, then the other sides in the order they first appear; without it, every side keeps
+    the order it first appears in, so an initiative winner stays first. With `keep_turn`, the
+    participant whose turn is next keeps it."""
     if not encounter.order:
         return
-    next_name = encounter.order[encounter.up] if keep_turn else None
+    next_name = (
+        encounter.order[encounter.up]
+        if keep_turn and encounter.up < len(encounter.order)
+        else None
+    )
     first: dict[str, int] = {}
     for index, name in enumerate(encounter.order):
-        first.setdefault(_side_key(encounter, name), index)
+        first.setdefault(side_key(encounter, name), index)
+    party_sides = party if party is not None else {name_key(PARTY_SIDE)}
 
     def rank(name: str) -> tuple[int, int]:
-        side = _side_key(encounter, name)
-        return (0 if side == name_key(PARTY_SIDE) else 1, first[side])
+        side = side_key(encounter, name)
+        return (0 if party_first and side in party_sides else 1, first[side])
 
     encounter.order.sort(key=rank)
     if next_name is not None:
         encounter.up = encounter.order.index(next_name)
 
 
-def _next_round(encounter: Encounter) -> None:
+def _next_round(encounter: Encounter, state: CampaignState) -> None:
     encounter.up = 0
     encounter.round += 1
-    group_by_side(encounter, keep_turn=False)
+    if encounter.side_initiative:
+        # A side-initiative rule set fixes the order of the sides for the whole fight; only the
+        # members of each side are kept together.
+        group_by_side(encounter, keep_turn=False, party_first=False)
+    else:
+        # Other rule sets begin every later round with the party, then its opponents.
+        group_by_side(encounter, keep_turn=False, party=player_sides(encounter, state))
+
+
+def _sits_out_first_round(encounter: Encounter, character: Character) -> bool:
+    """Whether a player character failed the first round's initiative save. Such a character
+    loses that round's turn; later rounds begin with the party as usual."""
+    return (
+        encounter.round == 1
+        and character.kind == PC_KIND
+        and encounter.initiative.get(name_key(character.name)) is False
+    )
 
 
 def _skip_defeated(encounter: Encounter, state: CampaignState) -> None:
-    """Pass the turn over participants who are out of the fight. It stays put when everyone is."""
+    """Pass the turn over participants who are out of the fight, and over a player character who
+    lost the first round's initiative save. It stays put when everyone is out."""
     if all(out_of_fight(state.characters[name_key(name)]) for name in encounter.order):
         return
-    while out_of_fight(state.characters[name_key(encounter.order[encounter.up])]):
+    while True:
+        character = state.characters[name_key(encounter.order[encounter.up])]
+        if not (out_of_fight(character) or _sits_out_first_round(encounter, character)):
+            return
         encounter.up += 1
         if encounter.up >= len(encounter.order):
-            _next_round(encounter)
+            _next_round(encounter, state)
 
 
 def token_label(name: str) -> str:

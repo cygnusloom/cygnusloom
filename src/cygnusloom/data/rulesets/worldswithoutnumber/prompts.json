@@ -28,7 +28,7 @@
   {
     "type": "prompt",
     "id": "encounter_initiative",
-    "text": "WWN rolls initiative for each side as soon as both sides have joined, so call roll_initiative only if it is still unset."
+    "text": "WWN uses side initiative: add every combatant first, then call roll_initiative once, before the first turn. Each side rolls 1d8 plus its best Dexterity modifier, ties go to the party, and a side acts as a block. If you leave it unrolled, the engine rolls it when your reply ends."
   },
   {
     "type": "prompt",

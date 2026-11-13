@@ -169,7 +169,7 @@
   {
     "type": "tool_call",
     "id": "player_initiative",
-    "description": "Ask the player character to make their DEX save for initiative in the first round of an encounter. Call it once for each player character the encounter says is waiting for initiative. The result says whether more are still waiting, and when none are, the turn order is set and the first turn begins.",
+    "description": "Ask the player character to make their DEX save for initiative in the first round of an encounter. Call it once for each player character the encounter says is waiting for initiative. A character who fails loses their turn in the first round; every later round begins with the party. The result says whether more are still waiting, and when none are, the turn order is set and the first turn begins.",
     "player_input": {
       "dice": "1d20",
       "param": "roll",
