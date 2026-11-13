@@ -57,6 +57,14 @@
   },
   {
     "type": "prompt",
+    "id": "attack_distance",
+    "requires": [
+      "combat"
+    ],
+    "text": "On the encounter map a melee attack must be made from a cell next to its target. A bow, crossbow, or sling reaches any target on the map, so only a wall, tree, or other blocking object between them stops the shot. When an attack is refused for distance or a blocked line, move the attacker with place_participant first, then attack."
+  },
+  {
+    "type": "prompt",
     "id": "overland_weather",
     "text": "When today's weather is Unpleasant or Inclement, a move_actor overland move must set weather_choice to fatigue (each traveller takes Fatigue) or watch (the journey takes one more watch)."
   },

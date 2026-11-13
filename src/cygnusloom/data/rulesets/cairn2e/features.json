@@ -85,7 +85,8 @@
     "looks_like": "bow",
     "description": "A simple hunting bow.",
     "damage": "1d6",
-    "size": "bulky"
+    "size": "bulky",
+    "ranges": {"ranged": 0}
   },
   {
     "type": "feature",
@@ -149,7 +150,8 @@
     "looks_like": "bow",
     "description": "A crossbow cocked with a windlass.",
     "damage": "1d8",
-    "size": "bulky"
+    "size": "bulky",
+    "ranges": {"ranged": 0}
   },
   {
     "type": "feature",
@@ -456,7 +458,8 @@
     "name": "Sling",
     "looks_like": "bow",
     "description": "A leather sling for throwing stones.",
-    "damage": "1d6"
+    "damage": "1d6",
+    "ranges": {"ranged": 0}
   },
   {
     "type": "feature",

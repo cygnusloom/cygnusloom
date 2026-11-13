@@ -45,6 +45,13 @@
     "hit_mode": "auto",
     "multi_attack": "highest",
     "attacks_per_turn": 1,
+    "ranges": {
+      "sight_blocked_by": ["wall", "tree", "boulder", "pillar", "well", "crate", "barrel",
+                           "bookshelf", "statue", "altar", "gate", "portcullis", "cart",
+                           "fountain", "throne", "anvil", "cauldron", "obelisk", "pine",
+                           "desk", "cabinet", "shelf", "fireplace", "oven", "counter",
+                           "keg", "alchemy-table"]
+    },
     "save": {"mode": "roll_under", "auto_success": 1, "auto_fail": 20},
     "initiative_mode": "pass_npcs_fail",
     "groups": {

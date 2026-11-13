@@ -435,15 +435,17 @@ def _shock_text(character: Character, attack: str) -> str:
 
 def _reach_text(character: Character, attack: str) -> str:
     """An attack's reach or ranged bands as a suffix, such as " (reach 10 ft)" or
-    " (range 30/60 ft)", or "" when it has neither."""
+    " (range 30/60 ft)", or "" when it has neither. A band with no limit reads "unlimited"."""
     parts = []
     reach = character.attack_reach.get(attack)
     if reach:
         parts.append(f"reach {reach} ft")
     bands = character.attack_ranges.get(attack) or {}
     if bands:
-        ordered = [feet for _, feet in sorted(bands.items(), key=lambda item: item[1])]
-        parts.append("range " + "/".join(str(feet) for feet in ordered) + " ft")
+        ordered = sorted(bands.items(), key=lambda item: (item[1] is None, item[1] or 0))
+        text = "/".join("unlimited" if feet is None else str(feet) for _, feet in ordered)
+        limited = all(feet is not None for _, feet in ordered)
+        parts.append(f"range {text} ft" if limited else f"range {text}")
     return f" ({'; '.join(parts)})" if parts else ""
 
 

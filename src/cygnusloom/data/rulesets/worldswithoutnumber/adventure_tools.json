@@ -717,7 +717,7 @@
               "reach": {"type": "integer", "minimum": 0},
               "ranges": {
                 "type": "object",
-                "additionalProperties": {"type": "integer", "minimum": 1}
+                "additionalProperties": {"type": "integer", "minimum": 0}
               }
             }
           }

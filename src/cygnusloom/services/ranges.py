@@ -27,16 +27,18 @@ from cygnusloom.services.events import (
 @dataclass(frozen=True)
 class AttackRange:
     """How far one attack reaches: its melee reach in feet, and the farthest distance of each
-    ranged band, such as {"short": 30, "long": 60}. No bands means the attack is melee only."""
+    ranged band, such as {"short": 30, "long": 60}. A band whose distance is None reaches the
+    whole encounter. No bands means the attack is melee only, and a reach of None is one grid
+    cell, so the attacker must be next to the target."""
 
-    reach: int = 5
-    bands: Mapping[str, int] = field(default_factory=dict)
+    reach: int | None = None
+    bands: Mapping[str, int | None] = field(default_factory=dict)
 
     @classmethod
     def melee(cls, combat: CombatRules) -> AttackRange:
         """The rule set's reach for an attack with no reach of its own."""
         rules = combat.ranges
-        return cls(reach=rules.melee if rules is not None else 5)
+        return cls(reach=rules.melee if rules is not None else None)
 
     @classmethod
     def for_feature(cls, feature: Feature | None, combat: CombatRules) -> AttackRange:
@@ -97,10 +99,11 @@ def check_attack(
     band: str = "",
 ) -> AttackDistance:
     """Measure an attack from the attacker's cell to the target's. An attack within the profile's
-    reach is a melee attack. One beyond it must fit a ranged band: the named band when `band` is
-    given, else the nearest band that covers the distance. The band's hit penalty is returned so
-    the caller can apply it. A rule set without `ranges`, a campaign without an encounter grid,
-    and a participant with no cell are all unchecked.
+    reach is a melee attack, and a reach of None means one cell. One beyond it must fit a ranged
+    band: the named band when `band` is given, else the nearest band that covers the distance. A
+    band with no limit covers any distance. The band's hit penalty is returned so the caller can
+    apply it. A rule set without `ranges`, a campaign without an encounter grid, and a participant
+    with no cell are all unchecked.
 
     Line of sight is checked for every measured attack. An intermediate cell whose object the rule
     set lists as a sight blocker refuses the attack."""
@@ -114,7 +117,7 @@ def check_attack(
         return AttackDistance(melee=True)
     cells = max(abs(end[0] - start[0]), abs(end[1] - start[1]))
     feet = cells * cell_feet
-    reach_cells = ceil(profile.reach / cell_feet)
+    reach_cells = 1 if profile.reach is None else max(1, ceil(profile.reach / cell_feet))
     if cells <= reach_cells:
         result = AttackDistance(melee=True, cells=cells, feet=feet)
     else:
@@ -134,22 +137,23 @@ def _band_for(
     profile: AttackRange, feet: int, band: str, attacker: Character, target: Character
 ) -> str:
     """The range band a ranged attack falls in, refusing when the target is beyond every band or
-    the caller named a band that does not fit."""
-    ordered = sorted(profile.bands.items(), key=lambda item: item[1])
+    the caller named a band that does not fit. A band with no limit fits any distance."""
+    ordered = _bands_in_order(profile.bands)
     if not ordered:
+        reach = "one cell" if profile.reach is None else f"{profile.reach} feet"
         raise InvalidInput(
             f"{target.name} is {feet} feet away, beyond {attacker.name}'s melee reach of "
-            f"{profile.reach} feet; move within reach with place_participant first"
+            f"{reach}; move within reach with place_participant first"
         )
     if band:
         wanted = band.strip().casefold()
-        maximum = profile.bands.get(wanted)
-        if maximum is None:
+        if wanted not in profile.bands:
             raise InvalidInput(
                 f"{attacker.name}'s attack has no range band {band!r}; {_band_text(profile.bands)}"
             )
-        if feet > maximum:
-            farther = next((name for name, limit in ordered if limit >= feet), "")
+        maximum = profile.bands[wanted]
+        if maximum is not None and feet > maximum:
+            farther = next((name for name, limit in ordered if limit is None or limit >= feet), "")
             hint = f"; use the {farther} band" if farther else "; move closer first"
             raise InvalidInput(
                 f"{target.name} is {feet} feet away, beyond the {wanted} band of {maximum} feet"
@@ -157,7 +161,7 @@ def _band_for(
             )
         return wanted
     for name, maximum in ordered:
-        if feet <= maximum:
+        if maximum is None or feet <= maximum:
             return name
     farthest_name, farthest = ordered[-1]
     raise InvalidInput(
@@ -166,9 +170,16 @@ def _band_for(
     )
 
 
-def _band_text(bands: Mapping[str, int]) -> str:
-    ordered = sorted(bands.items(), key=lambda item: item[1])
-    return ", ".join(f"{name} up to {feet} feet" for name, feet in ordered)
+def _bands_in_order(bands: Mapping[str, int | None]) -> list[tuple[str, int | None]]:
+    """The bands from shortest to longest, with a band that has no limit last."""
+    return sorted(bands.items(), key=lambda item: (item[1] is None, item[1] or 0))
+
+
+def _band_text(bands: Mapping[str, int | None]) -> str:
+    return ", ".join(
+        f"{name} up to {feet} feet" if feet is not None else f"{name} with no limit"
+        for name, feet in _bands_in_order(bands)
+    )
 
 
 def _require_sight(

@@ -1329,7 +1329,7 @@ def _attack_table(
     dict[str, list[str]],
     dict[str, list[int]],
     dict[str, int],
-    dict[str, dict[str, int]],
+    dict[str, dict[str, int | None]],
 ]:
     """The attacks an NPC gets: the given ones, else the statblock's, else none. Returns the dice by
     attack name, the flags of the attacks that have any, the Shock and the armor it shocks
@@ -1355,19 +1355,20 @@ def _attacks(
     dict[str, list[str]],
     dict[str, list[int]],
     dict[str, int],
-    dict[str, dict[str, int]],
+    dict[str, dict[str, int | None]],
 ]:
     """Each attack is {"name", "dice", "flags", "shock", "shock_ac", "reach", "ranges"}. Its dice
     must be a formula such as '1d8' or '1d6+1d6'; flags is an optional list of names from
     ATTACK_FLAGS, each listed once; shock and shock_ac say what it does to a target it misses
     whose armor is low enough; reach is how far it can strike in melee; and ranges gives the
-    farthest distance in feet of each ranged band. A Shock value needs a shock_ac. Returns the
-    dice, the flags, the shock, the reach, and the ranged bands of the attacks that have any."""
+    farthest distance in feet of each ranged band, or 0 for a band that reaches anywhere. A
+    Shock value needs a shock_ac. Returns the dice, the flags, the shock, the reach, and the
+    ranged bands of the attacks that have any."""
     checked: dict[str, str] = {}
     flags_by_attack: dict[str, list[str]] = {}
     shock_by_attack: dict[str, list[int]] = {}
     reach_by_attack: dict[str, int] = {}
-    ranges_by_attack: dict[str, dict[str, int]] = {}
+    ranges_by_attack: dict[str, dict[str, int | None]] = {}
     seen: set[str] = set()
     for attack in attacks:
         label = bounded_text(attack.get("name", ""), "attack name", MAX_NAME)

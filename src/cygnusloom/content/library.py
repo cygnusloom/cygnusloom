@@ -1320,11 +1320,12 @@ class UnarmedRules:
 @dataclass(frozen=True)
 class RangeRules:
     """How far an attack reaches on the encounter grid, and what blocks its line of sight. `melee`
-    is the reach in feet of an attack with no reach of its own, such as an unarmed strike. The
-    sight blockers are encounter object ids: a cell holding one of them blocks an attack's line
-    of sight. A rule set without this object does not limit attacks by distance."""
+    is the reach in feet of an attack with no reach of its own, such as an unarmed strike; None
+    means one grid cell, so a melee attack must be next to its target. The sight blockers are
+    encounter object ids: a cell holding one of them blocks an attack's line of sight. A rule set
+    without this object does not limit attacks by distance."""
 
-    melee: int = 5
+    melee: int | None = None
     sight_blocked_by: frozenset[str] = frozenset()
 
 
@@ -4955,7 +4956,7 @@ def _load_ranges(data: Mapping[str, Any], label: str) -> RangeRules | None:
     if not isinstance(raw, Mapping):
         raise ContentError(f"{label}: 'ranges' must be an object")
     check_keys(raw, {"melee", "sight_blocked_by"}, f"{label}: ranges")
-    melee = _whole(raw, "melee", f"{label}: ranges", 1) if "melee" in raw else 5
+    melee = _whole(raw, "melee", f"{label}: ranges", 1) if "melee" in raw else None
     blockers = _names(raw, "sight_blocked_by", f"{label}: ranges")
     return RangeRules(melee=melee, sight_blocked_by=frozenset(blockers))
 
@@ -5500,13 +5501,14 @@ def _statblock_shock(
 
 def _statblock_attack_ranges(
     raw: object, attacks: Mapping[str, str], label: str
-) -> tuple[dict[str, int], dict[str, dict[str, int]]]:
+) -> tuple[dict[str, int], dict[str, dict[str, int | None]]]:
     """The reach and ranged bands of a statblock's attacks. An attack with neither is melee at
-    the rule set's default reach. Only attacks written as objects can have either."""
+    the rule set's default reach. A band with no limit reaches anywhere. Only attacks written as
+    objects can have either."""
     if not isinstance(raw, dict):
         return {}, {}
     reach_by_attack: dict[str, int] = {}
-    bands_by_attack: dict[str, dict[str, int]] = {}
+    bands_by_attack: dict[str, dict[str, int | None]] = {}
     for attack_name, entry in raw.items():
         if not isinstance(entry, dict) or ("reach" not in entry and "ranges" not in entry):
             continue

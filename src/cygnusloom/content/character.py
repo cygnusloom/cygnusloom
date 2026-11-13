@@ -280,8 +280,9 @@ class Feature:
     # pike's 10. Zero uses the rule set's default reach.
     reach: int = 0
     # A ranged attack's bands and the farthest distance in feet of each, such as
-    # {"short": 30, "long": 60}. Empty for a melee-only weapon.
-    ranges: Mapping[str, int] = field(default_factory=dict)
+    # {"short": 30, "long": 60}. A band written as 0 reaches anywhere on the map. Empty for a
+    # melee-only weapon.
+    ranges: Mapping[str, int | None] = field(default_factory=dict)
     # Engine flags the weapon or item carries, such as "no_unskilled_penalty".
     flags: tuple[str, ...] = ()
     # Check ids this worn item penalizes by its Encumbrance, such as Sneak or Exert.

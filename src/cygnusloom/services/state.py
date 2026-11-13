@@ -275,7 +275,7 @@ class Character:
     # Each attack's melee reach in feet, when it is longer than the rule set's default.
     attack_reach: dict[str, int] = field(default_factory=dict)
     # Each attack's ranged bands and their farthest distance in feet, by band name.
-    attack_ranges: dict[str, dict[str, int]] = field(default_factory=dict)
+    attack_ranges: dict[str, dict[str, int | None]] = field(default_factory=dict)
     # The name of the bestiary statblock a monster was built from, such as "Wolf". Empty if none.
     creature: str = ""
     # A story-only NPC has no stats yet. It cannot fight, make saves, or be attacked until given stats.
@@ -919,9 +919,7 @@ def group_by_side(
     if not encounter.order:
         return
     next_name = (
-        encounter.order[encounter.up]
-        if keep_turn and encounter.up < len(encounter.order)
-        else None
+        encounter.order[encounter.up] if keep_turn and encounter.up < len(encounter.order) else None
     )
     first: dict[str, int] = {}
     for index, name in enumerate(encounter.order):

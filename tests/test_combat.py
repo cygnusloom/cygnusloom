@@ -94,6 +94,7 @@ def _tools(app: FastAPI, campaign_id: int, rng: random.Random | None = None) -> 
         rng=rng or random.Random(0),
         character=CAIRN.character,
         grid=CAIRN.grid,
+        encounter_objects=CAIRN.encounter_objects,
         combat=CAIRN.combat,
         plus=CAIRN.plus,
         monsters=CAIRN.monsters,

@@ -1035,9 +1035,9 @@
                 "type": "object",
                 "additionalProperties": {
                   "type": "integer",
-                  "minimum": 1
+                  "minimum": 0
                 },
-                "description": "Optional. The band names and farthest distance in feet of a ranged attack, such as {\"short\": 30, \"long\": 60}, when the rule set measures range. Leave it out for a melee attack."
+                "description": "Optional. The band names and farthest distance in feet of a ranged attack, such as {\"short\": 30, \"long\": 60}, when the rule set measures range. A distance of 0 means the band reaches anywhere on the map. Leave it out for a melee attack."
               }
             },
             "required": [

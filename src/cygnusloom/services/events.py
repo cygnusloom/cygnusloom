@@ -571,7 +571,7 @@ class NpcAdded(GameEvent):
     attack_flags: dict[str, list[str]] = field(default_factory=dict)
     attack_shock: dict[str, list[int]] = field(default_factory=dict)
     attack_reach: dict[str, int] = field(default_factory=dict)
-    attack_ranges: dict[str, dict[str, int]] = field(default_factory=dict)
+    attack_ranges: dict[str, dict[str, int | None]] = field(default_factory=dict)
     creature: str = ""
     large_group: bool = False
     story_only: bool = False
@@ -638,7 +638,7 @@ class NpcStatted(GameEvent):
     attack_flags: dict[str, list[str]] = field(default_factory=dict)
     attack_shock: dict[str, list[int]] = field(default_factory=dict)
     attack_reach: dict[str, int] = field(default_factory=dict)
-    attack_ranges: dict[str, dict[str, int]] = field(default_factory=dict)
+    attack_ranges: dict[str, dict[str, int | None]] = field(default_factory=dict)
     counters: dict[str, int] = field(default_factory=dict)
     skills: dict[str, int] = field(default_factory=dict)
     feature_choices: dict[str, list[str]] = field(default_factory=dict)
@@ -680,7 +680,7 @@ class NpcArmed(GameEvent):
     attack_flags: dict[str, list[str]] = field(default_factory=dict)
     attack_shock: dict[str, list[int]] = field(default_factory=dict)
     attack_reach: dict[str, int] = field(default_factory=dict)
-    attack_ranges: dict[str, dict[str, int]] = field(default_factory=dict)
+    attack_ranges: dict[str, dict[str, int | None]] = field(default_factory=dict)
     armor: int | None = None
 
     def apply(self, state: CampaignState, event_id: int) -> None:

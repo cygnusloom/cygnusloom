@@ -26,23 +26,26 @@ class Definition:
     data: Mapping[str, Any]
 
 
-def range_bands(value: object, label: str) -> dict[str, int]:
-    """A ranged attack's bands, mapping each band name to its farthest distance in feet. An empty
-    object means the attack has no ranged bands."""
+def range_bands(value: object, label: str) -> dict[str, int | None]:
+    """A ranged attack's bands, mapping each band name to its farthest distance in feet, or to no
+    limit for a band that reaches the whole encounter. A distance of 0 means no limit, so the band
+    covers any target the line of sight allows. An empty object means the attack has no ranged
+    bands."""
     if not isinstance(value, Mapping):
         raise ContentError(f"{label}: ranges must map band names to distances in feet")
-    result: dict[str, int] = {}
+    result: dict[str, int | None] = {}
     for name, feet in value.items():
         if not isinstance(name, str) or not name.strip():
             raise ContentError(f"{label}: each range band needs a name")
         key = name.strip().casefold()
         if key in result:
             raise ContentError(f"{label}: range band {name!r} is listed twice")
-        if not isinstance(feet, int) or isinstance(feet, bool) or feet < 1:
+        if not isinstance(feet, int) or isinstance(feet, bool) or feet < 0:
             raise ContentError(
-                f"{label}: range band {name!r} must be a whole number of feet, at least 1"
+                f"{label}: range band {name!r} must be a whole number of feet, 0 for no "
+                "limit, or at least 1"
             )
-        result[key] = feet
+        result[key] = feet or None
     return result
 
 
