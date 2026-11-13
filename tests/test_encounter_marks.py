@@ -12,7 +12,14 @@ from fastapi.testclient import TestClient
 from cygnusloom.content.library import EncounterGrid
 from cygnusloom.llm.base import ToolRequest
 from cygnusloom.services import encounters
-from cygnusloom.services.events import CellMark, load_state, name_key
+from cygnusloom.services.events import (
+    CampaignState,
+    CellMark,
+    MapCellsChanged,
+    MapCreated,
+    load_state,
+    name_key,
+)
 from cygnusloom.services.tools import ToolRun, run_tool
 from cygnusloom.web.campaigns import _cell_tip
 from tests.conftest import content_library
@@ -599,3 +606,27 @@ def test_cell_tip_includes_the_label():
         "Dais: Ada on Marble floor. Normal."
     )
     assert _cell_tip(None, "", "", "", False, "Dais") == "Dais"
+
+
+def test_two_folds_of_the_same_map_events_do_not_share_cell_changes():
+    """A decoded map event is shared between folds, but each fold's map stays its own."""
+    created = MapCreated(
+        name=MAP,
+        location=TOWN,
+        columns=4,
+        rows=4,
+        description="Test ground.",
+        marks=[{"column": 0, "row": 0, "terrain": "grass"}],
+    )
+    changed = MapCellsChanged(
+        name=MAP,
+        marks=[{"column": 1, "row": 1, "terrain": "mud"}],
+    )
+    first = CampaignState()
+    created.apply(first, 1)
+    changed.apply(first, 2)
+    second = CampaignState()
+    created.apply(second, 1)
+
+    assert (1, 1) in first.maps[name_key(MAP)].marks
+    assert (1, 1) not in second.maps[name_key(MAP)].marks

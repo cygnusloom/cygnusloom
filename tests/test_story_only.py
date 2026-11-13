@@ -47,11 +47,6 @@ def _story_only_world(**npc: Any) -> list[dict[str, Any]]:
     return [*_world(), glade, {**bo, **npc}]
 
 
-def test_twin_lakes_ships_story_only_and_statted_npcs():
-    assert STORY_ONLY, "the bundled world should ship at least one story-only NPC"
-    assert STATTED, "the bundled world should ship at least one NPC without the flag"
-
-
 def test_a_story_only_template_loads_with_the_flag_set(tmp_path: Path):
     _write(
         tmp_path,

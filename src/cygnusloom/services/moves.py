@@ -36,6 +36,7 @@ from cygnusloom.services.events import (
     modifier_value,
     name_key,
     record,
+    roll_breakdown,
 )
 from cygnusloom.services.injuries import EffectContext, run_effects
 
@@ -209,6 +210,20 @@ def make_move(
             text=band.text,
             cause=cause,
             stat=rolled_stat or "",
+            breakdown=roll_breakdown(
+                move.dice,
+                [roll],
+                [
+                    (
+                        spec.stats[rolled_stat].name
+                        if spec is not None and rolled_stat in spec.stats
+                        else (rolled_stat or "stat").replace("_", " "),
+                        stat_bonus,
+                    ),
+                    ("situational", modifier),
+                ],
+                total,
+            ),
         ),
     )
     if triggered is not None and applied:

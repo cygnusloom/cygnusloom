@@ -21,13 +21,37 @@ from cygnusloom.services.events import (
     Place,
     ResourceChanged,
     StatChanged,
+    breakdown_text,
     decode,
     last_event_id,
     load_state,
     record,
+    roll_breakdown,
     truncate,
 )
 from tests.test_campaigns import _campaign_id, _send
+
+
+def test_a_roll_breakdown_names_every_modifier():
+    text = breakdown_text(
+        roll_breakdown(
+            "1d20",
+            [8],
+            [("Attack bonus", 1), ("Stab", 1), ("Dexterity", 1)],
+            11,
+            target=13,
+            target_label="AC",
+        )
+    )
+    assert text == "1d20 8 +1 Attack bonus +1 Stab +1 Dexterity = 11 vs AC 13"
+    shock = breakdown_text(
+        roll_breakdown(
+            "", [], [("Shock", 2), ("Dexterity", 1)], 3, target=15, target_label="Shock AC"
+        )
+    )
+    assert shock == "Shock 2 +1 Dexterity = 3 vs Shock AC 15"
+    assert breakdown_text(roll_breakdown("", [], [("Shock", 3)], 3)) == "Shock 3"
+    assert breakdown_text(None) == ""
 
 
 def test_generic_payloads_apply_to_character_state():

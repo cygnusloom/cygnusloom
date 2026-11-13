@@ -545,6 +545,30 @@ def test_combat_rejects_an_unknown_unarmed_skill():
             },
             "'divisor' must be a whole number, at least 1",
         ),
+        (
+            {
+                "level_damage": {
+                    "template_kind": "profession",
+                    "templates": ["vanguard"],
+                    "counter": "renown",
+                    "divisor": 2,
+                    "weapons_only": "yes",
+                },
+            },
+            "'weapons_only' must be true or false",
+        ),
+        (
+            {
+                "level_damage": {
+                    "template_kind": "profession",
+                    "templates": ["vanguard"],
+                    "counter": "renown",
+                    "divisor": 2,
+                    "label": "",
+                },
+            },
+            "'label' must be a non-empty string",
+        ),
     ],
 )
 def test_combat_rejects_invalid_level_damage_rules(changes, message):
@@ -576,14 +600,11 @@ def test_bundled_combat_rules_keep_their_unarmed_and_level_damage_sources():
         "level",
         2,
     )
-    assert (
-        _level_damage_bonus(
-            WWN.combat,
-            SimpleNamespace(templates={"class": "warrior"}, counters={"level": 3}),
-            WWN.character,
-        )
-        == 2
-    )
+    assert WWN.combat.level_damage.weapons_only is True
+    assert WWN.combat.level_damage.label == "Killing Blow"
+    warrior = SimpleNamespace(templates={"class": "warrior"}, counters={"level": 3})
+    assert _level_damage_bonus(WWN.combat, warrior, WWN.character) == 2
+    assert _level_damage_bonus(WWN.combat, warrior, WWN.character, unarmed=True) == 0
 
 
 @pytest.mark.parametrize(
@@ -734,7 +755,8 @@ def test_roll_vs_defense_misses_a_blow_that_does_not_reach_the_armor(client_fact
     assert not any(_character(app, campaign_id, PC).harm.values())
     strike = _struck_events(app, campaign_id)[-1]
     assert strike.hit is False and strike.to_hit == 2
-    assert strike.render().endswith("swings the Claw at Mara and misses (rolled 2).")
+    text = strike.render()
+    assert text.endswith("swings the Claw at Mara and misses (1d20 2 = 2 vs AC 3).")
 
 
 def test_roll_vs_defense_lands_a_blow_that_reaches_the_armor(client_factory):

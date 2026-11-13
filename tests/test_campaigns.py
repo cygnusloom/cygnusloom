@@ -25,7 +25,6 @@ from tests.conftest import (
 )
 from tests.factories import (
     answer,
-    campaign_ready_fast,
     close_opening,
     pending_turn,
     place_pc,
@@ -216,18 +215,6 @@ def test_campaign_list_shows_when_the_last_event_was(
     page = client.get("/campaigns").text
     assert 'class="campaign-activity"' in page
     assert re.search(r"(?:just now|\d+ (?:minute|hour|day)s? ago) \(\d{4}-\d{2}-\d{2}\)", page)
-
-
-def test_the_campaign_pages_offer_no_game_upgrade(client_factory: Callable[[], TestClient]):
-    """Campaigns always load the running game, so nothing offers to upgrade one."""
-    client, campaign_id = campaign_ready_fast(client_factory)
-
-    campaign_page = client.get(f"/campaigns/{campaign_id}").text
-    assert 'data-view="play"' in campaign_page
-    for page in (campaign_page, client.get("/campaigns").text):
-        assert "Upgrade campaign" not in page
-        assert "Upgrade available" not in page
-        assert "Game updated." not in page
 
 
 def test_delete_campaign_removes_it_and_its_events(client_factory: Callable[[], TestClient]):

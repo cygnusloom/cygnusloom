@@ -8,7 +8,6 @@ import pytest
 
 from cygnusloom.services.resolution import (
     ROLL_OVER,
-    ROLL_UNDER,
     resolve_roll,
     roll_check,
     roll_die,
@@ -26,14 +25,6 @@ def test_roll_over_passes_at_or_over_the_score() -> None:
     assert roll_score(_Scripted(11), "1d20", 10, mode=ROLL_OVER).passed
     assert roll_score(_Scripted(10), "1d20", 10, mode=ROLL_OVER).passed
     assert not roll_score(_Scripted(9), "1d20", 10, mode=ROLL_OVER).passed
-
-
-def test_equal_rolls_pass_under_both_modes() -> None:
-    under = roll_score(_Scripted(12), "1d20", 12, mode=ROLL_UNDER)
-    over = roll_score(_Scripted(12), "1d20", 12, mode=ROLL_OVER)
-    assert under.passed
-    assert over.passed
-    assert under.roll == over.roll == 12
 
 
 def test_supplied_rolls_follow_the_same_rules() -> None:

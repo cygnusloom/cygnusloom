@@ -19,7 +19,7 @@ from cygnusloom.rules.dice import roll_values
 from cygnusloom.services import reactions, resolution
 from cygnusloom.services.common import InvalidInput, whole_number
 from cygnusloom.services.conditions import active_conditions
-from cygnusloom.services.events import CheckMade, load_state, name_key, record
+from cygnusloom.services.events import CheckMade, load_state, name_key, record, roll_breakdown
 
 
 def resolve_skill(spec: CharacterSpec, skill: str) -> str:
@@ -327,14 +327,32 @@ def roll_check(
             difficulty=target,
             success=result.passed,
             cause=cause,
+            stat_bonus=stat_bonus,
+            condition_modifier=condition_modifier,
+            situational_modifier=modifier,
+            dice=check.dice,
+            rolls=rolled_values,
+            breakdown=roll_breakdown(
+                check.dice,
+                rolled_values if roll is None else [],
+                [
+                    (skill_name, skill_bonus) if skill_name else ("", 0),
+                    (stat_name, stat_bonus) if stat_name else ("", 0),
+                    ("situational", modifier),
+                    ("conditions", condition_modifier),
+                    ("armor", armor_penalty),
+                ],
+                result.total,
+                target=target,
+                target_label="difficulty",
+                note="the player's roll" if roll is not None else "",
+            ),
             armor_penalty=armor_penalty,
             # A limited reaction records its use on its own event, which the Log shows. A
             # reaction waiting for the player's own roll adds its text to that roll instead.
             reaction=(
                 triggered.text
-                if triggered is not None
-                and pending is None
-                and triggered.reaction.uses <= 0
+                if triggered is not None and pending is None and triggered.reaction.uses <= 0
                 else ""
             ),
         ),
