@@ -1329,7 +1329,10 @@ def _encounter_lines(
         if view["moves_left"] is not None:
             left.append(f"{view['moves_left']} of {view['move_cells']} cells of movement")
         suffix = f", with {' and '.join(left)} left" if left else ""
-        lines.append(f"Taking their turn now: {view['acting']}{suffix}.")
+        line = f"Taking their turn now: {view['acting']}{suffix}."
+        if not view["has_acted"]:
+            line += " No attack or movement has been recorded for them yet this turn."
+        lines.append(line)
     if not view["participants"]:
         lines.append("No participants yet.")
     for who in view["participants"]:
