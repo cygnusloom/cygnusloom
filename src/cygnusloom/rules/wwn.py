@@ -1288,12 +1288,37 @@ def grant_package(character: str, package: str, ctx: ToolContext) -> dict[str, A
     }
 
 
-# Food a character can eat a day at a time, best first. A Daily Ration includes water.
-FOOD_ITEMS = ("Rations, One Week", "Daily Ration")
-WATER_ITEMS = ("Daily Ration",)
-WATER_CONTAINERS = ("Waterskin",)
+# Marks that count consecutive days without food or water.
 PRIVATION_FOOD = "privation_food"
 PRIVATION_WATER = "privation_water"
+
+
+def _hook_items(hc: HookContext, key: str) -> tuple[str, ...]:
+    """A non-empty item-name list from the rule set's hooks options."""
+    value = (hc.hooks.options if hc.hooks is not None else {}).get(key)
+    if (
+        not isinstance(value, (list, tuple))
+        or not value
+        or not all(isinstance(name, str) and name.strip() for name in value)
+    ):
+        raise InvalidInput(f"the WWN hooks definition must provide a non-empty {key} list")
+    return tuple(name for name in value)
+
+
+def _hook_text(hc: HookContext, key: str) -> str:
+    """A non-empty text option from the rule set's hooks options."""
+    value = (hc.hooks.options if hc.hooks is not None else {}).get(key)
+    if not isinstance(value, str) or not value.strip():
+        raise InvalidInput(f"the WWN hooks definition must provide {key}")
+    return value
+
+
+def _hook_int(hc: HookContext, key: str) -> int:
+    """A whole-number option from the rule set's hooks options."""
+    value = (hc.hooks.options if hc.hooks is not None else {}).get(key)
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise InvalidInput(f"the WWN hooks definition must provide a whole-number {key}")
+    return value
 
 
 def _carried_matching(
@@ -1328,10 +1353,12 @@ def _spend_one(hc: HookContext, character: str, names: Iterable[str]) -> str:
     return item.name
 
 
-def _has_water_container(hc: HookContext, character: str) -> bool:
+def _has_water_container(
+    hc: HookContext, character: str, containers: Iterable[str]
+) -> bool:
     found = hc.character(character)
     return any(
-        any(inventory_service.same_item_name(item.name, name) for name in WATER_CONTAINERS)
+        any(inventory_service.same_item_name(item.name, name) for name in containers)
         for item in found.items
     )
 
@@ -1371,18 +1398,28 @@ def before_rest(hc: HookContext, length: str, start: int, hours_per_part: int) -
     if length not in ("night", "extended"):
         return
     days = 7 if length == "extended" else 1
+    food_items = _hook_items(hc, "food_items")
+    water_items = _hook_items(hc, "water_items")
+    water_containers = _hook_items(hc, "water_containers")
     state = hc.state()
     for character in [c for c in state.characters.values() if c.kind == PC_KIND]:
         fed = 0
         watered = 0
         for _ in range(days):
-            food = _spend_one(hc, character.name, FOOD_ITEMS)
+            food = _spend_one(hc, character.name, food_items)
             if food:
                 fed += 1
-            day_water = bool(food and food.casefold().startswith("daily ration"))
+            day_water = bool(
+                food
+                and any(
+                    inventory_service.same_item_name(food, name) for name in water_items
+                )
+            )
             if not day_water:
-                water = _spend_one(hc, character.name, WATER_ITEMS)
-                day_water = bool(water or _has_water_container(hc, character.name))
+                water = _spend_one(hc, character.name, water_items)
+                day_water = bool(
+                    water or _has_water_container(hc, character.name, water_containers)
+                )
             if day_water:
                 watered += 1
         if fed < days:
@@ -1414,6 +1451,8 @@ def stabilize(hc: HookContext, name: str) -> str:
     Magic and aid items stabilize through their own paths, so this guard applies only to the
     ordinary `stabilize` tool. The check must have succeeded earlier in the same turn, at the
     rule's minimum difficulty, with the Heal skill."""
+    skill = _hook_text(hc, "stabilize_skill")
+    difficulty = _hook_int(hc, "stabilize_difficulty")
     db, campaign_id = hc.session()
     events = events_since(db, campaign_id)
     turn_start = 0
@@ -1426,12 +1465,13 @@ def stabilize(hc: HookContext, name: str) -> str:
         check = decode(row)
         if not isinstance(check, CheckMade) or not check.success:
             continue
-        if check.skill == "heal" and check.difficulty >= 8:
+        if check.skill == skill and check.difficulty >= difficulty:
             return ""
+    label = skill.replace("_", " ").title()
     return (
-        "stabilizing needs a successful Heal check first: call roll_check with the healer's "
-        "Heal skill at difficulty 8 plus the full rounds since the fall, +2 without a healer's "
-        "pouch, and call stabilize only after that check succeeds."
+        f"stabilizing needs a successful {label} check first: call roll_check with the healer's "
+        f"{label} skill at difficulty {difficulty} plus the full rounds since the fall, +2 "
+        "without a healer's pouch, and call stabilize only after that check succeeds."
     )
 
 

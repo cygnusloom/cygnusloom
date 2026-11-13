@@ -14,6 +14,7 @@ from cygnusloom.services.events import (
     CampaignState,
     CurrencyChanged,
     Item,
+    MapTokenRemoved,
     ObjectPlaced,
     ObjectTaken,
     Place,
@@ -183,6 +184,15 @@ def take_object(
             ),
             cause=cause,
         )
+    token_names = {name_key(obj.name), name_key(obj.contents)}
+    for entry in state.maps.values():
+        for key in list(entry.tokens):
+            if key in token_names and key not in state.characters:
+                record(
+                    db,
+                    campaign_id,
+                    MapTokenRemoved(map=entry.name, name=key, quiet=True),
+                )
     record(
         db,
         campaign_id,

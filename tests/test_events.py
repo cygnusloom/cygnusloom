@@ -15,10 +15,12 @@ from cygnusloom.services.events import (
     Channel,
     ChatPlayer,
     GameEvent,
+    Harmed,
     LocationAdded,
     NoteAdded,
     NpcAdded,
     Place,
+    Recovered,
     ResourceChanged,
     StatChanged,
     breakdown_text,
@@ -52,6 +54,12 @@ def test_a_roll_breakdown_names_every_modifier():
     assert shock == "Shock 2 +1 Dexterity = 3 vs Shock AC 15"
     assert breakdown_text(roll_breakdown("", [], [("Shock", 3)], 3)) == "Shock 3"
     assert breakdown_text(None) == ""
+
+
+def test_harm_lines_read_stat_ids_as_words():
+    assert Harmed(name="Wren", stat="hp", taken=2).render() == "Wren loses 2 HP."
+    assert Harmed(name="Wren", stat="effort_high", taken=1).render() == "Wren loses 1 Effort High."
+    assert Recovered(name="Wren", stat="castings", amount=1).render() == "Wren recovers 1 Castings."
 
 
 def test_generic_payloads_apply_to_character_state():

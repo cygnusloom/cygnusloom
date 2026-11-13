@@ -12,11 +12,14 @@
   </label>
   {% endfor %}
   {% else %}
+  {% set pick_label = pick.label|lower %}
+  {% set pick_plural = pick_label.endswith("s") and not (pick_label.endswith("us") or pick_label.endswith("ss") or pick_label.endswith("is")) %}
+  {% set pick_article = "" if pick_plural else ("an " if pick_label[0] in "aeiou" else "a ") %}
   {% for index in range(pick.count) %}
   <label>
     {{ pick.label }}{% if pick.count > 1 %} {{ index + 1 }}{% endif %}
     <select name="feature-choice-{{ feature.id }}-{{ pick.id }}-{{ index }}">
-      <option value="">Choose a {{ pick.label|lower }}</option>
+      <option value="">Choose {{ pick_article }}{{ pick_label }}</option>
       {% for option in pick.options %}
       <option value="{{ option.value }}">{{ option.title }}</option>
       {% endfor %}

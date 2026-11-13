@@ -216,6 +216,7 @@ class Faction:
     tally: str
     entry: str
     turn: int = 1
+    points: int = 0
     assets: dict[str, FactionAsset] = field(default_factory=dict)
 
     def asset_ready(self, asset: FactionAsset) -> bool:

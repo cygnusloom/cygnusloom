@@ -196,6 +196,26 @@ def test_a_non_dynamic_tally_refuses_create_faction(
     assert open_campaign(app, campaign_id).factions == {}
 
 
+def test_a_tally_less_faction_starts_with_and_keeps_its_points(
+    client_factory: Callable[[], TestClient],
+):
+    client = signed_in_client(client_factory)
+    campaign_id = create_campaign(
+        client, world_template="unwritten-world", rule_set="worldswithoutnumber"
+    )
+    tools = tools_for(client.app, campaign_id, rule_set="worldswithoutnumber")
+    created = tools.create_faction(
+        "The Ashen Guild", "A guild of mercenaries.", "Disciplined", points=10
+    )
+    assert created["points"] == 10
+
+    changed = tools.adjust_faction_points("The Ashen Guild", -4, reason="a lost contract")
+
+    assert changed["value"] == 6
+    [faction] = tools.list_factions()
+    assert faction["points"] == 6
+
+
 def test_the_world_state_lists_factions_with_traits_and_points(
     client_factory: Callable[[], TestClient],
 ):

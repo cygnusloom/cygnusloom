@@ -19,6 +19,7 @@ from cygnusloom.rules import wwn, wwn_magic
 from cygnusloom.rules.wwn_progression import require_wwn_progression
 from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.events import CheckMade, SpellCast, load_state
+from cygnusloom.services.views import scene_view
 from tests.test_wwn_advancement import (
     NAME,
     WWN,
@@ -73,6 +74,10 @@ def test_prepare_spells_enforces_the_prepared_limit_and_stores_the_mark(
     assert result["limit"] == 3  # the full mage's level-1 "prepared" value
     assert result["tradition"] == "high_mage"
     assert _pc(app, campaign_id).marks[wwn_magic.PREPARED_MARK] == list(HIGH_SPELLS[:3])
+    with Session(tools.engine) as db:
+        sheet = scene_view(load_state(db, campaign_id), WWN.character).pc_sheet
+    assert sheet is not None
+    assert [spell.id for spell in sheet.prepared] == list(HIGH_SPELLS[:3])
 
     with pytest.raises(InvalidInput, match="may prepare 3 spells at level 1, not 4"):
         wwn_magic.prepare_spells(NAME, HIGH_SPELLS, ctx)
@@ -144,7 +149,8 @@ def test_commit_effort_enforces_the_maximum_and_tracks_durations(
     # Fixed stats: Int 18 (+2), Cha 8 (0), Magic 0, so Effort is 1 + 2 = 3.
     assert _stat(app, campaign_id, "effort_high") == 3
 
-    scene = wwn_magic.commit_effort(NAME, "high", 1, "scene", ctx)
+    scene = wwn_magic.commit_effort(NAME, "high_mage", 1, "scene", ctx)
+    assert scene["tradition"] == "high"
     assert (scene["maximum"], scene["committed"], scene["remaining"]) == (3, 1, 2)
     day = wwn_magic.commit_effort(NAME, "high", 1, "day", ctx)
     indefinite = wwn_magic.commit_effort(NAME, "high", 1, "indefinite", ctx)

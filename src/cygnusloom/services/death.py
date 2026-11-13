@@ -6,11 +6,13 @@ from __future__ import annotations
 
 from sqlmodel import Session
 
+from cygnusloom.content.character import CharacterSpec
 from cygnusloom.content.library import CombatRules
 from cygnusloom.services.events import (
     PC_KIND,
     CharacterDied,
     CharacterDying,
+    CharacterStabilized,
     DyingRoundsPassed,
     load_state,
     name_key,
@@ -18,8 +20,25 @@ from cygnusloom.services.events import (
 )
 
 
+def _stabilizing_feature(character: object, spec: CharacterSpec | None) -> str:
+    """The name of a feature that steadies its holder when mortally wounded, or empty."""
+    if spec is None or not hasattr(character, "features"):
+        return ""
+    for feature_id in character.features:
+        feature = spec.features.get(feature_id)
+        if feature is not None and feature.stabilizes:
+            return feature.name
+    return ""
+
+
 def begin_dying(
-    db: Session, campaign_id: int, combat: CombatRules, name: str, cause: str = ""
+    db: Session,
+    campaign_id: int,
+    combat: CombatRules,
+    name: str,
+    cause: str = "",
+    *,
+    spec: CharacterSpec | None = None,
 ) -> None:
     """Start a player character's clock: it dies `combat.dying_hours` hours from now, or in
     `combat.dying_rounds` encounter rounds when the rule set gives that clock, unless aided. A
@@ -32,6 +51,15 @@ def begin_dying(
     if character.dying_hours is not None or character.dying_rounds is not None:
         return
     if combat.dying_hours < 1 and combat.dying_rounds < 1:
+        return
+    stabilizer = _stabilizing_feature(character, spec)
+    if stabilizer:
+        record(
+            db,
+            campaign_id,
+            CharacterStabilized(name=character.name, by=stabilizer),
+        )
+        db.commit()
         return
     record(
         db,
@@ -67,7 +95,14 @@ def tick_dying_rounds(db: Session, campaign_id: int) -> None:
         db.commit()
 
 
-def on_critical_save_failed(db: Session, campaign_id: int, combat: CombatRules, name: str) -> None:
+def on_critical_save_failed(
+    db: Session,
+    campaign_id: int,
+    combat: CombatRules,
+    name: str,
+    *,
+    spec: CharacterSpec | None = None,
+) -> None:
     """A player character failed its critical save. A character with a fatal condition dies at once;
     anyone else starts the dying clock, as set by the rule set."""
     character = load_state(db, campaign_id).characters.get(name_key(name))
@@ -84,4 +119,4 @@ def on_critical_save_failed(db: Session, campaign_id: int, combat: CombatRules, 
         )
         db.commit()
         return
-    begin_dying(db, campaign_id, combat, character.name)
+    begin_dying(db, campaign_id, combat, character.name, spec=spec)

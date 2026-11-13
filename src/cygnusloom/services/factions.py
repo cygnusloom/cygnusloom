@@ -25,6 +25,7 @@ from cygnusloom.services.events import (
     FactionAssetRemoved,
     FactionAssetRepaired,
     FactionAssetUpdated,
+    FactionPointsChanged,
     FactionRemoved,
     FactionTurnTaken,
     FactionUpdated,
@@ -96,7 +97,9 @@ def create_faction(
         existing.name.casefold() == faction_name.casefold() for existing in state.factions.values()
     ):
         raise InvalidInput(f"there is already a faction named {faction_name!r}")
+    starting_points = whole_number(points, "points", 0, 9999)
     chosen = _dynamic_tally(tallies, tally)
+    faction_id = _unique_id(state, faction_name)
     if chosen is not None:
         members = [existing for existing in state.factions.values() if existing.tally == chosen.id]
         if chosen.max_entries is not None and len(members) >= chosen.max_entries:
@@ -105,12 +108,9 @@ def create_faction(
                 "rename or remove one first"
             )
         tally_id = chosen.id
-        faction_id = _unique_id(state, faction_name)
         entry = faction_id
-        starting_points = whole_number(points, "points", 0, 9999)
     else:
-        tally_id, entry, starting_points = "", "", 0
-        faction_id = _unique_id(state, faction_name)
+        tally_id, entry = "", ""
     record(
         db,
         campaign_id,
@@ -201,6 +201,21 @@ def adjust_faction_points(
     found = find_faction(state, faction)
     if found is None:
         raise InvalidInput(f"there is no faction named {faction!r}")
+    if not found.tally:
+        before = found.points
+        after = before + change
+        record(
+            db,
+            campaign_id,
+            FactionPointsChanged(
+                faction_id=found.id,
+                before=before,
+                after=after,
+                cause=reason.strip(),
+            ),
+        )
+        db.commit()
+        return {"faction": found.name, "before": before, "value": after}
     tally = tallies.get(found.tally)
     if tally is None:
         raise InvalidInput(f"the tally {found.tally!r} is no longer in this rule set")
@@ -547,6 +562,11 @@ def _view(
     faction: Faction, state: CampaignState, tallies: Mapping[str, TallyRules]
 ) -> dict[str, Any]:
     tally = tallies.get(faction.tally)
+    points = (
+        state.tallies.get(faction.tally, {}).get(faction.entry, 0)
+        if faction.tally
+        else faction.points
+    )
     return {
         "id": faction.id,
         "name": faction.name,
@@ -555,7 +575,7 @@ def _view(
         "tally": faction.tally,
         "entry": faction.entry,
         "cup": tally.label if tally is not None else faction.tally,
-        "points": state.tallies.get(faction.tally, {}).get(faction.entry, 0),
+        "points": points,
         "turn": faction.turn,
         "assets": [
             _asset_view(faction, asset)

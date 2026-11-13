@@ -112,6 +112,20 @@ class GameEvent:
         raise NotImplementedError(f"{type(self).__name__} has no Log text")
 
 
+_ABBREVIATED_STATS = frozenset(
+    {"hp", "str", "dex", "con", "int", "wis", "cha", "wil", "luc", "mov", "sav"}
+)
+
+
+def _stat_label(stat: str) -> str:
+    """A stat's name as the Log writes it: an abbreviation stays uppercase, and a longer id such
+    as `effort_high` becomes readable words instead of a raw content id."""
+    lowered = stat.casefold()
+    if lowered in _ABBREVIATED_STATS:
+        return stat.upper()
+    return " ".join(part.capitalize() for part in stat.replace("_", " ").split())
+
+
 def roll_breakdown(
     dice: str,
     rolls: Sequence[int],
@@ -338,7 +352,7 @@ class StatChanged(GameEvent):
         character.harm[self.stat] = max(0, character.stats.get(self.stat, 0) - self.after)
 
     def render(self) -> str:
-        return f"{self.name}'s {self.stat.upper()} changes from {self.before} to {self.after}."
+        return f"{self.name}'s {_stat_label(self.stat)} changes from {self.before} to {self.after}."
 
 
 @dataclass(frozen=True)
@@ -2255,7 +2269,7 @@ class MoraleChecked(GameEvent):
         result = "holds" if self.passed else "breaks"
         return (
             f"The {self.side} side checks morale at the {label}: {self.leader} rolls {self.roll} "
-            f"on a {self.stat.upper()} save of {self.score} and the side {result}."
+            f"on a {_stat_label(self.stat)} save of {self.score} and the side {result}."
         )
 
 
@@ -2310,9 +2324,7 @@ class RetreatRolled(GameEvent):
             outcome = "and gets clear."
         else:
             outcome = "and cannot get clear."
-        return (
-            f"{self.name} rolls {self.roll} on a {self.stat.upper()} save of {self.score} {outcome}"
-        )
+        return f"{self.name} rolls {self.roll} on a {_stat_label(self.stat)} save of {self.score} {outcome}"
 
 
 @dataclass(frozen=True)
@@ -2411,7 +2423,7 @@ class Recovered(GameEvent):
             character.harm.pop(self.stat, None)
 
     def render(self) -> str:
-        text = f"{self.name} recovers {self.amount} {self.stat.upper()}"
+        text = f"{self.name} recovers {self.amount} {_stat_label(self.stat)}"
         if self.cause:
             return f"{text} ({self.cause})."
         if self.restores:
@@ -2421,8 +2433,8 @@ class Recovered(GameEvent):
 
 @dataclass(frozen=True)
 class CharacterRecovered(GameEvent):
-    """A player character brought back from a dying condition. The GM says how they survived and
-    what it cost them."""
+    """A character brought back from a dying condition or a nonlethal knockout. The GM says how
+    they survived and what it cost them."""
 
     kind: ClassVar[str] = "character.recovered"
 
@@ -3010,7 +3022,7 @@ class Struck(GameEvent):
                 text += f" The shock still does {taken} harm"
                 if self.shock_breakdown:
                     text += f" ({breakdown_text(self.shock_breakdown)})"
-                stats = ", ".join(stat.upper() for stat in self.harm)
+                stats = ", ".join(_stat_label(stat) for stat in self.harm)
                 if stats:
                     text += f" to {stats}"
                 text += "."
@@ -3066,7 +3078,7 @@ class SaveRolled(GameEvent):
 
     def render(self) -> str:
         result = "succeeds" if self.passed else "fails"
-        text = f"{self.name} rolls {self.roll} on a {self.stat.upper()} save of {self.score} and {result}."
+        text = f"{self.name} rolls {self.roll} on a {_stat_label(self.stat)} save of {self.score} and {result}."
         if not self.passed and self.critical:
             text += f" {self.name} is broken, and the GM decides whether it is defeated or flees."
         elif not self.passed:
@@ -3398,7 +3410,7 @@ class DebugStatSet(GameEvent):
         character.harm[self.stat] = max(0, character.stats.get(self.stat, 0) - self.remaining)
 
     def render(self) -> str:
-        return f"{self.name}'s {self.stat.upper()} is set to {self.remaining}."
+        return f"{self.name}'s {_stat_label(self.stat)} is set to {self.remaining}."
 
 
 @dataclass(frozen=True)
@@ -3557,7 +3569,7 @@ class MaxChanged(GameEvent):
 
     def render(self) -> str:
         prefix = f"{self.label} " if self.label else ""
-        text = f"{self.name}'s {prefix}{self.stat.upper()} goes from {self.before} to {self.after}"
+        text = f"{self.name}'s {prefix}{_stat_label(self.stat)} goes from {self.before} to {self.after}"
         return f"{text} ({self.cause})." if self.cause else f"{text}."
 
 
@@ -3633,7 +3645,7 @@ class AdvancementTaken(GameEvent):
 
     def render(self) -> str:
         return f"{self.name} takes the Advancement {self.label}" + (
-            f" ({self.stat.upper()})." if self.stat else "."
+            f" ({_stat_label(self.stat)})." if self.stat else "."
         )
 
 
@@ -3736,6 +3748,7 @@ class FactionAdded(GameEvent):
             trait=self.trait,
             tally=self.tally,
             entry=self.entry,
+            points=self.points if not self.tally else 0,
         )
         if self.tally and self.entry:
             state.tallies.setdefault(self.tally, {})[self.entry] = self.points
@@ -3745,6 +3758,27 @@ class FactionAdded(GameEvent):
         if not self.tally or not self.entry:
             return f"New faction: {self.name}{trait}."
         return f"New faction: {self.name}{trait}, {self.points} points."
+
+
+@dataclass(frozen=True)
+class FactionPointsChanged(GameEvent):
+    """A tally-less faction's points changed. A faction with a tally keeps its points there."""
+
+    kind: ClassVar[str] = "faction.points_changed"
+
+    faction_id: str
+    before: int
+    after: int
+    cause: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        faction = state.factions.get(self.faction_id)
+        if faction is not None:
+            faction.points = self.after
+
+    def render(self) -> str:
+        text = f"Faction points go from {self.before} to {self.after}"
+        return f"{text} ({self.cause})." if self.cause else f"{text}."
 
 
 @dataclass(frozen=True)
@@ -4201,7 +4235,7 @@ class Harmed(GameEvent):
                 character.fell_day = state.clock.day
 
     def render(self) -> str:
-        text = f"{self.name} loses {self.taken} {self.stat.upper()}"
+        text = f"{self.name} loses {self.taken} {_stat_label(self.stat)}"
         if self.cause:
             text += f" from {self.cause}"
         text += "."
@@ -4231,7 +4265,7 @@ class CharacterSaved(GameEvent):
 
     def render(self) -> str:
         result = "succeeds" if self.passed else "fails"
-        text = f"{self.name} rolls {self.roll} on a {self.stat.upper()} save of {self.score} and {result}"
+        text = f"{self.name} rolls {self.roll} on a {_stat_label(self.stat)} save of {self.score} and {result}"
         text = f"{text} ({self.cause})" if self.cause else text
         if self.reaction:
             return f"{text}. {self.reaction}"
@@ -4836,7 +4870,7 @@ class CharacterDrained(GameEvent):
         character.harm[self.stat] = character.stats.get(self.stat, 0)
 
     def render(self) -> str:
-        return f"{self.name}'s {self.stat.upper()} drops to 0 ({self.cause})."
+        return f"{self.name}'s {_stat_label(self.stat)} drops to 0 ({self.cause})."
 
 
 def is_hidden(kind: str) -> bool:

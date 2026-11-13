@@ -344,6 +344,15 @@ def test_a_stowed_item_cannot_be_used_until_it_is_readied(client_factory):
     assert tools.use_item(PC, "Rations")["uses_left"] >= 0
 
 
+def test_an_automatic_use_spends_a_stowed_item(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    tools = _pooled(tools)
+    _empty_pack(app, campaign_id, tools)
+    tools.give_item(PC, "Rations")
+
+    assert tools.use_item(PC, "Rations", automatic=True)["uses_left"] >= 0
+
+
 def test_a_named_stowed_pool_refuses_an_item_that_does_not_fit(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     tools = _pooled(tools)

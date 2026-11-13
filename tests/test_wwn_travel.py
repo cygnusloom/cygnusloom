@@ -78,7 +78,7 @@ def test_wwn_overland_travel_is_terrain_based() -> None:
     assert WWN.capabilities.travel == "terrain"
 
 
-def test_wwn_travel_uses_the_source_speeds_and_advances_ten_hours_a_day(
+def test_wwn_travel_uses_the_source_speeds_and_advances_a_whole_day_per_day(
     client_factory: Callable[[], TestClient],
 ) -> None:
     app, campaign_id, tools = _setup(client_factory)
@@ -99,7 +99,8 @@ def test_wwn_travel_uses_the_source_speeds_and_advances_ten_hours_a_day(
     assert result["speed_mph"] == 3.0
     assert result["miles_per_day"] == 30.0
     assert result["miles"] == 60.0
-    assert result["hours"] == 20
+    assert result["hours"] == 48
+    assert result["travel_hours"] == 20
     assert result["supplies"]["food"] == 6
     assert result["supplies"]["water"] == 6
     assert result["supplies"]["firewood"] == 8
@@ -108,7 +109,7 @@ def test_wwn_travel_uses_the_source_speeds_and_advances_ten_hours_a_day(
     assert result["privation"]["water"]
     assert result["move"]["location"] == "Far"
     assert _location(app, campaign_id) == "Far"
-    assert _hours(app, campaign_id) - before == 20
+    assert _hours(app, campaign_id) - before == 48
 
 
 @pytest.mark.parametrize(
@@ -253,6 +254,7 @@ def test_wwn_travel_moves_then_advances_the_clock_once_without_drawing(
         "miles_per_day",
         "miles",
         "hours",
+        "travel_hours",
         "move",
         "clock",
         "supplies",

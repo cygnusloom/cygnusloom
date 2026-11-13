@@ -116,6 +116,7 @@ def test_wwn_combat_loads_every_defeat_label_in_the_mapping():
         "player_character_dead",
         "important_npc",
         "npc",
+        "nonlethal",
     }
 
 

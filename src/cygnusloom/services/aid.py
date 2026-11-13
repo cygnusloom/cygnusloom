@@ -83,9 +83,11 @@ def use_item(
     *,
     plus: str,
     spec: CharacterSpec | None = None,
+    ignore_ready: bool = False,
 ) -> dict[str, Any]:
     """Spend one use of a consumable the character carries. An aid item the rule set lists may be
-    used on a dying character, and using it stabilizes them. Any other item is spent on the holder."""
+    used on a dying character, and using it stabilizes them. Any other item is spent on the holder.
+    `ignore_ready` spends a stowed item, for an automatic use such as a day's rations."""
     aid = combat is not None and any(same_item_name(item, a) for a in combat.aid_items)
     if target is None or name_key(target) == name_key(name):
         target = name
@@ -97,7 +99,9 @@ def use_item(
             raise InvalidInput(f"there is no character named {target!r}")
         if patient.dying_hours is None and patient.dying_rounds is None:
             raise InvalidInput(f"{patient.name} is not dying, so {item} has nothing to stop")
-    result = inventory_service.use_item(db, campaign_id, inventory, name, item, charged_kind)
+    result = inventory_service.use_item(
+        db, campaign_id, inventory, name, item, charged_kind, ignore_ready=ignore_ready
+    )
     if aid and combat is not None:
         result["stabilized"] = stabilize(
             db,

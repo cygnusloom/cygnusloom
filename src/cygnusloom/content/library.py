@@ -463,6 +463,9 @@ class JourneyRules:
 
     model: str = "terrain_days"
     day_hours: int = 10
+    # How long a whole day on the campaign clock lasts. A journey of two travel days advances
+    # the clock two days, even though only `day_hours` of each is spent marching.
+    clock_hours_per_day: int = 24
     terrain_speeds: Mapping[str, float] = field(default_factory=dict)
     road_multiplier: float = 2.0
     # A good road cannot push the pace above this many miles per hour; 0 means no cap.
@@ -3369,6 +3372,7 @@ CHARACTER_DEFINITION_KEYS: Mapping[str, frozenset[str]] = {
             "picks",
             "repeatable",
             "level_hp_bonus",
+            "stabilizes",
             "icon",
             "looks_like",
         }
@@ -4351,6 +4355,7 @@ def _load_journey(
             "id",
             "model",
             "day_hours",
+            "clock_hours_per_day",
             "terrain_speeds",
             "road_multiplier",
             "road_speed_cap",
@@ -4403,6 +4408,7 @@ def _load_journey(
     return JourneyRules(
         model=model,
         day_hours=whole_or("day_hours", 10, 1),
+        clock_hours_per_day=whole_or("clock_hours_per_day", 24, 1),
         terrain_speeds=terrain_speeds,
         road_multiplier=float(definition.data.get("road_multiplier", 2.0)),
         road_speed_cap=float(definition.data.get("road_speed_cap", 0.0)),

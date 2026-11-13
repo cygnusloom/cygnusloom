@@ -4,6 +4,7 @@
     "id": "wwn",
     "model": "terrain_days",
     "day_hours": 10,
+    "clock_hours_per_day": 24,
     "road_multiplier": 2,
     "road_speed_cap": 3,
     "terrain_speeds": {

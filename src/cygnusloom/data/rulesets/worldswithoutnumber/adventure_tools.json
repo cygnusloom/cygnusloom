@@ -425,7 +425,7 @@
     "type": "tool_call",
     "id": "recover_character",
     "extends": "core:tool_call/recover_character",
-    "description": "Clear a mortally wounded character's dying state as magical healing does, leaving the harm they took for heal_character to restore. Use it after the character is stabilized and the healing magic reaches them."
+    "description": "Clear a mortally wounded character's dying state, or wake a character knocked out by a nonlethal blow, leaving the harm they took for heal_character to restore. Use it after the character is stabilized and the healing magic or rest reaches them. It works on a player character or an important NPC."
   },
   {
     "type": "tool_call",

@@ -65,6 +65,19 @@ def _hire(tools, name: str = HIRELING, wage: int = WAGE, employer: str = PC):
     return tools.hire_hireling(name, employer, wage, "A hired hand, good with a rope.")
 
 
+def test_a_hireling_can_have_what_the_player_knows_recorded(
+    client_factory: Callable[[], TestClient],
+):
+    app, campaign_id, tools = _pcs(client_factory)
+    _hire(tools)
+
+    tools.update_npc_knowledge(HIRELING, personality="Dry and watchful")
+
+    with Session(app.state.engine) as db:
+        known = load_state(db, campaign_id).known[HIRELING.casefold()]
+    assert known.personality == "Dry and watchful"
+
+
 def _events(app: FastAPI, campaign_id: int, kind: str) -> list[Event]:
     with Session(app.state.engine) as db:
         rows = db.exec(

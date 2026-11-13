@@ -1691,10 +1691,10 @@ def test_recovery_says_how_the_character_survived_and_what_it_cost():
     assert text == "Mara comes to. A passing cart carried her out. Her hand is lamed."
 
 
-def test_recovery_refuses_an_npc_and_a_character_who_is_not_down(client_factory):
+def test_recovery_refuses_a_character_who_is_not_down(client_factory):
     _app, _campaign_id, tools = _fight(client_factory)
     _foe(tools, "Bo")
-    with pytest.raises(InvalidInput, match="not a player character"):
+    with pytest.raises(InvalidInput, match="Bo is not dead"):
         tools.recover_character("Bo", "Lucky.", "Nothing.")
     with pytest.raises(InvalidInput, match="not in critical damage"):
         tools.recover_character(PC, "Lucky.", "Nothing.")
