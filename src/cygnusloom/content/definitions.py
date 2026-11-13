@@ -26,6 +26,26 @@ class Definition:
     data: Mapping[str, Any]
 
 
+def range_bands(value: object, label: str) -> dict[str, int]:
+    """A ranged attack's bands, mapping each band name to its farthest distance in feet. An empty
+    object means the attack has no ranged bands."""
+    if not isinstance(value, Mapping):
+        raise ContentError(f"{label}: ranges must map band names to distances in feet")
+    result: dict[str, int] = {}
+    for name, feet in value.items():
+        if not isinstance(name, str) or not name.strip():
+            raise ContentError(f"{label}: each range band needs a name")
+        key = name.strip().casefold()
+        if key in result:
+            raise ContentError(f"{label}: range band {name!r} is listed twice")
+        if not isinstance(feet, int) or isinstance(feet, bool) or feet < 1:
+            raise ContentError(
+                f"{label}: range band {name!r} must be a whole number of feet, at least 1"
+            )
+        result[key] = feet
+    return result
+
+
 @dataclass(frozen=True)
 class _FileDefaults:
     """Fields merged under definitions in one file, and the definitions they match."""

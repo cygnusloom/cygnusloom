@@ -388,7 +388,7 @@ def _combat_lines(
             )
     if character.attacks:
         attacks = ", ".join(
-            f"{name} {formula}{_flag_text(character.attack_flags.get(name, ()))}{_shock_text(character, name)}"
+            f"{name} {formula}{_flag_text(character.attack_flags.get(name, ()))}{_shock_text(character, name)}{_reach_text(character, name)}"
             for name, formula in character.attacks.items()
         )
         lines.append(f"Attacks: {attacks}")
@@ -431,6 +431,20 @@ def _shock_text(character: Character, attack: str) -> str:
     if len(pair) < 2 or not pair[0]:
         return ""
     return f" (Shock {pair[0]} / AC {pair[1]})"
+
+
+def _reach_text(character: Character, attack: str) -> str:
+    """An attack's reach or ranged bands as a suffix, such as " (reach 10 ft)" or
+    " (range 30/60 ft)", or "" when it has neither."""
+    parts = []
+    reach = character.attack_reach.get(attack)
+    if reach:
+        parts.append(f"reach {reach} ft")
+    bands = character.attack_ranges.get(attack) or {}
+    if bands:
+        ordered = [feet for _, feet in sorted(bands.items(), key=lambda item: item[1])]
+        parts.append("range " + "/".join(str(feet) for feet in ordered) + " ft")
+    return f" ({'; '.join(parts)})" if parts else ""
 
 
 def _status_lines(
@@ -1308,9 +1322,13 @@ def _encounter_lines(
     view = encounters.encounter_view(state, grid, combat, terrain, encounter_objects)
     if view is None:
         return []
+    scale = f" Each cell is {grid.cell_feet} feet." if grid is not None else ""
     lines = [
         f"Encounter in progress on the map {view['map']} at {view['location']}, round {view['round']}.",
-        f"Map: {view['columns']} by {view['rows']} cells, columns and rows counted from 0 at the top left. {view['description']}",
+        (
+            f"Map: {view['columns']} by {view['rows']} cells, columns and rows counted from 0 "
+            f"at the top left.{scale} {view['description']}"
+        ),
     ]
     if view["background"] is not None:
         lines.append(_terrain_sentence("Background", view["background"]))
@@ -1340,13 +1358,21 @@ def _encounter_lines(
         lines.append(line)
     if not view["participants"]:
         lines.append("No participants yet.")
+    acting_cell = next(
+        (who["cell"] for who in view["participants"] if who["acting"] and who["cell"]),
+        None,
+    )
     for who in view["participants"]:
         cell = who["cell"]
         where = f"column {cell[0]}, row {cell[1]}" if cell else "not yet placed"
+        gap = ""
+        if grid is not None and acting_cell is not None and cell is not None and not who["acting"]:
+            cells = max(abs(cell[0] - acting_cell[0]), abs(cell[1] - acting_cell[1]))
+            gap = f", {cells} cells ({cells * grid.cell_feet} feet) from {view['acting']}"
         kind = "player character" if who["is_pc"] else "NPC"
         status = f", {who['status']}" if who["status"] else ""
         lines.append(
-            f"- {who['number']}. {who['name']} ({kind}, {who['side']} side{status}), {where}."
+            f"- {who['number']}. {who['name']} ({kind}, {who['side']} side{status}), {where}{gap}."
         )
     return lines
 

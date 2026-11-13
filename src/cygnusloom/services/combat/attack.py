@@ -15,7 +15,7 @@ from cygnusloom.content.library import (
     GroupRules,
 )
 from cygnusloom.rules.dice import roll_total
-from cygnusloom.services import death, reactions
+from cygnusloom.services import death, ranges, reactions
 from cygnusloom.services.attacks import (
     AttackFlags,
     highest_index,
@@ -77,9 +77,7 @@ def _attribute_modifier(
     """The best of the weapon's attribute modifiers, or 0 when the rule set has no attributes."""
     if spec is None:
         return 0
-    scores = [
-        character.modifier(spec, stat) for stat in attributes if stat in character.stats
-    ]
+    scores = [character.modifier(spec, stat) for stat in attributes if stat in character.stats]
     return max(scores) if scores else 0
 
 
@@ -346,12 +344,16 @@ def attack(
     conditions: Mapping[str, ConditionRules] | None = None,
     spec: CharacterSpec | None = None,
     force: bool = False,
+    cell_feet: int | None = None,
 ) -> dict[str, Any]:
     """An NPC's attack. Under the auto hit mode it always hits, so the attack's damage is the roll.
     A modifier rolls its own dice instead of the attack's. An attack with Blast hits every target in
     its area, which is `targets` (it must include `target`), and each target rolls separately. An
     attacker may only strike on their own turn unless `force` overrides that; the turn order's
-    Start and End buttons are what hand out turns."""
+    Start and End buttons are what hand out turns.
+
+    `cell_feet` turns on the rule set's distance limits: when both the attacker and target have a
+    cell, the attack must be within its reach or a ranged band, with a clear line of sight."""
     state = load_state(db, campaign_id)
     _no_initiative_pending(state)
     source = _participant(state, attacker)
@@ -366,6 +368,15 @@ def attack(
     struck = _participant(state, target)
     _living(struck, combat)
     name = _attack_named(source, attack_name)
+    distance = ranges.check_attack(
+        state,
+        combat,
+        cell_feet=cell_feet,
+        attacker=source,
+        target=struck,
+        profile=ranges.AttackRange.for_attack(source, name, combat),
+    )
+    placement = {"range": distance.as_dict()} if distance.cells else {}
     if source.large_group:
         if targets:
             raise InvalidInput(
@@ -384,10 +395,11 @@ def attack(
             modifier,
             plus=plus,
             spec=spec,
+            hit_penalty=distance.penalty,
         )
         if state.encounter is not None:
             _mark_attack(db, campaign_id, source.name)
-        return result
+        return {**result, **placement}
     flags = AttackFlags.of(source.attack_flags.get(name, ()))
     if flags.hits_all_targets:
         result = _blast_attack(
@@ -403,10 +415,11 @@ def attack(
             modifier,
             plus=plus,
             spec=spec,
+            hit_penalty=distance.penalty,
         )
         if state.encounter is not None:
             _mark_attack(db, campaign_id, source.name)
-        return result
+        return {**result, **placement}
     if targets:
         raise InvalidInput(f"{name} has no Blast, so it hits one target; leave targets out")
     _require_impaired(struck, modifier_name(modifier), combat)
@@ -433,6 +446,7 @@ def attack(
         ignores_armor=flags.ignores_armor,
         hit_bonus=_stat_bonus(combat, source, combat.hit_bonus_stat)
         + hit_modifier
+        + distance.penalty
         + _condition_attack_modifier(source, conditions),
         shock=shock,
         shock_ac=shock_ac,
@@ -440,7 +454,7 @@ def attack(
     )
     if state.encounter is not None:
         _mark_attack(db, campaign_id, source.name)
-    return result
+    return {**result, **placement}
 
 
 def _blast_attack(
@@ -457,6 +471,7 @@ def _blast_attack(
     *,
     plus: str,
     spec: CharacterSpec | None = None,
+    hit_penalty: int = 0,
 ) -> dict[str, Any]:
     """An NPC's attack with Blast. Each target in its area rolls separately. With no area given,
     the area is the named target alone, so its dice roll once. Against a group, blast damage is
@@ -479,7 +494,7 @@ def _blast_attack(
         raise InvalidInput(f"{', '.join(owed)} must make their save first")
     dice = modifier_dice(combat.modifiers, modifier) or source.attacks[name]
     damage_bonus = _stat_bonus(combat, source, combat.damage_bonus_stat)
-    hit_bonus = _stat_bonus(combat, source, combat.hit_bonus_stat)
+    hit_bonus = _stat_bonus(combat, source, combat.hit_bonus_stat) + hit_penalty
     shock, shock_ac = _attack_shock(source, name)
     ignores_armor = AttackFlags.of(source.attack_flags.get(name, ())).ignores_armor
     results = []
@@ -488,12 +503,15 @@ def _blast_attack(
         current_target = load_state(db, campaign_id).characters[name_key(target.name)]
         if out_of_fight(current_target):
             continue
-        raw = _damage_total(
-            dice,
-            rng,
-            plus=plus,
-            lucky=spec is not None and reactions.has_trigger(source, spec, None, "damage"),
-        ) + damage_bonus
+        raw = (
+            _damage_total(
+                dice,
+                rng,
+                plus=plus,
+                lucky=spec is not None and reactions.has_trigger(source, spec, None, "damage"),
+            )
+            + damage_bonus
+        )
         results.append(
             _strike(
                 db,
@@ -529,6 +547,7 @@ def _blast(
     *,
     plus: str,
     spec: CharacterSpec | None = None,
+    hit_penalty: int = 0,
 ) -> dict[str, Any]:
     """A group's attack, which has Blast: it rolls the rule set's blast dice separately for each living
     individual on the other side. The named target must be one of them. Every one is hit unless the
@@ -566,7 +585,7 @@ def _blast(
         raise InvalidInput(f"{', '.join(owed)} must make their save first")
     dice = modifier_dice(combat.modifiers, groups.blast_modifier) or source.attacks[name]
     damage_bonus = _stat_bonus(combat, source, combat.damage_bonus_stat)
-    hit_bonus = _stat_bonus(combat, source, combat.hit_bonus_stat)
+    hit_bonus = _stat_bonus(combat, source, combat.hit_bonus_stat) + hit_penalty
     shock, shock_ac = _attack_shock(source, name)
     ignores_armor = AttackFlags.of(source.attack_flags.get(name, ())).ignores_armor
     results = []
@@ -575,12 +594,15 @@ def _blast(
         current_target = load_state(db, campaign_id).characters[name_key(target.name)]
         if out_of_fight(current_target):
             continue
-        raw = _damage_total(
-            dice,
-            rng,
-            plus=plus,
-            lucky=spec is not None and reactions.has_trigger(source, spec, None, "damage"),
-        ) + damage_bonus
+        raw = (
+            _damage_total(
+                dice,
+                rng,
+                plus=plus,
+                lucky=spec is not None and reactions.has_trigger(source, spec, None, "damage"),
+            )
+            + damage_bonus
+        )
         results.append(
             _strike(
                 db,
@@ -615,12 +637,14 @@ def resolve_attacks(
     conditions: Mapping[str, ConditionRules] | None = None,
     spec: CharacterSpec | None = None,
     force: bool = False,
+    cell_feet: int | None = None,
 ) -> dict[str, Any]:
     """Several NPC attacks on one character, such as two NPCs of the foe side or one NPC's two
     weapons. Every attack rolls its own dice. Under the rule set's "highest" multi-attack the
     highest roll is the one hit and the rest are recorded; under "each" every attack hits in turn.
     Each attacker must be a living NPC on the foe side, every attack is checked before any die is
-    rolled, and each attacker needs their own turn unless `force` overrides that."""
+    rolled, and each attacker needs their own turn unless `force` overrides that. `cell_feet`
+    turns on the rule set's reach, range, and sight limits for each attacker."""
     state = load_state(db, campaign_id)
     _no_initiative_pending(state)
     struck = _living(_participant(state, target), combat)
@@ -631,6 +655,7 @@ def resolve_attacks(
     foe_side = encounter.sides.get(name_key(struck.name), "")
     # Each planned attack is the attacker, the attack, its modifier, its dice, and whether it ignores armor.
     planned: list[PlannedAttack] = []
+    placements: list[dict[str, Any]] = []
     for entry in attacks:
         attacker_name = entry.get("attacker")
         attack_name = entry.get("attack")
@@ -654,6 +679,16 @@ def resolve_attacks(
             )
         dice = modifier_dice(combat.modifiers, entry.get("modifier"))
         shock, shock_ac = _attack_shock(source, name)
+        distance = ranges.check_attack(
+            state,
+            combat,
+            cell_feet=cell_feet,
+            attacker=source,
+            target=struck,
+            profile=ranges.AttackRange.for_attack(source, name, combat),
+        )
+        if distance.cells:
+            placements.append({"attacker": source.name, "attack": name, **distance.as_dict()})
         planned.append(
             PlannedAttack(
                 attacker=source.name,
@@ -663,6 +698,7 @@ def resolve_attacks(
                 ignores_armor=flags.ignores_armor,
                 hit_bonus=_stat_bonus(combat, source, combat.hit_bonus_stat)
                 + int(entry.get("hit_modifier", 0))
+                + distance.penalty
                 + _condition_attack_modifier(source, conditions),
                 damage_bonus=_stat_bonus(combat, source, combat.damage_bonus_stat),
                 shock=shock,
@@ -672,10 +708,7 @@ def resolve_attacks(
             )
         )
     rolls = [
-        _damage_total(
-            attack.dice, rng, plus=plus, lucky=attack.lucky_damage
-        )
-        + attack.damage_bonus
+        _damage_total(attack.dice, rng, plus=plus, lucky=attack.lucky_damage) + attack.damage_bonus
         for attack in planned
     ]
     if combat.multi_attack == "each":
@@ -684,7 +717,7 @@ def resolve_attacks(
         )
         if state.encounter is not None:
             _mark_attacks(db, campaign_id, [attack.attacker for attack in planned])
-        return result
+        return {**result, **({"ranges": placements} if placements else {})}
     best = highest_index(rolls)
     chosen = planned[best]
     rolled = ""
@@ -715,7 +748,7 @@ def resolve_attacks(
     )
     if state.encounter is not None:
         _mark_attacks(db, campaign_id, [attack.attacker for attack in planned])
-    return result
+    return {**result, **({"ranges": placements} if placements else {})}
 
 
 @dataclass(frozen=True)
@@ -806,6 +839,7 @@ def player_attack(
     dual_wield: bool = False,
     force: bool = False,
     character: str = "",
+    cell_feet: int | None = None,
 ) -> dict[str, Any]:
     """A player character's hit. The engine rolls the damage unless the player's roll is passed as
     `damage_roll`. The hit mode decides whether it lands. A group takes only impaired attacks.
@@ -818,7 +852,12 @@ def player_attack(
     hit roll then adds the rule set's hit bonus stat, the weapon skill (or its unskilled penalty),
     and the weapon's best attribute modifier; the damage adds the rule set's damage bonus stat,
     the attribute modifier when the rule set uses attribute damage, and the unarmed skill for an
-    unarmed strike; and shock comes from the weapon plus the attribute and damage bonuses."""
+    unarmed strike; and shock comes from the weapon plus the attribute and damage bonuses.
+
+    `cell_feet` turns on the rule set's reach, range, and sight limits. A weapon's `feature`
+    supplies its reach and ranged bands; without one the attack is melee at the rule set's reach.
+    When the target lies beyond the reach, `range_band` names the band to use, or the nearest one
+    that covers the distance is chosen."""
     state = load_state(db, campaign_id)
     _no_initiative_pending(state)
     pc = _player_character(state, character)
@@ -840,8 +879,19 @@ def player_attack(
         second = roll_total(dice, rng, plus=plus)
         raw = max(raw, second)
     bonuses = _player_bonuses(combat, pc, name, spec, weapon_feature)
-    range_penalty = 0
-    if range_band:
+    distance = ranges.check_attack(
+        state,
+        combat,
+        cell_feet=cell_feet,
+        attacker=pc,
+        target=struck,
+        profile=ranges.AttackRange.for_feature(weapon_feature, combat),
+        band=range_band,
+    )
+    range_penalty = distance.penalty
+    if not distance.cells and range_band:
+        # Without placed positions there is no distance to check, so a named band keeps its old
+        # meaning: its penalty applies to the hit roll.
         band = range_band.strip().casefold()
         if band not in combat.range_penalties:
             options = ", ".join(sorted(combat.range_penalties)) or "none"
@@ -891,7 +941,8 @@ def player_attack(
     )
     if state.encounter is not None:
         _mark_attack(db, campaign_id, pc.name)
-    return result
+    placement = {"range": distance.as_dict()} if distance.cells else {}
+    return {**result, **placement}
 
 
 def _condition_attack_modifier(

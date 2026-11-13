@@ -38,6 +38,7 @@ from cygnusloom.content.character import (
 from cygnusloom.content.definitions import (
     ContentError,
     Definition,
+    range_bands,
     read_definitions,
     required_text,
 )
@@ -824,6 +825,10 @@ class MonsterTemplate:
     rules: tuple[str, ...] = ()
     attack_flags: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
     attack_shock: Mapping[str, tuple[int, int]] = field(default_factory=dict)
+    # An attack's melee reach in feet, when it is longer than the rule set's default, and the
+    # farthest distance in feet of each of its ranged bands. Attacks without either are melee.
+    attack_reach: Mapping[str, int] = field(default_factory=dict)
+    attack_ranges: Mapping[str, Mapping[str, int]] = field(default_factory=dict)
     rule_text: Mapping[str, str] = field(default_factory=dict)
     # The statblock's special abilities as structured rules instead of prose alone.
     abilities: tuple[MonsterAbility, ...] = ()
@@ -1313,6 +1318,17 @@ class UnarmedRules:
 
 
 @dataclass(frozen=True)
+class RangeRules:
+    """How far an attack reaches on the encounter grid, and what blocks its line of sight. `melee`
+    is the reach in feet of an attack with no reach of its own, such as an unarmed strike. The
+    sight blockers are encounter object ids: a cell holding one of them blocks an attack's line
+    of sight. A rule set without this object does not limit attacks by distance."""
+
+    melee: int = 5
+    sight_blocked_by: frozenset[str] = frozenset()
+
+
+@dataclass(frozen=True)
 class CombatRules:
     """How a rule set resolves combat. The attack, defense, dying, and unarmed systems are
     capability objects; the remaining fields describe checks, initiative, saves, defeat, and the
@@ -1356,6 +1372,9 @@ class CombatRules:
     # attack action, so its attacks per action all resolve inside this budget. Defaults to the
     # common one-attack-per-turn rule.
     attacks_per_turn: int = 1
+    # The grid reach and sight limits for attacks, or None when the rule set does not limit an
+    # attack by the distance between the attacker and its target.
+    ranges: RangeRules | None = None
 
     @property
     def damage(self) -> tuple[DamageStep, ...]:
@@ -3330,6 +3349,8 @@ CHARACTER_DEFINITION_KEYS: Mapping[str, frozenset[str]] = {
             "attributes",
             "shock",
             "shock_ac",
+            "reach",
+            "ranges",
             "flags",
             "encumbrance_checks",
             "effects",
@@ -4789,6 +4810,7 @@ def _load_combat(
             "natural_max_hits",
             "total_defense",
             "range_bands",
+            "ranges",
             "dual_wield_hit_penalty",
             "dual_wield_damage_bonus",
             "surprise_turns",
@@ -4920,7 +4942,22 @@ def _load_combat(
         attacks_per_turn=(
             _whole(data, "attacks_per_turn", label, 1) if "attacks_per_turn" in data else 1
         ),
+        ranges=_load_ranges(data, label),
     )
+
+
+def _load_ranges(data: Mapping[str, Any], label: str) -> RangeRules | None:
+    """The rule set's attack reach and sight limits, or None when it does not limit attacks by
+    distance."""
+    raw = data.get("ranges")
+    if raw is None:
+        return None
+    if not isinstance(raw, Mapping):
+        raise ContentError(f"{label}: 'ranges' must be an object")
+    check_keys(raw, {"melee", "sight_blocked_by"}, f"{label}: ranges")
+    melee = _whole(raw, "melee", f"{label}: ranges", 1) if "melee" in raw else 5
+    blockers = _names(raw, "sight_blocked_by", f"{label}: ranges")
+    return RangeRules(melee=melee, sight_blocked_by=frozenset(blockers))
 
 
 INITIATIVE_KEYS = frozenset({"die", "bonus_stat", "side", "tie"})
@@ -5307,6 +5344,7 @@ def _load_monster(
     _check_whole(armor, f"{label}: 'armor'")
     attacks, attack_flags = _statblock_attacks(data.get("attacks", {}), label)
     attack_shock = _statblock_shock(data.get("attacks", {}), attacks, label)
+    attack_reach, attack_ranges = _statblock_attack_ranges(data.get("attacks", {}), attacks, label)
     large_group = data.get("large_group", False)
     if not isinstance(large_group, bool):
         raise ContentError(f"{label}: 'large_group' must be true or false")
@@ -5325,6 +5363,8 @@ def _load_monster(
         rules=rules,
         attack_flags=attack_flags,
         attack_shock=attack_shock,
+        attack_reach=attack_reach,
+        attack_ranges=attack_ranges,
         rule_text=rule_text,
         abilities=abilities,
         icon=icon or FALLBACK_MONSTER,
@@ -5404,6 +5444,8 @@ def _statblock_attacks(
                 "flags",
                 "shock",
                 "shock_ac",
+                "reach",
+                "ranges",
             }
         ):
             formula, flags = entry["dice"], entry.get("flags", [])
@@ -5454,6 +5496,35 @@ def _statblock_shock(
             )
         shock[attack_name] = (value, reaches)
     return shock
+
+
+def _statblock_attack_ranges(
+    raw: object, attacks: Mapping[str, str], label: str
+) -> tuple[dict[str, int], dict[str, dict[str, int]]]:
+    """The reach and ranged bands of a statblock's attacks. An attack with neither is melee at
+    the rule set's default reach. Only attacks written as objects can have either."""
+    if not isinstance(raw, dict):
+        return {}, {}
+    reach_by_attack: dict[str, int] = {}
+    bands_by_attack: dict[str, dict[str, int]] = {}
+    for attack_name, entry in raw.items():
+        if not isinstance(entry, dict) or ("reach" not in entry and "ranges" not in entry):
+            continue
+        if attack_name not in attacks:
+            continue
+        label_text = f"{label}: attack {attack_name!r}"
+        if "reach" in entry:
+            reach = entry["reach"]
+            if not isinstance(reach, int) or isinstance(reach, bool) or reach < 1:
+                raise ContentError(
+                    f"{label_text} 'reach' must be a whole number of feet, at least 1"
+                )
+            reach_by_attack[attack_name] = reach
+        if "ranges" in entry:
+            bands = range_bands(entry["ranges"], label_text)
+            if bands:
+                bands_by_attack[attack_name] = bands
+    return reach_by_attack, bands_by_attack
 
 
 def _statblock_rules(data: Mapping[str, Any], label: str) -> tuple[tuple[str, ...], dict[str, str]]:
@@ -8849,9 +8920,7 @@ def _check_player_input(
                 f"{label}: 'player_input.dice_values_param' must not be a schema parameter"
             )
         if dice_values_param not in accepted:
-            raise ContentError(
-                f"{label}: function does not accept parameter {dice_values_param!r}"
-            )
+            raise ContentError(f"{label}: function does not accept parameter {dice_values_param!r}")
     if optional not in ("", "check", "save"):
         raise ContentError(f"{label}: 'player_input.optional' must be 'check' or 'save'")
     if optional_param is not None:
@@ -8864,9 +8933,7 @@ def _check_player_input(
                 f"{label}: 'player_input.optional_param' must not be a schema parameter"
             )
         if optional_param not in accepted:
-            raise ContentError(
-                f"{label}: function does not accept parameter {optional_param!r}"
-            )
+            raise ContentError(f"{label}: function does not accept parameter {optional_param!r}")
     if bool(optional) != bool(optional_param):
         raise ContentError(
             f"{label}: 'player_input.optional' and 'optional_param' must be set together"

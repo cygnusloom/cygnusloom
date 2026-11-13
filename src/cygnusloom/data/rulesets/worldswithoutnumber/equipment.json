@@ -224,6 +224,7 @@
     "attributes": ["str", "dex"],
     "shock": 1,
     "shock_ac": 15,
+    "ranges": {"short": 10, "long": 30},
     "description": "One-handed axe. 1d6 damage, Shock 1 against AC 15 or less. Throwable to 10/30 feet. Encumbrance 1."
   },
   {
@@ -263,6 +264,7 @@
     "attributes": ["dex"],
     "shock": 0,
     "shock_ac": 0,
+    "ranges": {"short": 100, "long": 600},
     "description": "Two-handed warbow. 1d8 damage, range 100/600 feet, no Shock. Encumbrance 2."
   },
   {
@@ -276,6 +278,7 @@
     "attributes": ["dex"],
     "shock": 0,
     "shock_ac": 0,
+    "ranges": {"short": 50, "long": 300},
     "description": "Two-handed hunting bow. 1d6 damage, range 50/300 feet, no Shock. Encumbrance 1."
   },
   {
@@ -320,6 +323,7 @@
   {
     "type": "feature",
     "id": "crossbow",
+    "ranges": {"short": 100, "long": 300},
     "name": "Crossbow",
     "looks_like": "bow",
     "size": "normal",
@@ -334,6 +338,7 @@
   {
     "type": "feature",
     "id": "dagger",
+    "ranges": {"short": 30, "long": 60},
     "name": "Dagger",
     "looks_like": "dagger",
     "size": "normal",
@@ -347,6 +352,7 @@
   {
     "type": "feature",
     "id": "halberd",
+    "reach": 10,
     "name": "Halberd",
     "looks_like": "spear",
     "size": "large",
@@ -386,6 +392,7 @@
   {
     "type": "feature",
     "id": "hurlant_great",
+    "ranges": {"short": 600, "long": 2400},
     "name": "Hurlant, Great",
     "looks_like": "wand",
     "size": "massive",
@@ -399,6 +406,7 @@
   {
     "type": "feature",
     "id": "hurlant_hand",
+    "ranges": {"short": 30, "long": 60},
     "name": "Hurlant, Hand",
     "looks_like": "wand",
     "size": "normal",
@@ -412,6 +420,7 @@
   {
     "type": "feature",
     "id": "hurlant_long",
+    "ranges": {"short": 200, "long": 600},
     "name": "Hurlant, Long",
     "looks_like": "wand",
     "size": "large",
@@ -438,6 +447,7 @@
   {
     "type": "feature",
     "id": "pike",
+    "reach": 10,
     "name": "Pike",
     "looks_like": "spear",
     "size": "large",
@@ -490,6 +500,7 @@
   {
     "type": "feature",
     "id": "spear_light",
+    "ranges": {"short": 30, "long": 60},
     "name": "Light Spear",
     "looks_like": "spear",
     "size": "normal",
@@ -503,6 +514,7 @@
   {
     "type": "feature",
     "id": "throwing_blade",
+    "ranges": {"short": 30, "long": 60},
     "name": "Throwing Blade",
     "looks_like": "dagger",
     "size": "normal",

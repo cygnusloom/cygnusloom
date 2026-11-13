@@ -321,7 +321,7 @@
     "type": "tool_call",
     "id": "resolve_attacks",
     "requires": ["combat"],
-    "description": "Resolve several NPC attacks on one character at once, such as several foes attacking the same character or one NPC using several weapons. Each attack rolls its own dice. Every attacker must be taking their turn unless force is true, and each attacker spends its one attack action for the turn, so a later attack action from the same NPC is refused. Use it only when the attackers' turns come up, after the initiative is set. Player characters attack with player_attack, not this tool.",
+    "description": "Resolve several NPC attacks on one character at once, such as several foes attacking the same character or one NPC using several weapons. Each attack rolls its own dice. Every attacker must be taking their turn unless force is true, and each attacker spends its one attack action for the turn, so a later attack action from the same NPC is refused. Use it only when the attackers' turns come up, after the initiative is set. Player characters attack with player_attack, not this tool. On an encounter map, each attack must be within its reach or range with a clear line of sight; move its attacker with place_participant first when it is refused for distance.",
     "parameters": {
       "properties": {
         "attacks": {
@@ -410,7 +410,7 @@
     "type": "tool_call",
     "id": "attack",
     "requires": ["combat"],
-    "description": "Make an NPC's attack against a character. Use it only when the attacker is taking their turn, after the initiative is set; an attack by anyone else is refused unless force is true. The tool resolves the statblock's full attacks per action, and that is the NPC's one attack action for the turn: a second attack action in the same turn is refused unless force is true. Player characters attack with player_attack, not this tool. The engine resolves the attack by the rule set's combat rules and narrates the result.",
+    "description": "Make an NPC's attack against a character. Use it only when the attacker is taking their turn, after the initiative is set; an attack by anyone else is refused unless force is true. The tool resolves the statblock's full attacks per action, and that is the NPC's one attack action for the turn: a second attack action in the same turn is refused unless force is true. Player characters attack with player_attack, not this tool. The engine resolves the attack by the rule set's combat rules and narrates the result. On an encounter map, the attack must be within its melee reach or ranged band, with a clear line of sight; move the attacker with place_participant first when it is refused for distance.",
     "parameters": {
       "properties": {
         "attacker": {
@@ -438,7 +438,7 @@
     "type": "tool_call",
     "id": "player_attack",
     "requires": ["combat"],
-    "description": "Ask the player to roll a player character's attack against a target. Use it when the player says what they attack with, the target is in the encounter, and it is that player character's turn; an attack outside their turn, or after the character has used the turn's attacks, is refused unless force is true. Name the character when the table controls more than one player character or a hireling.",
+    "description": "Ask the player to roll a player character's attack against a target. Use it when the player says what they attack with, the target is in the encounter, and it is that player character's turn; an attack outside their turn, or after the character has used the turn's attacks, is refused unless force is true. Name the character when the table controls more than one player character or a hireling. On an encounter map, the weapon's reach or range and a clear line of sight are enforced; move the character with place_participant first when the attack is refused for distance.",
     "parameters": {
       "properties": {
         "character": {

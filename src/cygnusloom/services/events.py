@@ -570,6 +570,8 @@ class NpcAdded(GameEvent):
     attacks: dict[str, str] = field(default_factory=dict)
     attack_flags: dict[str, list[str]] = field(default_factory=dict)
     attack_shock: dict[str, list[int]] = field(default_factory=dict)
+    attack_reach: dict[str, int] = field(default_factory=dict)
+    attack_ranges: dict[str, dict[str, int]] = field(default_factory=dict)
     creature: str = ""
     large_group: bool = False
     story_only: bool = False
@@ -599,6 +601,8 @@ class NpcAdded(GameEvent):
             attacks=dict(self.attacks),
             attack_flags={name: list(flags) for name, flags in self.attack_flags.items()},
             attack_shock={name: list(pair) for name, pair in self.attack_shock.items()},
+            attack_reach=dict(self.attack_reach),
+            attack_ranges={name: dict(bands) for name, bands in self.attack_ranges.items()},
             creature=self.creature,
             large_group=self.large_group,
             story_only=self.story_only,
@@ -633,6 +637,8 @@ class NpcStatted(GameEvent):
     attacks: dict[str, str]
     attack_flags: dict[str, list[str]] = field(default_factory=dict)
     attack_shock: dict[str, list[int]] = field(default_factory=dict)
+    attack_reach: dict[str, int] = field(default_factory=dict)
+    attack_ranges: dict[str, dict[str, int]] = field(default_factory=dict)
     counters: dict[str, int] = field(default_factory=dict)
     skills: dict[str, int] = field(default_factory=dict)
     feature_choices: dict[str, list[str]] = field(default_factory=dict)
@@ -649,10 +655,10 @@ class NpcStatted(GameEvent):
         npc.attacks = dict(self.attacks)
         npc.attack_flags = {name: list(flags) for name, flags in self.attack_flags.items()}
         npc.attack_shock = {name: list(pair) for name, pair in self.attack_shock.items()}
+        npc.attack_reach = dict(self.attack_reach)
+        npc.attack_ranges = {name: dict(bands) for name, bands in self.attack_ranges.items()}
         npc.skills = dict(self.skills)
-        npc.feature_choices = {
-            key: list(values) for key, values in self.feature_choices.items()
-        }
+        npc.feature_choices = {key: list(values) for key, values in self.feature_choices.items()}
         npc.stat_modifiers = dict(self.stat_modifiers)
         npc.story_only = False
 
@@ -673,6 +679,8 @@ class NpcArmed(GameEvent):
     attacks: dict[str, str] | None = None
     attack_flags: dict[str, list[str]] = field(default_factory=dict)
     attack_shock: dict[str, list[int]] = field(default_factory=dict)
+    attack_reach: dict[str, int] = field(default_factory=dict)
+    attack_ranges: dict[str, dict[str, int]] = field(default_factory=dict)
     armor: int | None = None
 
     def apply(self, state: CampaignState, event_id: int) -> None:
@@ -681,6 +689,8 @@ class NpcArmed(GameEvent):
             npc.attacks = dict(self.attacks)
             npc.attack_flags = {name: list(flags) for name, flags in self.attack_flags.items()}
             npc.attack_shock = {name: list(pair) for name, pair in self.attack_shock.items()}
+            npc.attack_reach = dict(self.attack_reach)
+            npc.attack_ranges = {name: dict(bands) for name, bands in self.attack_ranges.items()}
         if self.armor is not None:
             npc.armor = self.armor
 

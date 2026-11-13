@@ -46,9 +46,20 @@ def next_turn(tools: WorldTools, name: str) -> None:
     take_turn(tools, name)
 
 
+def _settle_initiative(tools: WorldTools) -> None:
+    """Roll the side order first when the rule set has not settled it yet, as the table's first
+    turn waits for the roll the end of a reply makes."""
+    with Session(tools.engine) as db:
+        state = load_state(db, tools.campaign_id)
+        if state.encounter is None or not encounters.initiative_open(state):
+            return
+    tools.settle_side_initiative()
+
+
 def take_turn(tools: WorldTools, name: str) -> None:
     """Put the encounter's turn on `name`, ending the turns in between and closing each GM reply
     the way the table would by pressing Start and End your turn. The name must be in the order."""
+    _settle_initiative(tools)
     with Session(tools.engine) as db:
         close_reply(db, tools.campaign_id)
         state = load_state(db, tools.campaign_id)
