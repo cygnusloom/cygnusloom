@@ -1290,8 +1290,13 @@ def test_overflow_on_a_player_character_waits_for_the_player_to_save(client_fact
     with pytest.raises(InvalidInput, match="must make their str save first"):
         _hit(tools, "Grave Thing", PC, 1, 1, 1)
     take_turn(tools, PC)
-    with pytest.raises(InvalidInput, match="must make their str save first"):
-        tools.player_attack(PC, "Sword")
+    # The character owing the save may not act either: the fight waits for the player's die.
+    with pytest.raises(InvalidInput, match=f"{PC} must make their str save first"):
+        tools.player_attack("Grave Thing", "Sword")
+
+    tools.player_save(1)
+    hit = tools.player_attack("Grave Thing", "Sword", damage_roll=1)
+    assert hit["target"] == "Grave Thing"
 
 
 def test_a_player_character_who_fails_the_save_is_defeated(client_factory):

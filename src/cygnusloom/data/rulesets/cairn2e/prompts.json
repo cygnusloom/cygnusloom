@@ -65,6 +65,14 @@
   },
   {
     "type": "prompt",
+    "id": "owed_saves",
+    "requires": [
+      "combat"
+    ],
+    "text": "When a hit's overflow leaves a save due, call player_save in the same turn, before you narrate anything else: the player rolls the d20 and the engine decides. Until that save is rolled the reeling character cannot attack and no one can attack them, so the fight waits for the player's die. Never invent the result or leave the save for a later turn."
+  },
+  {
+    "type": "prompt",
     "id": "overland_weather",
     "text": "When today's weather is Unpleasant or Inclement, a move_actor overland move must set weather_choice to fatigue (each traveller takes Fatigue) or watch (the journey takes one more watch)."
   },

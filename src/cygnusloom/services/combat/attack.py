@@ -861,6 +861,10 @@ def player_attack(
     state = load_state(db, campaign_id)
     _no_initiative_pending(state)
     pc = _player_character(state, character)
+    if pc.save_due is not None:
+        # The engine waits for the player's own die when harm overflowed, so the fight pauses
+        # until the GM asks for it rather than letting the character act while reeling.
+        raise InvalidInput(f"{pc.name} must make their {pc.save_due} save first; call player_save")
     _require_attack(state, pc, combat, force)
     if pc.grappled_by and name_key(weapon) not in combat.unarmed_names:
         raise InvalidInput(f"{pc.name} is grappled and can only make unarmed attacks")
