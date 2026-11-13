@@ -62,3 +62,13 @@ def pay_wages(db: Session, campaign_id: int, currency: str) -> None:
                 cause=f"wages for {hireling.name}",
             ),
         )
+        record(
+            db,
+            campaign_id,
+            CurrencyChanged(
+                name=hireling.name,
+                feature=currency,
+                amount=hireling.wage,
+                cause=f"wages from {employer.name}",
+            ),
+        )

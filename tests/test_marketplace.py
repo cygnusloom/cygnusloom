@@ -585,7 +585,7 @@ def test_an_unknown_shop_item_feature_is_refused(tmp_path):
         )
 
 
-BUNDLED_ITEM_RULE_SETS = {"cairn2e": 16, "worldswithoutnumber": 40}
+BUNDLED_ITEM_RULE_SETS = {"cairn2e": 16, "worldswithoutnumber": 41}
 
 
 def _bundled_shop_item_definitions(rule_set_id: str) -> list[dict[str, Any]]:

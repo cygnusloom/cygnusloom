@@ -69,6 +69,7 @@ from cygnusloom.services import periods as periods_service
 from cygnusloom.services import relations as relations_service
 from cygnusloom.services import rests as rests_service
 from cygnusloom.services import tallies as tallies_service
+from cygnusloom.services import timers as timers_service
 from cygnusloom.services import wilderness as wilderness_service
 from cygnusloom.services.common import (
     InvalidInput,
@@ -724,7 +725,44 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 plus=self.plus,
                 spec=self.character,
                 ignore_ready=automatic,
+                clock_rules=self.clock_rules,
+                marketplace=self.marketplace,
             )
+            db.commit()
+            return result
+
+    def set_timer(
+        self,
+        name: str,
+        item: str,
+        action: str = "start",
+        hours: int = 1,
+        label: str = "",
+        key: str = "",
+        force: bool = False,
+    ) -> dict[str, Any]:
+        """Start, refresh, or end a generic timer on a character. Items with `timer_hours` start
+        their timer automatically when used; this tool is for a timer the story starts or ends
+        directly. `force` replaces a different timer under the same key, or tolerates ending one
+        that is not there."""
+        clock_rules = _required(self.clock_rules, "time")
+        with session_scope(self.engine) as db:
+            if action == "end":
+                result = timers_service.end_timer(db, self.campaign_id, name, item, force=force)
+            elif action == "start":
+                result = timers_service.start_timer(
+                    db,
+                    self.campaign_id,
+                    clock_rules,
+                    name,
+                    item,
+                    hours=hours,
+                    label=label,
+                    key=key,
+                    force=force,
+                )
+            else:
+                raise InvalidInput(f"there is no timer action named {action!r}; use start or end")
             db.commit()
             return result
 
@@ -2536,6 +2574,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 ProjectStarted(
                     name=name,
                     project_kind=kind,
+                    kind_label=definition.label if definition is not None else kind,
                     goal=goal,
                     target=target,
                     cost=definition.cost if definition else 0,
@@ -2587,6 +2626,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
         return {
             "name": project.name,
             "kind": project.kind,
+            "kind_label": project.kind_label or project.kind,
             "goal": project.goal,
             "progress": project.progress,
             "target": project.target,

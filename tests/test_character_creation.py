@@ -190,7 +190,7 @@ def test_cairn_character_starts_unplaced_until_the_gm_places_it(
         pc = load_state(db, campaign_id).pc()
     assert pc is not None
     assert pc.location is None
-    assert "not yet placed" in client.get(f"/campaigns/{campaign_id}").text
+    assert "is ready to begin" in client.get(f"/campaigns/{campaign_id}").text
 
 
 def _complete_form(client: TestClient, campaign_id: int) -> dict[str, str]:

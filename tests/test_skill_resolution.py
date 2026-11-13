@@ -66,6 +66,27 @@ def test_roll_check_resolves_a_capitalized_skill_stat_and_check_label(
     assert (made.check, made.skill, made.stat) == ("Skill Check", "sneak", "dex")
 
 
+def test_a_player_reported_check_roll_shows_its_dice_in_the_log(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    app, campaign_id = _campaign(client_factory)
+    tools = _world_tools(app, campaign_id)
+
+    tools.roll_check(
+        "skill",
+        NAME,
+        skill="Sneak",
+        stat="DEX",
+        difficulty=8,
+        roll=8,
+        dice_values=[3, 5],
+    )
+
+    (made,) = _events_of(app, campaign_id, CheckMade.kind)
+    assert made.rolls == [3, 5]
+    assert "2d6 [3, 5]" in made.render()
+
+
 def test_a_capitalized_skill_still_takes_the_armor_penalty(
     client_factory: Callable[[], TestClient],
 ) -> None:

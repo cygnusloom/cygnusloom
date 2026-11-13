@@ -604,6 +604,35 @@ def test_downtime_rest_ends_burnout(
     assert "burnout" not in _pc(client.app, campaign_id).conditions
 
 
+def test_downtime_rest_clears_stress(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    client, campaign_id = _campaign(client_factory)
+    tools = tools_for(client.app, campaign_id, rule_set=RULE_SET)
+    tools.adjust_counter(NAME, "stress", 3)
+    assert _pc(client.app, campaign_id).counters["stress"] == 3
+
+    tools.rest("downtime", reason="a week away from the bench")
+
+    assert _pc(client.app, campaign_id).counters["stress"] == 0
+
+
+def test_the_gm_can_set_and_clear_the_college_field(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    client, campaign_id = _campaign(client_factory)
+    tools = tools_for(client.app, campaign_id, rule_set=RULE_SET)
+
+    result = tools.set_character_field(NAME, "College", "The Lantern College")
+
+    assert result == {"character": NAME, "field": "college", "value": "The Lantern College"}
+    assert _pc(client.app, campaign_id).fields["college"] == "The Lantern College"
+
+    tools.set_character_field(NAME, "college", "")
+
+    assert "college" not in _pc(client.app, campaign_id).fields
+
+
 def test_the_academy_market_sells_for_silver(
     client_factory: Callable[[], TestClient],
 ) -> None:

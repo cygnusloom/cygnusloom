@@ -225,6 +225,19 @@ class Faction:
 
 
 @dataclass
+class Timer:
+    """A timed effect on a character, such as a burning torch or a poison. `until_text` is the
+    campaign-clock time the timer ends, ready to show in the Log and on the sheet."""
+
+    item: str
+    label: str
+    until_day: int
+    until_part: int
+    until_hour: int
+    until_text: str
+
+
+@dataclass
 class Character:
     kind: str
     name: str
@@ -290,6 +303,11 @@ class Character:
     # The stat id of a save the character must make after harm overflowed, or None.
     save_due: str | None = None
     defeated: bool = False
+    # A defeated character whose dying clock has been stopped by aid, such as a stabilized
+    # mortal wound or Die Hard.
+    stable: bool = False
+    # Timed effects by key, such as a burning torch or a poison.
+    timers: dict[str, Timer] = field(default_factory=dict)
     # The ids of the conditions the character has, and the names of their injuries, in the order gained.
     conditions: list[str] = field(default_factory=list)
     injuries: list[str] = field(default_factory=list)
@@ -423,6 +441,8 @@ class Project:
     kind: str
     goal: str
     target: int
+    # The rule set's label for `kind`, such as “Class Challenge” for `class_challenge`.
+    kind_label: str = ""
     progress: int = 0
     notes: list[str] = field(default_factory=list)
     completed: bool = False

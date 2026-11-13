@@ -10,10 +10,15 @@ from cygnusloom.content.character import (
 )
 from cygnusloom.services import hireling_levels
 from cygnusloom.services.common import (
+    InvalidInput,
+    bounded_text,
     session_scope,
 )
 from cygnusloom.services.events import (
+    CharacterFieldSet,
     load_state,
+    name_key,
+    record,
 )
 from cygnusloom.services.inventory import tracks_inventory
 from cygnusloom.services.views import (
@@ -201,6 +206,48 @@ class PeopleMixin:
     def describe_character(self, name: str, summary: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return describe_character(db, self.campaign_id, name, summary)
+
+    def set_character_field(
+        self, name: str, field: str, value: str, force: bool = False
+    ) -> dict[str, Any]:
+        """Set one of the rule set's character fields, such as a student's College. `force`
+        allows a field the rule set does not define, for a story-only label."""
+        with session_scope(self.engine) as db:
+            state = load_state(db, self.campaign_id)
+            character = state.characters.get(name_key(name))
+            if character is None:
+                raise InvalidInput(f"there is no character named {name!r}")
+            wanted = field.strip()
+            found = self.character.fields.get(wanted)
+            if found is None:
+                found = next(
+                    (
+                        entry
+                        for entry in self.character.fields.values()
+                        if entry.name.casefold() == wanted.casefold()
+                    ),
+                    None,
+                )
+            if found is None and not force:
+                raise InvalidInput(
+                    f"there is no character field named {field!r}; use one of "
+                    f"{sorted(self.character.fields)}"
+                )
+            field_id = found.id if found is not None else wanted
+            label = found.name if found is not None else wanted
+            text = bounded_text(value, "value", 2000).strip() if value else ""
+            record(
+                db,
+                self.campaign_id,
+                CharacterFieldSet(
+                    name=character.name,
+                    field=field_id,
+                    label=label,
+                    value=text,
+                ),
+            )
+            db.commit()
+            return {"character": character.name, "field": field_id, "value": text}
 
     def delete_npc(self, name: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:

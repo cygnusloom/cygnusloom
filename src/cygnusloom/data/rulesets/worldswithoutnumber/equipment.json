@@ -540,6 +540,19 @@
   },
   {
     "type": "feature",
+    "id": "quarterstaff",
+    "name": "Quarterstaff",
+    "looks_like": "staff",
+    "size": "normal",
+    "damage": "1d6",
+    "skill": "stab",
+    "attributes": ["str", "dex"],
+    "shock": 1,
+    "shock_ac": 13,
+    "description": "A two-handed staff. 1d6 damage, Shock 1 against AC 13 or less, easily used to leave a foe alive. Encumbrance 1."
+  },
+  {
+    "type": "feature",
     "id": "stiletto",
     "name": "Stiletto",
     "looks_like": "dagger",
@@ -877,6 +890,8 @@
     "category": "gear",
     "price": 1,
     "uses": 1,
+    "timer_hours": 1,
+    "timer_label": "Light",
     "description": "A burning torch, 2 cp in the book. Encumbrance 1; three bundle as one."
   },
   {
@@ -1245,6 +1260,14 @@
     "type": "shop_item",
     "id": "shop_staff",
     "feature": "staff",
+    "category": "weapon",
+    "price": 1,
+    "description": "1d6 damage, Shock 1/AC 13, two-handed and easily non-lethal, Encumbrance 1."
+  },
+  {
+    "type": "shop_item",
+    "id": "shop_quarterstaff",
+    "feature": "quarterstaff",
     "category": "weapon",
     "price": 1,
     "description": "1d6 damage, Shock 1/AC 13, two-handed and easily non-lethal, Encumbrance 1."

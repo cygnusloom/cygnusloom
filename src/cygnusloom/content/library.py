@@ -1579,6 +1579,8 @@ class RestLength:
     full: bool
     restores: tuple[str, ...]
     clears: tuple[str, ...]
+    # Counters this rest resets to their minimum, such as Stress on a week of downtime.
+    clear_counters: tuple[str, ...] = ()
     # The condition-ending triggers this rest counts as, named by the rest definition.
     ends: tuple[str, ...] = ()
     # Whether the rest has upkeep: the rule set's before_rest hook runs for it.
@@ -1693,6 +1695,10 @@ class ShopItem:
     uses: int
     description: str
     armor_mode: str = "add"
+    # How many hours a timer one use starts for, or 0 when it starts no timer.
+    timer_hours: int = 0
+    # What the timer represents, such as “Light”.
+    timer_label: str = ""
     # Check ids this worn item penalizes by its Encumbrance, such as Sneak or Exert.
     encumbrance_checks: tuple[str, ...] = ()
     # The icon the catalogue entry shows, resolved from `icon` or `looks_like` at load time.
@@ -3373,6 +3379,9 @@ CHARACTER_DEFINITION_KEYS: Mapping[str, frozenset[str]] = {
             "repeatable",
             "level_hp_bonus",
             "stabilizes",
+            "timer_hours",
+            "timer_label",
+            "weapon_bonus",
             "icon",
             "looks_like",
         }
@@ -6212,6 +6221,7 @@ def _load_rests(
                 "full",
                 "restores",
                 "clears",
+                "clear_counters",
                 "ends",
                 "upkeep",
             },
@@ -6233,6 +6243,12 @@ def _load_rests(
         for stat in restores:
             if stat not in character.stats:
                 raise ContentError(f"{length_label}: 'restores' names no stat ({stat!r})")
+        clear_counters = _names(data, "clear_counters", length_label)
+        for counter in clear_counters:
+            if counter not in character.counters:
+                raise ContentError(
+                    f"{length_label}: 'clear_counters' names no counter ({counter!r})"
+                )
         ends = _names(data, "ends", length_label)
         if condition_ends:
             unknown = [end for end in ends if end not in condition_ends]
@@ -6254,6 +6270,7 @@ def _load_rests(
             full=full,
             restores=restores,
             clears=_names(data, "clears", length_label),
+            clear_counters=clear_counters,
             ends=ends,
             upkeep=upkeep,
             stop_at=stop_at,
@@ -6839,6 +6856,8 @@ def _load_marketplace(
                 "damage",
                 "uses",
                 "description",
+                "timer_hours",
+                "timer_label",
                 "encumbrance_checks",
                 "icon",
                 "looks_like",
@@ -6887,6 +6906,12 @@ def _load_marketplace(
                     else _shop_item_value(d.data, feature, "uses", 0)
                 ),
                 description=str(_shop_item_value(d.data, feature, "description", "")),
+                timer_hours=(
+                    _whole(d.data, "timer_hours", label, 0)
+                    if "timer_hours" in d.data
+                    else _shop_item_value(d.data, feature, "timer_hours", 0)
+                ),
+                timer_label=str(_shop_item_value(d.data, feature, "timer_label", "")),
                 encumbrance_checks=(
                     _names(d.data, "encumbrance_checks", label)
                     if "encumbrance_checks" in d.data

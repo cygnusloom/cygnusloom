@@ -1873,6 +1873,12 @@ def move_actor(
             f"there is no travel mode named {speed!r}; use one of {', '.join(sorted(travel.modes))}"
         )
     where = _place_named(state, location)
+    if actor.location is not None and name_key(actor.location) == name_key(where.name):
+        return {
+            "moved": actor.name,
+            "location": where.name,
+            "note": f"{actor.name} is already at {where.name}.",
+        }
     tasks = (
         housekeeping_service.scene_tasks(state, where, housekeeping)
         if housekeeping is not None and actor.kind == PC_KIND and not actor.hireling

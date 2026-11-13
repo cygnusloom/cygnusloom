@@ -83,6 +83,13 @@
         "op": "note",
         "text": "Ready a stowed melee or thrown weapon as an Instant action. Add your Stab level to damage or Shock from melee or thrown weapons (not unarmed or projectile attacks)."
       }
+    ],
+    "weapon_bonus": [
+      {
+        "skill": "stab",
+        "damage": true,
+        "shock": true
+      }
     ]
   },
   {
@@ -95,6 +102,14 @@
       {
         "op": "note",
         "text": "Melee Shock treats all targets as AC 10. Add +1 to hit with melee and thrown attacks."
+      }
+    ],
+    "weapon_bonus": [
+      {
+        "skill": "stab",
+        "hit": true,
+        "damage": true,
+        "shock": true
       }
     ]
   },
@@ -352,6 +367,13 @@
       {
         "op": "note",
         "text": "Ready a stowed ranged weapon as an Instant action. Use a bow or two-handed ranged weapon in melee at -4 to hit. Add your Shoot level to ranged damage."
+      }
+    ],
+    "weapon_bonus": [
+      {
+        "skill": "shoot",
+        "damage": true,
+        "shock": false
       }
     ]
   },

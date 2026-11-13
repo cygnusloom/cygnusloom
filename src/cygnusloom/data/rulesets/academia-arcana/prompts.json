@@ -23,7 +23,7 @@
     "type": "prompt",
     "id": "college_cup",
     "step": "state",
-    "text": "The College Cup is a tally of the colleges the GM invented with create_faction. Award points with adjust_faction_points only for a contest, a favour, or a deed the story showed. Give every award a unique key, such as the contest and date, so one event is never paid twice. Use update_faction when a college changes, and list_factions or the Factions line in the world state when you need the standings. Do not invent a college after the opening without creating it first."
+    "text": "The College Cup is a tally of the colleges the GM invented with create_faction. Award points with adjust_faction_points only for a contest, a favour, or a deed the story showed. Give every award a unique key, such as the contest and date, so one event is never paid twice. Use update_faction when a college changes, and list_factions or the Factions line in the world state when you need the standings. Do not invent a college after the opening without creating it first. Once the opening names the colleges and the student's place is clear, set the student's College with set_character_field so the sheet and later play know which college they belong to."
   },
   {
     "type": "prompt",

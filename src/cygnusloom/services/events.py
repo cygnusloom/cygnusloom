@@ -55,6 +55,7 @@ from cygnusloom.services.state import (  # noqa: F401
     Region,
     RestRecord,
     Storyline,
+    Timer,
     Turn,
     WorldMapStyle,
     WorldObject,
@@ -124,6 +125,17 @@ def _stat_label(stat: str) -> str:
     if lowered in _ABBREVIATED_STATS:
         return stat.upper()
     return " ".join(part.capitalize() for part in stat.replace("_", " ").split())
+
+
+def _currency_label(feature: str, amount: int) -> str:
+    """A currency feature's unit for an amount, such as `gold_pieces` -> `gold piece` or
+    `gold pieces`."""
+    words = feature.replace("_", " ").casefold().strip()
+    if abs(amount) != 1 and words.endswith("s") and not words.endswith("ss"):
+        return words
+    if abs(amount) == 1 and words.endswith("s") and not words.endswith("ss"):
+        return words[:-1]
+    return words
 
 
 def roll_breakdown(
@@ -588,7 +600,7 @@ class PcAdded(GameEvent):
 
     def render(self) -> str:
         if self.location is None:
-            return f"{self.name} is ready to begin, not yet placed at a location."
+            return f"{self.name} is ready to begin."
         return f"{self.name} begins at {self.location}."
 
 
@@ -1226,6 +1238,31 @@ class CharacterSummarized(GameEvent):
 
     def render(self) -> str:
         return f"Character summary updated: {self.name}."
+
+
+@dataclass(frozen=True)
+class CharacterFieldSet(GameEvent):
+    """A character's ruleset field changed, such as an Academia Arcana student's College. An
+    empty value clears the field."""
+
+    kind: ClassVar[str] = "character.field_set"
+
+    name: str
+    field: str
+    label: str
+    value: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        character = state.characters[name_key(self.name)]
+        if self.value:
+            character.fields[self.field] = self.value
+        else:
+            character.fields.pop(self.field, None)
+
+    def render(self) -> str:
+        if not self.value:
+            return f"{self.name}'s {self.label} is cleared."
+        return f"{self.name}'s {self.label} is now {self.value}."
 
 
 @dataclass(frozen=True)
@@ -2337,6 +2374,7 @@ class ProjectStarted(GameEvent):
     project_kind: str
     goal: str
     target: int
+    kind_label: str = ""
     cost: int = 0
     currency: str = ""
     owner: str = ""
@@ -2345,6 +2383,7 @@ class ProjectStarted(GameEvent):
         state.projects[name_key(self.name)] = Project(
             name=self.name,
             kind=self.project_kind,
+            kind_label=self.kind_label or self.project_kind,
             goal=self.goal,
             target=self.target,
             cost=self.cost,
@@ -2353,7 +2392,8 @@ class ProjectStarted(GameEvent):
         )
 
     def render(self) -> str:
-        return f"{self.name} begins ({self.project_kind}): {self.goal}, {self.target} points."
+        label = self.kind_label or self.project_kind
+        return f"{self.name} begins ({label}): {self.goal}, {self.target} points."
 
 
 @dataclass(frozen=True)
@@ -2445,6 +2485,7 @@ class CharacterRecovered(GameEvent):
     def apply(self, state: CampaignState, event_id: int) -> None:
         character = state.characters[name_key(self.name)]
         character.defeated = False
+        character.stable = False
         character.fell_day = None
         character.dying_hours = None
         character.dying_rounds = None
@@ -4497,6 +4538,7 @@ class CharacterDying(GameEvent):
         character = state.characters[name_key(self.name)]
         character.dying_hours = self.hours
         character.dying_rounds = self.rounds
+        character.stable = False
 
     def render(self) -> str:
         source = f" {self.cause}" if self.cause else ""
@@ -4524,6 +4566,59 @@ class DyingRoundsPassed(GameEvent):
 
 
 @dataclass(frozen=True)
+class TimerStarted(GameEvent):
+    """A timed effect on a character began, such as a burning torch or a poison. `key` is the
+    effect's stable identifier, so a second start replaces the first."""
+
+    kind: ClassVar[str] = "character.timer_started"
+
+    name: str
+    key: str
+    item: str
+    label: str
+    until_day: int
+    until_part: int
+    until_hour: int
+    until_text: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.characters[name_key(self.name)].timers[self.key] = Timer(
+            item=self.item,
+            label=self.label,
+            until_day=self.until_day,
+            until_part=self.until_part,
+            until_hour=self.until_hour,
+            until_text=self.until_text,
+        )
+
+    def render(self) -> str:
+        label = f" ({self.label})" if self.label else ""
+        return f"{self.name} starts {self.item}{label} until {self.until_text}."
+
+
+@dataclass(frozen=True)
+class TimerEnded(GameEvent):
+    """A timed effect ended. `expired` says the clock reached its end rather than the GM or an
+    effect ending it early."""
+
+    kind: ClassVar[str] = "character.timer_ended"
+
+    name: str
+    key: str
+    item: str
+    label: str = ""
+    expired: bool = False
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.characters[name_key(self.name)].timers.pop(self.key, None)
+
+    def render(self) -> str:
+        label = f" ({self.label})" if self.label else ""
+        reason = " as its time runs out" if self.expired else ""
+        return f"{self.name}'s {self.item}{label} ends{reason}."
+
+
+@dataclass(frozen=True)
 class CharacterStabilized(GameEvent):
     """Aid stopped a dying character's clock. It is still out of action until the GM recovers
     it."""
@@ -4537,6 +4632,7 @@ class CharacterStabilized(GameEvent):
         character = state.characters[name_key(self.name)]
         character.dying_hours = None
         character.dying_rounds = None
+        character.stable = True
 
     def render(self) -> str:
         source = f" {self.by}." if self.by else ""
@@ -4556,6 +4652,7 @@ class CharacterDied(GameEvent):
         character = state.characters[name_key(self.name)]
         character.dead = True
         character.defeated = True
+        character.stable = False
         if character.fell_day is None:
             character.fell_day = state.clock.day
         character.dying_hours = None
@@ -4632,9 +4729,10 @@ class CurrencyChanged(GameEvent):
         character.features[self.feature] = max(0, balance)
 
     def render(self) -> str:
+        unit = _currency_label(self.feature, self.amount)
         if self.amount < 0:
-            return f"{self.name} pays {-self.amount} for {self.cause}."
-        return f"{self.name} gains {self.amount} from {self.cause}."
+            return f"{self.name} pays {-self.amount} {unit} for {self.cause}."
+        return f"{self.name} gains {self.amount} {unit} from {self.cause}."
 
 
 @dataclass(frozen=True)

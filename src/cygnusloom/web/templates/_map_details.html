@@ -2,7 +2,7 @@
    in the Location tab beside the place's details, so the board keeps the whole map panel. #}
 {% if encounter %}
 <div class="map-caption">
-  <p><strong>{{ encounter.map }}</strong> <span class="muted">{{ encounter.location }}, round {{ encounter.round }}</span></p>
+  <p><strong>{{ encounter.map }}</strong> <span class="muted">{% if encounter.location and encounter.location != encounter.map %}{{ encounter.location }}, {% endif %}round {{ encounter.round }}</span></p>
   {% if encounter.description %}<p class="muted">{{ encounter.description }}</p>{% endif %}
   {% if not encounter.participants %}<p class="muted">No one has joined yet.</p>{% endif %}
 </div>
@@ -25,7 +25,7 @@
 {% endif %}
 {% elif local_map %}
 <div class="map-caption">
-  <p><strong>{{ local_map.map }}</strong> <span class="muted">{{ local_map.location }}</span></p>
+  <p><strong>{{ local_map.map }}</strong>{% if local_map.location and local_map.location != local_map.map %} <span class="muted">{{ local_map.location }}</span>{% endif %}</p>
   {% if local_map.description %}<p class="muted">{{ local_map.description }}</p>{% endif %}
 </div>
 {% if local_map.participants %}

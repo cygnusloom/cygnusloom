@@ -233,6 +233,18 @@ def _event_tools(tools: Any, event: JourneyEvent, rng: random.Random) -> Any:
     return replace(tools, journey=replace(WWN.journey, events=(event,)), rng=rng)
 
 
+def test_moving_to_the_place_the_party_already_stands_charges_no_time(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    app, campaign_id, tools = _setup(client_factory)
+    before = _hours(app, campaign_id)
+
+    result = tools.move_actor(NAME, "Start")
+
+    assert "already at" in result["note"]
+    assert _hours(app, campaign_id) == before
+
+
 def test_wwn_travel_moves_then_advances_the_clock_once_without_drawing(
     client_factory: Callable[[], TestClient],
 ) -> None:
@@ -261,8 +273,14 @@ def test_wwn_travel_moves_then_advances_the_clock_once_without_drawing(
         "forage",
         "privation",
         "events",
+        "nights_count",
+        "nights",
+        "nights_note",
     ]
     assert result["events"] == []
+    assert result["nights_count"] == 2
+    assert [night["part"] for night in result["nights"]] == ["night", "night"]
+    assert "advance_clock false" in result["nights_note"]
     assert [event.kind for event in _events_after(app, campaign_id, mark)] == [
         ActorMoved.kind,
         ClockAdvanced.kind,

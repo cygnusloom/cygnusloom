@@ -360,7 +360,14 @@ def get_statblock(
     if combat is not None:
         lines += _combat_lines(character, spec, combat, monsters)
     lines += _status_lines(
-        character, conditions, inventory, hooks, counters, track_inventory, currency
+        character,
+        conditions,
+        inventory,
+        hooks,
+        counters,
+        track_inventory,
+        currency,
+        show_all_counters=character.kind == PC_KIND or character.hireling,
     )
     for key, choices in character.feature_choices.items():
         lines.append(f"Feature choice {key}: {', '.join(choices)}")
@@ -467,10 +474,19 @@ def _status_lines(
     counters: Mapping[str, CounterRules] | None = None,
     track_inventory: bool = True,
     currency: str = "",
+    show_all_counters: bool = True,
 ) -> list[str]:
     """The character's conditions, counters, injuries, the rule set's status lines, and what they carry. Each part
     shows only when the rule set has it, or when the character has something to report."""
     lines: list[str] = []
+    if character.timers:
+        lines.append(
+            "Timers: "
+            + ", ".join(
+                f"{timer.label or 'Timer'} {timer.item} until {timer.until_text}"
+                for timer in character.timers.values()
+            )
+        )
     if conditions is not None:
         held = [rules.label for rules in active_conditions(character, conditions)]
         lines.append(f"Conditions: {', '.join(held) if held else 'none'}")
@@ -479,8 +495,10 @@ def _status_lines(
             f"{rules.label} {character.counters.get(rules.id, rules.initial)}"
             + (f" of {rules.maximum}" if rules.maximum is not None else "")
             for rules in counters.values()
+            if show_all_counters or rules.id in character.counters
         ]
-        lines.append(f"Counters: {', '.join(shown)}")
+        if shown:
+            lines.append(f"Counters: {', '.join(shown)}")
     if character.injuries:
         lines.append(f"Injuries: {'; '.join(character.injuries)}")
     lines.extend(
@@ -1772,7 +1790,11 @@ def _sheet_text(spec: CharacterSpec, character: Character, *, include_fields: bo
             if not _is_statblock_default(spec, stat)
         }
     effective = replace(spec, features=custom_features.merged_features(spec, character))
-    text = describe(effective, replace(sheet, stats=own))
+    text = describe(
+        effective,
+        replace(sheet, stats=own),
+        show_all_counters=character.kind == PC_KIND or character.hireling,
+    )
     harmed = []
     for stat, taken in character.harm.items():
         if taken <= 0 or stat not in spec.stats:

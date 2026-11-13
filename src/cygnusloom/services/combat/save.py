@@ -114,7 +114,7 @@ def _save(
             roll=result.roll,
             score=result.score,
             passed=result.passed,
-            status="" if critical else defeat_status(character, combat.defeat),
+            status="" if critical or result.passed else defeat_status(character, combat.defeat),
             critical=critical,
         ),
     )
@@ -175,9 +175,7 @@ def player_save(
                 passed=result.passed,
                 cause=cause,
                 reaction=(
-                    triggered.text
-                    if triggered is not None and triggered.reaction.uses <= 0
-                    else ""
+                    triggered.text if triggered is not None and triggered.reaction.uses <= 0 else ""
                 ),
             ),
         )
@@ -209,7 +207,7 @@ def player_save(
             roll=result.roll,
             score=result.score,
             passed=result.passed,
-            status=defeat_status(pc, combat.defeat),
+            status="" if result.passed else defeat_status(pc, combat.defeat),
             reaction=(
                 triggered.text if triggered is not None and triggered.reaction.uses <= 0 else ""
             ),

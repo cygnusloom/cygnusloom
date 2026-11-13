@@ -179,6 +179,27 @@ def _player_bonuses(
         shock_parts.append(("Shock", feature.shock))
         if attribute:
             shock_parts.append((_stat_label(spec, attribute_stat), attribute))
+    for feature_id, count in character.features.items():
+        if count < 1:
+            continue
+        held = spec.features.get(feature_id)
+        if held is None:
+            continue
+        for bonus in held.weapon_bonuses:
+            if bonus.skill and bonus.skill != skill:
+                continue
+            if bonus.skill and not spec.skill_trained(character.skills, bonus.skill):
+                continue
+            level = spec.skill_level(character.skills, bonus.skill) if bonus.skill else 1
+            if not level:
+                continue
+            label = _skill_label(spec, bonus.skill) if bonus.skill else held.name
+            if bonus.hit:
+                to_hit_parts.append((label, level))
+            if bonus.damage:
+                damage_parts.append((label, level))
+            if bonus.shock and feature is not None and feature.shock:
+                shock_parts.append((label, level))
     return WeaponBonuses(
         to_hit=sum(value for _, value in to_hit_parts),
         damage=sum(value for _, value in damage_parts),

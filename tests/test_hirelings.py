@@ -186,6 +186,7 @@ def test_a_day_passing_takes_the_wage_from_the_employer(client_factory):
     _hire(tools)
     tools.advance_time(days=1)
     assert _gold(app, campaign_id) == 20 - WAGE
+    assert _gold(app, campaign_id, HIRELING) == WAGE
     paid = _events(app, campaign_id, "character.currency_changed")
     assert any(f"wages for {HIRELING}" in row.payload for row in paid)
 

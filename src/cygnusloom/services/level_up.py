@@ -424,6 +424,10 @@ def option_views(
 def _new_level(pc: Character, rule_set: RuleSet, summary: Mapping[str, Any] | None) -> int:
     """The character's level after the pending level-up, or their current level."""
     rules = next(iter(rule_set.level_ups.values()), None)
+    if rules is None and "level" not in rule_set.counters:
+        # A rule set that advances by period or Year rather than levels has no level number to
+        # show on the page.
+        return 0
     counter = rules.level_counter if rules is not None else "level"
     initial = rule_set.counters[counter].initial if counter in rule_set.counters else 1
     current = int(pc.counters.get(counter, initial))
