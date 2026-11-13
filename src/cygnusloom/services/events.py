@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict, dataclass, field, fields, replace
+from functools import cache, lru_cache
 from typing import Any, ClassVar
 
 from sqlalchemy import delete, func
@@ -127,12 +128,29 @@ def record(db: Session, campaign_id: int, event: GameEvent) -> int:
     return row.id
 
 
+@cache
+def _payload_fields(cls: type[GameEvent]) -> frozenset[str]:
+    """The payload fields an event class has today. Cached because every fold decodes many."""
+    return frozenset(f.name for f in fields(cls))
+
+
+@lru_cache(maxsize=1024)
+def _decode_event(kind: str, payload: str) -> GameEvent:
+    """Decode one stored payload. The result is shared by every fold that reads that row.
+
+    Events are frozen and `apply` never changes them, so one decoded copy can be replayed
+    any number of times. A campaign page or a GM turn folds the log dozens of times, and
+    parsing the same JSON over and over used to be most of that work.
+    """
+    cls = EVENT_TYPES[kind]
+    known = _payload_fields(cls)
+    data = json.loads(payload)
+    return cls(**{key: value for key, value in data.items() if key in known})
+
+
 def decode(row: Event) -> GameEvent:
     """The event a row stores. Payload keys the event no longer has are ignored."""
-    cls = EVENT_TYPES[row.kind]
-    known = {f.name for f in fields(cls)}
-    payload = json.loads(row.payload)
-    return cls(**{key: value for key, value in payload.items() if key in known})
+    return _decode_event(row.kind, row.payload)
 
 
 def load_state(db: Session, campaign_id: int, before: int | None = None) -> CampaignState:
@@ -1741,6 +1759,27 @@ def _mark_used(mark: CellMark) -> bool:
     return any((mark.terrain, mark.object, mark.color, mark.pattern, mark.icon, mark.label))
 
 
+def _parsed_marks(
+    event: Any,
+) -> tuple[dict[tuple[int, int], CellMark], dict[tuple[int, int], CellMark]]:
+    """The event's marks parsed once, as (all, used), shared by every fold that replays it.
+
+    A map event carries every mark it sets, and a fold replays the whole log. Parsing the
+    same list again for each fold is the largest cost in a map-heavy campaign. The decoded
+    event is shared (see `_decode_event`), so the parsed dictionaries can be kept on it
+    without touching the stored payload.
+    """
+    cached = getattr(event, "_parsed_marks_cache", None)
+    if cached is None:
+        everything = marks_from_list(event.marks)
+        cached = (everything, {key: mark for key, mark in everything.items() if _mark_used(mark)})
+        try:
+            object.__setattr__(event, "_parsed_marks_cache", cached)
+        except AttributeError:
+            pass
+    return cached
+
+
 @dataclass(frozen=True)
 class MapCreated(GameEvent):
     kind: ClassVar[str] = "map.created"
@@ -1767,7 +1806,7 @@ class MapCreated(GameEvent):
             rows=self.rows,
             description=self.description,
             background=self.background,
-            marks={k: v for k, v in marks_from_list(self.marks).items() if _mark_used(v)},
+            marks=dict(_parsed_marks(self)[1]),
             created=event_id,
             palette=self.palette,
             ambient=self.ambient,
@@ -1937,7 +1976,7 @@ class MapCellsChanged(GameEvent):
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         encounter_map = state.maps[name_key(self.name)]
-        for (column, row), mark in marks_from_list(self.marks).items():
+        for (column, row), mark in _parsed_marks(self)[0].items():
             if _mark_used(mark):
                 encounter_map.marks[(column, row)] = mark
             else:

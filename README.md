@@ -104,9 +104,11 @@ important rules in full.
 
 
 Run checks with `uv run python scripts/test.py` and `uv run ruff check`. The test runner sizes
-its worker pool from the CPU and memory free at the moment, never takes more than half of
-either (swap excluded), and enforces those ceilings where the operating system allows it. A
-bare `pytest` run is refused unless `CYGNUSLOOM_TEST_SETTINGS=1` is set; CI sets that marker and
+its worker pool from the CPU and memory free at the moment (at least two workers when the
+machine can hold them), never takes more than half of either (swap excluded), and enforces
+those ceilings where the operating system allows it. A run that hangs is stopped after 30
+minutes; set `CYGNUSLOOM_TEST_TIMEOUT` to change that limit, or to 0 to remove it. A bare
+`pytest` run is refused unless `CYGNUSLOOM_TEST_SETTINGS=1` is set; CI sets that marker and
 runs `pytest -n auto` without limits because its runner is dedicated to the job.
 
 ## Using DeepSeek

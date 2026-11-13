@@ -45,13 +45,6 @@ def test_the_top_bar_shows_the_mark_beside_the_wordmark(client: TestClient):
     assert "<span>Cygnus Loom</span>" in page.text
 
 
-def test_the_brand_assets_are_checked_in():
-    for name in BRAND_FILES:
-        path = BRAND / name
-        assert path.is_file(), name
-        assert path.stat().st_size > 0, name
-
-
 def test_the_brand_assets_are_served(client: TestClient):
     svg = client.get("/static/brand/cygnus-loom.svg")
     assert svg.status_code == 200

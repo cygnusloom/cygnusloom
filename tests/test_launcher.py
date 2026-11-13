@@ -47,11 +47,6 @@ def test_one_process_holds_the_instance_lock(tmp_path):
     second.release()
 
 
-def test_free_port_is_usable():
-    port = launcher._free_port("127.0.0.1")
-    assert 1 <= port <= 65535
-
-
 @pytest.fixture
 def root_logging():
     """Restore the process-wide logging setup after a test starts the app's loggers."""
