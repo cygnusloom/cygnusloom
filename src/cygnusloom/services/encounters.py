@@ -1236,7 +1236,11 @@ def begin_turn(db: Session, campaign_id: int, name: str) -> Character:
         raise InvalidInput(f"it is {character.name}'s turn next, not {name}'s")
     instruction = ""
     if character.kind == NPC_KIND:
-        instruction = f"It is {character.name}'s turn in the encounter. Play out their turn."
+        instruction = (
+            f"It is {character.name}'s turn in the encounter. This is not an out-of-character "
+            "message. Resolve what they do now with the combat tools, then finish the state step; "
+            "an attack happens only when you call attack."
+        )
     record(db, campaign_id, EncounterTurnBegun(name=character.name, instruction=instruction))
     db.commit()
     return character
@@ -1429,6 +1433,7 @@ def encounter_view(
         "grid_color": entry.grid_color,
         "round": encounter.round,
         "acting": encounter.acting,
+        "has_acted": encounter.attacked > 0 or encounter.moved > 0,
         "awaiting_initiative": awaiting_initiative(state),
         "attacks_left": _attacks_left(encounter, combat),
         "attacks_per_turn": combat.attacks_per_turn if combat is not None else None,

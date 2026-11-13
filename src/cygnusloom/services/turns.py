@@ -131,6 +131,27 @@ TOOL_MARKUP = re.compile(
 # An XML tag whose name is a real tool is a tool call written as text, such as
 # `<get_statblock name="Mara"/>`.
 _TAG_NAME = re.compile(r"</?([A-Za-z_][\w-]*)\b")
+# A state step's checklist notes are internal prose. These words mark a note that claims an
+# attack resolved; if the encounter record holds no attack, the note is false and the step is
+# sent back to resolve the attack or correct the note.
+_ATTACK_CLAIM = re.compile(
+    r"\b(?:attacks?|attacked|attacking|strikes?|struck|striking|swings?|swung|swinging|"
+    r"hits?|hitting|slashes?|slashed|slashing|stabs?|stabbed|stabbing|blows?|shots?)\b",
+    re.IGNORECASE,
+)
+_ATTACK_OUTCOME = re.compile(
+    r"\b(?:misses?|missed|missing|hits?|hitting|harms?|harmed|harming|damages?|damaged|"
+    r"damaging|wounds?|wounded|wounding|struck|lands?|landed|landing|defeats?|defeated|"
+    r"defeating|drops?|dropped|kills?|killed|killing|bleeds?|bled|bleeding|blood|blocks?|"
+    r"blocked|blocking|parr(?:y|ies|ied|ying))\b",
+    re.IGNORECASE,
+)
+_NEGATED_CLAIM = re.compile(
+    r"\b(?:no|not|never|none|without|didn't|doesn't|isn't|wasn't|weren't|aren't|can't|"
+    r"couldn't|refuse[sd]?|refusing|holds?|held|avoids?|avoided)\b",
+    re.IGNORECASE,
+)
+_CLAUSE_END = re.compile(r"[.;!?]+")
 
 
 def _is_tool_markup(text: str, tool_names: Iterable[str]) -> bool:
@@ -325,9 +346,48 @@ def _format_checklist_report(report: Mapping[str, str]) -> str:
     return "\n".join(f"- {key}: {note}" for key, note in report.items())
 
 
+def _claimed_attack(report: Mapping[str, str]) -> bool:
+    """Whether a checklist note says an attack resolved. Only the `rules` and `encounter`
+    areas record attacks; a clause that negates the attack does not count."""
+    for key in ("rules", "encounter"):
+        for clause in _CLAUSE_END.split(report.get(key, "")):
+            if (
+                _ATTACK_CLAIM.search(clause)
+                and _ATTACK_OUTCOME.search(clause)
+                and not _NEGATED_CLAIM.search(clause)
+            ):
+                return True
+    return False
+
+
+def _unresolved_attack(run: _Run, turn: Turn, report: Mapping[str, str]) -> str:
+    """A state step that writes an attack into its notes must have resolved it with a tool. The
+    narration is written from the record, so an attack the record does not hold never happened."""
+    actor = turn.actor
+    if actor is None or not _claimed_attack(report):
+        return ""
+    with session_scope(run.engine) as db:
+        state = load_state(db, run.campaign_id)
+    encounter = state.encounter
+    if (
+        encounter is None
+        or encounter.acting is None
+        or encounter.attacked > 0
+        or name_key(encounter.acting) != name_key(actor)
+    ):
+        return ""
+    return (
+        "The state step is not finished: the encounter record shows no attack this turn by "
+        f"{actor}. An attack happens only when you call attack, and a refused or imagined "
+        "attack did not happen. If they attack, call attack now and then finish the state step "
+        "again; if they do not, correct the note that says they did, then call "
+        "finish_state_step again."
+    )
+
+
 def _is_checklist_retry_message(message: Mapping[str, Any]) -> bool:
     return message.get("role") == "system" and str(message.get("content", "")).startswith(
-        "The state step is not finished: the turn checklist is missing"
+        "The state step is not finished"
     )
 
 
@@ -1649,23 +1709,25 @@ async def _finish_checklist(
             yield entry
         return
     report, missing = _read_checklist_report(request, run.checklist_keys)
-    retry = _checklist_retry(missing) if missing else ""
+    retry = _checklist_retry(missing) if missing else _unresolved_attack(run, turn, report)
     messages: list[dict[str, Any]] = [
         {
             "role": "tool",
             "tool_call_id": request.id,
-            "content": json.dumps({"error": retry}) if missing else json.dumps({"finished": True}),
+            "content": json.dumps({"error": retry}) if retry else json.dumps({"finished": True}),
         }
     ]
+    label = (
+        "incomplete checklist" if missing else "unresolved attack" if retry else "turn checklist"
+    )
     context = [
         ContextPart(
             "assistant",
-            f"GM state step (round {round_no}), "
-            + ("incomplete checklist" if missing else "turn checklist"),
+            f"GM state step (round {round_no}), {label}",
             _format_checklist_report(report),
         )
     ]
-    if not missing:
+    if not retry:
         _record_state_finished(run, turn, messages, context)
         for entry in _flush(run):
             yield entry
@@ -1679,14 +1741,13 @@ async def _finish_checklist(
             StateStepMade(requests=[], messages=messages, context=_dicts(context), final=False),
         )
     else:
-        logger.warning("state step ended without checklist items: %s", ", ".join(missing))
-        context.append(
-            ContextPart(
-                "system",
-                "Checklist incomplete",
-                "Missing: " + ", ".join(missing) + ".",
-            )
-        )
+        if missing:
+            logger.warning("state step ended without checklist items: %s", ", ".join(missing))
+            note = "Missing: " + ", ".join(missing) + "."
+        else:
+            logger.warning("state step ended with an unresolved attack note")
+            note = "The encounter record still shows no attack."
+        context.append(ContextPart("system", "Checklist incomplete", note))
         _record_state_finished(run, turn, messages, context)
     for entry in _flush(run):
         yield entry

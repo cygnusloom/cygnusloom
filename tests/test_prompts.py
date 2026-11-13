@@ -76,6 +76,11 @@ def test_turn_review_instruction_is_generic():
     assert "never add a speculative action" in TURN_REVIEW_INSTRUCTION
     assert "Do not undo for style" in TURN_REVIEW_INSTRUCTION
     assert "tense, coverage, and formatting faults" in TURN_REVIEW_INSTRUCTION
+    assert "An event the record does not hold is also a fault" in TURN_REVIEW_INSTRUCTION
+    assert "play out their turn is an instruction, not an action" in TURN_REVIEW_INSTRUCTION
+    assert "Do not treat an invented attack as harmless fight flavor" in TURN_REVIEW_INSTRUCTION
+    assert "An earlier turn's event is not this turn's record" in TURN_REVIEW_INSTRUCTION
+    assert "call undo_narration with the restaged action as the fault" in TURN_REVIEW_INSTRUCTION
     # The review judges the narration, not the GM's choices in the record.
     assert "do not add an action the turn did not take" in TURN_REVIEW_INSTRUCTION
     assert "clearly needed but did not take" not in TURN_REVIEW_INSTRUCTION
@@ -84,6 +89,15 @@ def test_turn_review_instruction_is_generic():
 def test_ooc_instruction_does_not_restart_the_ooc_step():
     assert "call ooc" not in OOC_INSTRUCTION
     assert "state step already decided" in OOC_INSTRUCTION
+
+
+def test_narration_does_not_invent_an_attack_the_record_does_not_hold():
+    told = narrate_instruction(rules_for())
+    assert "An attack is in the record only when the log or a tool result records one" in told
+    assert "When the record has no attack by an NPC, that NPC does not swing" in told
+    assert "say only what the record shows them doing" in told
+    assert "An action from an earlier turn is not part of this turn's log" in told
+    assert "do not replay an earlier attack, miss, or move" in told
 
 
 def test_movement_within_a_local_map_is_recorded_before_the_narration():
