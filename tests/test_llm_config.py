@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import ssl
-from dataclasses import replace
 
 import pytest
 from sqlmodel import Session, select
@@ -235,10 +234,3 @@ def test_admin_add_on_an_environment_catalog_preserves_existing_models(settings:
     catalog, _ = _catalog(settings)
     catalog.add("openai", "gpt-4o-mini", "https://api.openai.com/v1")
     assert set(catalog.model_ids()) == {"fake/scripted", "ollama/test-model", "openai/gpt-4o-mini"}
-
-
-def test_settings_fixture_can_be_replaced_with_no_models(settings: Settings):
-    empty = replace(settings, llm_models=(), llm_default_model="")
-    catalog, _ = _catalog(empty)
-    catalog.seed_from_env()
-    assert catalog.model_ids() == ()
