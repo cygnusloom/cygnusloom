@@ -571,6 +571,17 @@ def test_player_input_and_activity_are_read(tree: Path):
     assert tool.activity == "You rolled {die} for {total}."
 
 
+def test_a_player_input_precheck_is_read(tree: Path):
+    """A player input may name the WorldTools method that refuses an impossible request before
+    the player is asked anything."""
+    tool = _load_tool(
+        tree,
+        player_input={"dice": "1d20", "param": "roll", "precheck": "player_save"},
+    )
+    assert tool.player_input is not None
+    assert tool.player_input.precheck == "player_save"
+
+
 @pytest.mark.parametrize(
     "overrides, message",
     [
@@ -597,6 +608,18 @@ def test_player_input_and_activity_are_read(tree: Path):
         (
             {"player_input": {"dice": "1d20", "param": "roll", "details": "{nope}"}},
             "names unknown argument 'nope'",
+        ),
+        (
+            {"player_input": {"dice": "1d20", "param": "roll", "precheck": "no_such_check"}},
+            "'no_such_check' is not a method of WorldTools",
+        ),
+        (
+            {"player_input": {"dice": "1d20", "param": "roll", "precheck": "add_note"}},
+            "'player_input.precheck' needs 'text', which is not a tool argument",
+        ),
+        (
+            {"player_input": {"dice": "1d20", "param": "roll", "precheck": 1}},
+            "'player_input.precheck' must name a WorldTools method",
         ),
         ({"activity": "   "}, "non-empty text template"),
         (

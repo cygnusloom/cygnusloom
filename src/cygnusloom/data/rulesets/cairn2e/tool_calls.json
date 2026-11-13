@@ -116,12 +116,13 @@
     "type": "tool_call",
     "id": "player_attack",
     "extends": "core:tool_call/player_attack",
-    "description": "Ask the player to roll their attack against a target. Attacks always hit, so the player's weapon roll is the damage; the modifier's dice replace the weapon's when one is named. The weapon must be carried (give it with give_item first, naming its damage if it is not in the catalogue), or be 'unarmed' for fists. Use it when the player says what they attack with, the target is in the encounter, and it is the player character's turn; an attack outside their turn is refused unless force is true. The target takes the damage through its armor, Hit Protection, and Strength, as with an NPC attack. A detachment can only be hit by an impaired attack.",
+    "description": "Ask the player to roll their attack against a target. Attacks always hit, so the player's weapon roll is the damage; the modifier's dice replace the weapon's when one is named. The weapon must be carried (give it with give_item first, naming its damage if it is not in the catalogue), or be 'unarmed' for fists. Use it when the player says what they attack with, the target is in the encounter, and it is the player character's turn; an attack outside their turn is refused unless force is true. When the player orders a different character to attack, such as a hireling, and it is not that character's turn, do not call this tool for them: say plainly that the character holds until their turn, and resolve the attack when their turn comes. The target takes the damage through its armor, Hit Protection, and Strength, as with an NPC attack. A detachment can only be hit by an impaired attack.",
     "player_input": {
       "weapon_param": "weapon",
       "weapon_roll_param": "damage_roll",
       "details": "{weapon} against {target}: roll the weapon's damage dice. Attacks always hit.",
-      "modifier_param": "modifier"
+      "modifier_param": "modifier",
+      "precheck": "player_attack_check"
     },
     "parameters": {
       "properties": {

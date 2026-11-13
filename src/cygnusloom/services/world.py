@@ -1848,6 +1848,36 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
         with session_scope(self.engine) as db:
             return combat.attack_dice(db, self.campaign_id, weapon, self._rules(), modifier)
 
+    def player_attack_check(
+        self,
+        target: str,
+        weapon: str,
+        modifier: str = "",
+        range_band: str = "",
+        dual_wield: bool = False,
+        force: bool = False,
+        character: str = "",
+    ) -> None:
+        """Refuse a player attack before its roll prompt is shown. It makes the same checks the
+        attack itself does, so the GM hears about an attack outside the character's turn, or
+        one out of reach, instead of the player being asked to roll for it."""
+        with session_scope(self.engine) as db:
+            combat.player_attack_check(
+                db,
+                self.campaign_id,
+                target,
+                weapon,
+                self._rules(),
+                modifier,
+                spec=self.character,
+                weapon_feature=self._weapon_feature(weapon),
+                range_band=range_band,
+                dual_wield=dual_wield,
+                force=force,
+                character=character,
+                cell_feet=self._cell_feet(),
+            )
+
     def resolve_group_break(self, name: str, outcome: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return combat.resolve_group_break(db, self.campaign_id, name, outcome, self._rules())

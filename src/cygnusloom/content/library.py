@@ -360,6 +360,10 @@ class PlayerInput:
     weapon_roll_param: str | None = None
     details: str | None = None
     modifier_param: str | None = None
+    # A WorldTools method that checks the request before the player is asked anything. It gets
+    # the tool's arguments and refuses the same way the tool would, so an impossible request is
+    # reported to the GM instead of being turned into a prompt the player cannot complete.
+    precheck: str | None = None
 
 
 @dataclass(frozen=True)
@@ -8874,9 +8878,25 @@ def _check_player_input(
             "weapon_roll_param",
             "details",
             "modifier_param",
+            "precheck",
         },
         f"{label}: player_input",
     )
+    precheck = data.get("precheck")
+    if precheck is not None:
+        if not isinstance(precheck, str) or not precheck:
+            raise ContentError(f"{label}: 'player_input.precheck' must name a WorldTools method")
+        method = _world_method(precheck, f"{label}: player_input")
+        for name, parameter in inspect.signature(method).parameters.items():
+            if name == "self" or parameter.kind is inspect.Parameter.VAR_KEYWORD:
+                continue
+            if (
+                parameter.default is inspect.Parameter.empty
+                and name not in parameters["properties"]
+            ):
+                raise ContentError(
+                    f"{label}: 'player_input.precheck' needs {name!r}, which is not a tool argument"
+                )
     dice = data.get("dice")
     dice_param = data.get("dice_param")
     dice_values_param = data.get("dice_values_param")
@@ -9010,6 +9030,7 @@ def _check_player_input(
         param=param,
         details=details,
         modifier_param=modifier_param,
+        precheck=precheck,
     )
 
 

@@ -1036,6 +1036,195 @@ def player_attack(
     supplies its reach and ranged bands; without one the attack is melee at the rule set's reach.
     When the target lies beyond the reach, `range_band` names the band to use, or the nearest one
     that covers the distance is chosen."""
+    prepared = _prepare_player_attack(
+        db,
+        campaign_id,
+        target,
+        weapon,
+        combat,
+        modifier,
+        spec=spec,
+        weapon_feature=weapon_feature,
+        damage_roll=damage_roll,
+        range_band=range_band,
+        dual_wield=dual_wield,
+        force=force,
+        character=character,
+        cell_feet=cell_feet,
+    )
+    state, pc, struck = prepared.state, prepared.pc, prepared.struck
+    damage_note = ""
+    damage_rolls: list[int] = []
+    if damage_roll is not None:
+        raw = damage_roll
+        damage_note = "the player's roll"
+    else:
+        damage_rolls, raw = roll_values(prepared.dice, rng, plus=plus)
+    if spec is not None and reactions.has_trigger(pc, spec, None, "damage"):
+        second_rolls, second = roll_values(prepared.dice, rng, plus=plus)
+        if second > raw:
+            raw, damage_rolls = second, second_rolls
+            damage_note = ""
+    damage_parts = list(prepared.bonuses.damage_parts)
+    if prepared.dual_damage:
+        damage_parts.append(("dual wielding", prepared.dual_damage))
+    if damage_modifier:
+        damage_parts.append(("situational", damage_modifier))
+    raw = max(0, raw + prepared.bonuses.damage + prepared.dual_damage + damage_modifier)
+    damage_breakdown = roll_breakdown(
+        prepared.dice, damage_rolls, damage_parts, raw, note=damage_note
+    )
+    # A thrown or ranged weapon never inflicts Shock, even on a miss, so only a melee attack
+    # carries the weapon's Shock and any bonus that reaches it.
+    ranged = not prepared.distance.melee or bool(range_band and not prepared.distance.cells)
+    shock_parts: list[tuple[str, int]] = []
+    if not ranged:
+        shock_parts = list(prepared.bonuses.shock_parts)
+        if shock_modifier:
+            shock_parts.append(("situational", shock_modifier))
+    shock = sum(value for _, value in shock_parts)
+    shock_ac = prepared.bonuses.shock_ac if shock else 0
+    shock_breakdown = (
+        roll_breakdown(
+            "",
+            [],
+            shock_parts,
+            shock,
+            target=shock_ac,
+            target_label="Shock AC",
+        )
+        if shock
+        else None
+    )
+    # The hit is rolled after the damage, so a roll_vs_defense rule set draws its dice in the same
+    # order it always has.
+    to_hit: int | None = None
+    natural: int | None = None
+    hit_breakdown: dict[str, Any] | None = None
+    if combat.hit_mode == "roll_vs_defense":
+        natural = (
+            attack_roll if attack_roll is not None else roll_total(combat.check_die, rng, plus=plus)
+        )
+        if spec is not None and reactions.has_trigger(pc, spec, None, "attack"):
+            natural = max(natural, roll_total(combat.check_die, rng, plus=plus))
+        hit_parts = list(prepared.bonuses.to_hit_parts)
+        if hit_modifier:
+            hit_parts.append(("situational", hit_modifier))
+        if prepared.range_penalty:
+            hit_parts.append(("range", prepared.range_penalty))
+        if prepared.dual_penalty:
+            hit_parts.append(("dual wielding", prepared.dual_penalty))
+        condition_modifier = _condition_attack_modifier(pc, conditions)
+        if condition_modifier:
+            hit_parts.append(("conditions", condition_modifier))
+        to_hit = natural + sum(value for _, value in hit_parts)
+        hit_breakdown = roll_breakdown(
+            combat.check_die,
+            [natural],
+            hit_parts,
+            to_hit,
+            target=struck.armor,
+            target_label="AC",
+        )
+    result = _strike(
+        db,
+        campaign_id,
+        combat,
+        rng,
+        struck,
+        pc.name,
+        prepared.weapon,
+        raw,
+        modifier=modifier_name(modifier),
+        plus=plus,
+        to_hit=to_hit,
+        natural=natural,
+        shock=shock,
+        shock_ac=shock_ac,
+        spec=spec,
+        hit_breakdown=hit_breakdown,
+        damage_breakdown=damage_breakdown,
+        shock_breakdown=shock_breakdown,
+    )
+    if state.encounter is not None:
+        _mark_attack(db, campaign_id, pc.name)
+    placement = {"range": prepared.distance.as_dict()} if prepared.distance.cells else {}
+    return {**result, **placement}
+
+
+def player_attack_check(
+    db: Session,
+    campaign_id: int,
+    target: str,
+    weapon: str,
+    combat: CombatRules,
+    modifier: str = "",
+    *,
+    spec: CharacterSpec | None = None,
+    weapon_feature: Feature | None = None,
+    range_band: str = "",
+    dual_wield: bool = False,
+    force: bool = False,
+    character: str = "",
+    cell_feet: int | None = None,
+) -> None:
+    """Refuse a player attack the same way `player_attack` would, without rolling or recording
+    anything. The engine calls it before showing the player's roll prompt, so an attack outside
+    the character's turn, at a spent budget, out of reach, or with a weapon they cannot use is
+    refused to the GM instead of being offered to the player as a roll that would fail."""
+    _prepare_player_attack(
+        db,
+        campaign_id,
+        target,
+        weapon,
+        combat,
+        modifier,
+        spec=spec,
+        weapon_feature=weapon_feature,
+        range_band=range_band,
+        dual_wield=dual_wield,
+        force=force,
+        character=character,
+        cell_feet=cell_feet,
+    )
+
+
+@dataclass(frozen=True)
+class _PreparedAttack:
+    """A player attack that passed every check: who strikes whom with what, before any dice."""
+
+    state: CampaignState
+    pc: Character
+    struck: Character
+    weapon: str
+    dice: str
+    bonuses: WeaponBonuses
+    distance: ranges.AttackDistance
+    range_penalty: int
+    dual_penalty: int
+    dual_damage: int
+
+
+def _prepare_player_attack(
+    db: Session,
+    campaign_id: int,
+    target: str,
+    weapon: str,
+    combat: CombatRules,
+    modifier: str,
+    *,
+    spec: CharacterSpec | None,
+    weapon_feature: Feature | None,
+    damage_roll: int | None = None,
+    range_band: str = "",
+    dual_wield: bool = False,
+    force: bool = False,
+    character: str = "",
+    cell_feet: int | None = None,
+) -> _PreparedAttack:
+    """Every check `player_attack` makes before it rolls: the attacker may act now, carries the
+    weapon, and can reach the target. Both the attack and its prompt check share it, so the
+    player is only asked to roll for an attack that can happen."""
     state = load_state(db, campaign_id)
     _no_initiative_pending(state)
     pc = _player_character(state, character)
@@ -1057,18 +1246,6 @@ def player_attack(
     dice = _attack_dice(pc, name, modifier, combat)
     _require_impaired(struck, modifier_name(modifier), combat)
     bonuses = _player_bonuses(combat, pc, name, spec, weapon_feature)
-    damage_note = ""
-    damage_rolls: list[int] = []
-    if damage_roll is not None:
-        raw = damage_roll
-        damage_note = "the player's roll"
-    else:
-        damage_rolls, raw = roll_values(dice, rng, plus=plus)
-    if spec is not None and reactions.has_trigger(pc, spec, None, "damage"):
-        second_rolls, second = roll_values(dice, rng, plus=plus)
-        if second > raw:
-            raw, damage_rolls = second, second_rolls
-            damage_note = ""
     distance = ranges.check_attack(
         state,
         combat,
@@ -1094,89 +1271,18 @@ def player_attack(
             raise InvalidInput("this rule set has no dual-wielding action")
         dual_penalty = combat.dual_wield_hit_penalty
         dual_damage = combat.dual_wield_damage_bonus
-    damage_parts = list(bonuses.damage_parts)
-    if dual_damage:
-        damage_parts.append(("dual wielding", dual_damage))
-    if damage_modifier:
-        damage_parts.append(("situational", damage_modifier))
-    raw = max(0, raw + bonuses.damage + dual_damage + damage_modifier)
-    damage_breakdown = roll_breakdown(dice, damage_rolls, damage_parts, raw, note=damage_note)
-    # A thrown or ranged weapon never inflicts Shock, even on a miss, so only a melee attack
-    # carries the weapon's Shock and any bonus that reaches it.
-    ranged = not distance.melee or bool(range_band and not distance.cells)
-    shock_parts: list[tuple[str, int]] = []
-    if not ranged:
-        shock_parts = list(bonuses.shock_parts)
-        if shock_modifier:
-            shock_parts.append(("situational", shock_modifier))
-    shock = sum(value for _, value in shock_parts)
-    shock_ac = bonuses.shock_ac if shock else 0
-    shock_breakdown = (
-        roll_breakdown(
-            "",
-            [],
-            shock_parts,
-            shock,
-            target=shock_ac,
-            target_label="Shock AC",
-        )
-        if shock
-        else None
+    return _PreparedAttack(
+        state=state,
+        pc=pc,
+        struck=struck,
+        weapon=name,
+        dice=dice,
+        bonuses=bonuses,
+        distance=distance,
+        range_penalty=range_penalty,
+        dual_penalty=dual_penalty,
+        dual_damage=dual_damage,
     )
-    # The hit is rolled after the damage, so a roll_vs_defense rule set draws its dice in the same
-    # order it always has.
-    to_hit: int | None = None
-    natural: int | None = None
-    hit_breakdown: dict[str, Any] | None = None
-    if combat.hit_mode == "roll_vs_defense":
-        natural = (
-            attack_roll if attack_roll is not None else roll_total(combat.check_die, rng, plus=plus)
-        )
-        if spec is not None and reactions.has_trigger(pc, spec, None, "attack"):
-            natural = max(natural, roll_total(combat.check_die, rng, plus=plus))
-        hit_parts = list(bonuses.to_hit_parts)
-        if hit_modifier:
-            hit_parts.append(("situational", hit_modifier))
-        if range_penalty:
-            hit_parts.append(("range", range_penalty))
-        if dual_penalty:
-            hit_parts.append(("dual wielding", dual_penalty))
-        condition_modifier = _condition_attack_modifier(pc, conditions)
-        if condition_modifier:
-            hit_parts.append(("conditions", condition_modifier))
-        to_hit = natural + sum(value for _, value in hit_parts)
-        hit_breakdown = roll_breakdown(
-            combat.check_die,
-            [natural],
-            hit_parts,
-            to_hit,
-            target=struck.armor,
-            target_label="AC",
-        )
-    result = _strike(
-        db,
-        campaign_id,
-        combat,
-        rng,
-        struck,
-        pc.name,
-        name,
-        raw,
-        modifier=modifier_name(modifier),
-        plus=plus,
-        to_hit=to_hit,
-        natural=natural,
-        shock=shock,
-        shock_ac=shock_ac,
-        spec=spec,
-        hit_breakdown=hit_breakdown,
-        damage_breakdown=damage_breakdown,
-        shock_breakdown=shock_breakdown,
-    )
-    if state.encounter is not None:
-        _mark_attack(db, campaign_id, pc.name)
-    placement = {"range": distance.as_dict()} if distance.cells else {}
-    return {**result, **placement}
 
 
 def _condition_attack_modifier(
@@ -1289,13 +1395,14 @@ def _require_turn(state: CampaignState, actor: Character, force: bool) -> None:
         if actor.kind == PC_KIND and upcoming and name_key(upcoming) == name_key(actor.name):
             return
         raise InvalidInput(
-            f"no one is taking a turn, so {actor.name} cannot attack: begin the next turn first, "
-            "or pass force true when the story needs an action outside the turn order"
+            f"no one is taking a turn, so {actor.name} cannot attack: begin the next turn "
+            "first, or pass force true when the story needs an action outside the turn order"
         )
     if name_key(encounter.acting) != name_key(actor.name):
         raise InvalidInput(
-            f"it is {encounter.acting}'s turn, not {actor.name}'s: press End your turn first, or "
-            "pass force true when the story needs an action outside the turn order"
+            f"it is {encounter.acting}'s turn, not {actor.name}'s: {actor.name} holds until "
+            "their own turn; the player presses End your turn to pass it, or pass force true "
+            "when the story needs an action outside the turn order"
         )
 
 
