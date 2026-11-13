@@ -1,0 +1,12 @@
+{# One character's statblock, as the player may read it. Expects `statblock` and `sheet_links`. #}
+<p class="muted">{{ statblock.kind }}{% if statblock.location %} · {{ statblock.location }}{% endif %}</p>
+{% if statblock.description %}<p>{{ statblock.description }}</p>{% endif %}
+{% if statblock.hp is not none %}<p class="sheet-hp"><strong>HP</strong> {{ statblock.hp }} / {{ statblock.hp_max }}</p>{% endif %}
+{% for line in statblock.lines %}
+<p>{{ line | compendium_links(sheet_links) }}</p>
+{% else %}
+<p class="muted">No statblock recorded.</p>
+{% endfor %}
+{% if statblock.entry %}
+<p class="statblock-entry"><a href="#{{ statblock.entry }}" data-view-link="compendium">Open the bestiary entry</a></p>
+{% endif %}

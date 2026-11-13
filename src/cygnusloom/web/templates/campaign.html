@@ -34,6 +34,15 @@
     </div>
   </form>
 </dialog>
+<dialog id="dialog-statblock" class="app-dialog statblock-dialog" aria-labelledby="dialog-statblock-title" data-statblock-url="/campaigns/{{ campaign.id }}/statblock">
+  <form method="dialog">
+    <h2 id="dialog-statblock-title">Statblock</h2>
+    <div class="statblock-body" data-statblock-body></div>
+    <div class="dialog-actions">
+      <button type="submit" class="secondary">Close</button>
+    </div>
+  </form>
+</dialog>
 {% endblock %}
 {% block scripts %}
   {{ super() }}

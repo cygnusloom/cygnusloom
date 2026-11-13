@@ -150,6 +150,32 @@
     });
   };
 
+  // A dialog that fetches a fragment shows the same loading line while it waits, and reads the
+  // fragment with the session cookie so the server can refuse a page the player cannot see.
+  const loadFragment = async (url) => {
+    try {
+      const response = await fetch(url, {
+        headers: { Accept: "text/html" },
+        credentials: "same-origin",
+      });
+      if (response.ok && !response.redirected) return await response.text();
+    } catch (error) {
+      return null;
+    }
+    return null;
+  };
+  const loadingNote = () => {
+    const note = document.createElement("p");
+    note.className = "muted loading-note";
+    const spinner = document.createElement("span");
+    spinner.className = "spinner";
+    spinner.setAttribute("aria-hidden", "true");
+    const text = document.createElement("span");
+    text.textContent = "Loading…";
+    note.append(spinner, text);
+    return note;
+  };
+
   const showView = (name) => {
     for (const view of document.querySelectorAll("[data-view]")) {
       view.hidden = view.dataset.view !== name;
@@ -396,35 +422,12 @@
       context: turnDialog.querySelector("[data-turn-context-body]"),
       transcript: turnDialog.querySelector("[data-turn-transcript-body]"),
     };
-    const loadFragment = async (url) => {
-      try {
-        const response = await fetch(url, {
-          headers: { Accept: "text/html" },
-          credentials: "same-origin",
-        });
-        if (response.ok && !response.redirected) return await response.text();
-      } catch (error) {
-        return null;
-      }
-      return null;
-    };
-    const loading = () => {
-      const note = document.createElement("p");
-      note.className = "muted loading-note";
-      const spinner = document.createElement("span");
-      spinner.className = "spinner";
-      spinner.setAttribute("aria-hidden", "true");
-      const text = document.createElement("span");
-      text.textContent = "Loading…";
-      note.append(spinner, text);
-      return note;
-    };
     const unavailable = "<p class=\"muted\">Could not load this reply's details.</p>";
     root.querySelectorAll("[data-turn-context-url]").forEach((button) => {
       on(button, "turn-context", "click", async () => {
         turnOpener = button;
-        bodies.context.replaceChildren(loading());
-        bodies.transcript.replaceChildren(loading());
+        bodies.context.replaceChildren(loadingNote());
+        bodies.transcript.replaceChildren(loadingNote());
         turnDialog.showModal();
         const [context, transcript] = await Promise.all([
           loadFragment(button.dataset.turnContextUrl),
@@ -438,6 +441,41 @@
     });
   };
   if (turnDialog) turnDialog.addEventListener("close", () => turnOpener?.focus());
+
+  // A character's name opens their statblock in place. The dialog works for anyone, including
+  // an NPC with no bestiary entry, and a character with an entry also links to it. The dialog
+  // sits outside the regions a turn replaces, so it survives a reply.
+  const statblockDialog = document.getElementById("dialog-statblock");
+  let statblockOpener = null;
+  const bindStatblockNames = (root) => {
+    if (!statblockDialog) return;
+    const body = statblockDialog.querySelector("[data-statblock-body]");
+    const title = statblockDialog.querySelector("h2");
+    const unavailable = "<p class=\"muted\">Could not load this statblock.</p>";
+    root.querySelectorAll("[data-statblock-name]").forEach((link) => {
+      // The link opens a dialog, not a page, so tell assistive technology what to expect.
+      link.setAttribute("aria-haspopup", "dialog");
+      on(link, "statblock", "click", async (event) => {
+        event.preventDefault();
+        statblockOpener = link;
+        const name = link.dataset.statblockName || "";
+        title.textContent = name || "Statblock";
+        dialogOpeners.set(statblockDialog, link);
+        body.replaceChildren(loadingNote());
+        statblockDialog.showModal();
+        const url = `${statblockDialog.dataset.statblockUrl}?name=${encodeURIComponent(name)}`;
+        const html = await loadFragment(url);
+        // Ignore a reply for a name the player has since replaced with another click.
+        if (statblockOpener !== link) return;
+        body.innerHTML = html ?? unavailable;
+        bindViewLinks(body);
+        // Following the bestiary link leaves this dialog for the compendium.
+        body.querySelectorAll("[data-view-link]").forEach((anchor) => {
+          anchor.addEventListener("click", () => statblockDialog.close());
+        });
+      });
+    });
+  };
 
   // On phones the message box starts at one row and grows with what is typed, up to a point.
   // Desktop keeps its three-row box.
@@ -485,6 +523,7 @@
     bindDialogButtons(root);
     bindMessageEditButtons(root);
     bindTurnContextButtons(root);
+    bindStatblockNames(root);
     bindComposer(root);
     measureCompendiumToolbars(root);
     observeCompendiumToolbars();

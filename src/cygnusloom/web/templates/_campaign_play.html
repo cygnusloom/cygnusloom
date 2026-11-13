@@ -235,14 +235,14 @@
                 {% endif %}
                 <ul>
                   {% if scene.pc %}
-                  <li><strong>{{ scene.pc.name }}</strong> <span class="muted">(you)</span></li>
+                  <li><strong><a href="#" class="statblock-name" data-statblock-name="{{ scene.pc.name }}">{{ scene.pc.name }}</a></strong> <span class="muted">(you)</span></li>
                   {% endif %}
                   {% for npc in scene.npcs %}
                   {% set creature_entry = creature_links.get(npc.creature, '') if creature_links and npc.creature else '' %}
-                  <li><strong>{{ npc.name }}</strong>{% if creature_entry %} <a href="#{{ creature_entry }}" data-view-link="compendium">{{ npc.creature }}</a>{% endif %}{% if npc.defeated %} <span class="muted">(body)</span>{% endif %}</li>
+                  <li><strong><a href="#" class="statblock-name" data-statblock-name="{{ npc.name }}">{{ npc.name }}</a></strong>{% if creature_entry %} <a href="#{{ creature_entry }}" data-view-link="compendium">{{ npc.creature }}</a>{% endif %}{% if npc.defeated %} <span class="muted">(body)</span>{% endif %}</li>
                   {% endfor %}
                   {% for hireling in scene.hirelings %}
-                  <li><strong>{{ hireling.name }}</strong> <span class="muted">(hireling of {{ hireling.employer }})</span></li>
+                  <li><strong><a href="#" class="statblock-name" data-statblock-name="{{ hireling.name }}">{{ hireling.name }}</a></strong> <span class="muted">(hireling of {{ hireling.employer }})</span></li>
                   {% endfor %}
                 </ul>
                 {% if scene.objects %}

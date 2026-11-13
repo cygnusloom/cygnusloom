@@ -838,7 +838,7 @@ def test_the_roster_shows_the_statblock_beside_a_monster(client_factory):
     tools.add_participant("Rover")
     page = client.get(f"/campaigns/{campaign_id}").text
     roster = page[page.index('class="encounter-roster"') :]
-    assert "<strong>Rover</strong>" in roster
+    assert '<a href="#" class="statblock-name" data-statblock-name="Rover">Rover</a>' in roster
     assert '<span class="muted">Blink Dog</span>' in roster
 
 

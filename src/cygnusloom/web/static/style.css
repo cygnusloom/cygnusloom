@@ -910,6 +910,12 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 .app-dialog form { display: flex; flex-direction: column; gap: 0.75rem; }
 .app-dialog form > button { align-self: flex-end; }
 .app-dialog .dialog-actions { display: flex; justify-content: flex-end; gap: 0.5rem; }
+/* A character's name opens their statblock, so it reads as a link in every list that shows one. */
+.statblock-name { color: var(--accent); text-decoration: none; }
+.statblock-name:hover, .statblock-name:focus-visible { text-decoration: underline; }
+/* The dialog's lines are already separated by their own gap. */
+.statblock-body { display: flex; flex-direction: column; gap: 0.5rem; }
+.statblock-body p { margin: 0; }
 .message-edit-dialog { width: min(44rem, calc(100% - 2rem)); }
 .message-edit-dialog textarea { width: 100%; resize: vertical; font-family: ui-monospace, Menlo, monospace; font-size: 0.9rem; }
 dialog.choice-dialog { width: min(42rem, calc(100% - 2rem)); max-height: 85vh; }
