@@ -53,7 +53,7 @@
         <section class="character-group" data-filter-group aria-labelledby="characters-you">
           <h3 id="characters-you">You</h3>
           <article class="character-card{% if scene.pc.dead %} is-dead{% endif %}" data-filter-item>
-            <h4>{{ scene.pc.name }}{% if scene.pc.dead %} <span class="tag tag-dead">Dead</span>{% elif scene.pc.retired %} <span class="muted">(left the story)</span>{% endif %}</h4>
+            <h4><a href="#" class="statblock-name" data-statblock-name="{{ scene.pc.name }}">{{ scene.pc.name }}</a>{% if scene.pc.dead %} <span class="tag tag-dead">Dead</span>{% elif scene.pc.retired %} <span class="muted">(left the story)</span>{% endif %}</h4>
             <p class="character-facts">
               {% if scene.pc.pronouns %}<span>Pronouns: {{ scene.pc.pronouns }}</span>{% endif %}
               <span>{% if scene.location %}At {{ scene.location.name }}{% else %}Not yet placed{% endif %}</span>
@@ -67,7 +67,7 @@
           <h3 id="characters-hirelings">Hirelings</h3>
           {% for hireling in living_hirelings %}
           <article class="character-card" data-filter-item>
-            <h4>{{ hireling.name }}</h4>
+            <h4><a href="#" class="statblock-name" data-statblock-name="{{ hireling.name }}">{{ hireling.name }}</a></h4>
             <p class="character-facts">
               {% if hireling.pronouns %}<span>Pronouns: {{ hireling.pronouns }}</span>{% endif %}
               <span>Hired by {{ hireling.employer }}</span>
@@ -82,7 +82,7 @@
           <h3 id="characters-known">People you know</h3>
           {% for npc in living_known %}
           <article class="character-card" data-filter-item>
-            <h4>{{ npc.name }}</h4>
+            <h4><a href="#" class="statblock-name" data-statblock-name="{{ npc.name }}">{{ npc.name }}</a></h4>
             <p class="character-facts">
               {% if npc.pronouns %}<span>Pronouns: {{ npc.pronouns }}</span>{% endif %}
               {% if npc.relation %}<span class="character-relation">{{ npc.relation }}</span>{% endif %}
@@ -101,7 +101,7 @@
           <h3 id="characters-fallen">Fallen</h3>
           {% for hireling in fallen_hirelings %}
           <article class="character-card is-dead" data-filter-item>
-            <h4>{{ hireling.name }} <span class="tag tag-dead">{{ "Dead" if hireling.dead else "Fallen" }}</span></h4>
+            <h4><a href="#" class="statblock-name" data-statblock-name="{{ hireling.name }}">{{ hireling.name }}</a> <span class="tag tag-dead">{{ "Dead" if hireling.dead else "Fallen" }}</span></h4>
             <p class="character-facts">
               {% if hireling.pronouns %}<span>Pronouns: {{ hireling.pronouns }}</span>{% endif %}
               <span>Hired by {{ hireling.employer }}</span>
@@ -112,7 +112,7 @@
           {% endfor %}
           {% for npc in fallen_known %}
           <article class="character-card is-dead" data-filter-item>
-            <h4>{{ npc.name }} <span class="tag tag-dead">{{ "Dead" if npc.dead else "Fallen" }}</span></h4>
+            <h4><a href="#" class="statblock-name" data-statblock-name="{{ npc.name }}">{{ npc.name }}</a> <span class="tag tag-dead">{{ "Dead" if npc.dead else "Fallen" }}</span></h4>
             <p class="character-facts">
               {% if npc.pronouns %}<span>Pronouns: {{ npc.pronouns }}</span>{% endif %}
               {% if npc.relation %}<span class="character-relation">{{ npc.relation }}</span>{% endif %}

@@ -92,6 +92,8 @@ from cygnusloom.services.encounters import encounter_view, local_map_view
 from cygnusloom.services.events import (
     PC_KIND,
     CampaignState,
+    Character,
+    hit_points,
     last_event_id,
     load_state,
     name_key,
@@ -110,7 +112,7 @@ from cygnusloom.services.membership import (
 )
 from cygnusloom.services.music import music_view
 from cygnusloom.services.tools import check_arguments
-from cygnusloom.services.views import map_view, scene_view, story_view, time_view
+from cygnusloom.services.views import get_statblock, map_view, scene_view, story_view, time_view
 from cygnusloom.web.character_form import (
     campaign_submission_from_form,
     campaign_view,
@@ -883,6 +885,82 @@ def map_fragment(request: Request, campaign_id: int) -> Response:
         local_map=local_map,
         local_map_rows=_encounter_rows(local_map) if local_map is not None else [],
         map_fragment=True,
+    )
+
+
+@router.get("/{campaign_id}/statblock")
+def statblock_fragment(request: Request, campaign_id: int, name: str = "") -> Response:
+    """One character's statblock on its own, for the dialog a character's name opens.
+
+    The dialog is player-facing. An NPC's description is a GM record that may hold secrets, so
+    only what the player has learned about them is shown. A character with a bestiary entry also
+    links to that entry.
+    """
+    user = page_user(request)
+    engine = request.app.state.engine
+    library = request.app.state.content
+    campaign = get_campaign(engine, user.id, campaign_id)
+    rule_set = library.rule_sets.get(campaign.rule_set)
+    if rule_set is None:
+        raise NotFound("this campaign's rule set is not available")
+    world = campaign_world(engine, user.id, campaign.id)
+    character = world.state.named(name)
+    if not isinstance(character, Character):
+        raise NotFound(f"there is no character named {name!r}")
+    content = library.world_content(campaign.world_template, campaign.rule_set)
+    # A player character's and a hireling's options are the player's own reading of the sheet.
+    # An NPC's fields, like its description, are GM records and stay out of the player's view.
+    own_sheet = character.hireling or character.kind == PC_KIND
+    try:
+        block = get_statblock(
+            world.state,
+            name,
+            rule_set.character,
+            rule_set.combat,
+            rule_set.conditions,
+            rule_set.inventory,
+            rule_set.hooks,
+            rule_set.counters,
+            track_inventory=campaign.use_inventory_space,
+            currency=rule_set.marketplace.currency if rule_set.marketplace else "",
+            monsters={**rule_set.monsters, **content.monsters},
+            include_description=False,
+            include_fields=own_sheet,
+        )
+    except InvalidInput as exc:
+        raise NotFound(str(exc)) from exc
+    points = hit_points(character, rule_set.hp_stat)
+    # A hireling is shaped like a player character, so it has to be told apart first.
+    if character.hireling:
+        kind = "Hireling"
+        description = character.summary or character.description
+    elif character.kind == PC_KIND:
+        kind = "Player character"
+        description = character.description
+    else:
+        kind = "NPC"
+        known = world.state.known.get(name_key(character.name))
+        description = known.description if known is not None else ""
+    compendium = compendium_view(library, campaign.rule_set, campaign.world_template, world.state)
+    entry = (
+        compendium.creature_links.get(character.name)
+        or compendium.creature_links.get(name_key(character.name))
+        or ""
+    )
+    return render_fragment(
+        request,
+        "_statblock.html",
+        statblock={
+            "name": block["name"],
+            "kind": kind,
+            "location": block["location"] or "",
+            "description": description,
+            "hp": points[0] if points is not None else None,
+            "hp_max": points[1] if points is not None else None,
+            "lines": block["statblock"],
+            "entry": entry,
+        },
+        sheet_links=compendium.sheet_links,
     )
 
 

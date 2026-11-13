@@ -12,7 +12,7 @@
   {% for participant in encounter.participants %}
   <li{% if participant.acting %} class="acting"{% endif %}{% if participant.side_color %} style="--side-color: {{ participant.side_color }}"{% endif %}>
     <span class="muted">{{ participant.number }}.</span>
-    <strong>{{ participant.name }}</strong>
+    <strong><a href="#" class="statblock-name" data-statblock-name="{{ participant.name }}">{{ participant.name }}</a></strong>
     {% if participant.creature %}<span class="muted">{{ participant.creature }}</span>{% endif %}
     {% if participant.is_pc %}<span class="muted">(you)</span>{% endif %}
     {% if participant.side %}<span class="roster-side">{{ participant.side }}</span>{% endif %}
@@ -34,7 +34,7 @@
   {% for participant in local_map.participants %}
   <li>
     <span class="muted">{{ participant.number }}.</span>
-    <strong>{{ participant.name }}</strong>
+    {% if participant.kind == "prop" %}<strong>{{ participant.name }}</strong>{% else %}<strong><a href="#" class="statblock-name" data-statblock-name="{{ participant.name }}">{{ participant.name }}</a></strong>{% endif %}
     {% if participant.creature %}<span class="muted">{{ participant.creature }}</span>{% endif %}
     {% if participant.is_pc %}<span class="muted">(you)</span>{% endif %}
     {% if participant.cell %}<span class="muted">column {{ participant.cell[0] }}, row {{ participant.cell[1] }}</span>{% else %}<span class="muted">not yet placed</span>{% endif %}

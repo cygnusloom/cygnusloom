@@ -336,16 +336,21 @@ def get_statblock(
     track_inventory: bool = True,
     currency: str = "",
     monsters: Mapping[str, MonsterTemplate] | None = None,
+    *,
+    include_description: bool = True,
+    include_fields: bool = True,
 ) -> dict[str, Any]:
     """A character's stats, template, features, and fields, one line each. Works for the player
     character and for NPCs. With a rule set's `combat`, the armor, attacks, harm, and status follow;
     `monsters` adds how many attacks a matching statblock makes in one attack action. With its
     `conditions`, `inventory`, `hooks`, and `counters`, the conditions, injuries, hooks-driven
-    holds, items, and counter values follow."""
+    holds, items, and counter values follow. An NPC's description and fields are GM records that
+    may hold secrets, so a player-facing statblock passes `include_description=False` and
+    `include_fields=False`."""
     character = _character_named(state, name)
     kind = "player character" if character.kind == PC_KIND else "npc"
-    lines = _sheet_text(spec, character).splitlines()
-    if character.description:
+    lines = _sheet_text(spec, character, include_fields=include_fields).splitlines()
+    if include_description and character.description:
         lines.insert(0, f"Description: {character.description}")
     if combat is not None:
         lines += _combat_lines(character, spec, combat, monsters)
@@ -1715,13 +1720,16 @@ def _inventory_view(
     )
 
 
-def _sheet_text(spec: CharacterSpec, character: Character) -> str:
+def _sheet_text(spec: CharacterSpec, character: Character, *, include_fields: bool = True) -> str:
     """A character's sheet as text. A player character's sheet leaves out the rule set's
     statblock defaults: stats it derives with no inputs, such as a monster's Morale, which a
     statblock supplies to an NPC and a player character never uses. A stat the character has
     taken harm to shows its remaining value beside its score, so a wounded character reads as
-    wounded."""
+    wounded. `include_fields=False` leaves out the character options, such as an NPC's goal,
+    which are GM records."""
     sheet = _sheet_of(character)
+    if not include_fields:
+        sheet = replace(sheet, fields={})
     own = sheet.stats
     if character.kind == PC_KIND:
         own = {
