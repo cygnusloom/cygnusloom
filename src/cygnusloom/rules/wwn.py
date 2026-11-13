@@ -37,6 +37,8 @@ from cygnusloom.services.events import (
     EffectNoted,
     FeatureLearned,
     Harmed,
+    ItemRemoved,
+    ItemUsesSet,
     MaxChanged,
     Recovered,
     current,
@@ -1288,9 +1290,11 @@ def grant_package(character: str, package: str, ctx: ToolContext) -> dict[str, A
     }
 
 
-# Marks that count consecutive days without food or water.
+# Marks that count consecutive days without food or water, and the warning that the
+# resulting Strain is at its maximum.
 PRIVATION_FOOD = "privation_food"
 PRIVATION_WATER = "privation_water"
+PRIVATION_DEADLINE = "privation_deadline"
 
 
 def _hook_items(hc: HookContext, key: str) -> tuple[str, ...]:
@@ -1321,19 +1325,36 @@ def _hook_int(hc: HookContext, key: str) -> int:
     return value
 
 
-def _carried_matching(
-    hc: HookContext, character: str, names: Iterable[str]
-) -> dict[str, Any] | None:
-    """The first carried item whose name matches one of `names` and still has a use."""
+def _carried_matching(hc: HookContext, character: str, names: Iterable[str]) -> Any | None:
+    """The first carried item whose name matches one of `names` and still has a use. An item
+    with no use count is a legacy item from before catalogue uses were tracked, so it is
+    returned when no counted item is left."""
     found = hc.character(character)
+    legacy: Any | None = None
     for item in found.items:
-        if (
-            any(inventory_service.same_item_name(item.name, name) for name in names)
-            and item.max_uses > 0
-            and item.uses > 0
-        ):
-            return item
-    return None
+        if not any(inventory_service.same_item_name(item.name, name) for name in names):
+            continue
+        if item.max_uses > 0:
+            if item.uses > 0:
+                return item
+        elif legacy is None:
+            legacy = item
+    return legacy
+
+
+def _listed_uses(hc: HookContext, name: str) -> int:
+    """The catalogue's use count for an item, or 0 when it is not listed."""
+    if hc.marketplace is None:
+        return 0
+    listed = next(
+        (
+            item
+            for item in hc.marketplace.items
+            if inventory_service.same_item_name(item.name, name)
+        ),
+        None,
+    )
+    return listed.uses if listed is not None else 0
 
 
 def _spend_one(hc: HookContext, character: str, names: Iterable[str]) -> str:
@@ -1342,6 +1363,26 @@ def _spend_one(hc: HookContext, character: str, names: Iterable[str]) -> str:
     if item is None or hc.inventory is None:
         return ""
     db, campaign_id = hc.session()
+    if item.max_uses < 1:
+        # BACKWARDS-COMPATIBILITY: 5
+        # A campaign begun before catalogue uses were tracked carries rations with no use
+        # count. Restore the catalogue's count once, then spend a day's use. An unlisted
+        # item is one day's supply and is used up.
+        uses = _listed_uses(hc, item.name)
+        if uses < 1:
+            record(db, campaign_id, ItemRemoved(name=character, item=item.name))
+            return item.name
+        record(
+            db,
+            campaign_id,
+            ItemUsesSet(
+                name=character,
+                item=item.name,
+                uses=uses,
+                max_uses=uses,
+                cause="legacy item",
+            ),
+        )
     inventory_service.use_item(
         db,
         campaign_id,
@@ -1383,7 +1424,7 @@ def _apply_privation(hc: HookContext, character: str, kind: str, cause: str) -> 
         if available <= strain:
             hc.set_mark(
                 found.name,
-                "privation_deadline",
+                PRIVATION_DEADLINE,
                 True,
                 f"{found.name}'s System Strain is at its maximum; a Physical save is owed by dawn.",
             )
@@ -1391,18 +1432,63 @@ def _apply_privation(hc: HookContext, character: str, kind: str, cause: str) -> 
 
 
 def before_rest(hc: HookContext, length: str, start: int, hours_per_part: int) -> None:
-    """Spend a day's food and water for each party member, and record privation.
+    """Spend a day's food and water for each party member, and record privation. A rest
+    whose needs_met_by names a host or suitable country spends nothing and ends the
+    privation it answers.
 
     The source gives a night's rest only to a character who is fed and watered. The engine
     consumes the supply; a character without it is held back from recovery by `held_back`."""
     if length not in ("night", "extended"):
         return
+    state = hc.state()
+    party = [c for c in state.characters.values() if c.kind == PC_KIND]
+    if not hc.survival_needs:
+        # The campaign does not track food, water, or rest privation, so a rest spends
+        # nothing and any old privation ends.
+        for character in party:
+            for kind, mark in (("food", PRIVATION_FOOD), ("water", PRIVATION_WATER)):
+                if character.marks.get(mark):
+                    hc.set_mark(
+                        character.name,
+                        mark,
+                        None,
+                        f"{character.name}'s {kind} privation ended; survival needs are "
+                        "not tracked.",
+                    )
+            if character.marks.get(PRIVATION_DEADLINE):
+                hc.set_mark(
+                    character.name,
+                    PRIVATION_DEADLINE,
+                    None,
+                    f"{character.name}'s privation crisis has passed.",
+                )
+        return
+    if hc.needs_met_by:
+        # The source lets the GM assume water and firewood in ordinary country, and a host
+        # can supply a day's food and a warm bed. A rest that names its provider spends
+        # nothing from the packs and ends the privation it answers.
+        for character in party:
+            for kind, mark in (("food", PRIVATION_FOOD), ("water", PRIVATION_WATER)):
+                if character.marks.get(mark):
+                    hc.set_mark(
+                        character.name,
+                        mark,
+                        None,
+                        f"{character.name} has {kind} from {hc.needs_met_by}; privation ended.",
+                    )
+            if character.marks.get(PRIVATION_DEADLINE):
+                hc.set_mark(
+                    character.name,
+                    PRIVATION_DEADLINE,
+                    None,
+                    f"{character.name}'s privation crisis has passed.",
+                )
+        return
     days = 7 if length == "extended" else 1
     food_items = _hook_items(hc, "food_items")
     water_items = _hook_items(hc, "water_items")
     water_containers = _hook_items(hc, "water_containers")
-    state = hc.state()
-    for character in [c for c in state.characters.values() if c.kind == PC_KIND]:
+    for character in party:
         fed = 0
         watered = 0
         for _ in range(days):
@@ -1434,6 +1520,8 @@ def before_rest(hc: HookContext, length: str, start: int, hours_per_part: int) -
 
 def held_back(hc: HookContext, name: str) -> str:
     """What stops a character recovering on a rest, or "" when nothing does."""
+    if not hc.survival_needs:
+        return ""
     found = hc.character(name)
     missing = [
         kind

@@ -25,7 +25,7 @@
     "type": "prompt",
     "id": "travel_supplies_due",
     "step": "state",
-    "text": "A travel result reports food, water, and firewood for every travel day. Spend the food and water with use_item for each traveler and day the journey covers, unless the journey ends with an immediate rest that the engine feeds; spend firewood for each night in the open. When the pack lacks a day's supply, apply the returned privation with add_strain instead of narrating a meal that was never eaten."
+    "text": "A travel result reports food, water, and firewood for every travel day. Spend the food with use_item for each traveler and day the journey covers, unless the journey ends with an immediate rest that the engine feeds. In ordinary, non-arid country water refills and firewood is scrounged along the way, so spend neither; charge water and firewood only in desert, barren, or exceptional country. When the pack lacks a day's food, apply the returned privation with add_strain instead of narrating a meal that was never eaten."
   },
   {
     "type": "prompt",
@@ -75,7 +75,7 @@
   {
     "type": "prompt",
     "id": "rest_and_recovery",
-    "text": "When the party camps or sleeps through a night, call rest once for the party with length \"night\". A short breather is \"moments\" and returns only scene Effort. A week of bed rest is \"extended\" and ends Frail. The engine spends a day's food and water from each character's pack; if the pack lacks them, it records the privation and holds back that character's recovery. Never add advance_time for the same time: the rest already restores HP equal to level, one System Strain, all castings, and scene and day Effort. Frail characters gain no HP or Strain from a single night."
+    "text": "When the party camps or sleeps through a night, call rest once for the party with length \"night\". A short breather is \"moments\" and returns only scene Effort. A week of bed rest is \"extended\" and ends Frail. The engine spends a day's food and water from each character's pack; if the pack lacks them, it records the privation and holds back that character's recovery. When a friendly village, an inn, a host, a river with forage, or a fertile forest meets the party's basic needs, pass needs_met_by with that source: the engine then spends no supplies and clears any privation for this rest. Never add advance_time for the same time: the rest already restores HP equal to level, one System Strain, all castings, and scene and day Effort. Frail characters gain no HP or Strain from a single night."
   },
   {
     "type": "prompt",

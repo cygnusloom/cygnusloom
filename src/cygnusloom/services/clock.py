@@ -11,6 +11,7 @@ from sqlmodel import Session
 
 from cygnusloom.content.library import ClockRules, Hooks, InventoryRules, RestLength
 from cygnusloom.services import reactions
+from cygnusloom.services.campaign_switches import survival_needs_enabled
 from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.events import (
     CharacterDied,
@@ -135,6 +136,7 @@ def advance_to(
             pay_wages(db, campaign_id, clock_rules.wage_currency)
     if hooks is not None:
         hc = HookContext(db, campaign_id, hooks, inventory)
+        hc.survival_needs = survival_needs_enabled(db, campaign_id)
         for day in range(before.day + 1, new.day + 1):
             call_hook(hooks, "new_day", hc, day, default=None)
     if new.day > before.day or (passed is not None and target > start):

@@ -169,6 +169,49 @@ def test_a_deprived_character_recovers_nothing_on_a_rest(client_factory):
     assert PC not in result["recovered"]
 
 
+def test_a_supplied_rest_eats_no_ration_and_heals(client_factory):
+    """A host or suitable country can meet the party's needs, so the pack is untouched."""
+    app, campaign_id, tools = _fight(client_factory)
+    if not any(i.name == "Rations" for i in _character(app, campaign_id, PC).items):
+        tools.give_item(PC, "Rations")
+    rations = [i for i in _character(app, campaign_id, PC).items if i.name == "Rations"]
+    _wound(app, campaign_id)
+
+    result = tools.rest("night", reason="guests at the inn", needs_met_by="the innkeeper")
+
+    after = _character(app, campaign_id, PC)
+    assert result["needs_met_by"] == "the innkeeper"
+    assert PC in result["recovered"]
+    assert after.harm.get("hp", 0) == 0
+    assert [i for i in after.items if i.name == "Rations"] == rations
+    assert "deprived" not in after.marks
+
+
+def test_a_supplied_rest_ends_a_need_deprivation(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _set_condition(tools, PC, True, cause="no food")
+    _wound(app, campaign_id)
+
+    result = tools.rest("night", reason="the village feeds them", needs_met_by="the village")
+
+    after = _character(app, campaign_id, PC)
+    assert PC in result["recovered"]
+    assert after.harm.get("hp", 0) == 0
+    assert "deprived" not in after.marks
+
+
+def test_a_supplied_rest_does_not_clear_a_wound_deprivation(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _set_condition(tools, PC, True, cause="mummy rot")
+    _wound(app, campaign_id)
+
+    result = tools.rest("night", reason="the village feeds them", needs_met_by="the village")
+
+    after = _character(app, campaign_id, PC)
+    assert PC in result["held_back"]
+    assert "deprived" in after.marks
+
+
 def test_an_interrupted_night_rest_becomes_a_moments_rest(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     before = _clock_position(app, campaign_id)

@@ -68,6 +68,7 @@ from cygnusloom.services.campaigns import (
     set_campaign_inventory_space,
     set_campaign_label,
     set_campaign_model,
+    set_campaign_survival_needs,
     set_debug_credits,
     set_debug_currency,
     set_debug_injection,
@@ -443,6 +444,8 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
     key = _roll_key(campaign_id)
     setting = ""
     table_genres: list[str] | None = None
+    use_inventory_space: bool | None = None
+    use_survival_needs: bool | None = None
     try:
         campaign = get_campaign(engine, user.id, campaign_id)
         state = campaign_world(engine, user.id, campaign_id).state
@@ -460,6 +463,8 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
             table_genres = [
                 value for value in form.getlist("table_genres") if isinstance(value, str)
             ]
+            use_inventory_space = form_text(form, "use_inventory_space") == "1"
+            use_survival_needs = form_text(form, "use_survival_needs") == "1"
         options = None
         if options_pending:
             options = campaign_submission_from_form(campaign_spec(library, campaign), form)
@@ -476,6 +481,8 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
                     "Your stats were rolled again. Review them and create your character.",
                     setting=setting,
                     table_genres=table_genres,
+                    use_inventory_space=use_inventory_space,
+                    use_survival_needs=use_survival_needs,
                 )
             spec = character_spec(library, campaign)
             submitted = submission_from_form(spec, form)
@@ -497,6 +504,8 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
             character=character,
             setting=setting if initial_setup else None,
             table_genres=table_genres,
+            use_inventory_space=use_inventory_space,
+            use_survival_needs=use_survival_needs,
         )
     except InvalidInput as exc:
         return _campaign_page(
@@ -507,6 +516,8 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
             str(exc),
             setting=setting,
             table_genres=table_genres,
+            use_inventory_space=use_inventory_space,
+            use_survival_needs=use_survival_needs,
         )
     except Conflict as exc:
         return _campaign_page(
@@ -517,6 +528,8 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
             str(exc),
             setting=setting,
             table_genres=table_genres,
+            use_inventory_space=use_inventory_space,
+            use_survival_needs=use_survival_needs,
         )
     if character is not None:
         request.session.pop(key, None)
@@ -1023,6 +1036,26 @@ async def change_inventory_space(request: Request, campaign_id: int) -> Response
     return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
 
 
+@router.post("/{campaign_id}/survival-needs")
+async def change_survival_needs(request: Request, campaign_id: int) -> Response:
+    """Turn food, water, and rest privation on or off for the owner's campaign."""
+    user = page_user(request)
+    await verify_csrf(request)
+    form = await request.form()
+    try:
+        set_campaign_survival_needs(
+            request.app.state.engine,
+            user.id,
+            campaign_id,
+            form_text(form, "use_survival_needs") == "1",
+        )
+    except InvalidInput as exc:
+        return _campaign_page(request, user, campaign_id, 400, str(exc))
+    except Conflict as exc:
+        return _campaign_page(request, user, campaign_id, 409, str(exc))
+    return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
+
+
 @router.post("/{campaign_id}/settings")
 async def change_campaign_settings(request: Request, campaign_id: int) -> Response:
     """Save the owner's model, campaign name, and inventory choice from the Settings page."""
@@ -1037,6 +1070,7 @@ async def change_campaign_settings(request: Request, campaign_id: int) -> Respon
             campaign_id,
             model=form_text(form, "model"),
             inventory_space=form_text(form, "use_inventory_space") == "1",
+            survival_needs=form_text(form, "use_survival_needs") == "1",
             label=form_text(form, "label"),
         )
     except InvalidInput as exc:
@@ -1713,6 +1747,8 @@ def _campaign_page(
     draft: str = "",
     setting: str = "",
     table_genres: Sequence[str] | None = None,
+    use_inventory_space: bool | None = None,
+    use_survival_needs: bool | None = None,
     fragment: bool = False,
 ) -> Response:
     engine = request.app.state.engine
@@ -1813,6 +1849,12 @@ def _campaign_page(
             show_options=options_pending,
             show_setting=not world.state.pcs(),
             campaign_setting=setting or campaign.setting,
+            track_inventory=(
+                campaign.use_inventory_space if use_inventory_space is None else use_inventory_space
+            ),
+            track_survival_needs=(
+                campaign.use_survival_needs if use_survival_needs is None else use_survival_needs
+            ),
             table_genres=library.available_table_genres,
             selected_table_genres=(
                 tuple(table_genres)

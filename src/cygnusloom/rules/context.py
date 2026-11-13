@@ -407,6 +407,7 @@ class World(CoreWorld, Protocol):
         scope: str = "party",
         character: str = "",
         advance_clock: bool | None = None,
+        needs_met_by: str = "",
     ) -> dict[str, Any]: ...
 
     def rest_history(self) -> dict[str, Any]: ...

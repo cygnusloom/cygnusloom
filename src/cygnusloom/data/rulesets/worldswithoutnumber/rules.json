@@ -123,7 +123,7 @@
   {
     "type": "rule",
     "id": "supplies",
-    "text": "Each person needs a day's food and water (1 item each) and a night's firewood (4 items); a week of packed food is 4 items. Foraging takes half a day and a Wis/Survive check (difficulty 8 in woodland, 9 in scrub or savanna, 12 in desert, 14 in broken highland), yielding 1d6 units plus the group's Survive levels, minimum 1. Without the Survive skill the total is -1, with a minimum of 1 unit. A full day of foraging adds -2 to the difficulty, and each further day in the same hex adds +1."
+    "text": "Each person needs a day's food and water (1 item each) and a night's firewood (4 items); a week of packed food is 4 items. In ordinary, non-arid country a party can refill waterskins and scrounge firewood as it travels, and a friendly village, inn, or host can supply a day's food, water, and shelter. Foraging takes half a day and a Wis/Survive check (difficulty 8 in woodland, 9 in scrub or savanna, 12 in desert, 14 in broken highland), yielding 1d6 units plus the group's Survive levels, minimum 1. Without the Survive skill the total is -1, with a minimum of 1 unit. A full day of foraging adds -2 to the difficulty, and each further day in the same hex adds +1."
   },
   {
     "type": "rule",

@@ -187,7 +187,9 @@ class Campaign(SQLModel, table=True):
     rule set's own choice. `force_credit_charges` is a debug-panel switch that charges an
     otherwise exempt account in this campaign. `use_inventory_space` is a per-campaign switch, on
     by default, for the rule set's slot limits; turning it off lets characters carry anything
-    reasonable."""
+    reasonable. `use_survival_needs` is a per-campaign switch, on by default, for food, water,
+    and rest privation; turning it off means rests spend no supplies and hunger and thirst are
+    not tracked."""
 
     __tablename__ = "campaign"
 
@@ -204,6 +206,7 @@ class Campaign(SQLModel, table=True):
     table_genres: str = Field(default="", sa_column=Column(Text, nullable=False))
     force_credit_charges: bool = Field(default=False)
     use_inventory_space: bool = Field(default=True)
+    use_survival_needs: bool = Field(default=True)
     created_at: datetime = Field(default_factory=utcnow)
 
 

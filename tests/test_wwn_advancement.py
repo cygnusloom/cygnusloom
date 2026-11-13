@@ -1379,6 +1379,64 @@ def test_a_night_rest_eats_a_days_rations(client_factory):
     assert after.marks.get("privation_food") is None
 
 
+def test_a_legacy_ration_without_uses_is_repaired_and_eaten(client_factory):
+    """A campaign begun before catalogue uses were tracked still has rations that feed it."""
+    app, campaign_id = _campaign(client_factory, class_id="warrior")
+    tools = _world_tools(app, campaign_id)
+    if not any(i.name == "Waterskin" for i in _pc(app, campaign_id).items):
+        tools.give_item(NAME, "Waterskin")
+    tools.drop_item(NAME, "Rations, One Week")
+    with session_scope(app.state.engine) as db:
+        record(
+            db,
+            campaign_id,
+            ItemAdded(
+                name=NAME,
+                item="Rations, One Week",
+                size="bulky",
+                slots=4,
+                text="A week of preserved food. Encumbrance 4.",
+            ),
+        )
+        db.commit()
+
+    result = tools.rest("night", reason="camp")
+
+    after = _pc(app, campaign_id)
+    left = next(i for i in after.items if i.name == "Rations, One Week")
+    assert (left.uses, left.max_uses) == (6, 7)
+    assert NAME not in result["held_back"]
+    assert after.marks.get("privation_food") is None
+
+
+def test_a_supplied_rest_spends_no_rations_and_ends_privation(client_factory):
+    """A friendly village or fertile country can meet the party's needs; the packs stay full."""
+    app, campaign_id = _campaign(client_factory, class_id="warrior")
+    tools = _world_tools(app, campaign_id)
+    tools.set_stat_max(NAME, "strain", 10, cause="a test")
+    tools.harm_character(NAME, "hp", 2, "a test")
+    tools.drop_item(NAME, "Rations, One Week")
+    if any(i.name == "Waterskin" for i in _pc(app, campaign_id).items):
+        tools.drop_item(NAME, "Waterskin")
+    first = tools.rest("night", reason="no supplies")
+    assert NAME in first["held_back"]
+
+    before = _pc(app, campaign_id)
+    result = tools.rest(
+        "night",
+        reason="guests of the village",
+        needs_met_by="the Vane household",
+    )
+
+    after = _pc(app, campaign_id)
+    assert result["needs_met_by"] == "the Vane household"
+    assert NAME in result["recovered"]
+    assert after.marks.get("privation_food") is None
+    assert after.marks.get("privation_water") is None
+    assert after.harm.get("strain", 0) < before.harm.get("strain", 0)
+    assert not any(i.name == "Rations, One Week" for i in after.items)
+
+
 def test_a_rest_uses_the_food_list_from_the_hooks_options(client_factory):
     """The rule set's food and water items are content, not Python constants."""
     app, campaign_id = _campaign(client_factory, class_id="warrior")

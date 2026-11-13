@@ -78,7 +78,14 @@ def _create_character(
     table_genres: list[str] | None = None,
 ):
     token = csrf_token(client, f"/campaigns/{campaign_id}")
-    form: dict[str, str | list[str]] = {"csrf_token": token, "name": name, **(fields or {})}
+    # A browser posts checked boxes, and both tracking switches start checked.
+    form: dict[str, str | list[str]] = {
+        "csrf_token": token,
+        "name": name,
+        "use_inventory_space": "1",
+        "use_survival_needs": "1",
+        **(fields or {}),
+    }
     if pronouns is not None:
         form["pronouns"] = pronouns
     if setting is not None:

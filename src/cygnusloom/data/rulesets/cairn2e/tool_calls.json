@@ -771,7 +771,7 @@
     "type": "tool_call",
     "id": "rest",
     "extends": "core:tool_call/rest",
-    "description": "Record a rest for the whole party. The Warden decides the length from what the party does: 'moments' is a short break of one hour, such as a drink and a sit-down, 'night' is a full night's rest, which runs until morning, or until dusk when it begins in the morning, 'week' is a week of rest. The rest moves the clock forward itself, so do not also advance_time for the same time. Set interrupted when something breaks the rest, and then it counts as moments only. A full rest, uninterrupted, is the only way to clear Fatigue. A deprived character recovers nothing. Rest eats one ration per character itself (a sheltered character uses the bed instead), so never remove rations before resting; a character with no ration is deprived.",
+    "description": "Record a rest for the whole party. The Warden decides the length from what the party does: 'moments' is a short break of one hour, such as a drink and a sit-down, 'night' is a full night's rest, which runs until morning, or until dusk when it begins in the morning, 'week' is a week of rest. The rest moves the clock forward itself, so do not also advance_time for the same time. Set interrupted when something breaks the rest, and then it counts as moments only. A full rest, uninterrupted, is the only way to clear Fatigue. A deprived character recovers nothing. Rest eats one ration per character itself (a sheltered character uses the bed instead), so never remove rations before resting; a character with no ration is deprived. A friendly village, an inn, a host, a river with forage, or a fertile forest meets the party's needs with needs_met_by: the engine then eats no ration and marks no one deprived.",
     "parameters": {
       "properties": {
         "length": {
@@ -782,6 +782,9 @@
         },
         "reason": {
           "description": "What the party was doing, such as 'camped in the ruined chapel'."
+        },
+        "needs_met_by": {
+          "description": "Who or what meets the party's food, water, and shelter: a friendly village, an inn, a host, a river with forage, or a fertile forest. Leave it out when supplies must come from the pack. With it the engine eats no ration and no one becomes deprived from this rest."
         }
       }
     }

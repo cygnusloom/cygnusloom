@@ -39,10 +39,11 @@
         {% endif %}
       {% endif %}
       <fieldset class="model-options">
-        <legend class="muted">Inventory space</legend>
+        <legend class="muted">Tracking</legend>
         <label><input type="checkbox" name="use_inventory_space" value="1"{% if campaign.use_inventory_space %} checked{% endif %}> Track item slots and their limits</label>
+        <label><input type="checkbox" name="use_survival_needs" value="1"{% if campaign.use_survival_needs %} checked{% endif %}> Track food, water, and rest needs</label>
       </fieldset>
-      <p class="muted">When this is off, characters may carry anything reasonable: no capacity checks, no penalty item, and no drain from a full pack.</p>
+      <p class="muted">Without inventory space, characters may carry anything reasonable: no capacity checks, no penalty item, and no drain from a full pack. Without survival needs, rests spend no rations or water, and hunger and thirst are not tracked.</p>
       <button type="submit">Save</button>
     </form>
   </section>
@@ -67,7 +68,7 @@
     <h3 id="settings-game-summary-title">Game</h3>
     <p><strong>{{ campaign.name }}</strong></p>
     <p class="muted">The campaign owner chooses the model for every reply.{% if credit_price and not single_player %} {{ campaign.model }} costs {{ credit_price }} credits per reply and the owner has {{ credit_balance }} credits.{% elif not single_player %} {{ campaign.model }} is free.{% endif %}</p>
-    <p class="muted">{% if campaign.use_inventory_space %}Inventory space is tracked: item slots and their limits apply.{% else %}Inventory space is not tracked: characters may carry anything reasonable.{% endif %}</p>
+    <p class="muted">{% if campaign.use_inventory_space %}Inventory space is tracked: item slots and their limits apply.{% else %}Inventory space is not tracked: characters may carry anything reasonable.{% endif %} {% if campaign.use_survival_needs %}Food, water, and rest needs are tracked.{% else %}Food, water, and rest needs are not tracked.{% endif %}</p>
   </section>
   {% endif %}
 </section>

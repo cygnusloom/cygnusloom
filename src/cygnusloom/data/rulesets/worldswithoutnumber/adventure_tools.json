@@ -180,7 +180,7 @@
     "type": "tool_call",
     "id": "travel",
     "extends": "core:tool_call/travel",
-    "description": "Travel overland by the WWN rules. A day is ten hours of marching; base speed is 3 mph on plains, 2 in light forest or desert, 1.5 in dense forest or rugged hills, 1 in swamp, and 0.5 in mountains or broken highland. A road doubles the pace, foul weather halves it, and deep snow reduces it to a tenth. The engine moves the character and advances the clock. Apply the returned food, water, firewood, and privation figures with use_item, add_strain, and the usual bookkeeping; foraging takes half a day and a Wis/Survive check at the returned difficulty.",
+    "description": "Travel overland by the WWN rules. A day is ten hours of marching; base speed is 3 mph on plains, 2 in light forest or desert, 1.5 in dense forest or rugged hills, 1 in swamp, and 0.5 in mountains or broken highland. A road doubles the pace, foul weather halves it, and deep snow reduces it to a tenth. The engine moves the character and advances the clock. Apply the returned food, water, firewood, and privation figures with use_item, add_strain, and the usual bookkeeping; in ordinary, non-arid country water refills and firewood is scrounged along the way, so do not charge those. Foraging takes half a day and a Wis/Survive check at the returned difficulty.",
     "parameters": {
       "properties": {
         "road": {
@@ -453,7 +453,7 @@
     "type": "tool_call",
     "id": "rest",
     "extends": "core:tool_call/rest",
-    "description": "Record one party rest. Every player character recovers: a night restores hit points equal to their level, one point of System Strain, all spell castings, and scene and day Effort. A few moments restores scene Effort only. A week of bed rest restores hit points equal to seven times their level, seven points of System Strain, all castings, and ends Frail with medical care. The rest moves the clock once. Frail characters recover no hit points or Strain from a single night.",
+    "description": "Record one party rest. Every player character recovers: a night restores hit points equal to their level, one point of System Strain, all spell castings, and scene and day Effort. A few moments restores scene Effort only. A week of bed rest restores hit points equal to seven times their level, seven points of System Strain, all castings, and ends Frail with medical care. The rest moves the clock once. Frail characters recover no hit points or Strain from a single night. A rest at a friendly village, an inn, a host's hearth, or a camp by a river or in fertile country can name what meets the party's needs with needs_met_by: the engine then spends no food or water and clears privation for that rest.",
     "parameters": {
       "properties": {
         "length": {
@@ -461,6 +461,9 @@
         },
         "interrupted": {
           "description": "True when something breaks the rest, which then counts as moments only."
+        },
+        "needs_met_by": {
+          "description": "Who or what meets the party's need for a day's food and water and a warm, safe sleep: a friendly village, an inn, a host, a river with forage, or a fertile forest. Leave it out when the packs must supply the day. With it the engine spends no supplies and ends any food or water privation."
         }
       }
     }

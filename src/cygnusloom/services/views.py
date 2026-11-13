@@ -937,6 +937,7 @@ def world_state_text(
     track_inventory: bool = True,
     currency: str = "",
     housekeeping: HousekeepingRules | None = None,
+    track_survival_needs: bool = True,
 ) -> str:
     """The GM's orientation at the start of a turn: the campaign options, the day, the player
     character and where they are, the NPCs there, the factions and their cup, and any encounter in
@@ -1080,6 +1081,11 @@ def world_state_text(
         lines.append(
             "Inventory space is not tracked in this campaign; characters may carry anything "
             "reasonable, so do not refuse a possession for its slots."
+        )
+    if not track_survival_needs:
+        lines.append(
+            "Survival needs are not tracked in this campaign; rests spend no rations or "
+            "water, and hunger and thirst are not conditions."
         )
     lines.extend(_encounter_lines(state, grid, combat, terrain, encounter_objects))
     if state.encounter is None:

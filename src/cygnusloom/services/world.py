@@ -71,6 +71,7 @@ from cygnusloom.services import rests as rests_service
 from cygnusloom.services import tallies as tallies_service
 from cygnusloom.services import timers as timers_service
 from cygnusloom.services import wilderness as wilderness_service
+from cygnusloom.services.campaign_switches import survival_needs_enabled
 from cygnusloom.services.common import (
     InvalidInput,
     bounded_text,
@@ -358,7 +359,10 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
         scope: str = "party",
         character: str = "",
         advance_clock: bool | None = None,
+        needs_met_by: str = "",
     ) -> dict[str, Any]:
+        """Rest the party. `needs_met_by` names a village, host, or suitable country that
+        supplies the day's food, water, and shelter; the rule set may then waive its upkeep."""
         with session_scope(self.engine) as db:
             return rests_service.take_rest(
                 db,
@@ -381,6 +385,8 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 scope=scope,
                 character=character,
                 advance_clock=advance_clock,
+                needs_met_by=needs_met_by,
+                marketplace=self.marketplace,
             )
 
     def rest_history(self) -> dict[str, Any]:
@@ -389,9 +395,9 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
 
     def with_hook_context(self, action: Callable[[HookContext], T]) -> T:
         with session_scope(self.engine) as db:
-            result = action(
-                HookContext(db, self.campaign_id, self.hooks, self.inventory, self.rule_data)
-            )
+            hc = HookContext(db, self.campaign_id, self.hooks, self.inventory, self.rule_data)
+            hc.survival_needs = survival_needs_enabled(db, self.campaign_id)
+            result = action(hc)
             db.commit()
             return result
 
@@ -399,6 +405,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
         with session_scope(self.engine) as db:
             if not force and self.hooks is not None:
                 hc = HookContext(db, self.campaign_id, self.hooks, self.inventory)
+                hc.survival_needs = survival_needs_enabled(db, self.campaign_id)
                 character = inventory_service.character_named(hc.state(), name)
                 reason = call_hook(self.hooks, "held_back", hc, character.name, default="")
                 if reason:

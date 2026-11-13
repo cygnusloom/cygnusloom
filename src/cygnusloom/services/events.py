@@ -4864,7 +4864,10 @@ class ObjectTaken(GameEvent):
 
 @dataclass(frozen=True)
 class ItemUsesSet(GameEvent):
-    """Sets a charged item's uses left, after a use or a recharge. `cause` says which."""
+    """Sets a charged item's uses left, after a use or a recharge. `cause` says which.
+
+    `max_uses` repairs a legacy item that was created before catalogue uses were tracked;
+    None leaves the item's maximum alone."""
 
     kind: ClassVar[str] = "character.item_uses_set"
 
@@ -4872,13 +4875,17 @@ class ItemUsesSet(GameEvent):
     item: str
     uses: int
     cause: str = ""
+    max_uses: int | None = None
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         character = state.characters[name_key(self.name)]
         for index, held in enumerate(character.items):
             if name_key(held.name) == name_key(self.item):
                 spent_on = state.clock if self.cause == "used" else None
-                character.items[index] = replace(held, uses=self.uses, spent_on=spent_on)
+                most = held.max_uses if self.max_uses is None else self.max_uses
+                character.items[index] = replace(
+                    held, uses=self.uses, max_uses=most, spent_on=spent_on
+                )
                 return
 
     def render(self) -> str:

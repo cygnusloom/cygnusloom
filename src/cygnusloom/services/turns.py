@@ -569,6 +569,9 @@ class _Run:
     setting: str = ""
     # Whether the campaign enforces inventory space. Off means anything reasonable is carried.
     tracks_inventory: bool = True
+    # Whether the campaign tracks food, water, and rest privation. Off means rests spend
+    # nothing and hunger and thirst are not tracked.
+    tracks_survival_needs: bool = True
     # The account answering this turn's prompt, when a player does. An opening or an NPC's turn
     # has none, and any player at the table may continue it. Its display name is resolved from
     # the account when the log is folded, so a name change reaches an open turn.
@@ -727,6 +730,7 @@ def _start_run(
         world=template,
         setting=campaign.setting,
         tracks_inventory=campaign.use_inventory_space,
+        tracks_survival_needs=campaign.use_survival_needs,
         player_id=player_id,
         tool_schema_mode=getattr(settings, "tool_schema_mode", "brief"),
         rule_info_mode=getattr(settings, "rule_info_mode", "brief"),
@@ -778,6 +782,7 @@ def _world_text(run: _Run, state: CampaignState) -> str:
         tallies=rule_set.tallies,
         unwritten_world=run.world is not None and not run.world.has_setting,
         track_inventory=run.tracks_inventory,
+        track_survival_needs=run.tracks_survival_needs,
         currency=rule_set.marketplace.currency if rule_set.marketplace else "",
         housekeeping=rule_set.housekeeping,
     )

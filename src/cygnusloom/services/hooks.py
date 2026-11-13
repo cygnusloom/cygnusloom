@@ -11,7 +11,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from cygnusloom.content.library import Hooks, InventoryRules
+from cygnusloom.content.library import Hooks, InventoryRules, Marketplace
 from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.events import (
     CampaignState,
@@ -35,6 +35,15 @@ class HookContext:
     # The rule set's structured data, so a hook such as WWN's after_rest can resolve its own
     # progression without holding a World service.
     rule_data: Mapping[str, object] = field(default_factory=dict)
+    # The catalogue, so an upkeep hook can restore the uses of a legacy consumable that was
+    # created before catalogue uses were tracked.
+    marketplace: Marketplace | None = None
+    # Who or what meets the party's food, water, and shelter for this rest, or "" when the
+    # packs must supply the day.
+    needs_met_by: str = ""
+    # Whether this campaign tracks food, water, and rest privation. False means an upkeep hook
+    # must spend no supplies and end the privation it would otherwise record.
+    survival_needs: bool = True
 
     @classmethod
     def for_rendering(cls, hooks: Hooks | None, inventory: InventoryRules | None) -> HookContext:

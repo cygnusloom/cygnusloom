@@ -269,6 +269,7 @@ def test_wwn_travel_moves_then_advances_the_clock_once_without_drawing(
         "travel_hours",
         "move",
         "clock",
+        "survival_needs",
         "supplies",
         "forage",
         "privation",

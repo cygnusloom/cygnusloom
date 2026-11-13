@@ -191,7 +191,13 @@ def create_character(
     # before submitting. It also carries the CSRF token, which the same page refresh can change.
     page = client.get(f"/campaigns/{campaign_id}").text
     token = remember_csrf_token(client, page)
-    form = {"csrf_token": token, "name": name}
+    # A browser posts checked boxes, and both tracking switches start checked.
+    form = {
+        "csrf_token": token,
+        "name": name,
+        "use_inventory_space": "1",
+        "use_survival_needs": "1",
+    }
     if pronouns is not None:
         form["pronouns"] = pronouns
     for field_name, value in (fields or {}).items():

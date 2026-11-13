@@ -48,7 +48,7 @@
   {
     "type": "prompt",
     "id": "needs",
-    "text": "When a need such as food or rest goes unmet, mark the character with set_condition as soon as it does, before advancing time, so the engine can count the days."
+    "text": "When a need such as food or rest goes unmet, mark the character with set_condition as soon as it does, before advancing time, so the engine can count the days. Clear it with set_condition once the need is met. A rest whose needs_met_by names a friendly village, an inn, a river with forage, or a fertile forest eats no ration and marks no one deprived from that rest."
   },
   {
     "type": "prompt",

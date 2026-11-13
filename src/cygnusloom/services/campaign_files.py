@@ -119,6 +119,7 @@ def export_campaign(engine: Engine, owner_id: int, campaign_id: int) -> tuple[st
             "setting": campaign.setting,
             "table_genres": genres,
             "use_inventory_space": campaign.use_inventory_space,
+            "use_survival_needs": campaign.use_survival_needs,
             "created_at": as_utc(campaign.created_at).isoformat(),
         },
         "events": events,
@@ -183,6 +184,7 @@ def import_campaign(
             setting=config["setting"],
             table_genres=json.dumps(list(config["table_genres"])),
             use_inventory_space=config["use_inventory_space"],
+            use_survival_needs=config["use_survival_needs"],
             created_at=config["created_at"],
         )
         db.add(campaign)
@@ -458,6 +460,9 @@ def _read_campaign(data: dict[str, Any], library: ContentLibrary) -> dict[str, A
     use_inventory_space = data.get("use_inventory_space", True)
     if not isinstance(use_inventory_space, bool):
         raise InvalidInput("use_inventory_space must be true or false")
+    use_survival_needs = data.get("use_survival_needs", True)
+    if not isinstance(use_survival_needs, bool):
+        raise InvalidInput("use_survival_needs must be true or false")
     created_at = _read_time(data.get("created_at"), "campaign")
     return {
         "name": _text(data, "name", MAX_NAME),
@@ -467,6 +472,7 @@ def _read_campaign(data: dict[str, Any], library: ContentLibrary) -> dict[str, A
         "setting": _text(data, "setting", MAX_SETTING),
         "table_genres": genres,
         "use_inventory_space": use_inventory_space,
+        "use_survival_needs": use_survival_needs,
         "created_at": created_at,
     }
 

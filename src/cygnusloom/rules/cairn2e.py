@@ -87,12 +87,27 @@ def _deprived_cause(marks: Mapping[str, Any]) -> str:
     return str(held["cause"]) if held else ""
 
 
+def _need_deprivation(marks: Mapping[str, Any]) -> bool:
+    """Whether the deprivation names an unmet need, such as \"no food\", rather than a wound,
+    poison, or curse. Only a need ends when survival needs are not tracked or a rest supplies
+    them."""
+    return _deprived_cause(marks).strip().casefold().startswith("no ")
+
+
 def _options(hc: HookContext) -> Mapping[str, Any]:
     return hc.hooks.options if hc.hooks is not None else {}
 
 
 def _held_ration(character: Any, item: str) -> Any:
-    return next((i for i in character.items if name_key(i.name) == name_key(item)), None)
+    """The first matching ration with a use left. An item with no use count is a legacy
+    ration from before its uses were tracked, so it still feeds the character."""
+    for held in character.items:
+        if name_key(held.name) != name_key(item):
+            continue
+        if held.max_uses > 0 and held.uses < 1:
+            continue
+        return held
+    return None
 
 
 def _spend_ration(hc: HookContext, character: Any, held: Any) -> None:
@@ -119,6 +134,8 @@ def new_day(hc: HookContext, day: int) -> None:
     for character in hc.state().characters.values():
         if DEPRIVED not in character.marks:
             continue
+        if not hc.survival_needs and _need_deprivation(character.marks):
+            continue
         since = _deprived_since(character.marks, day)
         if day - since <= after_days:
             continue
@@ -130,16 +147,49 @@ def before_rest(hc: HookContext, rest_id: str, start: int, hours_per_part: int) 
     """Called before time passes on an upkeep rest that starts `start` hours into the campaign.
     Each party member who is not sheltered eats one ration. A sheltered member's bed is used up
     instead. A member who ate a meal one part before this rest is fed by that meal. A member with
-    no ration is deprived, unless they already are."""
+    no ration is deprived, unless they already are. A rest whose needs_met_by names a host or
+    suitable country eats no ration and ends a deprivation caused by an unmet need."""
     options = _options(hc)
     state = hc.state()
     party = [c for c in state.characters.values() if c.kind == PC_KIND]
+    if not hc.survival_needs:
+        # The campaign does not track food, water, or rest privation, so a rest eats nothing
+        # and any need-based deprivation ends.
+        for character in party:
+            if character.marks.get(MEAL_AT) is not None:
+                hc.set_mark(character.name, MEAL_AT, None, f"{character.name}'s meal is used up.")
+            if character.marks.get(SHELTERED):
+                hc.set_mark(
+                    character.name, SHELTERED, None, f"{character.name}'s bed is used up."
+                )
+            if _need_deprivation(character.marks):
+                hc.set_mark(
+                    character.name,
+                    DEPRIVED,
+                    None,
+                    f"{character.name}'s deprivation ended; survival needs are not tracked.",
+                )
+        return
+    provided = hc.needs_met_by.strip()
     for character in party:
         meal_at = character.marks.get(MEAL_AT)
         if meal_at is not None:
             hc.set_mark(character.name, MEAL_AT, None, f"{character.name}'s meal is used up.")
-        if character.marks.get(SHELTERED):
+        sheltered = bool(character.marks.get(SHELTERED))
+        if sheltered:
             hc.set_mark(character.name, SHELTERED, None, f"{character.name}'s bed is used up.")
+        if provided:
+            # A deprivation caused by a need this rest answers ends; one caused by a wound,
+            # poison, or curse does not.
+            if _need_deprivation(character.marks):
+                hc.set_mark(
+                    character.name,
+                    DEPRIVED,
+                    None,
+                    f"{character.name} has what they need from {provided}; no longer deprived.",
+                )
+            continue
+        if sheltered:
             continue
         if meal_at is not None and start - int(meal_at) == hours_per_part:
             continue
@@ -158,7 +208,10 @@ def before_rest(hc: HookContext, rest_id: str, start: int, hours_per_part: int) 
 
 def held_back(hc: HookContext, name: str) -> str:
     """The cause a character is held back by, or "" when they are not held back."""
-    return _deprived_cause(hc.marks(name))
+    marks = hc.marks(name)
+    if not hc.survival_needs and _need_deprivation(marks):
+        return ""
+    return _deprived_cause(marks)
 
 
 def after_consume(

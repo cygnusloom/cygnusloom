@@ -91,7 +91,7 @@ class NotPlayable(Conflict):
 
 # The campaign-wide settings the AI GM may change during a turn, and only on the owner's
 # explicit request.
-TURN_SETTINGS = {"inventory_space"}
+TURN_SETTINGS = {"inventory_space", "survival_needs"}
 # The player's optional setting/story brief at campaign creation. It is prompt text, not state.
 MAX_SETTING = 4000
 # Spoken words never contain angle brackets or call syntax, so either means a tool call was written.
@@ -308,6 +308,8 @@ def save_creation(
     character: NewCharacter | None = None,
     setting: str | None = None,
     table_genres: Sequence[str] | None = None,
+    use_inventory_space: bool | None = None,
+    use_survival_needs: bool | None = None,
 ) -> None:
     """Save the campaign options, the player character, the setting and story, and the table
     genres together, so either all of them are saved or none is. A part left as None is not
@@ -331,13 +333,17 @@ def save_creation(
         # Only the campaign's first character sets the shared options, setting, and genres. A
         # player joining a campaign already under way makes their character and nothing else.
         first_character = not state.pcs()
-        if (brief is not None or genres is not None) and first_character:
+        if first_character:
             stored = db.get(Campaign, campaign_id)
             if stored is not None:
                 if brief is not None:
                     stored.setting = brief
                 if genres is not None:
                     stored.table_genres = json.dumps(list(genres))
+                if use_inventory_space is not None:
+                    stored.use_inventory_space = use_inventory_space
+                if use_survival_needs is not None:
+                    stored.use_survival_needs = use_survival_needs
         if options is not None:
             set_campaign_options(db, campaign_id, spec, options)
         if character is not None:
@@ -705,6 +711,22 @@ def set_campaign_inventory_space(
         return campaign
 
 
+def set_campaign_survival_needs(
+    engine: Engine, owner_id: int, campaign_id: int, enabled: bool
+) -> Campaign:
+    """Turn food, water, and rest privation on or off for the campaign. Off means a rest spends
+    no rations or water and records no privation. Existing marks end at the next rest."""
+    get_owned_campaign(engine, owner_id, campaign_id)
+    with _exclusive(campaign_id), session_scope(engine) as db:
+        campaign = db.get(Campaign, campaign_id)
+        assert campaign is not None
+        campaign.use_survival_needs = enabled
+        db.add(campaign)
+        db.commit()
+        db.refresh(campaign)
+        return campaign
+
+
 def update_campaign_settings(
     engine: Engine,
     allowed_models: Iterable[str],
@@ -713,10 +735,12 @@ def update_campaign_settings(
     *,
     model: str,
     inventory_space: bool,
+    survival_needs: bool,
     label: str,
 ) -> Campaign:
-    """Save the owner's manual campaign settings in one write: the model, the inventory switch,
-    and the label. They are configuration, not part of the log, so they may change mid-game."""
+    """Save the owner's manual campaign settings in one write: the model, the inventory and
+    survival-needs switches, and the label. They are configuration, not part of the log, so they
+    may change mid-game."""
     if model not in allowed_models:
         raise InvalidInput("that model is not available")
     label = (label or "").strip()
@@ -728,6 +752,7 @@ def update_campaign_settings(
         assert campaign is not None
         campaign.model = model
         campaign.use_inventory_space = inventory_space
+        campaign.use_survival_needs = survival_needs
         campaign.name = label
         db.add(campaign)
         db.commit()
@@ -762,6 +787,16 @@ def set_campaign_setting_from_turn(
                 "Inventory space is tracked again."
                 if value
                 else "Inventory space is no longer tracked; anything reasonable can be carried."
+            )
+            return {"setting": setting, "value": value, "detail": detail}
+        if setting == "survival_needs":
+            campaign.use_survival_needs = value
+            db.add(campaign)
+            db.commit()
+            detail = (
+                "Food, water, and rest needs are tracked again."
+                if value
+                else "Food, water, and rest needs are no longer tracked."
             )
             return {"setting": setting, "value": value, "detail": detail}
     raise InvalidInput(f"{setting!r} is not a campaign setting the GM can change")
@@ -1116,6 +1151,7 @@ def context_usage(
             counters=rule_set.counters if rule_set else None,
             tallies=rule_set.tallies if rule_set else None,
             track_inventory=campaign.use_inventory_space,
+            track_survival_needs=campaign.use_survival_needs,
             currency=(rule_set.marketplace.currency if rule_set and rule_set.marketplace else ""),
             housekeeping=rule_set.housekeeping if rule_set else None,
         ),

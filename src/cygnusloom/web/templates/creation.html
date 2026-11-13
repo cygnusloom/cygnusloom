@@ -76,6 +76,12 @@
             {% endfor %}
           </div>
         </section>
+        <section class="creation-panel campaign-tracking" aria-labelledby="panel-tracking">
+          <h3 id="panel-tracking">Tracking</h3>
+          <p class="muted">Both are on by default. Turn one off when this story should not track it.</p>
+          <label><input type="checkbox" name="use_inventory_space" value="1"{% if track_inventory %} checked{% endif %}> Track item slots and their limits</label>
+          <label><input type="checkbox" name="use_survival_needs" value="1"{% if track_survival_needs %} checked{% endif %}> Track food, water, and rest needs</label>
+        </section>
       </div>
       {% endif %}
     </section>

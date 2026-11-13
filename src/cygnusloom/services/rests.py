@@ -16,9 +16,11 @@ from cygnusloom.content.library import (
     ConditionRules,
     Hooks,
     InventoryRules,
+    Marketplace,
     RestLength,
 )
 from cygnusloom.services import reactions
+from cygnusloom.services.campaign_switches import survival_needs_enabled
 from cygnusloom.services.clock import absolute, advance_to, rest_target
 from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.conditions import end_condition
@@ -60,12 +62,17 @@ def take_rest(
     scope: str = "party",
     character: str = "",
     advance_clock: bool | None = None,
+    needs_met_by: str = "",
+    marketplace: Marketplace | None = None,
 ) -> dict[str, Any]:
     """The party rests. An interrupted rest counts as the rule set's interrupted length. A rest
-    with upkeep calls the before_rest hook first. Time passes, then each party member the rule set
-    does not hold back recovers what the rest restores. A full rest also clears the item kinds it
-    lists. A recovering member's conditions end when this rest is a trigger they list, such as a
-    full rest or an extended one."""
+    with upkeep calls the before_rest hook first. `needs_met_by` names a village, host, or
+    suitable country that supplies the day's food, water, and shelter, so the hook may waive its
+    upkeep. Time passes, then each party member the rule set does not hold back recovers what the
+    rest restores. A full rest also clears the item kinds it lists. A recovering member's
+    conditions end when this rest is a trigger they list, such as a full rest or an extended
+    one."""
+    needs_met_by = needs_met_by.strip()
     chosen_id = interrupted_rest if interrupted else length
     if chosen_id not in rests:
         raise InvalidInput(f"there is no rest length named {length!r}")
@@ -99,11 +106,16 @@ def take_rest(
     )
     record(db, campaign_id, took)
     hc = HookContext(db, campaign_id, hooks, inventory, rule_data or {})
+    hc.marketplace = marketplace
+    hc.needs_met_by = needs_met_by
+    hc.survival_needs = survival_needs_enabled(db, campaign_id)
     result: dict[str, Any] = {
         "length": rest.id,
         "interrupted": interrupted,
         "scope": scope,
     }
+    if needs_met_by:
+        result["needs_met_by"] = needs_met_by
     if rest.upkeep:
         call_hook(hooks, "before_rest", hc, rest.id, start, hours_per_part, default=None)
     end = rest_target(start, rest, clock_rules)

@@ -1426,19 +1426,20 @@
     "type": "tool_call",
     "id": "set_campaign_setting",
     "activity": "Campaign setting changed: {detail}",
-    "description": "Change a campaign setting only when the player has explicitly asked for that change. The only setting this tool can change is inventory_space. Never change it on your own initiative, to make the story easier, or as part of another action. Never change the model, the campaign name, or how much of the record the player sees; tell the player to use the Settings page for those. record_setting is for invented world facts, not this.",
+    "description": "Change a campaign setting only when the player has explicitly asked for that change. The settings this tool can change are inventory_space and survival_needs. Never change one on your own initiative, to make the story easier, or as part of another action. Never change the model, the campaign name, or how much of the record the player sees; tell the player to use the Settings page for those. record_setting is for invented world facts, not this.",
     "parameters": {
       "properties": {
         "setting": {
           "type": "string",
           "enum": [
-            "inventory_space"
+            "inventory_space",
+            "survival_needs"
           ],
-          "description": "The setting to change. inventory_space turns the rule set's item slots and capacity limits on or off."
+          "description": "The setting to change. inventory_space turns the rule set's item slots and capacity limits on or off. survival_needs turns food, water, and rest privation on or off."
         },
         "value": {
           "type": "boolean",
-          "description": "The setting's new value: true to track inventory space, false to stop tracking it."
+          "description": "The setting's new value: true to track it, false to stop tracking it."
         }
       },
       "required": [
@@ -2065,7 +2066,7 @@
   {
     "type": "tool_call",
     "id": "rest",
-    "description": "Record a rest for the whole party. The rest moves the clock forward itself, so do not also advance_time for the same time. Set interrupted when something breaks the rest, and then it counts as moments only.",
+    "description": "Record a rest for the whole party. The rest moves the clock forward itself, so do not also advance_time for the same time. Set interrupted when something breaks the rest, and then it counts as moments only. When the party's basic needs are already met, name what meets them with needs_met_by.",
     "parameters": {
       "properties": {
         "length": {
@@ -2085,6 +2086,10 @@
         "reason": {
           "type": "string",
           "description": "What the party was doing."
+        },
+        "needs_met_by": {
+          "type": "string",
+          "description": "Who or what meets the party's basic needs for this rest: food, water, and a warm, safe place to sleep. Name a friendly village, an inn, a host, a river with forage, a fertile forest, or similar. Leave it out when the party's packs must supply the day."
         }
       },
       "required": [

@@ -9,6 +9,7 @@ from cygnusloom.services import clock as clock_service
 from cygnusloom.services import inventory as inventory_service
 from cygnusloom.services import journey as journey_service
 from cygnusloom.services import wilderness as wilderness_service
+from cygnusloom.services.campaign_switches import survival_needs_enabled
 from cygnusloom.services.common import (
     InvalidInput,
     session_scope,
@@ -51,6 +52,7 @@ class TravelMixin:
         )
         with session_scope(self.engine) as db:
             start_clock = load_state(db, self.campaign_id).clock
+            survival_needs = survival_needs_enabled(db, self.campaign_id)
         moved = self.move_actor(character, location=destination)
         with session_scope(self.engine) as db:
             events = journey_service.roll_day_events(
@@ -89,16 +91,26 @@ class TravelMixin:
             "travel_hours": plan.hours,
             "move": moved,
             "clock": clock,
-            "supplies": {
-                "food": plan.food,
-                "water": plan.water,
-                "firewood": plan.firewood,
-                "note": (
-                    f"Each person needs {rules.food_per_traveler_day} day's food and "
-                    f"{rules.water_per_traveler_day} water, and the party needs "
-                    f"{rules.firewood_per_day} firewood per night."
-                ),
-            },
+            "survival_needs": survival_needs,
+            "supplies": (
+                {
+                    "food": plan.food,
+                    "water": plan.water,
+                    "firewood": plan.firewood,
+                    "note": (
+                        f"Each person needs {rules.food_per_traveler_day} day's food and "
+                        f"{rules.water_per_traveler_day} water, and the party needs "
+                        f"{rules.firewood_per_day} firewood per night."
+                    ),
+                }
+                if survival_needs
+                else {
+                    "food": 0,
+                    "water": 0,
+                    "firewood": 0,
+                    "note": "Survival needs are not tracked in this campaign; spend nothing.",
+                }
+            ),
             "forage": {
                 "takes": "half a day",
                 "check": "Wis/Survive",
@@ -107,14 +119,18 @@ class TravelMixin:
                 "note": "A full day of foraging adds -2 to the difficulty; each further day in "
                 "the same hex adds +1.",
             },
-            "privation": {
-                "food": "A first day without food costs no Strain; each consecutive day adds 1.",
-                "water": "A first day without water adds 2 Strain; each further day adds 3.",
-                "night": "A harsh night without shelter or fire adds 1 Strain.",
-                "note": "Strain above the maximum calls for a Physical save or death by dawn. "
-                "No healing, spell recovery, or nightly Strain loss until a full day with food, "
-                "water, and warm sleep.",
-            },
+            "privation": (
+                {
+                    "food": "A first day without food costs no Strain; each consecutive day adds 1.",
+                    "water": "A first day without water adds 2 Strain; each further day adds 3.",
+                    "night": "A harsh night without shelter or fire adds 1 Strain.",
+                    "note": "Strain above the maximum calls for a Physical save or death by "
+                    "dawn. No healing, spell recovery, or nightly Strain loss until a full day "
+                    "with food, water, and warm sleep.",
+                }
+                if survival_needs
+                else {}
+            ),
             "events": events,
             "nights_count": len(nights),
             "nights": nights,
