@@ -2198,7 +2198,7 @@
   {
     "type": "tool_call",
     "id": "set_timer",
-    "description": "Start, refresh, or end a timed effect on a character, such as a torch's light, a poison, or a spell's duration. Items with a timer start it automatically when used, so this tool is for a timer the story starts or ends directly. A timer ends when the campaign clock reaches its stated time and is then shown as ended in the Log. Set force true to replace a different timer under the same key or to end a timer that is not running.",
+    "description": "Start, refresh, or end a timed effect on a character, such as a torch's light, a poison, or a spell's duration. Items with a timer start it automatically when used, so this tool is for a timer the story starts or ends directly; do not call it again after use_item already started the same item's timer, because a redundant start is ignored. A timer ends when the campaign clock reaches its stated time and is then shown as ended in the Log. Set force true to replace a different timer under the same key, change its label without changing its time, or end a timer that is not running.",
     "parameters": {
       "properties": {
         "name": {

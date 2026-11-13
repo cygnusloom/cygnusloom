@@ -53,6 +53,24 @@ def start_timer(
     until = f"Day {end.day}, {clock_rules.parts[end.part].title()}"
     if per_part > 1:
         until += f", hour {end.hour + 1} of {per_part}"
+    if (
+        existing is not None
+        and existing.item.casefold() == text.casefold()
+        and (existing.until_day, existing.until_part, existing.until_hour)
+        == (end.day, end.part, end.hour)
+        and not force
+    ):
+        # A retried or redundant call for the same item and ending is one timer, not a refresh:
+        # keep the first label and log line.
+        return {
+            "character": character.name,
+            "item": existing.item,
+            "key": timer_key,
+            "hours": duration,
+            "until": existing.until_text,
+            "already_running": True,
+            "note": f"{existing.item} ({existing.label or 'timer'}) is already running.",
+        }
     record(
         db,
         campaign_id,

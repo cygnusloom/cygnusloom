@@ -9,7 +9,7 @@ from dataclasses import replace
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from cygnusloom.services.events import load_state
+from cygnusloom.services.events import TimerStarted, decode, events_since, load_state
 from tests.test_combat import PC, _fight
 from tests.test_wwn_combat import PC as WWN_PC
 from tests.test_wwn_combat import WWN, _wwn_campaign
@@ -33,6 +33,24 @@ def test_using_a_cairn_torch_starts_a_light_timer(
     timer = _timers(app, campaign_id)["torch"]
     assert (timer.label, timer.until_day) == ("Light", 1)
     assert timer.until_text.startswith("Day 1, ")
+
+
+def test_a_redundant_start_for_the_same_ending_is_ignored(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    app, campaign_id, tools = _fight(client_factory, rolled=False)
+    tools.give_item(PC, "Torch")
+    tools.use_item(PC, "Torch")
+
+    again = tools.set_timer(PC, "Torch", hours=1, label="torch burning")
+
+    assert again["already_running"] is True
+    assert _timers(app, campaign_id)["torch"].label == "Light"
+    with Session(app.state.engine) as db:
+        started = [
+            decode(row) for row in events_since(db, campaign_id) if row.kind == TimerStarted.kind
+        ]
+    assert len(started) == 1
 
 
 def test_the_clock_ends_an_expired_timer(
