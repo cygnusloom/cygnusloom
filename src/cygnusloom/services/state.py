@@ -272,6 +272,10 @@ class Character:
     # Each attack's shock and the armor it shocks through, by attack name, such as [2, 13]. Empty
     # for characters whose rule set has no shock.
     attack_shock: dict[str, list[int]] = field(default_factory=dict)
+    # Each attack's melee reach in feet, when it is longer than the rule set's default.
+    attack_reach: dict[str, int] = field(default_factory=dict)
+    # Each attack's ranged bands and their farthest distance in feet, by band name.
+    attack_ranges: dict[str, dict[str, int]] = field(default_factory=dict)
     # The name of the bestiary statblock a monster was built from, such as "Wolf". Empty if none.
     creature: str = ""
     # A story-only NPC has no stats yet. It cannot fight, make saves, or be attacked until given stats.

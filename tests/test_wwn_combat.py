@@ -104,6 +104,8 @@ def _wwn_tools(
         character=WWN.character,
         rule_data=WWN.rule_data,
         grid=WWN.grid,
+        terrain=WWN.terrain,
+        encounter_objects=WWN.encounter_objects,
         combat=combat or WWN.combat,
         monsters=WWN.monsters,
         checks=WWN.checks,
@@ -829,7 +831,9 @@ def test_impostor_rerolls_a_disguise_check_once_per_hour(client_factory):
     )
 
     assert result["success"] is True
-    assert result["reaction"] == "Impostor already rerolled the failed check to maintain the disguise."
+    assert (
+        result["reaction"] == "Impostor already rerolled the failed check to maintain the disguise."
+    )
     with Session(client.app.state.engine) as db:
         character = load_state(db, campaign_id).characters[name_key(PC)]
     assert character.reaction_uses == {"hour:focus_impostor:impostor-reroll": 1}
@@ -856,7 +860,10 @@ def test_impostor_rerolls_a_disguise_check_once_per_hour(client_factory):
         difficulty=12,
         cause="maintaining a disguise",
     )
-    assert recharged["reaction"] == "Impostor already rerolled the failed check to maintain the disguise."
+    assert (
+        recharged["reaction"]
+        == "Impostor already rerolled the failed check to maintain the disguise."
+    )
 
 
 def test_rider_rerolls_a_failed_ride_check_once_per_hour(client_factory):
@@ -896,9 +903,7 @@ def test_an_optional_save_reaction_waits_for_the_players_consent(client_factory)
     assert declined["passed"] is False
     assert "reaction" not in declined
 
-    allowed = tools.roll_save(
-        PC, "save_physical", "a poisoned blade", natural=1, use_optional=True
-    )
+    allowed = tools.roll_save(PC, "save_physical", "a poisoned blade", natural=1, use_optional=True)
     assert allowed["passed"] is True
     assert "Poisoner" in allowed["reaction"]
 

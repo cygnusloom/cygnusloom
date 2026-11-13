@@ -32,6 +32,13 @@
     "natural_max_hits": true,
     "total_defense": 2,
     "range_bands": {"short": 0, "long": -2},
+    "ranges": {
+      "melee": 5,
+      "sight_blocked_by": ["wall", "tree", "boulder", "pillar", "statue", "altar", "gate",
+                           "portcullis", "bookshelf", "cart", "fountain", "throne", "obelisk",
+                           "pine", "cabinet", "shelf", "potion-shelf", "shrine", "wagon",
+                           "fireplace"]
+    },
     "dual_wield_hit_penalty": -1,
     "dual_wield_damage_bonus": 2,
     "surprise_turns": 1,

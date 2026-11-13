@@ -246,6 +246,8 @@ def test_create_monster_keeps_each_rulesets_stat_model() -> None:
         "dice",
         "shock",
         "shock_ac",
+        "reach",
+        "ranges",
     }
     assert "required" not in wwn_properties["attacks"]["items"]
 

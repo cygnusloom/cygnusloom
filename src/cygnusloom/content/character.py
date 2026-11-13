@@ -15,7 +15,12 @@ from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
-from cygnusloom.content.definitions import ContentError, Definition, required_text
+from cygnusloom.content.definitions import (
+    ContentError,
+    Definition,
+    range_bands,
+    required_text,
+)
 from cygnusloom.content.icons import FALLBACK_ITEM, FALLBACK_WEAPON, resolve_icon
 from cygnusloom.rules.dice import FORMULA, is_formula, roll_total
 
@@ -61,7 +66,14 @@ FEATURE_EFFECT_OPS = ("stat", "skill", "counter", "armor", "note")
 # When a feature may react to a roll that is already being resolved.
 REACTION_TRIGGERS = ("move", "check", "reaction", "save", "attack", "damage")
 # What a reaction may do to that roll.
-REACTION_EFFECT_OPS = ("raise_band", "add_total", "set_reaction", "reroll", "reroll_ones", "best_of")
+REACTION_EFFECT_OPS = (
+    "raise_band",
+    "add_total",
+    "set_reaction",
+    "reroll",
+    "reroll_ones",
+    "best_of",
+)
 
 
 @dataclass(frozen=True)
@@ -264,6 +276,12 @@ class Feature:
     # The Shock a weapon deals to a target it misses whose armor is at most `shock_ac`.
     shock: int = 0
     shock_ac: int = 0
+    # A weapon's melee reach in feet when it is longer than the rule set's default, such as a
+    # pike's 10. Zero uses the rule set's default reach.
+    reach: int = 0
+    # A ranged attack's bands and the farthest distance in feet of each, such as
+    # {"short": 30, "long": 60}. Empty for a melee-only weapon.
+    ranges: Mapping[str, int] = field(default_factory=dict)
     # Engine flags the weapon or item carries, such as "no_unskilled_penalty".
     flags: tuple[str, ...] = ()
     # Check ids this worn item penalizes by its Encumbrance, such as Sneak or Exert.
@@ -1044,6 +1062,10 @@ def load_feature(
         raise ContentError(f"{label}: 'skill' names no skill ({skill!r})")
     shock = _amount(data, "shock", label)
     shock_ac = _amount(data, "shock_ac", label)
+    reach = data.get("reach", 0)
+    if not isinstance(reach, int) or isinstance(reach, bool) or reach < 0:
+        raise ContentError(f"{label}: 'reach' must be a whole number of feet, at least 0")
+    ranges = range_bands(data.get("ranges", {}), f"{label}: ranges")
     repeatable = data.get("repeatable", False)
     if not isinstance(repeatable, bool):
         raise ContentError(f"{label}: 'repeatable' must be a boolean")
@@ -1090,6 +1112,8 @@ def load_feature(
         attributes=_stat_ids(data.get("attributes", []), "attributes", stats, label),
         shock=shock,
         shock_ac=shock_ac,
+        reach=reach,
+        ranges=dict(ranges),
         flags=_text_list(data.get("flags", []), "flags", label),
         encumbrance_checks=_text_list(
             data.get("encumbrance_checks", []), "encumbrance_checks", label
@@ -1148,9 +1172,7 @@ def _feature_picks(
         keep = _pick_number(entry, "keep", label, pick_id)
         if grant == "check_best":
             if keep < 1 or dice < keep:
-                raise ContentError(
-                    f"{label}: pick {pick_id!r} needs 'keep' between 1 and 'dice'"
-                )
+                raise ContentError(f"{label}: pick {pick_id!r} needs 'keep' between 1 and 'dice'")
         elif dice or keep:
             raise ContentError(
                 f"{label}: pick {pick_id!r} 'dice' and 'keep' need grant 'check_best'"
@@ -2968,9 +2990,7 @@ def resolve(
     given_fields = submitted.get("fields", {})
     given_skill_picks = _pick_object(submitted.get("skill_picks", {}), "skill_picks")
     given_feature_picks = _pick_object(submitted.get("feature_picks", {}), "feature_picks")
-    given_feature_choices = _pick_object(
-        submitted.get("feature_choices", {}), "feature_choices"
-    )
+    given_feature_choices = _pick_object(submitted.get("feature_choices", {}), "feature_choices")
     given_feature_repeats = _pick_object(submitted.get("feature_repeats", {}), "feature_repeats")
     _check_feature_repeats(spec, submitted)
     skill_replacements = _skill_replacement_choices(spec, submitted)
@@ -3246,9 +3266,7 @@ def feature_choice_views(spec: CharacterSpec, feature: Feature) -> tuple[Mapping
                 "kind": pick.kind,
                 "label": pick.label,
                 "count": pick.count,
-                "options": [
-                    {"value": option, "title": names[option].name} for option in options
-                ],
+                "options": [{"value": option, "title": names[option].name} for option in options],
             }
         )
     return tuple(views)

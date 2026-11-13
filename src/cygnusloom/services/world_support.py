@@ -28,6 +28,7 @@ from cygnusloom.content.character import (
     check_swaps,
     resolve,
 )
+from cygnusloom.content.definitions import ContentError, range_bands
 from cygnusloom.content.icons import icon_ids
 from cygnusloom.content.library import (
     MAP_AMBIENTS,
@@ -1147,9 +1148,7 @@ def hire_existing_npc(
             fields=dict(sheet.fields),
             counters=dict(sheet.counters),
             skills=dict(sheet.skills),
-            feature_choices={
-                key: list(values) for key, values in sheet.feature_choices.items()
-            },
+            feature_choices={key: list(values) for key, values in sheet.feature_choices.items()},
             stat_modifiers=dict(sheet.stat_modifiers),
             armor=sheet.armor,
         ),
@@ -1286,7 +1285,7 @@ def create_monster(
         0,
         armor_max or combat.UNCAPPED_ARMOR,
     )
-    attack_map, flag_map, shock_map = _attack_table(attacks, base)
+    attack_map, flag_map, shock_map, reach_map, ranges_map = _attack_table(attacks, base)
     event = NpcAdded(
         name=name,
         location=where.name,
@@ -1299,6 +1298,8 @@ def create_monster(
         attacks=attack_map,
         attack_flags=flag_map,
         attack_shock=shock_map,
+        attack_reach=reach_map,
+        attack_ranges=ranges_map,
         creature=base.name if base else "",
         rules=list(rules) if rules is not None else (list(base.rules) if base else []),
         large_group=(detachment if detachment is not None else bool(base and base.large_group)),
@@ -1315,38 +1316,58 @@ def create_monster(
         "attacks": attack_map,
         "attack_flags": flag_map,
         "attack_shock": shock_map,
+        "attack_reach": reach_map,
+        "attack_ranges": ranges_map,
         "detachment": event.large_group,
     }
 
 
 def _attack_table(
     attacks: Sequence[Mapping[str, Any]] | None, base: MonsterTemplate | None
-) -> tuple[dict[str, str], dict[str, list[str]], dict[str, list[int]]]:
+) -> tuple[
+    dict[str, str],
+    dict[str, list[str]],
+    dict[str, list[int]],
+    dict[str, int],
+    dict[str, dict[str, int]],
+]:
     """The attacks an NPC gets: the given ones, else the statblock's, else none. Returns the dice by
-    attack name, the flags of the attacks that have any, and the Shock and the armor it shocks
-    through, by attack name."""
+    attack name, the flags of the attacks that have any, the Shock and the armor it shocks
+    through, the reach of the attacks that have one, and the ranged bands of the attacks that have
+    any."""
     if attacks is not None:
         return _attacks(attacks)
     if base is None:
-        return {}, {}, {}
+        return {}, {}, {}, {}, {}
     return (
         dict(base.attacks),
         {name: list(flags) for name, flags in base.attack_flags.items()},
         {name: list(pair) for name, pair in base.attack_shock.items()},
+        dict(base.attack_reach),
+        {name: dict(bands) for name, bands in base.attack_ranges.items()},
     )
 
 
 def _attacks(
     attacks: Sequence[Mapping[str, Any]],
-) -> tuple[dict[str, str], dict[str, list[str]], dict[str, list[int]]]:
-    """Each attack is {"name", "dice", "flags", "shock", "shock_ac"}. Its dice must be a formula
-    such as '1d8' or '1d6+1d6'; flags is an optional list of names from ATTACK_FLAGS, each listed
-    once; and shock and shock_ac say what it does to a target it misses whose armor is low enough.
-    A Shock value needs a shock_ac. Returns the dice, the flags, and the shock of the attacks that
-    have any."""
+) -> tuple[
+    dict[str, str],
+    dict[str, list[str]],
+    dict[str, list[int]],
+    dict[str, int],
+    dict[str, dict[str, int]],
+]:
+    """Each attack is {"name", "dice", "flags", "shock", "shock_ac", "reach", "ranges"}. Its dice
+    must be a formula such as '1d8' or '1d6+1d6'; flags is an optional list of names from
+    ATTACK_FLAGS, each listed once; shock and shock_ac say what it does to a target it misses
+    whose armor is low enough; reach is how far it can strike in melee; and ranges gives the
+    farthest distance in feet of each ranged band. A Shock value needs a shock_ac. Returns the
+    dice, the flags, the shock, the reach, and the ranged bands of the attacks that have any."""
     checked: dict[str, str] = {}
     flags_by_attack: dict[str, list[str]] = {}
     shock_by_attack: dict[str, list[int]] = {}
+    reach_by_attack: dict[str, int] = {}
+    ranges_by_attack: dict[str, dict[str, int]] = {}
     seen: set[str] = set()
     for attack in attacks:
         label = bounded_text(attack.get("name", ""), "attack name", MAX_NAME)
@@ -1354,6 +1375,7 @@ def _attacks(
         flags = attack.get("flags", [])
         shock = attack.get("shock", 0)
         shock_ac = attack.get("shock_ac", 0)
+        reach = attack.get("reach", 0)
         if label.casefold() in seen:
             raise InvalidInput(f"attack {label!r} is listed twice")
         if not isinstance(dice, str) or not is_formula(dice):
@@ -1370,13 +1392,24 @@ def _attacks(
             raise InvalidInput(
                 f"attack {label!r} gives Shock, so it needs the AC it shocks through"
             )
+        reach_value = whole_number(reach, f"attack {label!r} reach", 0, MAX_STAT)
+        bands: dict[str, int] = {}
+        if "ranges" in attack:
+            try:
+                bands = range_bands(attack["ranges"], f"attack {label!r} ranges")
+            except ContentError as error:
+                raise InvalidInput(str(error)) from error
         seen.add(label.casefold())
         checked[label] = dice
         if flags:
             flags_by_attack[label] = list(flags)
         if shock_value:
             shock_by_attack[label] = [shock_value, shock_ac_value]
-    return checked, flags_by_attack, shock_by_attack
+        if reach_value:
+            reach_by_attack[label] = reach_value
+        if bands:
+            ranges_by_attack[label] = bands
+    return checked, flags_by_attack, shock_by_attack, reach_by_attack, ranges_by_attack
 
 
 def _statblock_conflict(base: MonsterTemplate, spec: CharacterSpec) -> str:
@@ -1404,6 +1437,8 @@ def _with_statblock(event: NpcAdded, base: MonsterTemplate) -> NpcAdded:
         attacks=dict(base.attacks),
         attack_flags={name: list(flags) for name, flags in base.attack_flags.items()},
         attack_shock={name: list(pair) for name, pair in base.attack_shock.items()},
+        attack_reach=dict(base.attack_reach),
+        attack_ranges={name: dict(bands) for name, bands in base.attack_ranges.items()},
         creature=base.name,
         large_group=base.large_group,
         rules=list(dict.fromkeys([*event.rules, *base.rules])),
@@ -1634,7 +1669,9 @@ def update_npc(
             except CharacterError as error:
                 raise InvalidInput(str(error)) from error
             _check_sheet_text(sheet)
-            attack_map, attack_flags, attack_shock = _attacks(attacks or [])
+            attack_map, attack_flags, attack_shock, attack_reach, attack_ranges = _attacks(
+                attacks or []
+            )
             statted = NpcStatted(
                 name=npc.name,
                 armor=(sheet.armor if defense_base else 0)
@@ -1643,6 +1680,8 @@ def update_npc(
                 attacks=attack_map,
                 attack_flags=attack_flags,
                 attack_shock=attack_shock,
+                attack_reach=attack_reach,
+                attack_ranges=attack_ranges,
                 **_sheet_fields(sheet),
             )
         elif character is not None:
@@ -1651,14 +1690,18 @@ def update_npc(
             )
         else:
             # The sheet stays; only the weapons and armor in hand change.
-            attack_map = attack_flags = attack_shock = None
+            attack_map = attack_flags = attack_shock = attack_reach = attack_ranges = None
             if attacks is not None:
-                attack_map, attack_flags, attack_shock = _attacks(attacks)
+                attack_map, attack_flags, attack_shock, attack_reach, attack_ranges = _attacks(
+                    attacks
+                )
             armed = NpcArmed(
                 name=npc.name,
                 attacks=attack_map,
                 attack_flags=attack_flags or {},
                 attack_shock=attack_shock or {},
+                attack_reach=attack_reach or {},
+                attack_ranges=attack_ranges or {},
                 armor=None
                 if armor is None
                 else whole_number(armor, "armor", 0, armor_max or combat.UNCAPPED_ARMOR),

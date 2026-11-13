@@ -221,7 +221,9 @@ def _finish_reaction_save(pending: Mapping[str, Any], total: int) -> dict[str, A
     worse = (original_success and not new_success) or (
         new_success == original_success and total < original_roll
     )
-    final_roll = total if (keep == "better" and better) or (keep == "worse" and worse) else original_roll
+    final_roll = (
+        total if (keep == "better" and better) or (keep == "worse" and worse) else original_roll
+    )
     return {
         "name": str(pending.get("name", "")),
         "stat": str(pending.get("stat", "")),
@@ -955,9 +957,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 )
             )
 
-    def optional_save_reactions(
-        self, name: str, stat: str, cause: str = ""
-    ) -> list[str]:
+    def optional_save_reactions(self, name: str, stat: str, cause: str = "") -> list[str]:
         """The optional save reactions to offer on a player's roll prompt."""
         with session_scope(self.engine) as db:
             character = load_state(db, self.campaign_id).characters.get(name_key(name))
@@ -1487,9 +1487,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
             raise InvalidInput(f"{dice!r} is not a dice formula such as '3d6'")
         with session_scope(self.engine) as db:
             state = load_state(db, self.campaign_id)
-            caster = (
-                state.characters.get(name_key(character)) if character else state.pc()
-            )
+            caster = state.characters.get(name_key(character)) if character else state.pc()
             if caster is None:
                 raise InvalidInput(f"there is no character named {character!r}")
             if caster.features.get("art_empowered_sorcery", 0) <= 0:
@@ -1527,9 +1525,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
         stat = magic_service.save_stat_id(spec, stat)
         with session_scope(self.engine) as db:
             state = load_state(db, self.campaign_id)
-            caster = (
-                state.characters.get(name_key(character)) if character else state.pc()
-            )
+            caster = state.characters.get(name_key(character)) if character else state.pc()
             if caster is None:
                 raise InvalidInput(f"there is no character named {character!r}")
             if caster.features.get("art_inexorable_effect", 0) <= 0:
@@ -1548,13 +1544,9 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 raise InvalidInput("Inexorable Effect is already used this scene")
             previous = _last_successful_save(db, self.campaign_id, enemy.name, stat)
             if previous is None:
-                raise InvalidInput(
-                    "Inexorable Effect needs an enemy save that just succeeded"
-                )
+                raise InvalidInput("Inexorable Effect needs an enemy save that just succeeded")
             rules = _required(self.combat, "combat")
-            result = combat.resolve_save(
-                rules, current(enemy, stat), rng=self.rng, plus=self.plus
-            )
+            result = combat.resolve_save(rules, current(enemy, stat), rng=self.rng, plus=self.plus)
             worse = min(int(previous.roll), result.roll)
             record(
                 db,
@@ -1718,7 +1710,12 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 conditions=self.conditions,
                 spec=self.character,
                 force=force,
+                cell_feet=self._cell_feet(),
             )
+
+    def _cell_feet(self) -> int | None:
+        """The encounter grid's cell size, which attack reach and range use."""
+        return self.grid.cell_feet if self.grid is not None else None
 
     def attacks_per_action(self, name: str) -> int:
         """The number of attacks a statblock makes in one action, or 1 for a custom NPC."""
@@ -1751,6 +1748,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 conditions=self.conditions,
                 spec=self.character,
                 force=force,
+                cell_feet=self._cell_feet(),
             )
 
     def player_attack(
@@ -1786,6 +1784,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 dual_wield=dual_wield,
                 force=force,
                 character=character,
+                cell_feet=self._cell_feet(),
             )
 
     def attack_dice(self, weapon: str, modifier: str = "") -> str:
@@ -2033,6 +2032,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 attack_roll=20,
                 damage_roll=damage,
                 conditions=self.conditions,
+                cell_feet=self._cell_feet(),
             )
             db.commit()
             return {**result, "execution": True, "damage": damage}

@@ -117,7 +117,8 @@
     "armor": 14,
     "attacks": {
       "tentacle": {
-        "dice": "1d6"
+        "dice": "1d6",
+        "reach": 10
       }
     },
     "attacks_per_action": 4,
@@ -550,7 +551,8 @@
     "armor": 12,
     "attacks": {
       "beak": {
-        "dice": "1d8"
+        "dice": "1d8",
+        "reach": 10
       }
     },
     "attacks_per_action": 1,
@@ -1218,10 +1220,12 @@
     "armor": 13,
     "attacks": {
       "bite": {
-        "dice": "2d6"
+        "dice": "2d6",
+        "reach": 10
       },
       "coil": {
-        "dice": "1d10"
+        "dice": "1d10",
+        "reach": 10
       }
     },
     "attacks_per_action": 2,
@@ -1363,7 +1367,8 @@
         "shock_ac": 13
       },
       "hurled stone": {
-        "dice": "1d8"
+        "dice": "1d8",
+        "ranges": {"short": 60, "long": 120}
       }
     },
     "attacks_per_action": 2,
@@ -1547,7 +1552,8 @@
       "thorn lance": {
         "dice": "1d10",
         "shock": 2,
-        "shock_ac": 13
+        "shock_ac": 13,
+        "reach": 10
       }
     },
     "attacks_per_action": 1,
@@ -1639,7 +1645,8 @@
       "rusted pike": {
         "dice": "1d8",
         "shock": 2,
-        "shock_ac": 13
+        "shock_ac": 13,
+        "reach": 10
       },
       "gauntlet": {
         "dice": "1d6"
@@ -2002,7 +2009,8 @@
     "armor": 12,
     "attacks": {
       "noose": {
-        "dice": "1d6"
+        "dice": "1d6",
+        "reach": 10
       }
     },
     "attacks_per_action": 1,
@@ -2229,7 +2237,8 @@
         "dice": "1d8"
       },
       "hurled stone": {
-        "dice": "1d6"
+        "dice": "1d6",
+        "ranges": {"short": 30, "long": 60}
       }
     },
     "attacks_per_action": 2,

@@ -1007,7 +1007,7 @@
         },
         "attacks": {
           "type": "array",
-          "description": "Optional. The NPC's attacks, each with a name and dice such as '1d8' or '1d6+1d6'. For a story-only NPC this is part of giving them stats; for any other NPC it replaces their attacks.",
+          "description": "Optional. The NPC's attacks, each with a name and dice such as '1d8' or '1d6+1d6'. For a story-only NPC this is part of giving them stats; for any other NPC it replaces their attacks. An attack with neither reach nor ranges is melee at the rule set's reach.",
           "items": {
             "type": "object",
             "properties": {
@@ -1025,6 +1025,19 @@
                   "type": "string"
                 },
                 "description": "Leave out for a plain attack. The flags the rule set defines for attacks."
+              },
+              "reach": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Optional. How far the attack can strike in melee, in feet, when the rule set measures reach, such as 10 for a long weapon. Leave it out for the rule set's normal reach."
+              },
+              "ranges": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Optional. The band names and farthest distance in feet of a ranged attack, such as {\"short\": 30, \"long\": 60}, when the rule set measures range. Leave it out for a melee attack."
               }
             },
             "required": [
