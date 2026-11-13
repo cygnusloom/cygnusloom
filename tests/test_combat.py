@@ -52,7 +52,7 @@ from cygnusloom.services.events import (
 from cygnusloom.services.tools import Ask, RollAnswer, ToolRun, run_tool
 from cygnusloom.services.world import WorldTools
 from tests.conftest import content_library
-from tests.test_campaigns import _create_character
+from tests.factories import create_character_direct
 from tests.test_character_creation import _cairn_campaign, _cairn_campaign_fast, _complete_form
 from tests.test_world import _db, _state
 from tests.turns import next_turn, take_turn
@@ -141,10 +141,9 @@ def _fight_client(
         client, campaign_id = _cairn_campaign(client_factory)
     else:
         client, campaign_id = _cairn_campaign_fast(client_factory)
-    created = _create_character(
+    create_character_direct(
         client, campaign_id, name=PC, fields=_complete_form(client, campaign_id)
     )
-    assert created.status_code == 303
     tools = _tools(client.app, campaign_id)
     tools.give_item(PC, "Sword", damage="1d8")
     tools.create_location(YARD, "Cobbles around a dry well.")

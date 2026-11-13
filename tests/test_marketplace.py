@@ -23,8 +23,9 @@ from cygnusloom.services.events import (
     record,
 )
 from tests.conftest import bundled_library, csrf_token
+from tests.factories import create_character_direct
 from tests.support import content_tree
-from tests.test_campaigns import _create_character, _debug_client_factory
+from tests.test_campaigns import _debug_client_factory
 from tests.test_character_creation import _cairn_campaign, _complete_form
 from tests.test_clock_rest import _wound
 from tests.test_combat import CAIRN, PC, _character, _set_stat, _tools
@@ -38,10 +39,9 @@ PLACE = "The Road"
 
 def _pcs(client_factory: Callable[[], TestClient]):
     client, campaign_id = _cairn_campaign(client_factory)
-    created = _create_character(
+    create_character_direct(
         client, campaign_id, name=PC, fields=_complete_form(client, campaign_id)
     )
-    assert created.status_code == 303
     return client.app, campaign_id, _tools(client.app, campaign_id)
 
 
@@ -385,10 +385,9 @@ def test_debug_gold_is_hidden_by_default(client_factory):
 
 def test_debug_gold_adds_the_rule_sets_currency(settings: Settings, fake: FakeProvider):
     client, campaign_id = _cairn_campaign(_debug_client_factory(settings, fake))
-    created = _create_character(
+    create_character_direct(
         client, campaign_id, name=PC, fields=_complete_form(client, campaign_id)
     )
-    assert created.status_code == 303
     app = client.app
     before = _gold(app, campaign_id)
     assert _give_debug_gold(client, campaign_id, "40").status_code == 303
@@ -398,10 +397,9 @@ def test_debug_gold_adds_the_rule_sets_currency(settings: Settings, fake: FakePr
 
 def test_debug_gold_refuses_a_bad_amount(settings: Settings, fake: FakeProvider):
     client, campaign_id = _cairn_campaign(_debug_client_factory(settings, fake))
-    created = _create_character(
+    create_character_direct(
         client, campaign_id, name=PC, fields=_complete_form(client, campaign_id)
     )
-    assert created.status_code == 303
     assert _give_debug_gold(client, campaign_id, "lots").status_code == 400
     assert _give_debug_gold(client, campaign_id, "0").status_code == 400
     assert _give_debug_gold(client, campaign_id, "5", name="Nobody").status_code == 400

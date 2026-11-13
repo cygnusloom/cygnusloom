@@ -47,7 +47,7 @@ from cygnusloom.services.injuries import EffectContext, run_effects
 from cygnusloom.services.tools import check_arguments
 from cygnusloom.services.world import WorldTools
 from tests.conftest import content_library
-from tests.factories import WWN_STATS
+from tests.factories import WWN_STATS, create_character_direct
 from tests.test_campaigns import _create_character, _new_campaign, _signed_in
 from tests.test_character_creation import (
     _choices,
@@ -230,9 +230,7 @@ def _campaign(
             fields["template-tradition2"] = tradition2
             fields.update(TRADITION2_PICKS[tradition2])
         fields = _named_picks(fields)
-        created = _create_character(client, campaign_id, name=name, fields=fields)
-    error = re.search(r'<p class="form-error"[^>]*>(.*?)</p>', created.text, re.DOTALL)
-    assert created.status_code == 303, error.group(1) if error else created.text[:500]
+        create_character_direct(client, campaign_id, name=name, fields=fields)
     return client.app, campaign_id
 
 

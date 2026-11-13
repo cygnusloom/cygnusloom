@@ -17,7 +17,8 @@ from cygnusloom.services.events import (
     record,
 )
 from cygnusloom.services.views import scene_view, world_state_text
-from tests.test_campaigns import _create_character, _signed_in
+from tests.factories import create_character_direct
+from tests.test_campaigns import _signed_in
 from tests.test_character_creation import _cairn_campaign, _complete_form
 from tests.test_combat import CAIRN, PC, _character, _tools
 
@@ -31,10 +32,9 @@ WAGE = 3
 
 def _pcs(client_factory: Callable[[], TestClient]):
     client, campaign_id = _cairn_campaign(client_factory)
-    created = _create_character(
+    create_character_direct(
         client, campaign_id, name=PC, fields=_complete_form(client, campaign_id)
     )
-    assert created.status_code == 303
     tools = _tools(client.app, campaign_id)
     tools.create_location(PLACE, "A road between towns.")
     tools.move_actor(PC, PLACE)
