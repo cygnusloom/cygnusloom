@@ -356,6 +356,15 @@ def test_placement_is_bounded_occupied_and_movement_limited(
     )
     assert forced["placed"] == "Pip"
     assert forced["moves_left"] == 0
+    occupied = _call(
+        app,
+        campaign_id,
+        "place_participant",
+        {"name": "Pip", "column": 19, "row": 19, "force": True},
+        CAIRN_GRID,
+    )
+    assert occupied["placed"] == "Pip"
+    assert occupied["column"] == 19 and occupied["row"] == 19
 
 
 def test_turns_follow_join_order_and_wrap_into_a_new_round(

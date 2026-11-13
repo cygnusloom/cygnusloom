@@ -8,7 +8,7 @@
   {
     "type": "prompt",
     "id": "mortal_wounds_clock",
-    "text": "A mortally wounded character has six rounds, and the engine counts them down when encounter turns end; an hour is the fallback only when no encounter is running. Do not roll or track the death timer yourself, and do not advance the clock with advance_time for it. Stabilizing takes an Int/Heal or Dex/Heal check at difficulty 8 plus the full rounds since the fall, +2 without a healer's pouch: call roll_check first and call stabilize only on a success. Never stabilize without that check. Once a stabilized character is healed above 0 HP, call recover_character so the engine clears their defeated state and the map no longer shows them down."
+    "text": "A mortally wounded character has six rounds, and the engine counts them down when encounter turns end; an hour is the fallback only when no encounter is running. Do not roll or track the death timer yourself, and do not advance the clock with advance_time for it. Stabilizing takes an Int/Heal or Dex/Heal check at difficulty 8 plus the full rounds since the fall, +2 without a healer's pouch: call roll_check first and call stabilize only on a success. Never stabilize without that check unless the story truly requires it, in which case set the tool's force parameter. Once a stabilized character is healed above 0 HP, call recover_character so the engine clears their defeated state and the map no longer shows them down."
   },
   {
     "type": "prompt",
@@ -122,6 +122,6 @@
   {
     "type": "prompt",
     "id": "travel",
-    "text": "Use travel for overland journeys between distant places. A travel day is ten hours of marching; the tool computes the pace from the terrain, road, and weather, moves the character, and advances the clock. The engine spends a day's food and water for each character when the party rests; for a journey longer than a day without a rest, spend the extra days with use_item. When supplies are lacking, apply the returned privation rules with add_strain. Foraging takes half a day and a Wis/Survive check at the returned difficulty; use roll_check and grant what the roll earns. Do not use move_actor with mode overland for a long journey, and do not advance the clock again for the same travel."
+    "text": "Use travel for overland journeys between distant places. A travel day is ten hours of marching; the tool computes the pace from the terrain, road, and weather, moves the character, and advances the clock. The engine spends a day's food and water for each character when the party rests; for a journey longer than a day without a rest, spend the extra days with use_item. When supplies are lacking, apply the returned privation rules with add_strain. Foraging takes half a day and a Wis/Survive check at the returned difficulty; use roll_check and grant what the roll earns. Do not use move_actor with mode overland for a long journey unless the story truly requires the override and you set its force parameter, and do not advance the clock again for the same travel."
   }
 ]

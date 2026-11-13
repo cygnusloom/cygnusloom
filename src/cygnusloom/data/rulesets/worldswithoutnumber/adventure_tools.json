@@ -412,7 +412,7 @@
     "type": "tool_call",
     "id": "stabilize",
     "extends": "core:tool_call/stabilize",
-    "description": "Stop a mortally wounded character's dying clock. The character wakes with 1 hit point after ten minutes and gains the Frail condition. In the book this needs an Int/Heal or Dex/Heal check at difficulty 8 plus the rounds since they fell; call roll_check first and stabilize only on a success.",
+    "description": "Stop a mortally wounded character's dying clock. The character wakes with 1 hit point after ten minutes and gains the Frail condition. In the book this needs an Int/Heal or Dex/Heal check at difficulty 8 plus the rounds since they fell; call roll_check first and stabilize only on a success. Set force true only when the story requires the aid to work without that check.",
     "parameters": {
       "properties": {
         "explanation": {

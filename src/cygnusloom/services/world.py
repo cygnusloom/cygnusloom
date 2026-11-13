@@ -725,10 +725,10 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
             db.commit()
             return result
 
-    def stabilize(self, name: str, explanation: str) -> dict[str, Any]:
+    def stabilize(self, name: str, explanation: str, force: bool = False) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             hc = HookContext(db, self.campaign_id, self.hooks, self.inventory)
-            refusal = call_hook(self.hooks, "stabilize", hc, name, default="")
+            refusal = "" if force else call_hook(self.hooks, "stabilize", hc, name, default="")
             if refusal:
                 raise InvalidInput(refusal)
             return aid.stabilize(

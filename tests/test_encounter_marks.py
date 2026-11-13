@@ -491,8 +491,17 @@ def test_a_wall_cannot_be_set_on_a_cell_a_participant_occupies(
     app = client.app
     assert _move(app, campaign_id, 4, 5)["placed"] == "Pip"
     refused = _paint(app, campaign_id, [{"column": 4, "row": 5, "object": "wall"}])
-    assert refused["error"] == "column 4, row 5 is occupied by Pip, so it cannot be walled off"
+    assert refused["error"] == (
+        "column 4, row 5 is occupied by Pip, so it cannot be walled off; set force true to override"
+    )
     assert _map(app, campaign_id).marks.get((4, 5)) is None
+    forced = _call(
+        app,
+        campaign_id,
+        "set_map_cells",
+        {"map": MAP, "cells": [{"column": 4, "row": 5, "object": "wall"}], "force": True},
+    )
+    assert forced["changed"] == 1
     assert _paint(app, campaign_id, [{"column": 4, "row": 6, "object": "wall"}])["changed"] == 1
 
 
