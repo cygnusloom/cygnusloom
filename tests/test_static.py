@@ -12,3 +12,12 @@ def test_the_markdown_renderer_is_served_for_streamed_replies(client):
     assert response.status_code == 200
     assert response.headers["cache-control"] == "no-cache"
     assert "window.renderMarkdown" in response.text
+
+
+def test_a_campaign_opens_at_the_newest_message(client):
+    """The transcript starts at the bottom and stays there when its layout settles."""
+    script = client.get("/static/turn_stream.js").text
+
+    assert "transcript.scrollTop = transcript.scrollHeight" in script
+    assert 'window.addEventListener("pageshow"' in script
+    assert "new ResizeObserver(keepBottom)" in script

@@ -27,21 +27,52 @@
   const atBottom = () =>
     !transcript ||
     transcript.scrollHeight - transcript.scrollTop - transcript.clientHeight <= NEAR_BOTTOM_PX;
+  const scrollToBottom = () => {
+    if (transcript) transcript.scrollTop = transcript.scrollHeight;
+  };
   const updateJump = () => {
     if (jumpButton) jumpButton.hidden = atBottom();
+  };
+  // Keep the reader at the bottom, unless they scrolled up to read something earlier.
+  const scrollDown = () => {
+    if (followBottom) scrollToBottom();
+    updateJump();
   };
   const syncFollow = () => {
     followBottom = atBottom();
     updateJump();
   };
-  transcript?.addEventListener("scroll", syncFollow, { passive: true });
-  window.addEventListener("resize", updateJump);
-  jumpButton?.addEventListener("click", () => {
+  // Opening a campaign shows its newest message. The first scroll can come before the layout
+  // is final: a phone's browser chrome changes the viewport after the page renders, the window
+  // may be resized, an image can load, or a back-forward cache restore brings its own scroll
+  // position back. Pin the bottom again on those changes, and show the jump button as soon as
+  // the transcript is no longer at the bottom.
+  const pinBottom = () => {
     followBottom = true;
-    if (transcript) transcript.scrollTop = transcript.scrollHeight;
+    scrollToBottom();
     updateJump();
+  };
+  const keepBottom = () => {
+    if (followBottom) scrollToBottom();
+    updateJump();
+  };
+  pinBottom();
+  transcript?.addEventListener("scroll", syncFollow, { passive: true });
+  window.addEventListener("resize", keepBottom);
+  window.visualViewport?.addEventListener("resize", keepBottom);
+  window.addEventListener("pageshow", (event) => {
+    pinBottom();
+    // A restored page can put its old scroll position back after the event.
+    if (event.persisted) requestAnimationFrame(pinBottom);
   });
-  syncFollow();
+  // An image in a reply grows the transcript after it loads, without resizing its box.
+  transcript?.addEventListener("load", keepBottom, true);
+  // A transcript in a hidden view has no size yet; showing the Play view resizes it, and this
+  // observer then brings it to the bottom for a reader who has not scrolled away.
+  const transcriptResize =
+    transcript && "ResizeObserver" in window ? new ResizeObserver(keepBottom) : null;
+  transcriptResize?.observe(transcript);
+  jumpButton?.addEventListener("click", pinBottom);
 
   const composer = document.getElementById("composer");
   if (!composer || !composer.dataset.streamAction || !window.ReadableStream) return;
@@ -109,12 +140,6 @@
     }
     transcript.append(bubble);
     return { bubble, content, status, statusText, text: "", frame: 0 };
-  };
-
-  // Keep the reader at the bottom, unless they scrolled up to read something earlier.
-  const scrollDown = () => {
-    if (followBottom) transcript.scrollTop = transcript.scrollHeight;
-    updateJump();
   };
 
   // Log entries sit in the chat just before the reply they belong to.
