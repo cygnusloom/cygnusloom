@@ -31,6 +31,7 @@ from cygnusloom.services.events import (
     EncounterTurnEnded,
     FeatureLearned,
     Harmed,
+    InitiativeSettled,
     Struck,
     current,
     decode,
@@ -337,7 +338,59 @@ def test_a_miss_still_does_shock_to_a_low_ac_target(client_factory):
 
     [event] = _struck(app, campaign_id)
     assert (event.hit, event.to_hit, event.shock) == (False, 12, shock)
-    assert event.render().endswith(f"The shock still does {shock} harm to HP.")
+    text = event.render()
+    assert f"The shock still does {shock} harm" in text
+    assert f"Shock {shock}" in text
+
+
+def test_side_initiative_shows_each_sides_roll(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _foe(tools, hp=20)
+
+    [settled] = _events(app, campaign_id, InitiativeSettled.kind)
+    text = settled.render()
+    assert text.count("1d8") == 2
+    assert "Dexterity" in text
+    assert "Initiative is set:" in text
+
+
+def test_a_player_attack_shows_the_roll_and_each_modifier(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _foe(tools, hp=20, armor=13)
+    _make_room(tools)
+    tools.give_item(PC, LONG_SWORD, damage="1d8")
+    take_turn(tools, PC)
+    pc = _pc(app, campaign_id)
+    feature = _feature(LONG_SWORD)
+    bonus = _to_hit_bonus(pc, LONG_SWORD, feature)
+
+    replace(tools, rng=Rolls(5, _roll_for_total(12, bonus))).player_attack(FOE, LONG_SWORD)
+    [event] = _struck(app, campaign_id)
+    text = event.render()
+    assert f"1d20 {12 - bonus}" in text
+    assert "+1 Attack Bonus" in text
+    assert "-2 unskilled" in text
+    assert "+1 Dexterity" in text
+    assert "= 12 vs AC 13" in text
+    # The long sword's Shock 2 plus Dexterity 1, with no Killing Blow.
+    assert "Shock 2 +1 Dexterity = 3" in text
+
+
+def test_a_hit_shows_the_damage_dice_and_each_modifier(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _foe(tools, hp=20, armor=13)
+    _make_room(tools)
+    tools.give_item(PC, LONG_SWORD, damage="1d8")
+    take_turn(tools, PC)
+    pc = _pc(app, campaign_id)
+    feature = _feature(LONG_SWORD)
+    bonus = _to_hit_bonus(pc, LONG_SWORD, feature)
+
+    result = replace(tools, rng=Rolls(5, _roll_for_total(20, bonus))).player_attack(FOE, LONG_SWORD)
+    [event] = _struck(app, campaign_id)
+    text = event.render()
+    assert f"(1d8 5 +1 Killing Blow +1 Dexterity = {result['raw']})" in text
+    assert "1d20" in text and "vs AC 13" in text
 
 
 def test_shock_does_not_reach_a_shield_grade_ac(client_factory):

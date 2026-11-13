@@ -504,7 +504,7 @@ def test_checks_and_advancement_use_configured_skill_limits(client_factory):
     assert tools.roll_check("skill", PC, skill=skill)["bonus"] == -1
     (check,) = _events(app, campaign_id, CheckMade.kind)
     assert (check.skill_level, check.skill_bonus) == (-2, -1)
-    assert f"{spec.skills[skill].name} -1" in check.render()
+    assert f"-1 {spec.skills[skill].name}" in check.render()
     tools.raise_skill(PC, skill, -2, cause="training")
     (changed,) = _events(app, campaign_id, SkillChanged.kind)
     assert "becomes trained" in changed.render()

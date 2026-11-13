@@ -76,7 +76,17 @@ def player_initiative(
     character = state.characters[name_key(waiting[0])]
     roll = whole_number(roll, "roll", 1, combat.check_sides)
     result = resolve_save(combat, current(character, combat.initiative_stat), roll=roll)
-    record(db, campaign_id, InitiativeRolled(name=character.name, passed=result.passed))
+    record(
+        db,
+        campaign_id,
+        InitiativeRolled(
+            name=character.name,
+            passed=result.passed,
+            roll=result.roll,
+            score=result.score,
+            dice=combat.check_die,
+        ),
+    )
     db.commit()
     settle_initiative(db, campaign_id, combat.initiative_order)
     return {
