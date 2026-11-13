@@ -5,15 +5,6 @@
     if (!(form instanceof HTMLFormElement)) return;
     if (form.dataset.confirm && !window.confirm(form.dataset.confirm)) {
       event.preventDefault();
-      return;
-    }
-    // Ending a turn can start the next player turn at once, so a second click must not end that
-    // new turn. Let the submission start, then disable the button.
-    const submitter = event.submitter;
-    if (form.hasAttribute("data-once") && submitter) {
-      window.setTimeout(() => {
-        submitter.disabled = true;
-      }, 0);
     }
   });
 
@@ -527,6 +518,39 @@
     }
   };
 
+  // Ending a turn opens no GM reply, so the button posts and the page stays put; the live
+  // views then take the server's state. Ending can start the next character's turn at once, so
+  // the button locks for the request, and a refusal keeps the page with the server's reason.
+  async function endTurn(form) {
+    if (form.dataset.ending) return;
+    form.dataset.ending = "1";
+    const button = form.querySelector('button[type="submit"]');
+    if (button) button.disabled = true;
+    errorBox.hidden = true;
+    // Hold the live stream while the request lands; settle() then fetches the finished state.
+    localTurn = true;
+    let message = "";
+    try {
+      const response = await fetch(form.action, {
+        method: "POST",
+        body: new FormData(form),
+        credentials: "same-origin",
+      });
+      if (!response.ok && !response.redirected) {
+        const page = new DOMParser().parseFromString(await response.text(), "text/html");
+        message =
+          page.querySelector('main p[role="alert"]')?.textContent.trim() ||
+          "Could not end the turn. Try again.";
+      }
+    } catch {
+      message = "Could not end the turn. Try again.";
+    } finally {
+      delete form.dataset.ending;
+      localTurn = false;
+    }
+    await settle({ focusComposer: true, message });
+  }
+
   // BACKWARDS-COMPATIBILITY: 3 - an old page may still render the Begin form for a player
   // turn. Submit it without a page navigation and then take the fresh state.
   async function startPlayerTurn(form) {
@@ -697,6 +721,11 @@
   document.addEventListener("submit", async (event) => {
     const form = event.target;
     if (!(form instanceof HTMLFormElement)) return;
+    if (form.hasAttribute("data-encounter-end")) {
+      event.preventDefault();
+      await endTurn(form);
+      return;
+    }
     if (!form.hasAttribute("data-pending-action") && !form.hasAttribute("data-encounter-turn")) return;
     event.preventDefault();
     const data = new FormData(form);
