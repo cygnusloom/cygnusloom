@@ -52,6 +52,8 @@ def test_setup_page_shows_the_presets(tmp_path):
     assert "DeepSeek" in page.text
     assert "Scripted demo" in page.text
     assert 'data-prefilled="0"' in page.text
+    # The script sits inside the form so no element breaks the card spacing after it.
+    assert page.text.index("</script>") < page.text.index("</form>")
 
 
 def test_setup_saves_the_first_model_as_default(tmp_path):

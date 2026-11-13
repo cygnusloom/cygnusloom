@@ -582,6 +582,22 @@ def test_the_desktop_wizard_can_be_forced_after_setup(tmp_path):
     assert "fake/scripted" in forced.text
 
 
+def test_the_desktop_setup_wizard_returns_when_the_last_model_is_removed(tmp_path):
+    settings = desktop_settings(tmp_path)
+    app = make_app(settings)
+    client = TestClient(app)
+
+    assert "Give your game master a mind" not in client.get("/campaigns").text
+    spec = app.state.catalog.all_specs()[0]
+    assert spec.row_id is not None
+    app.state.catalog.delete(spec.row_id)
+
+    page = client.get("/campaigns")
+    assert "Give your game master a mind" in page.text
+    assert "Play on a server" in page.text
+    assert 'id="setup-form"' in page.text
+
+
 def test_adding_a_server_rejects_a_non_cygnus_address(tmp_path, monkeypatch):
     def fail(url: str):
         raise desktop_web.ServerCheckError(f"{url} is not a Cygnus Loom server.")
