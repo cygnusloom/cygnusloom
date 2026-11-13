@@ -108,7 +108,7 @@
     "id": "gain_growth",
     "python_module": "wwn",
     "function": "gain_growth",
-    "description": "Roll the character's background Growth table for a level's growth. Apply the result with improve_attribute, spend_skill_point, adjust_counter, or the appropriate skill or stat tool. Call it after level_up, once per new level.",
+    "description": "Roll a background Growth table. The source rolls Growth and Learning during character creation, not on level-up; use this only when a character's background calls for that roll at creation.",
     "parameters": {
       "properties": {
         "character": {"type": "string", "description": "The player character who grows."}
@@ -183,7 +183,7 @@
     "id": "learn_spell",
     "python_module": "wwn",
     "function": "learn_spell",
-    "description": "Add a spell to a spellcaster's spellbook. A High Mage learns High Magic spells; a Necromancer or Elementalist may learn High Magic or a spell of their own New Magic. The spell's rank (1 to 5) must not exceed the maximum spell level their class and level allow. Call it at creation or when a level-up grants a new spell. Learning takes 7 days minus the learner's Magic skill in days, with a minimum of 1 day, and needs a written copy or teacher.",
+    "description": "Add a spell to a spellcaster's spellbook. A High Mage learns High Magic spells; a Necromancer or Elementalist may learn High Magic or a spell of their own New Magic. The spell's rank (1 to 5) must not exceed the maximum spell level their class and level allow. Call it at creation or when a level-up grants a new spell. Learning takes one week per spell level minus one week per level of the learner's Magic skill, with a minimum of one day, and needs a written copy or teacher.",
     "parameters": {
       "properties": {
         "character": {

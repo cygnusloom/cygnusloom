@@ -29,6 +29,7 @@ from cygnusloom.services.events import (
     Encounter,
     ParticipantLeft,
     group_by_side,
+    name_key,
     record,
     speaker_name,
     token_label,
@@ -388,6 +389,49 @@ def test_encounter_ends_mid_turn(client_factory: Callable[[], TestClient]):
     assert _encounter(app, campaign_id).encounter is None
     _finish_gm_reply(app, campaign_id)
     assert _encounter(app, campaign_id).turn is None
+
+
+def test_combat_movement_moves_the_map_token_too(
+    client_factory: Callable[[], TestClient],
+):
+    """The board during a fight uses encounter cells, but the local map token should follow, so
+    the map the player falls back to after the fight is not stale."""
+    client, campaign_id = _encounter_with(client_factory)
+    app = client.app
+    _place(app, campaign_id, "Ada", 3, 4)
+    _place(app, campaign_id, "Pip", 7, 8)
+
+    entry = _encounter(app, campaign_id).maps[name_key(MAP)]
+
+    assert entry.tokens[name_key("Ada")] == (3, 4)
+    assert entry.tokens[name_key("Pip")] == (7, 8)
+
+
+def test_an_ended_encounter_leaves_everyone_on_the_map(
+    client_factory: Callable[[], TestClient],
+):
+    """The fight's final cells become the local map's tokens, so the map does not go blank and
+    the GM need not place every survivor again. A participant from another place is left off."""
+    client, campaign_id = _encounter_with(client_factory)
+    app = client.app
+    _place(app, campaign_id, "Ada", 3, 4)
+    _place(app, campaign_id, "Pip", 7, 8)
+    _call(app, campaign_id, "create_location", {"name": "Far Shore", "description": "Across."})
+    _call(
+        app,
+        campaign_id,
+        "create_npc",
+        {"name": "Wren", "location": "Far Shore", "description": "A ferry hand."},
+    )
+    _call(app, campaign_id, "add_participant", {"name": "Wren"})
+    _place(app, campaign_id, "Wren", 1, 2)
+
+    assert _call(app, campaign_id, "end_encounter", {})["ended"] == "encounter"
+
+    entry = _encounter(app, campaign_id).maps[name_key(MAP)]
+    assert entry.tokens[name_key("Ada")] == (3, 4)
+    assert entry.tokens[name_key("Pip")] == (7, 8)
+    assert name_key("Wren") not in entry.tokens
 
 
 def test_removing_the_acting_participant_passes_the_turn_on(

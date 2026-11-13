@@ -228,10 +228,14 @@ def roll_save(
     features: Mapping[str, Feature] | None = None,
     use_optional: bool = True,
     player_rolls_reaction: bool = False,
+    modifier: int = 0,
 ) -> dict[str, Any]:
     """A save against a stat, recorded with its reason. The engine rolls unless the player's own
-    roll is passed as `natural`. A failure only records the result; the GM applies what it
-    costs."""
+    roll is passed as `natural`. `modifier` is a situational bonus to the save (a penalty is
+    negative), such as an execution attack's combat-skill penalty. A failure only records the
+    result; the GM applies what it costs."""
+    if isinstance(modifier, bool) or not isinstance(modifier, int) or not -20 <= modifier <= 20:
+        raise InvalidInput("the save modifier must be a whole number from -20 to 20")
     stat = save_stat_id(spec, stat)
     if stat not in spec.stats:
         raise InvalidInput(f"there is no stat named {stat!r}")
@@ -247,7 +251,11 @@ def roll_save(
         raise InvalidInput(
             f"{character.name} has no stats yet; give them stats with update_npc first"
         )
-    result = resolve_save(combat, current(character, stat), rng=rng, roll=natural, plus=plus)
+    score = current(character, stat)
+    # A bonus helps the roll. In a roll-over save that lowers the score to beat; in a
+    # roll-under save it raises the score to stay at or under.
+    effective = score - modifier if combat.save.mode == "roll_over" else score + modifier
+    result = resolve_save(combat, effective, rng=rng, roll=natural, plus=plus)
     triggered = reactions.match_save(
         character, spec, features, stat, result.roll, result.passed, reason, use_optional
     )
@@ -281,9 +289,7 @@ def roll_save(
             triggered,
             result,
             reroll=lambda: resolve_save(combat, result.score, rng=rng, plus=plus),
-            resolve_total=lambda total: resolve_save(
-                combat, result.score, roll=total, plus=plus
-            ),
+            resolve_total=lambda total: resolve_save(combat, result.score, roll=total, plus=plus),
         )
     record(
         db,
@@ -297,9 +303,7 @@ def roll_save(
             cause=reason,
             reaction=(
                 triggered.text
-                if triggered is not None
-                and pending is None
-                and triggered.reaction.uses <= 0
+                if triggered is not None and pending is None and triggered.reaction.uses <= 0
                 else ""
             ),
         ),
@@ -314,6 +318,9 @@ def roll_save(
         "score": result.score,
         "passed": result.passed,
     }
+    if modifier:
+        payload["modifier"] = modifier
+        payload["base_score"] = score
     if triggered is not None and pending is None:
         payload["reaction"] = triggered.text
     if pending is not None:

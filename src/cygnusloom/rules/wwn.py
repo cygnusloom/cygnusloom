@@ -28,6 +28,7 @@ from cygnusloom.rules.wwn_progression import (
     combine_class_tables,
     require_wwn_progression,
 )
+from cygnusloom.services import inventory as inventory_service
 from cygnusloom.services import reactions
 from cygnusloom.services.common import InvalidInput, whole_number
 from cygnusloom.services.events import (
@@ -35,8 +36,12 @@ from cygnusloom.services.events import (
     CheckMade,
     EffectNoted,
     FeatureLearned,
+    Harmed,
     MaxChanged,
     Recovered,
+    current,
+    decode,
+    events_since,
     record,
 )
 from cygnusloom.services.hooks import HookContext
@@ -556,7 +561,11 @@ def project_level(
             _art_picks(casting_class, tradition, new_level, progression)
             for tradition in found["traditions"]
         ),
-        "spell_picks": _spell_picks(str(found["casting_class"] or ""), progression),
+        "spell_picks": _spell_picks(
+            str(found["casting_class"] or ""),
+            str(found["traditions"][0]) if found["traditions"] else "",
+            progression,
+        ),
     }
     attack = table.attack[new_level - 1]
     values = {
@@ -646,12 +655,19 @@ def apply_level_up(character: str, ctx: ToolContext, rate: str = "") -> dict[str
     }
 
 
-def _spell_picks(casting_class: str, progression: WWNProgression) -> int:
-    """The new spells a level grants, as the class's casting table configures."""
+def _spell_picks(casting_class: str, tradition: str, progression: WWNProgression) -> int:
+    """The new spells a level grants, as the class's casting table configures. A full Mage of
+    High Magic learns two; a full Necromancer or Elementalist learns one, as the source's
+    class charts say."""
     table_id = progression.casting_class_tables.get(casting_class.strip().casefold())
     if table_id is None:
         return 0
-    return progression.casting_tables[table_id].spell_picks
+    table = progression.casting_tables[table_id]
+    if table_id == "full_mage":
+        tag = tradition_tag(tradition, progression)
+        if tag in ("necromancer", "elementalist"):
+            return 1
+    return table.spell_picks
 
 
 def _art_picks(class_id: str, tradition: str, level: int, progression: WWNProgression) -> int:
@@ -1270,6 +1286,153 @@ def grant_package(character: str, package: str, ctx: ToolContext) -> dict[str, A
         "items": given,
         "silver": found.grant.silver,
     }
+
+
+# Food a character can eat a day at a time, best first. A Daily Ration includes water.
+FOOD_ITEMS = ("Rations, One Week", "Daily Ration")
+WATER_ITEMS = ("Daily Ration",)
+WATER_CONTAINERS = ("Waterskin",)
+PRIVATION_FOOD = "privation_food"
+PRIVATION_WATER = "privation_water"
+
+
+def _carried_matching(
+    hc: HookContext, character: str, names: Iterable[str]
+) -> dict[str, Any] | None:
+    """The first carried item whose name matches one of `names` and still has a use."""
+    found = hc.character(character)
+    for item in found.items:
+        if (
+            any(inventory_service.same_item_name(item.name, name) for name in names)
+            and item.max_uses > 0
+            and item.uses > 0
+        ):
+            return item
+    return None
+
+
+def _spend_one(hc: HookContext, character: str, names: Iterable[str]) -> str:
+    """Spend one use of the first matching consumable and return its name, or "" if none."""
+    item = _carried_matching(hc, character, names)
+    if item is None or hc.inventory is None:
+        return ""
+    db, campaign_id = hc.session()
+    inventory_service.use_item(
+        db,
+        campaign_id,
+        hc.inventory,
+        character,
+        item.name,
+        ignore_ready=True,
+    )
+    return item.name
+
+
+def _has_water_container(hc: HookContext, character: str) -> bool:
+    found = hc.character(character)
+    return any(
+        any(inventory_service.same_item_name(item.name, name) for name in WATER_CONTAINERS)
+        for item in found.items
+    )
+
+
+def _apply_privation(hc: HookContext, character: str, kind: str, cause: str) -> None:
+    """Add the day's System Strain for hunger or thirst and keep the streak."""
+    found = hc.character(character)
+    mark = PRIVATION_FOOD if kind == "food" else PRIVATION_WATER
+    streak = int(found.marks.get(mark) or 0) + 1
+    if kind == "food":
+        strain = 0 if streak == 1 else 1
+    else:
+        strain = 2 if streak == 1 else 3
+    db, campaign_id = hc.session()
+    if strain:
+        available = current(found, "strain")
+        taken = min(strain, available)
+        if taken:
+            record(
+                db, campaign_id, Harmed(name=found.name, stat="strain", taken=taken, cause=cause)
+            )
+        if available <= strain:
+            hc.set_mark(
+                found.name,
+                "privation_deadline",
+                True,
+                f"{found.name}'s System Strain is at its maximum; a Physical save is owed by dawn.",
+            )
+    hc.set_mark(found.name, mark, streak, f"{found.name} lacks {kind} ({streak} day(s)).")
+
+
+def before_rest(hc: HookContext, length: str, start: int, hours_per_part: int) -> None:
+    """Spend a day's food and water for each party member, and record privation.
+
+    The source gives a night's rest only to a character who is fed and watered. The engine
+    consumes the supply; a character without it is held back from recovery by `held_back`."""
+    if length not in ("night", "extended"):
+        return
+    days = 7 if length == "extended" else 1
+    state = hc.state()
+    for character in [c for c in state.characters.values() if c.kind == PC_KIND]:
+        fed = 0
+        watered = 0
+        for _ in range(days):
+            food = _spend_one(hc, character.name, FOOD_ITEMS)
+            if food:
+                fed += 1
+            day_water = bool(food and food.casefold().startswith("daily ration"))
+            if not day_water:
+                water = _spend_one(hc, character.name, WATER_ITEMS)
+                day_water = bool(water or _has_water_container(hc, character.name))
+            if day_water:
+                watered += 1
+        if fed < days:
+            _apply_privation(hc, character.name, "food", "a day without food")
+        else:
+            hc.set_mark(character.name, PRIVATION_FOOD, None, "food privation ended")
+        if watered < days:
+            _apply_privation(hc, character.name, "water", "a day without water")
+        else:
+            hc.set_mark(character.name, PRIVATION_WATER, None, "water privation ended")
+
+
+def held_back(hc: HookContext, name: str) -> str:
+    """What stops a character recovering on a rest, or "" when nothing does."""
+    found = hc.character(name)
+    missing = [
+        kind
+        for kind, mark in (("food", PRIVATION_FOOD), ("water", PRIVATION_WATER))
+        if found.marks.get(mark)
+    ]
+    if not missing:
+        return ""
+    return " and ".join(missing) + " privation"
+
+
+def stabilize(hc: HookContext, name: str) -> str:
+    """Refuse mundane stabilization without the Heal check the source requires.
+
+    Magic and aid items stabilize through their own paths, so this guard applies only to the
+    ordinary `stabilize` tool. The check must have succeeded earlier in the same turn, at the
+    rule's minimum difficulty, with the Heal skill."""
+    db, campaign_id = hc.session()
+    events = events_since(db, campaign_id)
+    turn_start = 0
+    for row in events:
+        if row.kind == "turn.begun":
+            turn_start = row.id
+    for row in events:
+        if row.id <= turn_start or row.kind != "check.made":
+            continue
+        check = decode(row)
+        if not isinstance(check, CheckMade) or not check.success:
+            continue
+        if check.skill == "heal" and check.difficulty >= 8:
+            return ""
+    return (
+        "stabilizing needs a successful Heal check first: call roll_check with the healer's "
+        "Heal skill at difficulty 8 plus the full rounds since the fall, +2 without a healer's "
+        "pouch, and call stabilize only after that check succeeds."
+    )
 
 
 def after_rest(

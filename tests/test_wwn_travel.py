@@ -95,9 +95,10 @@ def test_wwn_travel_uses_the_source_speeds_and_advances_ten_hours_a_day(
         reason="the king's road",
     )
 
-    assert result["speed_mph"] == 6.0
-    assert result["miles_per_day"] == 60.0
-    assert result["miles"] == 120.0
+    # A good road cannot push the party above three miles per hour.
+    assert result["speed_mph"] == 3.0
+    assert result["miles_per_day"] == 30.0
+    assert result["miles"] == 60.0
     assert result["hours"] == 20
     assert result["supplies"]["food"] == 6
     assert result["supplies"]["water"] == 6
@@ -147,6 +148,7 @@ def test_wwn_travel_applies_road_and_weather_modifiers(
     [
         ("dense_forest", 8),
         ("plains", 9),
+        ("mountains", 9),
         ("desert", 12),
         ("broken_highland", 14),
     ],
@@ -176,16 +178,16 @@ def test_wwn_travel_refuses_bad_routes_and_weather(
         tools.travel(NAME, "Far", "plains", travelers=0)
 
 
-def test_overland_move_falls_back_when_a_rule_set_has_no_wilderness(
+def test_an_overland_move_must_use_the_travel_tool(
     client_factory: Callable[[], TestClient],
 ) -> None:
+    """WWN has a terrain-day journey, so move_actor refuses to skip its pace and supplies."""
     app, campaign_id, tools = _setup(client_factory)
 
-    result = tools.move_actor(NAME, "Far", mode="overland")
+    with pytest.raises(InvalidInput, match="travel tool"):
+        tools.move_actor(NAME, "Far", mode="overland")
 
-    assert result["location"] == "Far"
-    assert "does not track wilderness" in result["note"]
-    assert _location(app, campaign_id) == "Far"
+    assert _location(app, campaign_id) == "Start"
 
 
 class _NoDraws(random.Random):

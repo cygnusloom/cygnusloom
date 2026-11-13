@@ -461,6 +461,8 @@ class JourneyRules:
     day_hours: int = 10
     terrain_speeds: Mapping[str, float] = field(default_factory=dict)
     road_multiplier: float = 2.0
+    # A good road cannot push the pace above this many miles per hour; 0 means no cap.
+    road_speed_cap: float = 0.0
     weather_factors: Mapping[str, float] = field(default_factory=dict)
     forage_difficulty: Mapping[str, int] = field(default_factory=dict)
     food_per_traveler_day: int = 1
@@ -4344,6 +4346,7 @@ def _load_journey(
             "day_hours",
             "terrain_speeds",
             "road_multiplier",
+            "road_speed_cap",
             "weather_factors",
             "forage_difficulty",
             "food_per_traveler_day",
@@ -4395,6 +4398,7 @@ def _load_journey(
         day_hours=whole_or("day_hours", 10, 1),
         terrain_speeds=terrain_speeds,
         road_multiplier=float(definition.data.get("road_multiplier", 2.0)),
+        road_speed_cap=float(definition.data.get("road_speed_cap", 0.0)),
         weather_factors=weather_factors,
         forage_difficulty={name: int(value) for name, value in forage.items()},
         food_per_traveler_day=whole_or("food_per_traveler_day", 1, 0),

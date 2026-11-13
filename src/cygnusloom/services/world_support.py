@@ -132,6 +132,8 @@ from cygnusloom.services.views import (
 
 T = TypeVar("T")
 MAX_NAME = 120
+# NPC detail fields are prose, not names; the GM often needs a sentence or two.
+MAX_DETAIL = 400
 MAX_STAT = 999
 MAX_TEXT = 2000
 # One setting fact: a short paragraph about a topic, shown to the GM every turn.
@@ -979,8 +981,8 @@ def create_npc(
         name=name,
         location=where.name,
         description=bounded_text(description, "description", MAX_TEXT),
-        personality=_optional_text(personality, "personality"),
-        accent=_optional_text(accent, "accent"),
+        personality=_optional_text(personality, "personality", MAX_DETAIL),
+        accent=_optional_text(accent, "accent", MAX_DETAIL),
         quirks=_quirks(quirks),
         character=character,
         plus=plus,
@@ -1046,8 +1048,8 @@ def hire_hireling(
         name=name,
         location=boss.location,
         description=bounded_text(description, "description", MAX_TEXT),
-        personality=_optional_text(personality, "personality"),
-        accent=_optional_text(accent, "accent"),
+        personality=_optional_text(personality, "personality", MAX_DETAIL),
+        accent=_optional_text(accent, "accent", MAX_DETAIL),
         quirks=_quirks(quirks),
         character=character,
         plus=plus,
@@ -1718,8 +1720,8 @@ def update_npc(
                 else bounded_text(description, "description", MAX_TEXT),
                 personality=npc.personality
                 if personality is None
-                else bounded_text(personality, "personality", MAX_NAME),
-                accent=npc.accent if accent is None else bounded_text(accent, "accent", MAX_NAME),
+                else bounded_text(personality, "personality", MAX_DETAIL),
+                accent=npc.accent if accent is None else bounded_text(accent, "accent", MAX_DETAIL),
                 quirks=list(npc.quirks) if quirks is None else _quirks(quirks) or [],
             ),
         )
@@ -1777,13 +1779,13 @@ def update_npc_knowledge(
             else bounded_text(description, "description", MAX_TEXT),
             personality=known.personality
             if personality is None
-            else bounded_text(personality, "personality", MAX_NAME),
-            accent=known.accent if accent is None else bounded_text(accent, "accent", MAX_NAME),
+            else bounded_text(personality, "personality", MAX_DETAIL),
+            accent=known.accent if accent is None else bounded_text(accent, "accent", MAX_DETAIL),
             quirks=list(known.quirks) if quirks is None else _quirks(quirks) or [],
             pronouns=known.pronouns if pronouns is None else _optional_text(pronouns, "pronouns"),
             relationship=known.relationship
             if relationship is None
-            else bounded_text(relationship, "relationship", MAX_NAME),
+            else bounded_text(relationship, "relationship", MAX_DETAIL),
             location=where,
             summary=known.summary,
         ),

@@ -820,6 +820,31 @@ class CampaignState:
         candidates = owned or pcs
         return next((c for c in candidates if not c.out_of_play), next(iter(candidates), None))
 
+    def newest_map_at(self, place_name: str) -> EncounterMap | None:
+        """The newest map set in a place, or None when it has none."""
+        matching = [
+            encounter_map
+            for encounter_map in self.maps.values()
+            if name_key(encounter_map.location) == name_key(place_name)
+        ]
+        if not matching:
+            return None
+        return max(enumerate(matching), key=lambda pair: (pair[1].created, pair[0]))[1]
+
+    def local_map_for(self, location: str | None) -> EncounterMap | None:
+        """The local map for a place: its newest map, or the newest map of its nearest parent."""
+        place = self.places.get(name_key(location)) if location else None
+        while place is not None:
+            entry = self.newest_map_at(place.name)
+            if entry is not None:
+                return entry
+            place = self.places.get(name_key(place.parent)) if place.parent else None
+        return None
+
+    def map_covers(self, entry: EncounterMap, location: str | None) -> bool:
+        """Whether `entry` is the local map a character at `location` resolves to."""
+        return self.local_map_for(location) is entry
+
 
 def speaker_name(state: CampaignState, player_id: int | None = None) -> str | None:
     """Whose turn the player's next message speaks for: the acting PC or hireling in an encounter

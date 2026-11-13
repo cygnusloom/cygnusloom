@@ -712,6 +712,7 @@
     "looks_like": "torch-item",
     "category": "gear",
     "price": 1,
+    "uses": 1,
     "size": "bulky",
     "description": "One night's fire, 2 cp in the book. Encumbrance 4."
   },
@@ -795,6 +796,7 @@
     "looks_like": "potion",
     "category": "gear",
     "price": 1,
+    "uses": 1,
     "description": "Lamp oil. Encumbrance 1; three flasks bundle as one item."
   },
   {
@@ -814,6 +816,7 @@
     "looks_like": "tool",
     "category": "gear",
     "price": 5,
+    "uses": 7,
     "size": "bulky",
     "description": "A week of preserved food. Encumbrance 4."
   },
@@ -824,6 +827,7 @@
     "looks_like": "tool",
     "category": "gear",
     "price": 1,
+    "uses": 1,
     "description": "A day's food and water for one person. Encumbrance 1."
   },
   {
@@ -872,6 +876,7 @@
     "looks_like": "torch-item",
     "category": "gear",
     "price": 1,
+    "uses": 1,
     "description": "A burning torch, 2 cp in the book. Encumbrance 1; three bundle as one."
   },
   {

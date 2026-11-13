@@ -178,6 +178,7 @@ def _strike(
     hit_bonus: int = 0,
     shock: int = 0,
     shock_ac: int = 0,
+    no_shock: bool = False,
     spec: CharacterSpec | None = None,
 ) -> dict[str, Any]:
     """Apply a hit through the rule set's damage steps. A target that owes a save takes no more
@@ -196,7 +197,11 @@ def _strike(
     if target.save_due is not None:
         raise InvalidInput(f"{target.name} must make their {target.save_due} save first")
     defense = 0 if ignores_armor else target.armor
-    shock_applies = bool(shock) and defense <= shock_ac
+    # Total defense also turns aside Shock until the character's next turn; the source grants
+    # the immunity alongside the AC bonus. A thrown or ranged attack never inflicts Shock.
+    shock_applies = (
+        bool(shock) and defense <= shock_ac and not target.total_defense and not no_shock
+    )
     if combat.hit_mode == "roll_vs_defense":
         if to_hit is None:
             natural = roll_total(combat.check_die, rng, plus=plus)
@@ -450,6 +455,7 @@ def attack(
         + _condition_attack_modifier(source, conditions),
         shock=shock,
         shock_ac=shock_ac,
+        no_shock=not distance.melee,
         spec=spec,
     )
     if state.encounter is not None:
@@ -941,6 +947,7 @@ def player_attack(
         natural=natural,
         shock=bonuses.shock,
         shock_ac=bonuses.shock_ac,
+        no_shock=bool(range_band) or not distance.melee,
         spec=spec,
     )
     if state.encounter is not None:

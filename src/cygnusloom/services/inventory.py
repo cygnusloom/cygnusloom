@@ -545,15 +545,19 @@ def use_item(
     name: str,
     item: str,
     charged_kind: str = "",
+    *,
+    ignore_ready: bool = False,
 ) -> dict[str, Any]:
     """Spend one use of a consumable the character carries. Its last use uses it up, which removes
-    it. Charged items are spent with use_charge, so they are refused here."""
+    it. Charged items are spent with use_charge, so they are refused here. An automatic
+    consumption, such as a night's rations, passes `ignore_ready`: it does not need the item in
+    hand."""
     state = load_state(db, campaign_id)
     character = character_named(state, name)
     held = next((i for i in character.items if same_item_name(i.name, item)), None)
     if held is None:
         raise InvalidInput(f"{character.name} carries no {item!r}")
-    if rules.pools and not held.ready:
+    if rules.pools and not held.ready and not ignore_ready:
         raise InvalidInput(f"{held.name} is stowed; ready it before use")
     if held.max_uses < 1:
         raise InvalidInput(f"{held.name} is not a consumable and has no uses to spend")

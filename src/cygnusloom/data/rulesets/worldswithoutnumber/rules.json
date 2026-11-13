@@ -74,7 +74,7 @@
     "type": "rule",
     "id": "injury-healing",
     "important": true,
-    "text": "A night's rest with food and decent shelter restores HP equal to the character's level, or hit dice for a creature, and removes 1 point of System Strain. Magical healing removes Mortal Wounds and Frail at once. Frail characters gain nothing from natural healing."
+    "text": "A night's rest with food and decent shelter restores HP equal to the character's level, or hit dice for a creature, and removes 1 point of System Strain. Frailty ends with a week of bed rest, any magical healing, or a physician's successful Heal check at difficulty 10. Frail characters gain nothing from natural healing."
   },
   {
     "type": "rule",
@@ -97,7 +97,7 @@
     "type": "rule",
     "id": "system-strain",
     "important": true,
-    "text": "System Strain measures how much healing and hardship a body can take; its maximum equals the Constitution score. A good night's sleep removes 1 point. Healing magic and first aid add Strain, and a target at maximum gains nothing from further healing. A victim forced above maximum collapses and dies in minutes unless the poison or effect is neutralized."
+    "text": "System Strain measures how much healing and hardship a body can take; its maximum equals the Constitution score. A good night's sleep removes 1 point. Healing magic and first aid add Strain, and a target at maximum gains nothing from further healing. A victim forced above maximum by an unavoidable effect is knocked unconscious for at least an hour; a poison may instead kill in minutes unless it is neutralized."
   },
   {
     "type": "rule",
@@ -107,7 +107,7 @@
   {
     "type": "rule",
     "id": "encumbrance",
-    "text": "Items are the unit of encumbrance: a one-handed object is 1, a two-handed or heavy object is 2 or more, and 100 coins count as 1. A character can keep floor(Str/2) items Readied and Str items Stowed. Each 2 extra Readied or 4 extra Stowed items lower Move to 20 ft, and a further 2 or 4 lower it to 15 ft."
+    "text": "Items are the unit of encumbrance: a one-handed object is 1, a two-handed or heavy object is 2 or more, and 100 coins count as 1. A character can keep floor(Str/2) items Readied and Str items Stowed. Each 2 extra Readied or 4 extra Stowed items lower Move to 20 ft, and a further 2 or 4 lower it to 10 ft; more weight than that cannot be practically hauled."
   },
   {
     "type": "rule",
@@ -168,7 +168,7 @@
   {
     "type": "rule",
     "id": "casting-spells",
-    "text": "Casting a spell is a Main action and spends one casting from the caster's daily supply. A caster who is damaged, grappled, or severely jostled in the round cannot cast; if damaged while casting, the spell fizzles and the casting is still lost. A night's rest restores all castings."
+    "text": "Casting a spell is a Main action and spends one casting from the caster's daily supply. A caster who has taken hit point damage or been severely jostled in a round cannot cast magic that round, and a grappled caster cannot cast. A night's rest restores all castings."
   },
   {
     "type": "rule",

@@ -15,6 +15,12 @@
         },
         "reason": {
           "description": "What the save is against, in a few words."
+        },
+        "modifier": {
+          "type": "integer",
+          "minimum": -20,
+          "maximum": 20,
+          "description": "A situational bonus to the save, negative for a penalty, such as -the attacker's combat skill on an execution attack or a poison's -2."
         }
       }
     }
@@ -49,6 +55,12 @@
         "prompt": {
           "type": "string",
           "description": "What the player is asked to roll, such as 'Roll a Physical save against the poison.'"
+        },
+        "modifier": {
+          "type": "integer",
+          "minimum": -20,
+          "maximum": 20,
+          "description": "A situational bonus to the save, negative for a penalty, such as -the attacker's combat skill on an execution attack or a poison's -2."
         }
       },
       "required": ["character", "save", "cause", "prompt"]
@@ -400,7 +412,7 @@
     "type": "tool_call",
     "id": "rest",
     "extends": "core:tool_call/rest",
-    "description": "Record one party rest. Every player character recovers: a night restores hit points equal to their level, one point of System Strain, all spell castings, and scene and day Effort. A few moments restores scene Effort only. A week of bed rest restores all hit points and Strain and ends Frail. The rest moves the clock once. Frail characters recover no hit points or Strain from a single night.",
+    "description": "Record one party rest. Every player character recovers: a night restores hit points equal to their level, one point of System Strain, all spell castings, and scene and day Effort. A few moments restores scene Effort only. A week of bed rest restores hit points equal to seven times their level, seven points of System Strain, all castings, and ends Frail with medical care. The rest moves the clock once. Frail characters recover no hit points or Strain from a single night.",
     "parameters": {
       "properties": {
         "length": {
@@ -846,6 +858,7 @@
   {
     "type": "tool_call",
     "id": "use_item",
-    "disabled": true
+    "extends": "core:tool_call/use_item",
+    "description": "Spend one use of a consumable the character carries. Lighting a torch spends one torch and gives six ten-minute turns of light; filling and lighting a lantern spends one pint of oil and gives twenty-four. The lantern itself is not consumed. A day's food and water are eaten by the engine when the party rests; call this for a torch, oil, or another deliberate use."
   }
 ]

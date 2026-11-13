@@ -54,6 +54,15 @@ LIBRARY: ContentLibrary = content_library()
 WWN = LIBRARY.rule_sets["worldswithoutnumber"]
 
 PC = "Wren"
+
+
+def test_only_a_full_warrior_gets_killing_blow() -> None:
+    """The source gives Killing Blow to a full Warrior and says partial Warriors do not get it."""
+    assert WWN.combat is not None
+    assert WWN.combat.level_damage is not None
+    assert WWN.combat.level_damage.templates == ("warrior",)
+
+
 FOE = "Hound"
 OTHER_FOE = "Second Hound"
 YARD = "Old Yard"
@@ -339,6 +348,20 @@ def test_a_miss_still_does_shock_to_a_low_ac_target(client_factory):
     assert event.render().endswith(f"The shock still does {shock} harm to HP.")
 
 
+def test_a_thrown_attack_does_no_shock_on_a_miss(client_factory):
+    """The source says thrown weapons never inflict Shock, even when the target's AC is low."""
+    app, campaign_id, tools = _fight(client_factory)
+    _foe(tools, hp=20, armor=12)
+    take_turn(tools, PC)
+
+    result = tools.player_attack(FOE, "Dagger", attack_roll=1, damage_roll=2, range_band="short")
+
+    assert result["hit"] is False
+    assert result["harm"] == {}
+    [event] = _struck(app, campaign_id)
+    assert (event.hit, event.shock) == (False, 0)
+
+
 def test_shock_does_not_reach_a_shield_grade_ac(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, hp=20, armor=16)
@@ -620,6 +643,24 @@ def test_npc_attack_damage_uses_its_statblock_dice(client_factory):
 
     [event] = _struck(app, campaign_id)
     assert (event.hit, event.to_hit) == (True, 20)
+
+
+def test_total_defense_turns_aside_shock_until_the_next_turn(client_factory):
+    """The source grants Shock immunity with total defense, not only the AC bonus."""
+    app, campaign_id, tools = _fight(client_factory)
+    _foe(tools, hp=20, attack_bonus=3, shock=2, shock_ac=13)
+    tools.set_armor(PC, 13)
+    tools.total_defense(PC)
+    foe = _character(app, campaign_id, FOE)
+    d20 = _roll_for_total(12, _hit_bonus(foe, "attack_bonus"))
+    take_turn(tools, FOE)
+
+    result = replace(tools, rng=Rolls(2, d20)).attack(FOE, "Claw", PC)
+
+    assert result["hit"] is False
+    assert result["harm"] == {}
+    [event] = _struck(app, campaign_id)
+    assert (event.hit, event.shock) == (False, 0)
 
 
 def test_a_natural_one_always_misses_and_a_natural_twenty_always_hits(client_factory):
@@ -920,6 +961,28 @@ def test_an_optional_save_reaction_waits_for_the_players_consent(client_factory)
     allowed = tools.roll_save(PC, "save_physical", "a poisoned blade", natural=1, use_optional=True)
     assert allowed["passed"] is True
     assert "Poisoner" in allowed["reaction"]
+
+
+def test_a_save_modifier_helps_or_hurts_the_roll(client_factory):
+    """Execution attacks and poisons call for saves with a bonus or penalty."""
+    client, campaign_id, tools = _wwn_campaign(client_factory)
+    app = client.app
+    pc = _pc(app, campaign_id)
+    score = current(pc, "save_physical")
+
+    helped = tools.roll_save(
+        PC, "save_physical", "an execution", natural=score, modifier=1, use_optional=False
+    )
+    hindered = tools.roll_save(
+        PC, "save_physical", "a poison", natural=score, modifier=-1, use_optional=False
+    )
+
+    assert helped["passed"] is True
+    assert helped["score"] == score - 1
+    assert hindered["passed"] is False
+    assert hindered["score"] == score + 1
+    assert helped["modifier"] == 1 and hindered["modifier"] == -1
+    assert _pc(app, campaign_id).stats["save_physical"] == score
 
 
 def test_trapmaster_shares_one_hourly_reroll_between_checks_and_saves(client_factory):

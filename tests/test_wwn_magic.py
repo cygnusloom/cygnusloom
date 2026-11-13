@@ -47,6 +47,9 @@ def _mage(
 ):
     app, campaign_id = _campaign(client_factory, class_id=class_id, tradition="high_mage")
     tools = _world_tools(app, campaign_id, seed=seed)
+    # A night's rest now eats and drinks from the character's own supplies.
+    tools.give_item(NAME, "Rations, One Week")
+    tools.give_item(NAME, "Waterskin")
     return app, campaign_id, tools, _ctx(tools)
 
 

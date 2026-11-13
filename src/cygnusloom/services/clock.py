@@ -50,7 +50,11 @@ def rest_target(start: int, rest: RestLength, clock: ClockRules) -> int:
             return target if target > start else target + day_hours
     target = start + rest.hours + (rest.days * parts_per_day + rest.parts) * hours_per_part
     if rest.until_morning:
-        target = max(target, start + hours_per_part)
+        # Run to the next morning boundary. A rest begun inside the night part may have less
+        # than one part left before morning; forcing a whole extra part would skip the morning
+        # and land a day later.
+        if target <= start:
+            target = start + 1
         target += (-target) % day_hours
     return target
 

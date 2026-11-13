@@ -126,6 +126,14 @@ class TravelMixin:
             with session_scope(self.engine) as db:
                 actor = _character_named(load_state(db, self.campaign_id), name)
             if actor.kind == PC_KIND:
+                if self.journey is not None and self.journey.model == "terrain_days":
+                    # A rule set with terrain-day journeys has a travel tool that computes the
+                    # pace and consumes supplies. Refuse the generic move so the GM cannot skip
+                    # that procedure by accident.
+                    raise InvalidInput(
+                        "this rule set measures overland journeys with the travel tool; call "
+                        "travel with terrain, road, weather, and days instead of move_actor"
+                    )
                 if self.wilderness is None:
                     # A rule set with no wilderness subsystem still needs to move the party.
                     # Put them at the destination and let the GM narrate the journey, using

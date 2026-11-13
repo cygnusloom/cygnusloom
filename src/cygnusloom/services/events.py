@@ -13,6 +13,7 @@ characters by name, which is unique within a campaign and never changes."""
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass, field, fields, replace
 from functools import cache, lru_cache
 from typing import Any, ClassVar
@@ -1211,9 +1212,16 @@ class NpcRemoved(GameEvent):
     name: str
 
     def apply(self, state: CampaignState, event_id: int) -> None:
-        del state.characters[name_key(self.name)]
+        key = name_key(self.name)
+        del state.characters[key]
         # A removed NPC was only passing through, so the player no longer keeps them in mind.
-        state.known.pop(name_key(self.name), None)
+        state.known.pop(key, None)
+        # A leftover token would be read as a prop and block its cell forever.
+        for map_key, entry in list(state.maps.items()):
+            if key in entry.tokens:
+                tokens = dict(entry.tokens)
+                tokens.pop(key, None)
+                state.maps[map_key] = replace(entry, tokens=tokens)
 
     def render(self) -> str:
         return f"Character removed: {self.name}."
@@ -2081,6 +2089,31 @@ class EncounterStarted(GameEvent):
         return f"Encounter begins at {self.map}, {self.location}."
 
 
+def _carry_cells_to_map(
+    state: CampaignState,
+    entry: EncounterMap,
+    cells: Mapping[str, tuple[int, int]],
+    *,
+    local_only: bool = True,
+) -> None:
+    """Write final encounter cells onto a map's tokens, skipping cells another token holds."""
+    tokens = dict(entry.tokens)
+    occupied = {cell: name for name, cell in tokens.items()}
+    for name, cell in cells.items():
+        if local_only:
+            character = state.characters.get(name)
+            if character is not None and not state.map_covers(entry, character.location):
+                continue
+        if not (0 <= cell[0] < entry.columns and 0 <= cell[1] < entry.rows):
+            continue
+        holder = occupied.get(cell)
+        if holder is not None and holder != name:
+            continue
+        tokens[name] = cell
+        occupied[cell] = name
+    state.maps[name_key(entry.name)] = replace(entry, tokens=tokens)
+
+
 @dataclass(frozen=True)
 class EncounterEnded(GameEvent):
     """The encounter is over. `reason` says why it ended early, such as a side being down."""
@@ -2096,6 +2129,16 @@ class EncounterEnded(GameEvent):
             place = state.places.get(key)
             if place is not None:
                 state.places[key] = replace(place, fight_day=state.clock.day)
+            # The fight's final cells are where everyone stands once it is over. Copy them onto
+            # the map the player's panel will show for that place, so the map does not go blank
+            # and the GM does not have to place every survivor again. A participant whose local
+            # map is elsewhere is left out, and a cell already held by another token is skipped.
+            visible = state.local_map_for(encounter.location)
+            if visible is not None:
+                _carry_cells_to_map(state, visible, encounter.cells)
+            fight_map = state.maps.get(name_key(encounter.map))
+            if fight_map is not None and fight_map is not visible:
+                _carry_cells_to_map(state, fight_map, encounter.cells)
         for character in state.characters.values():
             character.fled = False
             character.surrendered = False
@@ -2387,6 +2430,23 @@ class ParticipantLeft(GameEvent):
             return
         key = name_key(self.name)
         index = next(i for i, name in enumerate(encounter.order) if name_key(name) == key)
+        # A character who leaves the fight but stays at the place keeps their last cell on the
+        # local map; the board should not lose them when their turn in the fight ends.
+        entry = state.maps.get(name_key(encounter.map))
+        character = state.characters.get(key)
+        cell = encounter.cells.get(key)
+        if (
+            entry is not None
+            and character is not None
+            and cell is not None
+            and state.map_covers(entry, character.location)
+            and not any(
+                other != key and other_cell == cell for other, other_cell in entry.tokens.items()
+            )
+        ):
+            tokens = dict(entry.tokens)
+            tokens[key] = cell
+            state.maps[name_key(encounter.map)] = replace(entry, tokens=tokens)
         del encounter.order[index]
         encounter.cells.pop(key, None)
         encounter.sides.pop(key, None)
@@ -2422,9 +2482,21 @@ class ParticipantPlaced(GameEvent):
         if encounter is None:
             return
         key = name_key(self.name)
-        encounter.cells[key] = (self.column, self.row)
+        cell = (self.column, self.row)
+        encounter.cells[key] = cell
         if encounter.acting is not None and name_key(encounter.acting) == key:
             encounter.moved += self.cost
+        # Keep the map's token with the fight, so the board and statblocks agree and a fight
+        # that ends on this map leaves everyone where they actually stood.
+        entry = state.maps.get(name_key(encounter.map))
+        character = state.characters.get(key)
+        if entry is None or character is None or not state.map_covers(entry, character.location):
+            return
+        if any(other != key and other_cell == cell for other, other_cell in entry.tokens.items()):
+            return
+        tokens = dict(entry.tokens)
+        tokens[key] = cell
+        state.maps[name_key(encounter.map)] = replace(entry, tokens=tokens)
 
     def render(self) -> str:
         return f"{self.name} moves to column {self.column + 1}, row {self.row + 1}."

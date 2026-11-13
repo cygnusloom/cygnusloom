@@ -202,6 +202,15 @@
         "op": "note",
         "text": "Gain level-0 in one combat skill (Stab, Shoot, or Punch). Throw knife-sized weapons in melee without penalty. Ignore melee Shock even unarmored, though doing so disrupts your own spellcasting that round."
       }
+    ],
+    "picks": [
+      {
+        "id": "skill",
+        "kind": "skill",
+        "label": "Combat skill",
+        "choices": ["stab", "shoot", "punch"],
+        "grant": "trained"
+      }
     ]
   },
   {
@@ -961,6 +970,14 @@
         "op": "note",
         "text": "Gain one bonus skill. Treat all non-combat skills as at least level-0 for checks, even if untrained. Only experts and partial experts may take this Focus."
       }
+    ],
+    "picks": [
+      {
+        "id": "skill",
+        "kind": "skill",
+        "label": "Bonus skill",
+        "grant": "trained"
+      }
     ]
   },
   {
@@ -1029,6 +1046,15 @@
       {
         "op": "note",
         "text": "Gain level-0 in Punch or Stab. Your weapon's Shock treats all targets as AC 10 when the weapon can harm them and they are not Shock-immune."
+      }
+    ],
+    "picks": [
+      {
+        "id": "skill",
+        "kind": "skill",
+        "label": "Combat skill",
+        "choices": ["punch", "stab"],
+        "grant": "trained"
       }
     ]
   },
