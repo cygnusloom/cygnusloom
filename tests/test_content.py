@@ -2090,6 +2090,7 @@ def test_a_rule_set_can_define_its_turn_checklist(tree: Path):
                     "items": [
                         {"id": "people", "text": "everyone here"},
                         {"id": "fight", "group": "combat", "text": "the fight"},
+                        {"id": "attack", "when": "npc_turn", "text": "the attack"},
                     ],
                 }
             ]
@@ -2097,9 +2098,10 @@ def test_a_rule_set_can_define_its_turn_checklist(tree: Path):
     )
     checklist = ContentLibrary.load(tree).rule_sets["testset"].checklist
     assert checklist is not None
-    assert [(item.id, item.text, item.group) for item in checklist.items] == [
-        ("people", "everyone here", ""),
-        ("fight", "the fight", "combat"),
+    assert [(item.id, item.text, item.group, item.when) for item in checklist.items] == [
+        ("people", "everyone here", "", ""),
+        ("fight", "the fight", "combat", ""),
+        ("attack", "the attack", "", "npc_turn"),
     ]
 
 
@@ -2117,6 +2119,23 @@ def test_a_checklist_group_must_name_a_tool_group(tree: Path):
         },
     )
     with pytest.raises(ContentError, match="'group' must be one of"):
+        ContentLibrary.load(tree)
+
+
+def test_a_checklist_when_must_name_a_supported_moment(tree: Path):
+    _write(
+        tree,
+        {
+            "rulesets/testset/checklist.json": [
+                {
+                    "type": "checklist",
+                    "id": "turn",
+                    "items": [{"id": "fight", "when": "player_turn", "text": "The fight."}],
+                }
+            ]
+        },
+    )
+    with pytest.raises(ContentError, match="'when' must be 'npc_turn' or left out"):
         ContentLibrary.load(tree)
 
 

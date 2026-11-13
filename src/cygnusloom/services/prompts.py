@@ -139,12 +139,15 @@ STATE_CLOSING = (
 )
 
 
-def turn_checklist(rules: ChecklistRules | None, groups: set[str]) -> tuple[str, tuple[str, ...]]:
+def turn_checklist(
+    rules: ChecklistRules | None, groups: set[str], *, npc_turn: bool = False
+) -> tuple[str, tuple[str, ...]]:
     """The checklist every state step must check, and the keys its final reply must mark. The
     items and their order come from the rule set's JSON; an item with an optional tool group is
     left out when the rule set offers no tool in that group, so a rule set without magic or
-    factions does not ask the GM to check them."""
-    items = checklist_areas(rules, groups)
+    factions does not ask the GM to check them. An item with `when` is left out unless its
+    condition holds; NPC encounter turns add the reminders for attacks and movement."""
+    items = checklist_areas(rules, groups, npc_turn=npc_turn)
     if not items:
         return "", ()
     lines = [
@@ -163,12 +166,19 @@ def turn_checklist(rules: ChecklistRules | None, groups: set[str]) -> tuple[str,
     return "\n".join(lines), tuple(item.id for item in items)
 
 
-def checklist_areas(rules: ChecklistRules | None, groups: set[str]) -> list[ChecklistItem]:
+def checklist_areas(
+    rules: ChecklistRules | None, groups: set[str], *, npc_turn: bool = False
+) -> list[ChecklistItem]:
     """The checklist areas the rule set asks for, in order, without the optional areas whose
-    tool group the rule set does not offer."""
+    tool group the rule set does not offer and the conditional areas whose moment has not come."""
     if rules is None:
         return []
-    return [item for item in rules.items if not item.group or item.group in groups]
+    return [
+        item
+        for item in rules.items
+        if (not item.group or item.group in groups)
+        and (not item.when or (item.when == "npc_turn" and npc_turn))
+    ]
 
 
 NARRATE_INSTRUCTION = (

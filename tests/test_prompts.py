@@ -273,6 +273,18 @@ def test_checklist_areas_drop_groups_the_rule_set_does_not_offer():
     assert "market" not in [area.id for area in areas]
 
 
+def test_an_npc_turn_checklist_reminds_the_gm_about_attacks_and_movement():
+    areas = checklist_areas(rules_for().checklist, {"combat"}, npc_turn=True)
+    ids = [area.id for area in areas]
+    assert "attack" not in [area.id for area in checklist_areas(rules_for().checklist, {"combat"})]
+    assert ids.index("attack") == ids.index("movement") + 1
+    assert ids.index("tactical_move") == ids.index("attack") + 1
+    text, keys = turn_checklist(rules_for().checklist, {"combat"}, npc_turn=True)
+    assert "attack" in keys and "tactical_move" in keys
+    assert "the acting NPC's attack action" in text
+    assert "the acting NPC's movement" in text
+
+
 def test_the_system_prompt_carries_the_checklist_as_its_own_part():
     checklist, _ = turn_checklist(rules_for().checklist, {"combat"})
     parts = system_parts("test", {}, frozenset(), "", 0, checklist=checklist)

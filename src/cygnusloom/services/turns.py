@@ -131,27 +131,6 @@ TOOL_MARKUP = re.compile(
 # An XML tag whose name is a real tool is a tool call written as text, such as
 # `<get_statblock name="Mara"/>`.
 _TAG_NAME = re.compile(r"</?([A-Za-z_][\w-]*)\b")
-# A state step's checklist notes are internal prose. These words mark a note that claims an
-# attack resolved; if the encounter record holds no attack, the note is false and the step is
-# sent back to resolve the attack or correct the note.
-_ATTACK_CLAIM = re.compile(
-    r"\b(?:attacks?|attacked|attacking|strikes?|struck|striking|swings?|swung|swinging|"
-    r"hits?|hitting|slashes?|slashed|slashing|stabs?|stabbed|stabbing|blows?|shots?)\b",
-    re.IGNORECASE,
-)
-_ATTACK_OUTCOME = re.compile(
-    r"\b(?:misses?|missed|missing|hits?|hitting|harms?|harmed|harming|damages?|damaged|"
-    r"damaging|wounds?|wounded|wounding|struck|lands?|landed|landing|defeats?|defeated|"
-    r"defeating|drops?|dropped|kills?|killed|killing|bleeds?|bled|bleeding|blood|blocks?|"
-    r"blocked|blocking|parr(?:y|ies|ied|ying))\b",
-    re.IGNORECASE,
-)
-_NEGATED_CLAIM = re.compile(
-    r"\b(?:no|not|never|none|without|didn't|doesn't|isn't|wasn't|weren't|aren't|can't|"
-    r"couldn't|refuse[sd]?|refusing|holds?|held|avoids?|avoided)\b",
-    re.IGNORECASE,
-)
-_CLAUSE_END = re.compile(r"[.;!?]+")
 
 
 def _is_tool_markup(text: str, tool_names: Iterable[str]) -> bool:
@@ -305,14 +284,24 @@ def _checklist_active(turn: Turn) -> bool:
     return any(part.source == "Turn checklist" for part in turn.context)
 
 
-def _checklist_items(run: _Run) -> dict[str, str]:
+def _checklist_for(run: _Run, turn: Turn) -> tuple[str, tuple[str, ...]]:
+    """The turn's checklist text and keys. An NPC's encounter turn adds the areas that remind
+    the GM to consider its attack, movement, and other turn resources."""
+    return turn_checklist(
+        run.rule_set.checklist,
+        tool_group_names(run.rule_set.tool_calls),
+        npc_turn=turn.actor is not None,
+    )
+
+
+def _checklist_items(run: _Run, turn: Turn) -> dict[str, str]:
     """The checklist areas this turn requires, in the rule set's order, mapping each key to the
     area's description for the finish tool."""
     rules = run.rule_set.checklist
     if rules is None:
         return {}
-    keys = set(run.checklist_keys)
-    return {item.id: item.text for item in rules.items if item.id in keys}
+    required = set(_checklist_for(run, turn)[1])
+    return {item.id: item.text for item in rules.items if item.id in required}
 
 
 def _read_checklist_report(
@@ -346,48 +335,9 @@ def _format_checklist_report(report: Mapping[str, str]) -> str:
     return "\n".join(f"- {key}: {note}" for key, note in report.items())
 
 
-def _claimed_attack(report: Mapping[str, str]) -> bool:
-    """Whether a checklist note says an attack resolved. Only the `rules` and `encounter`
-    areas record attacks; a clause that negates the attack does not count."""
-    for key in ("rules", "encounter"):
-        for clause in _CLAUSE_END.split(report.get(key, "")):
-            if (
-                _ATTACK_CLAIM.search(clause)
-                and _ATTACK_OUTCOME.search(clause)
-                and not _NEGATED_CLAIM.search(clause)
-            ):
-                return True
-    return False
-
-
-def _unresolved_attack(run: _Run, turn: Turn, report: Mapping[str, str]) -> str:
-    """A state step that writes an attack into its notes must have resolved it with a tool. The
-    narration is written from the record, so an attack the record does not hold never happened."""
-    actor = turn.actor
-    if actor is None or not _claimed_attack(report):
-        return ""
-    with session_scope(run.engine) as db:
-        state = load_state(db, run.campaign_id)
-    encounter = state.encounter
-    if (
-        encounter is None
-        or encounter.acting is None
-        or encounter.attacked > 0
-        or name_key(encounter.acting) != name_key(actor)
-    ):
-        return ""
-    return (
-        "The state step is not finished: the encounter record shows no attack this turn by "
-        f"{actor}. An attack happens only when you call attack, and a refused or imagined "
-        "attack did not happen. If they attack, call attack now and then finish the state step "
-        "again; if they do not, correct the note that says they did, then call "
-        "finish_state_step again."
-    )
-
-
 def _is_checklist_retry_message(message: Mapping[str, Any]) -> bool:
     return message.get("role") == "system" and str(message.get("content", "")).startswith(
-        "The state step is not finished"
+        "The state step is not finished: the turn checklist is missing"
     )
 
 
@@ -629,9 +579,6 @@ class _Run:
     rule_info_mode: str = "brief"
     # Groups the model asked for with load_tool during this turn.
     extra_groups: set[str] = field(default_factory=set)
-    # The areas every state step must check, and the keys its final reply must mark.
-    checklist: str = ""
-    checklist_keys: tuple[str, ...] = ()
 
     @property
     def tool_calls(self) -> Mapping[str, ToolCall]:
@@ -754,9 +701,6 @@ def _start_run(
     metered = MeteredProvider(provider, meter)
     world = library.world_content(campaign.world_template, campaign.rule_set)
     template = library.world_templates.get(campaign.world_template)
-    checklist, checklist_keys = turn_checklist(
-        rule_set.checklist, tool_group_names(rule_set.tool_calls)
-    )
     return _Run(
         engine=engine,
         campaign_id=campaign.id or 0,
@@ -786,8 +730,6 @@ def _start_run(
         player_id=player_id,
         tool_schema_mode=getattr(settings, "tool_schema_mode", "brief"),
         rule_info_mode=getattr(settings, "rule_info_mode", "brief"),
-        checklist=checklist,
-        checklist_keys=checklist_keys,
     )
 
 
@@ -1068,12 +1010,13 @@ async def _begin(run: _Run, turn: Turn) -> AsyncIterator[TurnEvent]:
     present_text = present_rules_text(state, run.ctx.rules)
     state_text = state_instruction(run.rule_set, run.world)
     groups = state_tool_groups(state, message) | run.extra_groups
+    checklist, _ = _checklist_for(run, turn)
     tool_parts = _campaigns().tool_definition_parts(
         rule_set,
         run.tool_schema_mode,
         include_groups=groups,
         load_tools=True,
-        checklist=_checklist_items(run) or None,
+        checklist=_checklist_items(run, turn) or None,
     )
     prompt_tokens = sum(
         p.tokens
@@ -1087,7 +1030,7 @@ async def _begin(run: _Run, turn: Turn) -> AsyncIterator[TurnEvent]:
             present_text,
             run.setting,
             rule_info_mode=run.rule_info_mode,
-            checklist=run.checklist,
+            checklist=checklist,
         )
     )
     prompt_tokens += estimate_tokens(state_text)
@@ -1153,7 +1096,7 @@ async def _begin(run: _Run, turn: Turn) -> AsyncIterator[TurnEvent]:
         present_text,
         run.setting,
         rule_info_mode=run.rule_info_mode,
-        checklist=run.checklist,
+        checklist=checklist,
     )
     conversation = [
         *(ContextPart(m.role, _campaigns()._message_source(m), m.content) for m in history),
@@ -1708,26 +1651,25 @@ async def _finish_checklist(
         for entry in _flush(run):
             yield entry
         return
-    report, missing = _read_checklist_report(request, run.checklist_keys)
-    retry = _checklist_retry(missing) if missing else _unresolved_attack(run, turn, report)
+    keys = _checklist_for(run, turn)[1]
+    report, missing = _read_checklist_report(request, keys)
+    retry = _checklist_retry(missing) if missing else ""
     messages: list[dict[str, Any]] = [
         {
             "role": "tool",
             "tool_call_id": request.id,
-            "content": json.dumps({"error": retry}) if retry else json.dumps({"finished": True}),
+            "content": json.dumps({"error": retry}) if missing else json.dumps({"finished": True}),
         }
     ]
-    label = (
-        "incomplete checklist" if missing else "unresolved attack" if retry else "turn checklist"
-    )
     context = [
         ContextPart(
             "assistant",
-            f"GM state step (round {round_no}), {label}",
+            f"GM state step (round {round_no}), "
+            + ("incomplete checklist" if missing else "turn checklist"),
             _format_checklist_report(report),
         )
     ]
-    if not retry:
+    if not missing:
         _record_state_finished(run, turn, messages, context)
         for entry in _flush(run):
             yield entry
@@ -1741,13 +1683,14 @@ async def _finish_checklist(
             StateStepMade(requests=[], messages=messages, context=_dicts(context), final=False),
         )
     else:
-        if missing:
-            logger.warning("state step ended without checklist items: %s", ", ".join(missing))
-            note = "Missing: " + ", ".join(missing) + "."
-        else:
-            logger.warning("state step ended with an unresolved attack note")
-            note = "The encounter record still shows no attack."
-        context.append(ContextPart("system", "Checklist incomplete", note))
+        logger.warning("state step ended without checklist items: %s", ", ".join(missing))
+        context.append(
+            ContextPart(
+                "system",
+                "Checklist incomplete",
+                "Missing: " + ", ".join(missing) + ".",
+            )
+        )
         _record_state_finished(run, turn, messages, context)
     for entry in _flush(run):
         yield entry
@@ -1768,9 +1711,9 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
             include_groups=groups,
             load_tools=True,
         )
-        checklist_required = _checklist_active(turn) and bool(run.checklist_keys)
+        checklist_required = _checklist_active(turn) and bool(_checklist_for(run, turn)[1])
         if checklist_required:
-            tools = [*(tools or []), checklist_tool_spec(_checklist_items(run))]
+            tools = [*(tools or []), checklist_tool_spec(_checklist_items(run, turn))]
         ooc_tools = (
             [
                 spec
@@ -1928,7 +1871,7 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
         if not step.tool_requests:
             retries = sum(1 for part in turn.context if part.source == "Checklist retry")
             if checklist_required and retries < CHECKLIST_RETRIES:
-                retry = _checklist_retry(run.checklist_keys)
+                retry = _checklist_retry(_checklist_for(run, turn)[1])
                 context: list[ContextPart] = []
                 if step.text.strip():
                     context.append(
