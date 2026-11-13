@@ -21,3 +21,14 @@ def test_a_campaign_opens_at_the_newest_message(client):
     assert "transcript.scrollTop = transcript.scrollHeight" in script
     assert 'window.addEventListener("pageshow"' in script
     assert "new ResizeObserver(keepBottom)" in script
+
+
+def test_posting_forms_show_a_busy_button(client):
+    """Every page carries the helper that turns a pressed submit button into a spinner."""
+    script = client.get("/static/busy.js")
+
+    assert script.status_code == 200
+    assert "window.cygnusBusy" in script.text
+    assert "dataset.busyLabel" in script.text
+    assert "data-no-busy" in script.text
+    assert '<script src="/static/busy.js"></script>' in client.get("/license").text

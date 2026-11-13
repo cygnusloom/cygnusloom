@@ -1919,7 +1919,9 @@ def _interaction_state(
             if not mine:
                 waiting_for = f"It is {actor.name}'s turn."
                 other_turn = True
-            if mine or is_owner:
+            # The GM is resolving the action the player just described; ending the turn in
+            # the middle of that reply would race it.
+            if (mine or is_owner) and not busy:
                 control = "end"
         elif actor is not None:
             waiting_for = f"The GM is playing {actor.name}'s turn."
@@ -1929,7 +1931,7 @@ def _interaction_state(
                 # with no way forward, so the owner can close the NPC's turn by hand.
                 waiting_for = f"{actor.name}'s turn is still open."
                 control = "end" if is_owner else ""
-        elif encounter.order and encounter.up < len(encounter.order):
+        elif encounter.order and encounter.up < len(encounter.order) and not busy:
             upcoming = state.characters.get(name_key(encounter.order[encounter.up]))
             if upcoming is not None:
                 if upcoming.kind == PC_KIND:
