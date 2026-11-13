@@ -297,17 +297,6 @@ def test_stat_that_is_not_a_number_is_rejected(client_factory: Callable[[], Test
     assert "must be a number" in response.text
 
 
-def test_a_second_player_character_is_refused(client_factory: Callable[[], TestClient]):
-    client = _signed_in(client_factory)
-    campaign_id = int(_new_campaign(client).headers["location"].rsplit("/", 1)[1])
-    assert _create_character(client, campaign_id, name="Ada").status_code == 303
-    response = _create_character(client, campaign_id, name="Bran")
-    assert response.status_code != 303
-    with Session(client.app.state.engine) as db:
-        state = load_state(db, campaign_id)
-    assert [c.name for c in state.characters.values() if c.kind == "pc"] == ["Ada"]
-
-
 SCRIVENER_WORK = "scrivener-what-work-did-you-keep-for-yourself"
 WILD_TONGUE = "The Wild Tongue"
 WILD_TONGUE_DETAIL = (

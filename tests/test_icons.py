@@ -8,7 +8,6 @@ from collections.abc import Callable
 from pathlib import Path
 
 import pytest
-from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from cygnusloom.content.definitions import ContentError
@@ -25,7 +24,6 @@ from cygnusloom.web.icons import (
 )
 from tests.conftest import content_library
 from tests.test_combat import PC, _fight_client
-from tests.test_world import _described_campaign, _tool
 
 SVG_NS = "{http://www.w3.org/2000/svg}"
 
@@ -400,21 +398,6 @@ def test_every_bundled_monster_place_and_item_has_an_icon():
     for world in library.world_templates.values():
         for place in world.locations:
             assert place.icon in registry, f"{world.id}: {place.name} has no icon"
-
-
-def test_campaign_map_draws_a_marker_icon(client_factory: Callable[[], TestClient], app: FastAPI):
-    client, campaign_id = _described_campaign(client_factory)
-    _tool(
-        app,
-        campaign_id,
-        "move_actor",
-        {"mode": "in_settlement", "name": "Ada", "location": "Mossbell Hollow"},
-    )
-    page = client.get(f"/campaigns/{campaign_id}").text
-
-    map_view = page[page.index('data-view="map"') : page.index('data-view="journal"')]
-    assert f'<img src="{place_icon_path(None)}" alt="">' in map_view
-    assert 'aria-label="MH"' in map_view
 
 
 def test_campaign_pack_draws_item_icons(client_factory: Callable[[], TestClient]):

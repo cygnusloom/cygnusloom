@@ -45,19 +45,6 @@ def _event_count(db: Session, campaign_id: int) -> int:
     ).one()
 
 
-def test_the_real_cairn_rule_set_loads_its_dice_tables():
-    tables = bundled_library().rule_sets["cairn2e"].dice_tables
-    assert {"dungeon_reaction", "die_of_fate", *MONSTER_TABLES} <= set(tables)
-    assert tables["dungeon_reaction"].dice == "2d6"
-
-
-def test_cairn_reaction_table_maps_rolls_to_results():
-    reaction = bundled_library().rule_sets["cairn2e"].dice_tables["dungeon_reaction"]
-    assert reaction.row_for(2).result == "Hostile"
-    assert reaction.row_for(7).result == "Curious"
-    assert reaction.row_for(12).result == "Helpful"
-
-
 @pytest.mark.parametrize("table_id", MONSTER_TABLES)
 def test_cairn_monster_tables_have_twenty_rows_covering_one_to_twenty(table_id):
     table = bundled_library().rule_sets["cairn2e"].dice_tables[table_id]

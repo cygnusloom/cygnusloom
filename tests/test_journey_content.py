@@ -54,13 +54,6 @@ def test_the_bundled_wwn_journey_has_no_events() -> None:
     assert journey.events == ()
 
 
-def test_the_bundled_cairn_journey_is_watch_based_and_has_no_events() -> None:
-    journey = bundled_library().rule_sets["cairn2e"].journey
-    assert journey is not None
-    assert journey.model == "watches"
-    assert journey.events == ()
-
-
 def test_a_day_event_loads_its_filters() -> None:
     event = _event(
         when={

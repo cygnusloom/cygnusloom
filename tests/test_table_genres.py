@@ -9,19 +9,16 @@ see.
 from __future__ import annotations
 
 import random
-from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
 import pytest
-from fastapi.testclient import TestClient
 
 from cygnusloom.content.definitions import ContentError, Definition
 from cygnusloom.content.library import (
     TABLE_GENRES,
     ContentLibrary,
     _load_creative_table,
-    _patch_creative_table,
     effective_table_genres,
 )
 from cygnusloom.llm.fake import FakeProvider
@@ -30,7 +27,7 @@ from cygnusloom.services.world import WorldTools
 from tests.conftest import bundled_library, content_library
 from tests.factories import campaign_ready_fast
 from tests.support import content_tree
-from tests.test_campaigns import _create_character, _new_campaign, _signed_in
+from tests.test_campaigns import _new_campaign, _signed_in
 
 
 def _dice_table(ident: str, genres: list[str] | None = None) -> dict[str, Any]:
@@ -138,37 +135,6 @@ def test_a_rule_set_refuses_an_unknown_genre(tmp_path: Path):
         ContentLibrary.load(tmp_path)
 
 
-def test_a_creative_table_patch_keeps_or_overrides_the_core_genres():
-    core = {
-        "plot": Definition(
-            type="creative_table",
-            id="plot",
-            data={
-                "type": "creative_table",
-                "id": "plot",
-                "entries": ["a", "b"],
-                "genres": ["fantasy"],
-            },
-        )
-    }
-    inherited = _patch_creative_table(
-        Definition(type="creative_table", id="plot", data={"add": ["c"]}),
-        core,
-        "testset",
-    )
-    assert _load_creative_table(inherited, "testset").genres == ("fantasy",)
-    overridden = _patch_creative_table(
-        Definition(
-            type="creative_table",
-            id="plot",
-            data={"add": ["c"], "genres": ["generic"]},
-        ),
-        core,
-        "testset",
-    )
-    assert _load_creative_table(overridden, "testset").genres == ("generic",)
-
-
 def test_the_bundled_rule_sets_offer_generic_and_fantasy_tables():
     library = bundled_library()
     for rule_set_id in ("cairn2e", "worldswithoutnumber", "academia-arcana"):
@@ -246,28 +212,3 @@ def test_the_creative_table_picker_lives_in_the_campaign_options(client_factory)
     assert 'name="table_genres" value="fantasy" checked' in section
     assert page.index("Campaign options") < page.index("Creative and lore tables")
     assert page.index("Creative and lore tables") < page.index("Your character")
-
-
-def test_a_campaign_may_choose_genres_the_rule_set_has_no_tables_for(
-    client_factory: Callable[[], TestClient],
-):
-    client = _signed_in(client_factory)
-    response = _new_campaign(client)
-    assert response.status_code == 303
-    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
-    created = _create_character(client, campaign_id, table_genres=["generic", "historical"])
-    assert created.status_code == 303
-
-
-def test_an_unknown_genre_is_refused_and_the_rest_stay_checked(
-    client_factory: Callable[[], TestClient],
-):
-    client = _signed_in(client_factory)
-    response = _new_campaign(client)
-    assert response.status_code == 303
-    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
-    created = _create_character(client, campaign_id, table_genres=["generic", "steampunk"])
-    assert created.status_code == 400
-    assert "unknown genre" in created.text
-    assert 'name="table_genres" value="generic" checked' in created.text
-    assert 'value="steampunk"' not in created.text

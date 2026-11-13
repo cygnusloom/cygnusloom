@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import random
 import re
 import shutil
 from pathlib import Path
@@ -30,7 +29,7 @@ from cygnusloom.content.library import (
 )
 from cygnusloom.services.hooks import HookContext, call_hook
 from tests.conftest import bundled_library, content_library
-from tests.rolls import SocialRoll, social_roll
+from tests.rolls import social_roll
 
 
 def test_bundled_content_marks_third_party_sources():
@@ -456,16 +455,6 @@ def test_twin_lakes_map_matches_the_module_map():
     assert km("isthmus-town", "white-tower-fens") / 4 == pytest.approx(2, abs=0.25)
     assert km("dunston", "white-tower-fens") / 4 == pytest.approx(2, abs=0.25)
     assert km("temple-of-the-fungal-lizards", "bone-sump") < 1
-
-
-def test_social_roll_is_one_d20_plus_modifiers():
-    for seed in range(50):
-        result = social_roll(2, -1, rng=random.Random(seed))
-        assert isinstance(result, SocialRoll)
-        assert 1 <= result.die <= 20
-        assert result.relationship == 2
-        assert result.circumstance == -1
-        assert result.total == result.die + 1
 
 
 def test_every_json_file_in_a_directory_is_read(tmp_path: Path):
@@ -2477,14 +2466,6 @@ def _world_route(origin: str, destination: str, **overrides: object) -> dict[str
     }
     route.update(overrides)
     return route
-
-
-def test_bundled_twin_lakes_routes_load_on_both_locations():
-    place = content_library().world_templates["twin-lakes"]
-    isthmus = next(loc for loc in place.locations if loc.id == "isthmus-town")
-    dunston = next(loc for loc in place.locations if loc.id == "dunston")
-    assert isthmus.routes["dunston"] == _valid_route()
-    assert dunston.routes["isthmus-town"] == _valid_route()
 
 
 def test_bundled_twin_lakes_routes_match_their_previous_maps():

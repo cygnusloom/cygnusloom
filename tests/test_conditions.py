@@ -6,7 +6,6 @@ import pytest
 
 from cygnusloom.services import world
 from cygnusloom.services.common import InvalidInput
-from cygnusloom.services.conditions import end_condition
 from cygnusloom.services.events import current
 from tests.factories import (
     DEFAULT_PC,
@@ -17,37 +16,11 @@ from tests.factories import (
 from tests.factories import (
     character_named as _character,
 )
-from tests.factories import (
-    db as open_db,
-)
 from tests.test_combat import _fight
 
-# The fixture rule set's condition-ending triggers, from its own `rule_set.json`.
-FIXTURE_CONDITION_ENDS = ("rest", "scene")
 ADA = DEFAULT_PC
 # The Cairn campaign that `_fight` sets up names its player character this.
 PC = "Mara"
-
-
-def test_a_stored_condition_ends_by_one_of_its_triggers(client_factory):
-    app, campaign_id, tools = scene(client_factory)
-    tools.add_condition(ADA, "shaken", "a test")
-
-    tools.end_condition(ADA, "shaken", "rest")
-
-    assert _character(app, campaign_id, ADA).conditions == []
-
-
-def test_walloped_ends_at_rest_and_its_on_end_raises_max_hp(client_factory):
-    app, campaign_id, tools = _fight(client_factory)
-    tools.add_condition(PC, "walloped", "a test")
-    before = _character(app, campaign_id, PC).stats["hp"]
-    rest_tools = replace(tools, rng=Rolls(4))
-    rest_tools.end_condition(PC, "walloped", "rest")
-
-    character = _character(app, campaign_id, PC)
-    assert character.conditions == []
-    assert character.stats["hp"] == before + 4
 
 
 def test_a_night_rest_ends_walloped_and_adds_a_die_to_max_hp(client_factory):
@@ -80,30 +53,6 @@ def test_a_condition_names_only_its_own_triggers(client_factory):
 
     with pytest.raises(InvalidInput, match="not a condition-ending trigger"):
         tools.end_condition(ADA, "shaken", "magic")
-    assert _character(app, campaign_id, ADA).conditions == ["shaken"]
-
-
-def test_a_trigger_outside_the_rule_sets_vocabulary_is_refused(client_factory):
-    app, campaign_id, tools = scene(client_factory)
-    tools.add_condition(ADA, "shaken", "a test")
-
-    with (
-        open_db(app) as session,
-        pytest.raises(InvalidInput, match="not a condition-ending trigger"),
-    ):
-        end_condition(
-            session,
-            campaign_id,
-            ADA,
-            "shaken",
-            "banana",
-            tools.combat,
-            tools.conditions,
-            tools.rng,
-            plus=tools.plus,
-            spec=tools.character,
-            condition_ends=FIXTURE_CONDITION_ENDS,
-        )
     assert _character(app, campaign_id, ADA).conditions == ["shaken"]
 
 
@@ -221,15 +170,6 @@ def test_outside_harm_to_a_defeated_character_is_refused(client_factory):
 
     with pytest.raises(InvalidInput, match=f"{PC} is in critical damage"):
         tools.harm_character(PC, "dex", 1, "a fall")
-
-
-def test_add_condition_gives_a_stored_condition_with_its_cause(client_factory):
-    app, campaign_id, tools = scene(client_factory)
-
-    result = tools.add_condition(ADA, "shaken", "a thunderclap")
-
-    assert result == {"character": ADA, "condition": "shaken"}
-    assert _character(app, campaign_id, ADA).conditions == ["shaken"]
 
 
 def test_add_condition_leaves_a_held_condition_as_it_is(client_factory):

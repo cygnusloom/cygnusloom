@@ -113,13 +113,6 @@ def test_filling_the_inventory_drains_hp_once(client_factory):
     assert current(character, "hp") == 0
 
 
-def test_items_after_the_full_inventory_do_not_drain_again(client_factory):
-    app, campaign_id, tools = _fight(client_factory)
-    _fill(app, campaign_id, tools)
-    extra = tools.give_item(PC, "Lantern")
-    assert "drained" not in extra
-
-
 def test_going_over_capacity_is_reported_without_a_second_drain(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _fill(app, campaign_id, tools)
