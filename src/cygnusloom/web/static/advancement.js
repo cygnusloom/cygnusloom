@@ -141,44 +141,6 @@
     updateBudget(form, pools);
   };
 
-  // The page's work happens on submit: the level rolls hit points and recomputes the sheet, so
-  // the button says what it is doing and cannot be pressed twice. Disabling the fields would
-  // drop them from the submission, so only the submit button changes.
-  const markBusy = (form) => {
-    form.dataset.busy = "1";
-    form.setAttribute("aria-busy", "true");
-    for (const button of form.querySelectorAll('button[type="submit"]')) {
-      if (button.dataset.idleHtml === undefined) button.dataset.idleHtml = button.innerHTML;
-      button.disabled = true;
-      button.textContent = "";
-      const spinner = document.createElement("span");
-      spinner.className = "spinner";
-      spinner.setAttribute("aria-hidden", "true");
-      const label = document.createElement("span");
-      label.textContent = form.dataset.busyLabel || "Working…";
-      button.append(spinner, label);
-    }
-  };
-
-  const clearBusy = (form) => {
-    delete form.dataset.busy;
-    form.removeAttribute("aria-busy");
-    for (const button of form.querySelectorAll('button[type="submit"]')) {
-      if (button.dataset.idleHtml !== undefined) {
-        button.innerHTML = button.dataset.idleHtml;
-        delete button.dataset.idleHtml;
-      }
-      button.disabled = false;
-    }
-  };
-
-  // Coming back through the browser cache restores the disabled button; put it back as it was.
-  window.addEventListener("pageshow", () => {
-    for (const form of document.querySelectorAll("form.advancement-form[data-busy]")) {
-      clearBusy(form);
-    }
-  });
-
   for (const form of document.querySelectorAll("form.advancement-form")) {
     const pools = new Map();
     for (const fieldset of form.querySelectorAll("[data-pick-kind][data-pick-counter]")) {
@@ -251,11 +213,5 @@
         (feature || stat).closest("[data-pick-control]")?.querySelector("[data-open-pick]")?.focus();
       });
     }
-
-    // Registered last, so a validation handler above can still cancel the submission.
-    form.addEventListener("submit", (event) => {
-      if (event.defaultPrevented || form.dataset.busy) return;
-      markBusy(form);
-    });
   }
 })();

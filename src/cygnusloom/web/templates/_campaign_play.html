@@ -48,7 +48,7 @@
                   {% if message.id == editable_message_id and not gm_busy %}
                   <button type="button" class="message-edit" data-message-edit-url="/campaigns/{{ campaign.id }}/messages/{{ message.id }}/edit" data-message-edit-content="{{ message.content }}" aria-label="Edit this reply" title="Edit this reply"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
                   {% endif %}
-                  {% if is_owner %}
+                  {% if is_owner and not gm_busy %}
                   <form method="post" action="/campaigns/{{ campaign.id }}/messages/{{ message.id }}/rollback" class="rollback-form" data-confirm="Roll back to right after this reply? Later messages, Log entries, and any pending prompt will be deleted.">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                     <button type="submit" class="message-rollback" aria-label="Roll back to this reply" title="Roll back to this reply"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg></button>
@@ -77,7 +77,7 @@
                     {% if pending.prompt.details %}<p class="pending-details muted">{{ pending.prompt.details }}</p>{% endif %}
                     {% if pending_for_viewer %}
                     {% for choice in pending.prompt.choices %}
-                    <form method="post" action="/campaigns/{{ campaign.id }}/pending/stream" data-pending-action>
+                    <form method="post" action="/campaigns/{{ campaign.id }}/pending/stream" data-pending-action data-busy-label="Answering…">
                       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                       <input type="hidden" name="kind" value="choice">
                       <input type="hidden" name="content" value="{{ choice.id }}">
@@ -86,14 +86,14 @@
                     </form>
                     {% endfor %}
                     {% if pending.prompt.dice %}
-                    <form method="post" action="/campaigns/{{ campaign.id }}/pending/stream" data-pending-action>
+                    <form method="post" action="/campaigns/{{ campaign.id }}/pending/stream" data-pending-action data-busy-label="Rolling…">
                       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                       <input type="hidden" name="kind" value="roll">
                       <button type="submit">Roll {{ pending.prompt.dice }}</button>
                     </form>
                     {% endif %}
                     {% if not pending.prompt.reaction %}
-                    <form method="post" action="/campaigns/{{ campaign.id }}/pending/stream" data-pending-action>
+                    <form method="post" action="/campaigns/{{ campaign.id }}/pending/stream" data-pending-action data-busy-label="Sending…">
                       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                       <input type="hidden" name="kind" value="text">
                       <textarea name="content" rows="2" required maxlength="8000" placeholder="Or describe what you do instead"></textarea>
@@ -109,7 +109,7 @@
                     <p class="muted">The GM is opening the campaign.</p>
                     {% if credits_blocked and not single_player %}<p role="alert">{{ credit_message }} <a href="/credits">Get more credits</a></p>{% endif %}
                     {% if pending_for_viewer %}
-                    <form method="post" action="/campaigns/{{ campaign.id }}/pending/stream" data-pending-action{% if auto_start %} data-auto-start{% endif %}>
+                    <form method="post" action="/campaigns/{{ campaign.id }}/pending/stream" data-pending-action{% if auto_start %} data-auto-start{% endif %} data-busy-label="Continuing…">
                       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                       <input type="hidden" name="kind" value="continue">
                       <button type="submit">Continue</button>
@@ -122,7 +122,7 @@
                   <div class="pending-prompt">
                     <p class="muted">{{ pending.error }}</p>
                     {% if pending_for_viewer %}
-                    <form method="post" action="/campaigns/{{ campaign.id }}/pending/stream" data-pending-action>
+                    <form method="post" action="/campaigns/{{ campaign.id }}/pending/stream" data-pending-action data-busy-label="Continuing…">
                       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                       <input type="hidden" name="kind" value="continue">
                       <button type="submit">Continue</button>
@@ -133,7 +133,7 @@
                   </div>
                 {% endif %}
                 {% if not pending.opening and (pending_for_viewer or is_owner) %}
-                <form method="post" action="/campaigns/{{ campaign.id }}/pending/discard" data-confirm="Discard this reply and the message that started it? It cannot be undone.">
+                <form method="post" action="/campaigns/{{ campaign.id }}/pending/discard" data-confirm="Discard this reply and the message that started it? It cannot be undone." data-busy-label="Discarding…">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                   <button type="submit">Discard reply</button>
                 </form>
@@ -158,22 +158,24 @@
               {% else %}
               <p class="muted">{{ actor.name }} is taking their turn.{% if encounter.attacks_left is not none %} Attacks left: {{ encounter.attacks_left }} of {{ encounter.attacks_per_turn }}.{% endif %}{% if encounter.moves_left is not none %} Movement left: {{ encounter.moves_left }} of {{ encounter.move_cells }} cells.{% endif %}</p>
               {% endif %}
-              <form method="post" action="/campaigns/{{ campaign.id }}/encounter/turn/end" data-encounter-end>
+              <form method="post" action="/campaigns/{{ campaign.id }}/encounter/turn/end" data-encounter-end data-busy-label="Ending turn…">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <input type="hidden" name="name" value="{{ actor.name }}">
-                <button type="submit"{% if pending %} disabled{% endif %}>End {{ "your" if player_name == actor.name else actor.name ~ "'s" }} turn</button>
+                <button type="submit"{% if pending or gm_busy %} disabled{% endif %}>End {{ "your" if player_name == actor.name else actor.name ~ "'s" }} turn</button>
               </form>
             {% elif encounter_control == "start" and next %}
-              <form method="post" action="/campaigns/{{ campaign.id }}/encounter/turn/stream" data-encounter-turn>
+              <form method="post" action="/campaigns/{{ campaign.id }}/encounter/turn/stream" data-encounter-turn data-busy-label="Starting {{ next.name }}'s turn…">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <input type="hidden" name="name" value="{{ next.name }}">
-                <button type="submit"{% if pending or credits_blocked %} disabled{% endif %}>Start {{ next.name }}'s turn</button>
+                <button type="submit"{% if pending or credits_blocked or gm_busy %} disabled{% endif %}>Start {{ next.name }}'s turn</button>
               </form>
+            {% elif gm_busy %}
+              <p class="muted">The GM is finishing the turn…</p>
             {% elif actor %}
               <p class="muted">{{ actor.name }} is taking their turn. The turn ends when the GM finishes it.</p>
             {% elif waiting_for %}
               <p class="muted">{{ waiting_for }}</p>
-            {% elif next.is_pc and not pending %}
+            {% elif next.is_pc and not pending and not gm_busy %}
               {# BACKWARDS-COMPATIBILITY: 3 - start a player turn saved before turns auto-started. #}
               <p class="muted">Starting your turn...</p>
               <form method="post" action="/campaigns/{{ campaign.id }}/encounter/turn/begin" data-auto-start-turn hidden>
@@ -190,7 +192,7 @@
           {% endif %}
           {% if waiting_for %}<p class="turn-note" data-turn-note role="status">{{ waiting_for }}</p>{% else %}<p class="turn-note" data-turn-note role="status" hidden></p>{% endif %}
           <p class="typing-note" data-typing-note role="status" hidden></p>
-          <form method="post" action="/campaigns/{{ campaign.id }}/messages" data-stream-action="/campaigns/{{ campaign.id }}/messages/stream" data-player-name="{{ acting_name }}" data-blocked="{{ '1' if (pending or advancement_due or composer_blocked or credits_blocked) else '0' }}" class="composer" id="composer"{% if members|length > 1 %} data-typing-url="/campaigns/{{ campaign.id }}/typing" data-viewer-id="{{ viewer_id }}"{% endif %}>
+          <form method="post" action="/campaigns/{{ campaign.id }}/messages" data-stream-action="/campaigns/{{ campaign.id }}/messages/stream" data-player-name="{{ acting_name }}" data-blocked="{{ '1' if (pending or advancement_due or composer_blocked or credits_blocked) else '0' }}" class="composer" id="composer" data-no-busy{% if members|length > 1 %} data-typing-url="/campaigns/{{ campaign.id }}/typing" data-viewer-id="{{ viewer_id }}"{% endif %}>
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <textarea name="content" rows="3" required maxlength="8000" placeholder="{{ ('Add credits to continue' if credits_blocked and not single_player else ('Level up first' if advancement_due else (waiting_for if waiting_for else ('Answer the GM above first' if pending else 'Message')))) }}"{% if pending or advancement_due or composer_blocked or credits_blocked %} disabled{% endif %}>{{ draft }}</textarea>
             <div class="composer-actions">

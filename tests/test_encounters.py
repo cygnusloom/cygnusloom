@@ -5,6 +5,7 @@ import json
 import random
 from collections.abc import Callable
 from dataclasses import replace
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -14,6 +15,7 @@ from fastapi.testclient import TestClient
 from cygnusloom.content.library import EncounterGrid
 from cygnusloom.llm.base import ToolRequest
 from cygnusloom.rules.context import ToolContext, brief
+from cygnusloom.services import campaigns as campaigns_service
 from cygnusloom.services import encounters
 from cygnusloom.services import turns as turns_service
 from cygnusloom.services.common import InvalidInput
@@ -23,6 +25,7 @@ from cygnusloom.services.events import (
     CampaignState,
     Character,
     ChatGM,
+    ChatPlayer,
     Encounter,
     group_by_side,
     record,
@@ -526,9 +529,7 @@ def test_an_npc_turn_checklist_reminds_the_gm_about_attacks_and_movement(
     prompt = str(call["messages"][0].get("content", ""))
     assert "- attack:" in prompt
     assert "- tactical_move:" in prompt
-    finish = next(
-        spec for spec in call["tools"] if spec["function"]["name"] == "finish_state_step"
-    )
+    finish = next(spec for spec in call["tools"] if spec["function"]["name"] == "finish_state_step")
     assert {"attack", "tactical_move"} <= set(finish["function"]["parameters"]["properties"])
 
 
@@ -712,10 +713,74 @@ def test_the_end_turn_button_updates_the_page_without_navigating(
     page = client.get(f"/campaigns/{campaign_id}").text
     assert "End your turn" in page
     assert f'action="/campaigns/{campaign_id}/encounter/turn/end" data-encounter-end' in page
+    assert 'data-busy-label="Ending turn…"' in page
     script = client.get("/static/turn_stream.js").text
     assert 'if (form.hasAttribute("data-encounter-end"))' in script
     assert "async function endTurn(form)" in script
     assert "await settle({ focusComposer: true, message });" in script
+    assert "window.cygnusBusy?.clear(form);" in script
+
+
+def test_top_level_turn_controls_wait_while_the_gm_is_working():
+    """End and Start disappear until the GM's reply is written; the next state restores
+    whichever control applies."""
+    from cygnusloom.web.campaigns import _interaction_state
+
+    actor = SimpleNamespace(kind=PC_KIND, name="Ada")
+    npc = SimpleNamespace(kind=NPC_KIND, name="Pip")
+    state = SimpleNamespace(
+        turn=SimpleNamespace(player_id=None),
+        encounter=SimpleNamespace(acting="Ada", order=["Ada", "Pip"], up=0),
+        characters={"ada": actor, "pip": npc},
+        owned_by=lambda character, user_id: True,
+    )
+
+    assert _interaction_state(state, 1, None, is_owner=False)["encounter_control"] == "end"
+    assert _interaction_state(state, 1, None, is_owner=False, busy=True)["encounter_control"] == ""
+
+    state.turn = None
+    state.encounter = SimpleNamespace(acting="", order=["Pip"], up=0)
+    assert _interaction_state(state, 1, None, is_owner=False)["encounter_control"] == "start"
+    assert _interaction_state(state, 1, None, is_owner=False, busy=True)["encounter_control"] == ""
+
+
+def test_a_busy_gm_hides_the_end_turn_control(client_factory: Callable[[], TestClient]):
+    client, campaign_id = _encounter_with(client_factory, columns=10, rows=10)
+    app = client.app
+    _begin(app, campaign_id, "Pip")
+    _finish_gm_reply(app, campaign_id)
+    _end(app, campaign_id, "Pip", by_player=False)
+    _finish_gm_reply(app, campaign_id)
+    assert _state(app, campaign_id).encounter.acting == "Ada"
+    with _db(app) as db:
+        record(db, campaign_id, ChatPlayer(content="Ada waits."))
+        db.commit()
+
+    with campaigns_service._exclusive(campaign_id):
+        page = client.get(f"/campaigns/{campaign_id}").text
+
+    assert "End your turn" not in page
+    assert "The GM is finishing the turn…" in page
+
+
+def test_a_busy_gm_hides_the_start_turn_control(client_factory: Callable[[], TestClient]):
+    client, campaign_id = _encounter_with(client_factory, columns=10, rows=10)
+    app = client.app
+    _begin(app, campaign_id, "Pip")
+    _finish_gm_reply(app, campaign_id)
+    _end(app, campaign_id, "Pip", by_player=False)
+    _finish_gm_reply(app, campaign_id)
+    assert _state(app, campaign_id).encounter.acting == "Ada"
+    _end(app, campaign_id, "Ada", by_player=True)
+    with _db(app) as db:
+        record(db, campaign_id, ChatPlayer(content="Ada waits."))
+        db.commit()
+
+    with campaigns_service._exclusive(campaign_id):
+        page = client.get(f"/campaigns/{campaign_id}").text
+
+    assert "Start Pip's turn" not in page
+    assert "The GM is finishing the turn…" in page
 
 
 def test_turn_buttons_refuse_the_wrong_participant(client_factory: Callable[[], TestClient]):
@@ -953,8 +1018,7 @@ def test_the_roster_and_its_tokens_colour_each_side(client_factory: Callable[[],
     assert f'style="--token-side: {encounters.PARTY_SIDE_COLOR}" data-side="party"' in page
     assert f'style="--token-side: {encounters.FOES_SIDE_COLOR}" data-side="foes"' in page
     assert (
-        f'style="--token-side: {encounters.OTHER_SIDE_COLORS[0]}" data-side="wild things"'
-        in page
+        f'style="--token-side: {encounters.OTHER_SIDE_COLORS[0]}" data-side="wild things"' in page
     )
     assert '<span class="roster-side">party</span>' in page
     assert '<span class="roster-side">foes</span>' in page

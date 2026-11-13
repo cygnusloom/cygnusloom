@@ -34,13 +34,6 @@
     post("external", { url: target.href });
   }
 
-  // Confirmation forms work in a regular browser too.
-  document.querySelectorAll("form[data-confirm]").forEach((form) => {
-    form.addEventListener("submit", (event) => {
-      if (!window.confirm(form.dataset.confirm)) event.preventDefault();
-    });
-  });
-
   function start() {
     if (started) return;
     started = true;
