@@ -42,10 +42,11 @@ def _render(
         request,
         "setup.html",
         admin=admin,
-        presets=PRESETS,
-        models=request.app.state.catalog.all_specs(),
-        error=error,
-        values=values or {"preset": "ollama"},
+        setup_presets=PRESETS,
+        setup_models=request.app.state.catalog.all_specs(),
+        setup_error=error,
+        setup_values=values or {"preset": "ollama"},
+        setup_heading="h1",
         status_code=status_code,
     )
 
@@ -54,6 +55,11 @@ def _render(
 def setup_page(request: Request) -> Response:
     _solo(request)
     admin = admin_user(request)
+    if request.app.state.settings.desktop:
+        # The desktop wizard lives in the Play on my device tab, beside the server list.
+        force = request.query_params.get("force") == "1"
+        target = "/campaigns?setup=1#device" if force else "/campaigns#device"
+        return RedirectResponse(target, status_code=303)
     if request.app.state.catalog.model_ids() and request.query_params.get("force") != "1":
         return RedirectResponse("/campaigns", status_code=303)
     return _render(request, admin)
@@ -118,6 +124,11 @@ async def save_setup(request: Request) -> Response:
     try:
         spec = request.app.state.catalog.upsert(provider, model, base_url, api_key, is_default=True)
     except (Conflict, InvalidInput) as exc:
+        if request.app.state.settings.desktop:
+            # Keep the desktop wizard inside the Play on my device tab.
+            request.session["flash"] = {"message": str(exc), "kind": "error"}
+            request.session["setup_values"] = values
+            return RedirectResponse("/campaigns?setup=1#device", status_code=303)
         return _render(request, admin, error=str(exc), values=values, status_code=400)
     admin_service.record_audit(
         request.app.state.engine,

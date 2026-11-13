@@ -25,6 +25,7 @@ from cygnusloom.auth.deps import page_user, verify_csrf
 from cygnusloom.content.character import NO_CAMPAIGN, NO_CHARACTER, character_schema
 from cygnusloom.db.models import User
 from cygnusloom.llm.base import LLMError
+from cygnusloom.llm.presets import PRESETS
 from cygnusloom.services import campaign_files
 from cygnusloom.services import credits as credit_service
 from cygnusloom.services import level_up as level_up_service
@@ -135,6 +136,9 @@ router = APIRouter(prefix="/campaigns")
 def _setup_redirect(request: Request) -> RedirectResponse | None:
     """Single-player starts in the wizard instead of a dead campaign form."""
     if request.app.state.settings.single_player and not request.app.state.catalog.model_ids():
+        if request.app.state.settings.desktop:
+            # The desktop wizard lives in the device tab, so the server list stays reachable.
+            return RedirectResponse("/campaigns#device", status_code=303)
         return RedirectResponse("/setup", status_code=303)
     return None
 
@@ -152,24 +156,35 @@ def _campaign_context_tokens(request: Request, user_id: int, campaign_id: int) -
 @router.get("")
 def campaigns_page(request: Request) -> Response:
     user = page_user(request)
-    setup = _setup_redirect(request)
-    if setup is not None:
-        return setup
+    settings = request.app.state.settings
+    needs_setup = settings.single_player and not request.app.state.catalog.model_ids()
+    if needs_setup and not settings.desktop:
+        return RedirectResponse("/setup", status_code=303)
     campaigns = visible_campaigns(request.app.state.engine, user.id)
-    store = optional_server_store(request.app.state.settings)
+    store = optional_server_store(settings)
     servers = store.list() if store is not None else []
     # The desktop app chooses a new local port each launch, so this choice lives in a
     # cookie: cookies ignore the port and survive restarts of the app.
     play_tab = request.cookies.get("cygnus_play_tab", "device")
     if play_tab not in ("device", "server"):
         play_tab = "device"
-    return render(
-        request,
-        "campaigns.html",
-        campaigns=campaigns,
-        servers=servers,
-        play_tab=play_tab,
-    )
+    context = {
+        "campaigns": campaigns,
+        "servers": servers,
+        "play_tab": play_tab,
+        "setup_required": needs_setup,
+        "setup_visible": settings.desktop
+        and (needs_setup or request.query_params.get("setup") == "1"),
+    }
+    if context["setup_visible"]:
+        context.update(
+            setup_presets=PRESETS,
+            setup_models=request.app.state.catalog.all_specs(),
+            setup_error=None,
+            setup_values=request.session.pop("setup_values", None) or {"preset": "ollama"},
+            setup_heading="h2",
+        )
+    return render(request, "campaigns.html", **context)
 
 
 @router.get("/new")

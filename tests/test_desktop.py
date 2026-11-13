@@ -484,6 +484,104 @@ def test_the_desktop_menu_without_desktop_mode_has_no_server_list(client: TestCl
     assert "/static/desktop.js" not in client.get("/license").text
 
 
+def test_the_desktop_setup_wizard_lives_in_the_device_tab(tmp_path):
+    settings = desktop_settings(tmp_path, llm_models=(), llm_default_model="")
+    client = TestClient(make_app(settings))
+
+    response = client.get("/campaigns", follow_redirects=False)
+
+    assert response.status_code == 200
+    assert "Give your game master a mind" in response.text
+    assert "Play on my device" in response.text
+    assert "Play on a server" in response.text
+    device_panel = response.text.split('id="panel-device"', 1)[1].split('id="panel-server"', 1)[0]
+    assert "Give your game master a mind" in device_panel
+    assert 'id="setup-form"' in device_panel
+    server_panel = response.text.split('id="panel-server"', 1)[1]
+    assert "Give your game master a mind" not in server_panel
+    assert "Add by invitation link" in server_panel
+    # Creating a campaign has to wait for the model.
+    assert 'href="/campaigns/new"' not in response.text
+
+
+def test_the_desktop_setup_route_opens_the_device_tab(tmp_path):
+    settings = desktop_settings(tmp_path, llm_models=(), llm_default_model="")
+    client = TestClient(make_app(settings))
+
+    response = client.get("/setup", follow_redirects=False)
+    assert response.status_code == 303
+    assert response.headers["location"] == "/campaigns#device"
+
+    forced = client.get("/setup?force=1", follow_redirects=False)
+    assert forced.status_code == 303
+    assert forced.headers["location"] == "/campaigns?setup=1#device"
+
+
+def test_a_desktop_new_campaign_returns_to_the_device_tab(tmp_path):
+    settings = desktop_settings(tmp_path, llm_models=(), llm_default_model="")
+    client = TestClient(make_app(settings))
+
+    response = client.get("/campaigns/new", follow_redirects=False)
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/campaigns#device"
+
+
+def test_the_desktop_setup_wizard_saves_and_disappears(tmp_path):
+    settings = desktop_settings(tmp_path, llm_models=(), llm_default_model="")
+    client = TestClient(make_app(settings))
+    token = csrf_token(client, "/campaigns")
+
+    response = client.post(
+        "/setup",
+        data={"csrf_token": token, "preset": "demo"},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/campaigns/new"
+    page = client.get("/campaigns")
+    assert "Give your game master a mind" not in page.text
+    assert "Play on a server" in page.text
+    assert 'href="/campaigns/new"' in page.text
+
+
+def test_a_desktop_setup_error_stays_on_the_campaigns_page(tmp_path):
+    settings = desktop_settings(tmp_path, llm_models=(), llm_default_model="")
+    client = TestClient(make_app(settings))
+    token = csrf_token(client, "/campaigns")
+
+    response = client.post(
+        "/setup",
+        data={"csrf_token": token, "preset": "custom", "model": "my-model", "base_url": ""},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/campaigns?setup=1#device"
+    page = client.get("/campaigns?setup=1")
+    assert "base url is required" in page.text.lower()
+    assert "Give your game master a mind" in page.text
+    assert "Play on a server" in page.text
+    assert "Play on my device" in page.text
+    assert 'value="my-model"' in page.text
+    assert 'data-prefilled="1"' in page.text
+    assert re.search(r'value="custom"[^>]*checked', page.text)
+
+
+def test_the_desktop_wizard_can_be_forced_after_setup(tmp_path):
+    settings = desktop_settings(tmp_path)
+    client = TestClient(make_app(settings))
+
+    page = client.get("/campaigns")
+    assert "Give your game master a mind" not in page.text
+
+    forced = client.get("/campaigns?setup=1")
+    assert "Give your game master a mind" in forced.text
+    assert "Already configured" in forced.text
+    assert "fake/scripted" in forced.text
+
+
 def test_adding_a_server_rejects_a_non_cygnus_address(tmp_path, monkeypatch):
     def fail(url: str):
         raise desktop_web.ServerCheckError(f"{url} is not a Cygnus Loom server.")
