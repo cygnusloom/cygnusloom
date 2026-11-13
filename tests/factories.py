@@ -16,20 +16,31 @@ import html
 import json
 import random
 import re
-from collections.abc import Callable, Iterator, Mapping
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from unittest.mock import patch
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from httpx import Response
-from sqlmodel import Session
+from sqlmodel import Session, select
+from starlette.datastructures import FormData
 
+from cygnusloom.content.character import character_schema
 from cygnusloom.content.library import RuleSet
+from cygnusloom.db.models import User
 from cygnusloom.services import campaigns as campaigns_service
 from cygnusloom.services import world
+from cygnusloom.services.campaigns import NewCharacter
+from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.events import CampaignState, Character, ChatGM, Turn, load_state, record
+from cygnusloom.services.tools import check_arguments
 from cygnusloom.services.world import WorldTools
+from cygnusloom.web.character_form import (
+    campaign_submission_from_form,
+    pronouns_from_form,
+    submission_from_form,
+)
 from tests.conftest import content_library, csrf_token, register, remember_csrf_token
 
 DEFAULT_WORLD = "testhollow"
@@ -194,6 +205,100 @@ def create_character(
     )
 
 
+def _account_id(client: TestClient, email: str) -> int:
+    """The row id of the account the client signed in with."""
+    with Session(client.app.state.engine) as session:
+        account = session.exec(select(User).where(User.email == email)).one()
+    return account.id
+
+
+def create_campaign_direct(
+    client: TestClient,
+    *,
+    label: str = DEFAULT_LABEL,
+    world_template: str = DEFAULT_WORLD,
+    rule_set: str = DEFAULT_RULE_SET,
+    model: str | None = None,
+    email: str = "ada@example.com",
+) -> int:
+    """Create a campaign through the service the new-campaign form calls.
+
+    Use it to set up a test that only needs a campaign to exist. Tests of the form and route
+    itself use the HTTP helpers.
+    """
+    app = client.app
+    catalog = app.state.catalog
+    campaign = campaigns_service.create_campaign(
+        app.state.engine,
+        app.state.content,
+        catalog.model_ids(),
+        _account_id(client, email),
+        label,
+        world_template,
+        rule_set,
+        model or catalog.default_model_id(),
+    )
+    return campaign.id
+
+
+def create_character_direct(
+    client: TestClient,
+    campaign_id: int,
+    *,
+    name: str = DEFAULT_PC,
+    fields: Mapping[str, str] | None = None,
+    rolled: Mapping[str, int] | None = None,
+    pronouns: str = DEFAULT_PRONOUNS,
+    setting: str | None = None,
+    table_genres: Sequence[str] | None = None,
+    email: str = "ada@example.com",
+) -> None:
+    """Create the player character through the service the creation form submits.
+
+    ``fields`` use the form's own names (``stat-``, ``template-``, ``pick-``, ...). The
+    rolled stats default to the submitted ``stat-`` values. Use it to set up a test that is
+    not about the creation form; tests of the form and route itself post the page.
+    """
+    app = client.app
+    library = app.state.content
+    form = FormData([("name", name), ("pronouns", pronouns), *(fields or {}).items()])
+    with Session(app.state.engine) as session:
+        campaign = session.get(campaigns_service.Campaign, campaign_id)
+        assert campaign is not None
+        account_id = session.exec(select(User).where(User.email == email)).one().id
+        state = load_state(session, campaign_id)
+    spec = campaigns_service.character_spec(library, campaign)
+    submitted = submission_from_form(spec, form)
+    problem = check_arguments(character_schema(spec), submitted)
+    if problem:
+        raise InvalidInput(problem)
+    options = None
+    campaign_spec = campaigns_service.campaign_spec(library, campaign)
+    if campaign_spec.fields and not state.options:
+        options = campaign_submission_from_form(campaign_spec, form)
+    if rolled is None:
+        rolled = {
+            field.removeprefix("stat-"): int(value)
+            for field, value in (fields or {}).items()
+            if field.startswith("stat-")
+        }
+    campaigns_service.save_creation(
+        app.state.engine,
+        library,
+        account_id,
+        campaign_id,
+        options=options,
+        character=NewCharacter(
+            name=name,
+            rolled=rolled,
+            submitted=submitted,
+            pronouns=pronouns_from_form(form),
+        ),
+        setting=setting,
+        table_genres=table_genres,
+    )
+
+
 def open_campaign(app: FastAPI, campaign_id: int) -> CampaignState:
     """The campaign state as its recorded events read it now."""
     with Session(app.state.engine) as db:
@@ -285,9 +390,8 @@ def scene(
 ) -> tuple[FastAPI, int, WorldTools]:
     """A campaign with one character, and tools to act with it: the app, its id, and the tools."""
     client = signed_in_client(client_factory)
-    campaign_id = create_campaign(client, world_template=world_template, rule_set=rule_set)
-    created = create_character(client, campaign_id, name=name)
-    assert created.status_code == 303, created.text
+    campaign_id = create_campaign_direct(client, world_template=world_template, rule_set=rule_set)
+    create_character_direct(client, campaign_id, name=name)
     return client.app, campaign_id, tools_for(client.app, campaign_id, rule_set=rule_set, rng=rng)
 
 
@@ -301,11 +405,10 @@ def campaign_ready(
 ) -> tuple[TestClient, int]:
     """A campaign whose opening GM turn has finished, so the player can act."""
     client = signed_in_client(client_factory)
-    campaign_id = create_campaign(
+    campaign_id = create_campaign_direct(
         client, label=label, world_template=world_template, rule_set=rule_set
     )
-    created = create_character(client, campaign_id, name=name)
-    assert created.status_code == 303, created.text
+    create_character_direct(client, campaign_id, name=name)
     answer(client, campaign_id, "continue")
     return client, campaign_id
 
@@ -330,11 +433,10 @@ def campaign_ready_fast(
     running the model turn. Use it only when a test reads campaign state and never asserts on
     the opening narration."""
     client = signed_in_client(client_factory)
-    campaign_id = create_campaign(
+    campaign_id = create_campaign_direct(
         client, label=label, world_template=world_template, rule_set=rule_set
     )
-    created = create_character(client, campaign_id, name=name)
-    assert created.status_code == 303, created.text
+    create_character_direct(client, campaign_id, name=name)
     close_opening(client, campaign_id)
     return client, campaign_id
 

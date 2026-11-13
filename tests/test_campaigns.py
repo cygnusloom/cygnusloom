@@ -26,6 +26,8 @@ from tests.conftest import (
 from tests.factories import (
     answer,
     close_opening,
+    create_campaign_direct,
+    create_character_direct,
     pending_turn,
     place_pc,
     send_message,
@@ -103,11 +105,10 @@ def _campaign_id(
     the opening narration, its journal entry, or the model calls it made.
     """
     client = _signed_in(client_factory)
-    response = _new_campaign(client)
-    assert response.status_code == 303
-    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
-    created = _create_character(client, campaign_id, setting=setting)
-    assert created.status_code == 303
+    campaign_id = create_campaign_direct(
+        client, label="Test chat", world_template="testhollow", rule_set="rolltest"
+    )
+    create_character_direct(client, campaign_id, setting=setting)
     if opening:
         _answer(client, campaign_id, "continue")
     else:

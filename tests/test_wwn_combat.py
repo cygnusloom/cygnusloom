@@ -7,7 +7,6 @@ from __future__ import annotations
 import asyncio
 import json
 import random
-import re
 from collections.abc import Callable
 from dataclasses import replace
 from types import SimpleNamespace
@@ -45,8 +44,8 @@ from cygnusloom.services.tools import Ask, RollAnswer, ToolRequest, run_tool
 from cygnusloom.services.views import scene_view
 from cygnusloom.services.world import WorldTools
 from tests.conftest import content_library, csrf_token
-from tests.factories import WWN_STATS, pinned_stats
-from tests.test_campaigns import _create_character, _new_campaign, _signed_in
+from tests.factories import WWN_STATS, create_character_direct, pinned_stats
+from tests.test_campaigns import _new_campaign, _signed_in
 from tests.test_character_creation import _choices, _named_picks, _picks, _rolled_stats
 from tests.test_combat import Rolls, _character
 from tests.test_world import _db
@@ -157,9 +156,7 @@ def _wwn_campaign(
     )
     fields.update(choices or {})
     fields = _named_picks(fields)
-    created = _create_character(client, campaign_id, name=PC, fields=fields)
-    error = re.search(r'<p class="form-error"[^>]*>(.*?)</p>', created.text, re.DOTALL)
-    assert created.status_code == 303, error.group(1) if error else "no error"
+    create_character_direct(client, campaign_id, name=PC, fields=fields)
     # Close the opening reply so an encounter turn can start from a clean state.
     with Session(client.app.state.engine) as db:
         record(db, campaign_id, ChatGM(content="The opening plays out.", model="test"))
