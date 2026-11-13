@@ -74,6 +74,11 @@ body.workspace-page .site-footer { margin-top: 0; padding-block: 0.35rem; }
 }
 .narrow { max-width: 480px; margin: 2rem auto; }
 
+/* An advanced section stays closed until someone wants the extra choices. */
+.advanced-options { margin: 0.75rem 0 0; }
+.advanced-options > summary { cursor: pointer; color: var(--muted); }
+.advanced-options[open] > summary { margin-bottom: 0.5rem; }
+
 .heading { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
 
 label { display: block; margin: 0.75rem 0; }

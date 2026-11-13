@@ -48,6 +48,7 @@ def _new_campaign(
     label: str = "Test chat",
     world_template: str = "testhollow",
     rule_set: str = "rolltest",
+    model: str | None = None,
 ):
     token = csrf_token(client, "/campaigns/new")
     data: dict[str, str] = {
@@ -56,6 +57,8 @@ def _new_campaign(
         "world_template": world_template,
         "rule_set": rule_set,
     }
+    if model is not None:
+        data["model"] = model
     return client.post(
         "/campaigns/new",
         data=data,
@@ -350,6 +353,72 @@ def test_new_campaign_form_asks_for_the_label_last(
     page = client.get("/campaigns/new").text
     assert page.index('name="rule_set"') < page.index('name="world_template"')
     assert page.index('name="world_template"') < page.index('name="label"')
+
+
+def test_new_campaign_form_keeps_the_model_choice_in_advanced_settings(
+    client_factory: Callable[[], TestClient],
+):
+    client = _signed_in(client_factory)
+    page = client.get("/campaigns/new").text
+    assert '<details class="advanced-options">' in page
+    assert page.index('name="label"') < page.index("Advanced settings")
+    assert page.index("Advanced settings") < page.index('name="model"')
+    assert '<option value="" selected>Use the server\'s default (fake/scripted)</option>' in page
+    assert "ollama/test-model" in page
+
+
+def test_a_new_campaign_can_choose_its_model(
+    client_factory: Callable[[], TestClient],
+):
+    client = _signed_in(client_factory)
+    response = _new_campaign(client, model="ollama/test-model")
+    assert response.status_code == 303
+    with Session(client.app.state.engine) as db:
+        campaign = db.get(Campaign, _created_campaign_id(response))
+        assert campaign is not None
+        assert campaign.model == "ollama/test-model"
+
+
+def test_a_new_campaign_uses_the_default_model_without_a_choice(
+    client_factory: Callable[[], TestClient],
+):
+    client = _signed_in(client_factory)
+    response = _new_campaign(client)
+    assert response.status_code == 303
+    with Session(client.app.state.engine) as db:
+        campaign = db.get(Campaign, _created_campaign_id(response))
+        assert campaign is not None
+        assert campaign.model == "fake/scripted"
+
+
+def test_new_campaign_form_offers_only_enabled_models(
+    client_factory: Callable[[], TestClient],
+):
+    client = _signed_in(client_factory)
+    catalog = client.app.state.catalog
+    spec = next(spec for spec in catalog.specs() if spec.model_id == "ollama/test-model")
+    catalog.set_enabled(spec.row_id or 0, False)
+    page = client.get("/campaigns/new").text
+    assert "ollama/test-model" not in page
+
+
+def test_create_rejects_a_model_that_is_not_offered(
+    client_factory: Callable[[], TestClient],
+):
+    client = _signed_in(client_factory)
+    response = _new_campaign(client, model="openai/gpt-x")
+    assert response.status_code == 400
+    assert "that model is not available" in response.text
+
+
+def test_a_failed_create_keeps_the_chosen_model_visible(
+    client_factory: Callable[[], TestClient],
+):
+    client = _signed_in(client_factory)
+    response = _new_campaign(client, rule_set="d20-everything", model="ollama/test-model")
+    assert response.status_code == 400
+    assert '<details class="advanced-options" open>' in response.text
+    assert '<option value="ollama/test-model" selected>' in response.text
 
 
 def test_setting_belongs_to_the_campaign_options_creation_page(

@@ -33,6 +33,24 @@
         Label
         <input type="text" name="label" value="{{ campaign_label }}" maxlength="120">
       </label>
+      {# The model is optional, so it stays folded away until someone wants it. #}
+      {% if models %}
+      <details class="advanced-options"{% if selected_model %} open{% endif %}>
+        <summary>Advanced settings</summary>
+        <label>
+          Language model
+          <select name="model">
+            <option value=""{% if not selected_model %} selected{% endif %}>Use the server's default ({{ default_model }})</option>
+            {% for spec in models %}
+              <option value="{{ spec.model_id }}"{% if spec.model_id == selected_model %} selected{% endif %}>{{ spec.model_id }}{% if not single_player %} · {% if spec.credits_per_turn %}{{ spec.credits_per_turn }} credits per reply{% else %}free{% endif %}{% endif %}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <p class="muted">
+          Every reply in this campaign uses this model.{% if not single_player %} The campaign owner pays its price per reply.{% endif %} You can change it later in Settings.
+        </p>
+      </details>
+      {% endif %}
       <button type="submit">Create</button>
     </form>
   </section>
