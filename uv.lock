@@ -250,7 +250,7 @@ wheels = [
 
 [[package]]
 name = "cygnusloom"
-version = "4.8.4"
+version = "4.9.0"
 source = { editable = "." }
 dependencies = [
     { name = "alembic" },
