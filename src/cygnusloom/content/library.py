@@ -1214,12 +1214,14 @@ class SaveRules:
 
 @dataclass(frozen=True)
 class LevelDamageRules:
-    """The templates whose counter contributes to damage, rounded up by `divisor`."""
+    """The templates whose counter contributes to damage, rounded up by `divisor`. With
+    `weapons_only`, an unarmed attack adds nothing."""
 
     template_kind: str
     templates: tuple[str, ...]
     counter: str
     divisor: int
+    weapons_only: bool = False
 
 
 @dataclass(frozen=True)
@@ -5186,7 +5188,7 @@ def _load_level_damage(
     if not isinstance(block, Mapping):
         raise ContentError(f"{label}: 'level_damage' must be an object")
     level_label = f"{label}: level_damage"
-    allowed = {"template_kind", "templates", "counter", "divisor"}
+    allowed = {"template_kind", "templates", "counter", "divisor", "weapons_only"}
     unknown = set(block) - allowed
     if unknown:
         raise ContentError(
@@ -5198,6 +5200,9 @@ def _load_level_damage(
         raise ContentError(f"{level_label}: 'templates' must be a non-empty list")
     counter = required_text(block, "counter", level_label)
     divisor = _whole(block, "divisor", level_label, 1)
+    weapons_only = block.get("weapons_only", False)
+    if not isinstance(weapons_only, bool):
+        raise ContentError(f"{level_label}: 'weapons_only' must be true or false")
     if len(template_ids) != len(set(template_ids)):
         raise ContentError(f"{level_label}: 'templates' must not list an id twice")
     kind_ids = {
@@ -5219,6 +5224,7 @@ def _load_level_damage(
         templates=template_ids,
         counter=counter,
         divisor=divisor,
+        weapons_only=weapons_only,
     )
 
 

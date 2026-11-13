@@ -325,7 +325,8 @@ def test_a_miss_still_does_shock_to_a_low_ac_target(client_factory):
     take_turn(tools, PC)
     pc = _pc(app, campaign_id)
     feature = _feature(WAR_AXE)
-    shock = feature.shock + _modifier(pc, "str") + 1
+    # Shock takes the weapon's rating and the attribute, but not the Warrior's Killing Blow.
+    shock = feature.shock + _modifier(pc, "str")
     assert shock >= 1
     bonus = _to_hit_bonus(pc, WAR_AXE, feature)
 
@@ -367,7 +368,7 @@ def test_a_hit_does_at_least_its_shock(client_factory):
     take_turn(tools, PC)
     pc = _pc(app, campaign_id)
     feature = _feature(WAR_AXE)
-    shock = feature.shock + _modifier(pc, "str") + 1
+    shock = feature.shock + _modifier(pc, "str")
     bonus = _to_hit_bonus(pc, WAR_AXE, feature)
 
     # A damage roll of 1 plus the Strength modifier is below the Shock, so Shock is the damage.
@@ -468,7 +469,29 @@ def test_damage_adds_the_weapon_attribute_and_damage_bonus_stat(client_factory):
     assert result["harm"] == {"hp": expected}
 
 
-def test_damage_bonus_stat_adds_to_shock(client_factory):
+def test_a_thrown_weapon_at_range_does_no_shock(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _foe(tools, hp=20, armor=13)
+    _make_room(tools)
+    tools.give_item(PC, "Hand Axe", damage="1d6")
+    tools.place_participant(PC, 0, 0)
+    tools.place_participant(FOE, 2, 0)
+    take_turn(tools, PC)
+    pc = _pc(app, campaign_id)
+    feature = _feature("Hand Axe")
+    assert feature.shock > 0
+    bonus = _to_hit_bonus(pc, "Hand Axe", feature)
+
+    result = replace(tools, rng=Rolls(5, _roll_for_total(12, bonus))).player_attack(FOE, "Hand Axe")
+    assert result["hit"] is False
+    assert result["harm"] == {}
+    assert result["range"]["melee"] is False
+
+    [event] = _struck(app, campaign_id)
+    assert (event.hit, event.to_hit, event.shock) == (False, 12, 0)
+
+
+def test_damage_bonus_stat_does_not_add_to_shock(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     tools = replace(
         tools,
@@ -482,12 +505,37 @@ def test_damage_bonus_stat_adds_to_shock(client_factory):
     take_turn(tools, PC)
     pc = _pc(app, campaign_id)
     feature = _feature(WAR_AXE)
-    shock = feature.shock + _modifier(pc, "str") + current(pc, "attack_bonus") + 1
+    shock = feature.shock + _modifier(pc, "str")
     bonus = _to_hit_bonus(pc, WAR_AXE, feature)
 
     result = replace(tools, rng=Rolls(5, _roll_for_total(12, bonus))).player_attack(FOE, WAR_AXE)
     assert result["hit"] is False
     assert result["harm"] == {"hp": shock}
+
+
+def test_damage_and_shock_modifiers_reach_the_attack(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _foe(tools, hp=20, armor=13)
+    _make_room(tools)
+    tools.give_item(PC, WAR_AXE, damage="1d10")
+    take_turn(tools, PC)
+    pc = _pc(app, campaign_id)
+    feature = _feature(WAR_AXE)
+    attribute = _modifier(pc, "str")
+    bonus = _to_hit_bonus(pc, WAR_AXE, feature)
+
+    missed = replace(tools, rng=Rolls(5, _roll_for_total(12, bonus))).player_attack(
+        FOE, WAR_AXE, shock_modifier=2
+    )
+    assert missed["hit"] is False
+    assert missed["harm"] == {"hp": feature.shock + attribute + 2}
+
+    next_turn(tools, PC)
+    hit = tools.player_attack(
+        FOE, WAR_AXE, attack_roll=20, damage_roll=5, damage_modifier=3, shock_modifier=4
+    )
+    # A hit adds the damage modifier, but Shock never adds to a hit's rolled damage.
+    assert hit["raw"] == 5 + attribute + 1 + 3
 
 
 def test_an_unarmed_strike_adds_punch_skill_and_attribute_to_damage(client_factory):
@@ -497,7 +545,9 @@ def test_an_unarmed_strike_adds_punch_skill_and_attribute_to_damage(client_facto
     take_turn(tools, PC)
     pc = _pc(app, campaign_id)
     attribute = max(WWN.character.modifier(pc.stats, stat) for stat in ("str", "dex"))
-    expected = 2 + attribute + level + 1
+    # The Warrior's Killing Blow applies to weapons only, so an unarmed strike adds just the
+    # unarmed skill and the attribute.
+    expected = 2 + attribute + level
 
     result = replace(tools, rng=Rolls(2, 20)).player_attack(FOE, UNARMED)
     assert result["raw"] == expected
@@ -638,7 +688,8 @@ def test_a_natural_one_always_misses_and_a_natural_twenty_always_hits(client_fac
     pc = _pc(app, campaign_id)
     punch = max(0, WWN.character.skill_level(pc.skills, "punch"))
     attribute = max(WWN.character.modifier(pc.stats, stat) for stat in ("str", "dex"))
-    assert hit["harm"] == {"hp": 1 + attribute + punch + 1}
+    # An unarmed strike takes no Warrior's Killing Blow.
+    assert hit["harm"] == {"hp": 1 + attribute + punch}
 
 
 def test_side_initiative_is_rolled_once_both_sides_have_joined(client_factory):

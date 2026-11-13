@@ -47,7 +47,8 @@
       "template_kind": "class",
       "templates": ["warrior", "adventurer_expert_warrior", "adventurer_warrior_mage"],
       "counter": "level",
-      "divisor": 2
+      "divisor": 2,
+      "weapons_only": true
     },
     "unarmed": {"damage": "1d2", "names": ["unarmed", "fist", "fists", "punch", "kick"],
                 "attributes": ["str", "dex"], "skill": "punch"},

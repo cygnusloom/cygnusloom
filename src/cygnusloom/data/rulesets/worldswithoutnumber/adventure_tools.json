@@ -238,7 +238,7 @@
     "type": "tool_call",
     "id": "attack",
     "extends": "core:tool_call/attack",
-    "description": "Make an NPC's attack: d20 plus its attack bonus against the target's Armor Class, with a natural 1 always missing and a natural 20 always hitting. The engine rolls the damage; on a miss it still applies the attack's Shock when the target's AC is low enough. An attack is refused unless the attacker is the character taking their turn, so the player presses Start for the NPC's turn first; pass force true only for an action the story needs outside the turn order, such as an ambush. On the encounter map, the attack must be within its melee reach or ranged band, with a clear line of sight; a reach weapon such as a pike can strike 10 feet away. Move the attacker with place_participant first when it is refused for distance.",
+    "description": "Make an NPC's attack: d20 plus its attack bonus against the target's Armor Class, with a natural 1 always missing and a natural 20 always hitting. The engine rolls the damage; on a miss it still applies the attack's Shock when the target's AC is low enough, but a thrown or ranged attack never inflicts Shock. Pass damage_modifier or shock_modifier for a Focus or magic bonus the engine does not compute itself. An attack is refused unless the attacker is the character taking their turn, so the player presses Start for the NPC's turn first; pass force true only for an action the story needs outside the turn order, such as an ambush. On the encounter map, the attack must be within its melee reach or ranged band, with a clear line of sight; a reach weapon such as a pike can strike 10 feet away. Move the attacker with place_participant first when it is refused for distance.",
     "parameters": {
       "properties": {
         "attack": {
@@ -250,6 +250,20 @@
           "maximum": 10,
           "default": 0,
           "description": "A situational bonus or penalty to the hit roll: -2 long range, -4 firing while meleed or attacking prone, -1 dual wielding, -2 or -4 cover, -2 for total defence."
+        },
+        "damage_modifier": {
+          "type": "integer",
+          "minimum": -10,
+          "maximum": 10,
+          "default": 0,
+          "description": "A bonus or penalty to the damage roll from a Focus, magic, or the situation that the engine does not compute itself. It is added after the attack's dice and attribute."
+        },
+        "shock_modifier": {
+          "type": "integer",
+          "minimum": -10,
+          "maximum": 10,
+          "default": 0,
+          "description": "A bonus or penalty to the attack's Shock from a Focus or magic that explicitly reaches Shock. It never applies to a thrown or ranged attack."
         },
         "count": {
           "type": "integer",
@@ -265,11 +279,11 @@
     "type": "tool_call",
     "id": "player_attack",
     "extends": "core:tool_call/player_attack",
-    "description": "Ask the player to roll their attack with a carried weapon or unarmed, then record the d20. The engine adds the weapon skill, the best weapon attribute, the attack bonus, and a Warrior's Killing Blow, rolls damage, and applies Shock on a miss when the target's AC is low enough. Use it for the player character; the player presses the roll button and the result is final. An attack is refused unless the player character is taking their turn; their turn starts automatically when it comes up. Pass force true only for an action the story needs outside the turn order. On the encounter map, the weapon's melee reach or ranged band and a clear line of sight are enforced: pass range_band for a ranged shot, or leave it out to let the engine choose the band for the distance.",
+    "description": "Ask the player to roll their attack with a carried weapon or unarmed, then record the d20. The player rolls only the d20: the engine adds the weapon skill, the best weapon attribute, and the attack bonus to the hit; it adds the attribute and a Warrior's Killing Blow to weapon damage; and it applies Shock on a miss when the target's AC is low enough, with Shock taking the attribute but not other damage bonuses. A thrown or ranged attack never inflicts Shock. Pass damage_modifier or shock_modifier for a Focus or magic bonus the engine does not compute itself, such as Armsmaster's Stab level added to damage or Shock. Use it for the player character; the player presses the roll button and the result is final. An attack is refused unless the player character is taking their turn; their turn starts automatically when it comes up. Pass force true only for an action the story needs outside the turn order. On the encounter map, the weapon's melee reach or ranged band and a clear line of sight are enforced: pass range_band for a ranged shot, or leave it out to let the engine choose the band for the distance.",
     "player_input": {
       "dice": "1d20",
       "param": "attack_roll",
-      "details": "{weapon} against {target}: roll 1d20 and add your attack bonus. The engine rolls damage."
+      "details": "{weapon} against {target}: roll 1d20 only. The engine adds your attack bonus and weapon modifiers, then rolls damage."
     },
     "parameters": {
       "properties": {
@@ -285,6 +299,20 @@
           "maximum": 10,
           "default": 0,
           "description": "A situational bonus or penalty to the hit roll: -2 long range, -4 firing while meleed or attacking prone, -1 dual wielding, -2 or -4 cover, -2 for total defence."
+        },
+        "damage_modifier": {
+          "type": "integer",
+          "minimum": -10,
+          "maximum": 10,
+          "default": 0,
+          "description": "A bonus or penalty to the damage roll from a Focus or magic that the engine does not compute itself, such as Armsmaster's Stab level. It is added after the weapon's dice and attribute."
+        },
+        "shock_modifier": {
+          "type": "integer",
+          "minimum": -10,
+          "maximum": 10,
+          "default": 0,
+          "description": "A bonus or penalty to Shock from a Focus or magic that explicitly reaches Shock, such as Shocking Assault's +2. It never applies to a thrown or ranged attack."
         },
         "range_band": {
           "type": "string",
@@ -315,6 +343,18 @@
           "items": {
             "properties": {
               "hit_modifier": {
+                "type": "integer",
+                "minimum": -10,
+                "maximum": 10,
+                "default": 0
+              },
+              "damage_modifier": {
+                "type": "integer",
+                "minimum": -10,
+                "maximum": 10,
+                "default": 0
+              },
+              "shock_modifier": {
                 "type": "integer",
                 "minimum": -10,
                 "maximum": 10,

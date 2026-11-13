@@ -115,7 +115,7 @@ def _player_bonuses(
     damage_bonus = _stat_bonus(combat, character, combat.damage_bonus_stat)
     to_hit = _stat_bonus(combat, character, combat.hit_bonus_stat) + attribute
     damage = damage_bonus
-    class_bonus = _level_damage_bonus(combat, character, spec)
+    class_bonus = _level_damage_bonus(combat, character, spec, unarmed=unarmed)
     damage += class_bonus
     skill = _weapon_skill(combat, weapon, feature)
     if skill and skill in spec.skills:
@@ -131,15 +131,22 @@ def _player_bonuses(
     shock = 0
     shock_ac = 0
     if feature is not None and feature.shock:
-        shock = feature.shock + attribute + damage_bonus + class_bonus
+        # Shock takes the weapon's own rating and the attribute modifier. Other damage bonuses,
+        # such as a Warrior's Killing Blow, do not apply unless the rules say they reach Shock.
+        shock = feature.shock + attribute
         shock_ac = feature.shock_ac
     return WeaponBonuses(to_hit=to_hit, damage=damage, shock=shock, shock_ac=shock_ac)
 
 
-def _level_damage_bonus(combat: CombatRules, character: Character, spec: CharacterSpec) -> int:
-    """The damage the configured template's counter adds, rounded up by its divisor."""
+def _level_damage_bonus(
+    combat: CombatRules, character: Character, spec: CharacterSpec, *, unarmed: bool = False
+) -> int:
+    """The damage the configured template's counter adds, rounded up by its divisor. A rule set
+    whose level damage applies only to weapons gives an unarmed attack nothing."""
     rules = combat.level_damage
     if rules is None:
+        return 0
+    if unarmed and rules.weapons_only:
         return 0
     counter = spec.counters.get(rules.counter)
     if counter is None:
@@ -341,6 +348,8 @@ def attack(
     plus: str,
     targets: Sequence[str] | None = None,
     hit_modifier: int = 0,
+    damage_modifier: int = 0,
+    shock_modifier: int = 0,
     conditions: Mapping[str, ConditionRules] | None = None,
     spec: CharacterSpec | None = None,
     force: bool = False,
@@ -396,6 +405,7 @@ def attack(
             plus=plus,
             spec=spec,
             hit_penalty=distance.penalty,
+            damage_modifier=damage_modifier,
         )
         if state.encounter is not None:
             _mark_attack(db, campaign_id, source.name)
@@ -416,6 +426,7 @@ def attack(
             plus=plus,
             spec=spec,
             hit_penalty=distance.penalty,
+            damage_modifier=damage_modifier,
         )
         if state.encounter is not None:
             _mark_attack(db, campaign_id, source.name)
@@ -430,8 +441,13 @@ def attack(
         plus=plus,
         lucky=spec is not None and reactions.has_trigger(source, spec, None, "damage"),
     )
-    raw += _stat_bonus(combat, source, combat.damage_bonus_stat)
+    raw = max(0, raw + _stat_bonus(combat, source, combat.damage_bonus_stat) + damage_modifier)
     shock, shock_ac = _attack_shock(source, name)
+    if not distance.melee:
+        # A thrown or ranged attack never inflicts Shock, even on a miss.
+        shock, shock_ac = 0, 0
+    else:
+        shock += shock_modifier
     result = _strike(
         db,
         campaign_id,
@@ -472,6 +488,7 @@ def _blast_attack(
     plus: str,
     spec: CharacterSpec | None = None,
     hit_penalty: int = 0,
+    damage_modifier: int = 0,
 ) -> dict[str, Any]:
     """An NPC's attack with Blast. Each target in its area rolls separately. With no area given,
     the area is the named target alone, so its dice roll once. Against a group, blast damage is
@@ -511,6 +528,7 @@ def _blast_attack(
                 lucky=spec is not None and reactions.has_trigger(source, spec, None, "damage"),
             )
             + damage_bonus
+            + damage_modifier
         )
         results.append(
             _strike(
@@ -548,6 +566,7 @@ def _blast(
     plus: str,
     spec: CharacterSpec | None = None,
     hit_penalty: int = 0,
+    damage_modifier: int = 0,
 ) -> dict[str, Any]:
     """A group's attack, which has Blast: it rolls the rule set's blast dice separately for each living
     individual on the other side. The named target must be one of them. Every one is hit unless the
@@ -602,6 +621,7 @@ def _blast(
                 lucky=spec is not None and reactions.has_trigger(source, spec, None, "damage"),
             )
             + damage_bonus
+            + damage_modifier
         )
         results.append(
             _strike(
@@ -689,6 +709,11 @@ def resolve_attacks(
         )
         if distance.cells:
             placements.append({"attacker": source.name, "attack": name, **distance.as_dict()})
+        if not distance.melee:
+            # A thrown or ranged attack never inflicts Shock, even on a miss.
+            shock, shock_ac = 0, 0
+        else:
+            shock += int(entry.get("shock_modifier", 0))
         planned.append(
             PlannedAttack(
                 attacker=source.name,
@@ -700,7 +725,8 @@ def resolve_attacks(
                 + int(entry.get("hit_modifier", 0))
                 + distance.penalty
                 + _condition_attack_modifier(source, conditions),
-                damage_bonus=_stat_bonus(combat, source, combat.damage_bonus_stat),
+                damage_bonus=_stat_bonus(combat, source, combat.damage_bonus_stat)
+                + int(entry.get("damage_modifier", 0)),
                 shock=shock,
                 shock_ac=shock_ac,
                 lucky_damage=spec is not None
@@ -708,7 +734,11 @@ def resolve_attacks(
             )
         )
     rolls = [
-        _damage_total(attack.dice, rng, plus=plus, lucky=attack.lucky_damage) + attack.damage_bonus
+        max(
+            0,
+            _damage_total(attack.dice, rng, plus=plus, lucky=attack.lucky_damage)
+            + attack.damage_bonus,
+        )
         for attack in planned
     ]
     if combat.multi_attack == "each":
@@ -834,6 +864,8 @@ def player_attack(
     attack_roll: int | None = None,
     damage_roll: int | None = None,
     hit_modifier: int = 0,
+    damage_modifier: int = 0,
+    shock_modifier: int = 0,
     conditions: Mapping[str, ConditionRules] | None = None,
     range_band: str = "",
     dual_wield: bool = False,
@@ -852,7 +884,10 @@ def player_attack(
     hit roll then adds the rule set's hit bonus stat, the weapon skill (or its unskilled penalty),
     and the weapon's best attribute modifier; the damage adds the rule set's damage bonus stat,
     the attribute modifier when the rule set uses attribute damage, and the unarmed skill for an
-    unarmed strike; and shock comes from the weapon plus the attribute and damage bonuses.
+    unarmed strike; and shock comes from the weapon plus the attribute modifier. `hit_modifier`,
+    `damage_modifier`, and `shock_modifier` add bonuses the rule set does not compute itself, such
+    as cover or a Focus. A ranged attack never inflicts Shock, so a thrown weapon's Shock reaches
+    only a melee throw.
 
     `cell_feet` turns on the rule set's reach, range, and sight limits. A weapon's `feature`
     supplies its reach and ranged bands; without one the attack is melee at the rule set's reach.
@@ -907,7 +942,12 @@ def player_attack(
             raise InvalidInput("this rule set has no dual-wielding action")
         dual_penalty = combat.dual_wield_hit_penalty
         raw += combat.dual_wield_damage_bonus
-    raw += bonuses.damage
+    raw = max(0, raw + bonuses.damage + damage_modifier)
+    # A thrown or ranged weapon never inflicts Shock, even on a miss, so only a melee attack
+    # carries the weapon's Shock and any bonus that reaches it.
+    ranged = not distance.melee or bool(range_band and not distance.cells)
+    shock = 0 if ranged else bonuses.shock + shock_modifier
+    shock_ac = 0 if ranged else bonuses.shock_ac
     # The hit is rolled after the damage, so a roll_vs_defense rule set draws its dice in the same
     # order it always has.
     to_hit: int | None = None
@@ -939,8 +979,8 @@ def player_attack(
         plus=plus,
         to_hit=to_hit,
         natural=natural,
-        shock=bonuses.shock,
-        shock_ac=bonuses.shock_ac,
+        shock=shock,
+        shock_ac=shock_ac,
         spec=spec,
     )
     if state.encounter is not None:

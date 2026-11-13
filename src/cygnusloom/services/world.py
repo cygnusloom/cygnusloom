@@ -1726,6 +1726,8 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
         modifier: str = "",
         targets: Sequence[str] | None = None,
         hit_modifier: int = 0,
+        damage_modifier: int = 0,
+        shock_modifier: int = 0,
         count: int = 0,
         force: bool = False,
     ) -> dict[str, Any]:
@@ -1737,6 +1739,8 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                     "attack": attack,
                     "modifier": modifier,
                     "hit_modifier": hit_modifier,
+                    "damage_modifier": damage_modifier,
+                    "shock_modifier": shock_modifier,
                 }
                 for _ in range(attacks)
             ]
@@ -1754,6 +1758,8 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 plus=self.plus,
                 targets=targets,
                 hit_modifier=hit_modifier,
+                damage_modifier=damage_modifier,
+                shock_modifier=shock_modifier,
                 conditions=self.conditions,
                 spec=self.character,
                 force=force,
@@ -1806,6 +1812,8 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
         attack_roll: int | None = None,
         damage_roll: int | None = None,
         hit_modifier: int = 0,
+        damage_modifier: int = 0,
+        shock_modifier: int = 0,
         range_band: str = "",
         dual_wield: bool = False,
         force: bool = False,
@@ -1826,6 +1834,8 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 attack_roll=attack_roll,
                 damage_roll=damage_roll,
                 hit_modifier=hit_modifier,
+                damage_modifier=damage_modifier,
+                shock_modifier=shock_modifier,
                 conditions=self.conditions,
                 range_band=range_band,
                 dual_wield=dual_wield,

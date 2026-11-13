@@ -545,6 +545,18 @@ def test_combat_rejects_an_unknown_unarmed_skill():
             },
             "'divisor' must be a whole number, at least 1",
         ),
+        (
+            {
+                "level_damage": {
+                    "template_kind": "profession",
+                    "templates": ["vanguard"],
+                    "counter": "renown",
+                    "divisor": 2,
+                    "weapons_only": "yes",
+                },
+            },
+            "'weapons_only' must be true or false",
+        ),
     ],
 )
 def test_combat_rejects_invalid_level_damage_rules(changes, message):
@@ -576,14 +588,10 @@ def test_bundled_combat_rules_keep_their_unarmed_and_level_damage_sources():
         "level",
         2,
     )
-    assert (
-        _level_damage_bonus(
-            WWN.combat,
-            SimpleNamespace(templates={"class": "warrior"}, counters={"level": 3}),
-            WWN.character,
-        )
-        == 2
-    )
+    assert WWN.combat.level_damage.weapons_only is True
+    warrior = SimpleNamespace(templates={"class": "warrior"}, counters={"level": 3})
+    assert _level_damage_bonus(WWN.combat, warrior, WWN.character) == 2
+    assert _level_damage_bonus(WWN.combat, warrior, WWN.character, unarmed=True) == 0
 
 
 @pytest.mark.parametrize(
