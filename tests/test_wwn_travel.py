@@ -189,6 +189,13 @@ def test_an_overland_move_must_use_the_travel_tool(
 
     assert _location(app, campaign_id) == "Start"
 
+    forced = tools.move_actor(NAME, "Far", mode="overland", force=True)
+
+    assert (
+        forced["note"] == "The overland move overrode the journey procedure because force was set."
+    )
+    assert _location(app, campaign_id) == "Far"
+
 
 class _NoDraws(random.Random):
     """An RNG that fails the test if anything draws from it."""

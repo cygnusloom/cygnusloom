@@ -571,9 +571,11 @@ def set_map_cells(
     cells: Sequence[Mapping[str, Any]],
     terrain: Mapping[str, EncounterTerrain] | None = None,
     encounter_objects: Mapping[str, EncounterObject] | None = None,
+    force: bool = False,
 ) -> dict[str, Any]:
     """Set a cell's terrain, object, colour, pattern, icon, or label. A key left out of a cell
-    keeps its value; an empty string clears it. A cell with every field empty is removed."""
+    keeps its value; an empty string clears it. A cell with every field empty is removed.
+    `force` lets a blocking object close over a cell someone occupies when the story insists."""
     state = load_state(db, campaign_id)
     entry = _map_named(state, name)
     if not isinstance(cells, Sequence) or isinstance(cells, str) or not cells:
@@ -642,21 +644,22 @@ def set_map_cells(
         on_this_map = state.encounter is not None and (
             name_key(state.encounter.map) == name_key(entry.name)
         )
-        if found is not None and found.blocks:
+        if found is not None and found.blocks and not force:
             for key, where in entry.tokens.items():
                 if where == cell:
                     holder = state.characters.get(key)
                     label = holder.name if holder is not None else _token_name(key)
                     raise InvalidInput(
                         f"column {column}, row {row} is occupied by {label}, "
-                        "so it cannot be walled off"
+                        "so it cannot be walled off; set force true to override"
                     )
             if on_this_map:
                 for key, where in state.encounter.cells.items():
                     if where == cell:
                         raise InvalidInput(
                             f"column {column}, row {row} is occupied by "
-                            f"{state.characters[key].name}, so it cannot be walled off"
+                            f"{state.characters[key].name}, so it cannot be walled off; "
+                            "set force true to override"
                         )
         marks[cell] = CellMark(new_terrain, new_object, new_color, new_pattern, new_icon, new_label)
         touched.add(cell)
@@ -1155,8 +1158,9 @@ def place_participant(
 ) -> dict[str, Any]:
     """Move a participant to a cell. Obstacles block; difficult terrain costs two moves per cell
     entered. Without marks or a background, the cost is the plain distance in cells. `force` lets
-    a move go past the movement left this turn when the story needs it; the cost is still
-    recorded, so the participant has no movement left afterward."""
+    a move go past the movement left this turn, onto a cell someone else holds, or through a
+    blocker when the story needs it; the cost is still recorded, so the participant has no
+    movement left afterward."""
     state = load_state(db, campaign_id)
     encounter = _encounter(state)
     character = _participant(state, name)
@@ -1169,20 +1173,28 @@ def place_participant(
             f"{entry.rows - 1} on {entry.name}"
         )
     key = name_key(character.name)
-    for other, cell in encounter.cells.items():
-        if other != key and cell == (column, row):
-            raise InvalidInput(
-                f"column {column}, row {row} is taken by {state.characters[other].name}"
-            )
-    for other, cell in entry.tokens.items():
-        if other != key and cell == (column, row):
-            holder = state.characters.get(other)
-            label = holder.name if holder is not None else _token_name(other)
-            raise InvalidInput(f"column {column}, row {row} is taken by {label} on {entry.name}")
+    if not force:
+        for other, cell in encounter.cells.items():
+            if other != key and cell == (column, row):
+                raise InvalidInput(
+                    f"column {column}, row {row} is taken by {state.characters[other].name}; "
+                    "set force true to override"
+                )
+        for other, cell in entry.tokens.items():
+            if other != key and cell == (column, row):
+                holder = state.characters.get(other)
+                label = holder.name if holder is not None else _token_name(other)
+                raise InvalidInput(
+                    f"column {column}, row {row} is taken by {label} on {entry.name}; "
+                    "set force true to override"
+                )
     target = (column, row)
     blocker = _blocks(entry, target, encounter_objects or {})
-    if blocker:
-        raise InvalidInput(f"column {column}, row {row} is blocked by {blocker} on {entry.name}")
+    if blocker and not force:
+        raise InvalidInput(
+            f"column {column}, row {row} is blocked by {blocker} on {entry.name}; "
+            "set force true to override"
+        )
     cost = 0
     previous = encounter.cells.get(key)
     if previous is not None:
@@ -1193,9 +1205,12 @@ def place_participant(
         if entry.marks or entry.background:
             route = _path_cost(entry, previous, target, terrain or {}, encounter_objects or {})
             if route is None:
-                raise InvalidInput(
-                    f"{character.name} has no way to column {column}, row {row}: it is blocked"
-                )
+                if not force:
+                    raise InvalidInput(
+                        f"{character.name} has no way to column {column}, row {row}: it is "
+                        "blocked; set force true to override"
+                    )
+                route = max(abs(column - previous[0]), abs(row - previous[1]))
             too_far = (
                 f"{character.name} cannot reach column {column}, row {row} this turn: the way is "
                 f"too far, it costs {route} and {left} moves are left"

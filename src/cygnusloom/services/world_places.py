@@ -255,14 +255,24 @@ class PlacesMixin:
         with session_scope(self.engine) as db:
             return encounters.remove_map_token(db, self.campaign_id, map, name)
 
-    def set_map_cells(self, map: str, cells: list[Mapping[str, Any]]) -> dict[str, Any]:
+    def set_map_cells(
+        self, map: str, cells: list[Mapping[str, Any]], force: bool = False
+    ) -> dict[str, Any]:
         """Set terrain or objects on map cells, inside or outside an encounter."""
-        return self.set_encounter_map_cells(map, cells)
+        return self.set_encounter_map_cells(map, cells, force=force)
 
-    def set_encounter_map_cells(self, map: str, cells: list[Mapping[str, Any]]) -> dict[str, Any]:
+    def set_encounter_map_cells(
+        self, map: str, cells: list[Mapping[str, Any]], force: bool = False
+    ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return encounters.set_map_cells(
-                db, self.campaign_id, map, cells, self.terrain, self.encounter_objects
+                db,
+                self.campaign_id,
+                map,
+                cells,
+                self.terrain,
+                self.encounter_objects,
+                force=force,
             )
 
     def update_encounter_map(

@@ -56,6 +56,10 @@ For every player message, inspect the turn's tool events and answer:
 
 Any "yes" is a candidate engine gap. Prefer a small engine or content fix over a longer prompt.
 
+Every tool that refuses an action for a rule also exposes a `force` parameter. The GM sets it
+only when the story needs the exception, and the tool result or narration should make that
+override visible. The normal path stays binding; `force` is the escape hatch, not the routine.
+
 ## Plan C: maps and tokens
 
 The original failure was a fight whose final cells never reached the visible local map, leaving
@@ -164,3 +168,4 @@ narration.
 | Purchases | The GM narrated buying food and oil but only moved coin | Prompt now requires item events for every purchase or gift |
 | Morale | An allied NPC was not checked when the PC fell | Prompt now requires a check for every NPC side, including allies |
 | Site turns | A six-turn search advanced one part (six hours) instead of one hour | Prompt now forbids `parts` for site turns and states the cost explicitly |
+| Refusals | New engine refusals had no story override | `move_actor`, `set_map_cells`, `place_participant`, and `stabilize` now take `force`; the GM is told to use it only when the story requires it |

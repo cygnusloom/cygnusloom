@@ -6655,6 +6655,7 @@ HOOK_ARITIES: Mapping[str, int] = {
     "before_rest": 3,
     "after_rest": 5,
     "held_back": 1,
+    "stabilize": 1,
     "after_consume": 5,
     "lodge": 1,
     "status": 1,

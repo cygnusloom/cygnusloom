@@ -29,7 +29,7 @@
         "force": {
           "type": "boolean",
           "default": false,
-          "description": "Allow the move even though it costs more than the movement left this turn. Set it only when the player insists for the story; the move is still charged, so the participant has no movement left afterward."
+          "description": "Allow the move even though it costs more than the movement left this turn, onto a cell someone else holds, or through a blocker. Set it only when the story insists; the move is still charged, so the participant has no movement left afterward."
         },
         "name": {
           "type": "string"
@@ -379,6 +379,11 @@
       "properties": {
         "explanation": {
           "type": "string"
+        },
+        "force": {
+          "type": "boolean",
+          "default": false,
+          "description": "Set true only when the story requires the aid to work without the rule set's usual check. Normally leave it false."
         },
         "name": {
           "type": "string"

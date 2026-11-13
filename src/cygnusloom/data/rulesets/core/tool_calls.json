@@ -297,6 +297,11 @@
               "type": "string"
             }
           }
+        },
+        "force": {
+          "type": "boolean",
+          "default": false,
+          "description": "Set true only when the story must move someone overland despite the rule set's journey procedure. Normally leave it false."
         }
       },
       "required": [
@@ -1600,6 +1605,11 @@
               "row"
             ]
           }
+        },
+        "force": {
+          "type": "boolean",
+          "default": false,
+          "description": "Set true only when the story needs a blocking object to close over a cell someone occupies. Normally leave it false."
         }
       },
       "required": [

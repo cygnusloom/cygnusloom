@@ -1400,6 +1400,10 @@ def test_stabilizing_without_a_heal_check_is_refused(client_factory):
     with pytest.raises(InvalidInput, match="Heal check"):
         tools.stabilize(NAME, "A healer helps.")
 
+    forced = tools.stabilize(NAME, "A healer helps.", force=True)
+
+    assert forced["stabilized"] is True
+
 
 def test_a_character_without_food_or_water_is_held_back_and_gains_strain(
     client_factory,
