@@ -59,7 +59,7 @@
     "type": "tool_call",
     "id": "adjust_encounter_order",
     "requires": ["combat"],
-    "description": "Adjust the encounter's turn order, or whose turn is running now. Give order as every participant's name in the new sequence, current as the participant whose turn should be open now, or both. Use it only when the rule set's initiative or the story calls for an exception, such as a held or delayed action, choosing a side's order, a surprise round, or correcting a mistake. Never use it in normal play: the turn order stands.",
+    "description": "Adjust the encounter's turn order, or whose turn is running now. Give order as every participant's name in the new sequence, current as the participant whose turn should be open now, or both. Use it only when the rule set's initiative or the story calls for an exception, such as a held or delayed action, choosing a side's order, a surprise round, or correcting a mistake. Choosing a side's order sets the order its members will take; it does not cut a running turn short. Never use it in normal play: the turn order stands, and the player presses End your turn to pass their character's turn. To let another character act now because the player insists, pass force true to that attack instead.",
     "parameters": {
       "properties": {
         "current": {
@@ -438,7 +438,7 @@
     "type": "tool_call",
     "id": "player_attack",
     "requires": ["combat"],
-    "description": "Ask the player to roll a player character's attack against a target. Use it when the player says what they attack with, the target is in the encounter, and it is that player character's turn; an attack outside their turn, or after the character has used the turn's attacks, is refused unless force is true. Name the character when the table controls more than one player character or a hireling. On an encounter map, the weapon's reach or range and a clear line of sight are enforced; move the character with place_participant first when the attack is refused for distance.",
+    "description": "Ask the player to roll a player character's attack against a target. Use it when the player says what they attack with, the target is in the encounter, and it is that player character's turn; an attack outside their turn, or after the character has used the turn's attacks, is refused unless force is true. When the player orders a different character to attack, such as another player character or a hireling, and it is not that character's turn, do not call this tool for them: say plainly that they hold until their turn, and resolve the attack when their turn comes. Name the character when the table controls more than one player character or a hireling. On an encounter map, the weapon's reach or range and a clear line of sight are enforced; move the character with place_participant first when the attack is refused for distance.",
     "parameters": {
       "properties": {
         "character": {

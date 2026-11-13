@@ -31,9 +31,9 @@ from tests.test_campaigns import _campaign_id, _pending, _send, _signed_in
 from tests.test_encounters import _encounter_with, _npc_turn_stream
 from tests.test_tools import ROLL, _recording_provider, _script
 
-PLAYER_ATTACK = {
-    "name": "player_attack",
-    "arguments": {"target": "Pip", "weapon": "unarmed", "prompt": "Roll your attack."},
+PLAYER_SAVE = {
+    "name": "player_save",
+    "arguments": {"prompt": "Roll your save.", "stat": "str", "cause": "a test hazard"},
 }
 
 
@@ -153,7 +153,7 @@ def test_a_prompt_paused_npc_turn_ends_when_it_is_resumed(
     client, campaign_id = _encounter_with(client_factory, columns=10, rows=10, cairn=True)
     script = _script(
         {"text": "Pip waits."},
-        {"rounds": [[PLAYER_ATTACK]], "text": "Pip shrugs and does nothing."},
+        {"rounds": [[PLAYER_SAVE]], "text": "Pip shrugs and does nothing."},
     )
     assert send_message(client, campaign_id, script).status_code == 303
     lines = _npc_turn_stream(client, campaign_id, "Pip")

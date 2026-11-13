@@ -114,5 +114,7 @@ def test_a_starting_feature_weapon_carries_its_damage(client_factory):
 def test_the_tool_path_resolves_a_carried_weapons_dice(client_factory):
     _, _, tools = _fight(client_factory)
     tools.give_item(PC, "Cutlass", damage="1d8")
+    _foe(tools, "Bo")
+    take_turn(tools, PC)
     ask = _run(tools, "player_attack", {"target": "Bo", "weapon": "Cutlass", "prompt": "Roll."})
     assert (ask.text, ask.dice) == ("Roll.", "1d8")

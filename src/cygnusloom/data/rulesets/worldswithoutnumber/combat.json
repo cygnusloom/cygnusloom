@@ -47,7 +47,9 @@
       "template_kind": "class",
       "templates": ["warrior"],
       "counter": "level",
-      "divisor": 2
+      "divisor": 2,
+      "weapons_only": true,
+      "label": "Killing Blow"
     },
     "unarmed": {"damage": "1d2", "names": ["unarmed", "fist", "fists", "punch", "kick"],
                 "attributes": ["str", "dex"], "skill": "punch"},

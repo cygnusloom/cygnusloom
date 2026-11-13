@@ -43,12 +43,16 @@ from cygnusloom.services.recovery import recover
 @dataclass(frozen=True)
 class WeaponBonuses:
     """What a player character's weapon adds to an attack: `to_hit` to the hit roll, `damage` to
-    the hit's own damage, and the `shock` a miss does through armor of `shock_ac` or less."""
+    the hit's own damage, and the `shock` a miss does through armor of `shock_ac` or less. The
+    `*_parts` lists name each contribution so the Log can show the whole roll."""
 
     to_hit: int = 0
     damage: int = 0
     shock: int = 0
     shock_ac: int = 0
+    to_hit_parts: tuple[tuple[str, int], ...] = ()
+    damage_parts: tuple[tuple[str, int], ...] = ()
+    shock_parts: tuple[tuple[str, int], ...] = ()
 
 
 @dataclass(frozen=True)

@@ -360,6 +360,10 @@ class PlayerInput:
     weapon_roll_param: str | None = None
     details: str | None = None
     modifier_param: str | None = None
+    # A WorldTools method that checks the request before the player is asked anything. It gets
+    # the tool's arguments and refuses the same way the tool would, so an impossible request is
+    # reported to the GM instead of being turned into a prompt the player cannot complete.
+    precheck: str | None = None
 
 
 @dataclass(frozen=True)
@@ -1216,12 +1220,15 @@ class SaveRules:
 
 @dataclass(frozen=True)
 class LevelDamageRules:
-    """The templates whose counter contributes to damage, rounded up by `divisor`."""
+    """The templates whose counter contributes to damage, rounded up by `divisor`. With
+    `weapons_only`, an unarmed attack adds nothing. `label` names the bonus in the Log."""
 
     template_kind: str
     templates: tuple[str, ...]
     counter: str
     divisor: int
+    weapons_only: bool = False
+    label: str = "level damage"
 
 
 @dataclass(frozen=True)
@@ -5190,7 +5197,7 @@ def _load_level_damage(
     if not isinstance(block, Mapping):
         raise ContentError(f"{label}: 'level_damage' must be an object")
     level_label = f"{label}: level_damage"
-    allowed = {"template_kind", "templates", "counter", "divisor"}
+    allowed = {"template_kind", "templates", "counter", "divisor", "weapons_only", "label"}
     unknown = set(block) - allowed
     if unknown:
         raise ContentError(
@@ -5202,6 +5209,12 @@ def _load_level_damage(
         raise ContentError(f"{level_label}: 'templates' must be a non-empty list")
     counter = required_text(block, "counter", level_label)
     divisor = _whole(block, "divisor", level_label, 1)
+    weapons_only = block.get("weapons_only", False)
+    if not isinstance(weapons_only, bool):
+        raise ContentError(f"{level_label}: 'weapons_only' must be true or false")
+    bonus_label = block.get("label", "level damage")
+    if not isinstance(bonus_label, str) or not bonus_label.strip():
+        raise ContentError(f"{level_label}: 'label' must be a non-empty string")
     if len(template_ids) != len(set(template_ids)):
         raise ContentError(f"{level_label}: 'templates' must not list an id twice")
     kind_ids = {
@@ -5223,6 +5236,8 @@ def _load_level_damage(
         templates=template_ids,
         counter=counter,
         divisor=divisor,
+        weapons_only=weapons_only,
+        label=bonus_label.strip(),
     )
 
 
@@ -8867,9 +8882,25 @@ def _check_player_input(
             "weapon_roll_param",
             "details",
             "modifier_param",
+            "precheck",
         },
         f"{label}: player_input",
     )
+    precheck = data.get("precheck")
+    if precheck is not None:
+        if not isinstance(precheck, str) or not precheck:
+            raise ContentError(f"{label}: 'player_input.precheck' must name a WorldTools method")
+        method = _world_method(precheck, f"{label}: player_input")
+        for name, parameter in inspect.signature(method).parameters.items():
+            if name == "self" or parameter.kind is inspect.Parameter.VAR_KEYWORD:
+                continue
+            if (
+                parameter.default is inspect.Parameter.empty
+                and name not in parameters["properties"]
+            ):
+                raise ContentError(
+                    f"{label}: 'player_input.precheck' needs {name!r}, which is not a tool argument"
+                )
     dice = data.get("dice")
     dice_param = data.get("dice_param")
     dice_values_param = data.get("dice_values_param")
@@ -9003,6 +9034,7 @@ def _check_player_input(
         param=param,
         details=details,
         modifier_param=modifier_param,
+        precheck=precheck,
     )
 
 

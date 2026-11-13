@@ -579,6 +579,12 @@ async def run_tool(
     if tool.player_input is None:
         return await _call(tool, arguments, ctx)
     if answer is None:
+        # A tool that declares a precheck refuses an impossible request to the GM now, rather
+        # than turning it into a prompt the player would answer into an error.
+        if tool.player_input.precheck is not None:
+            problem = _precheck(tool.player_input.precheck, arguments, ctx)
+            if problem is not None:
+                return ToolRun(_error(problem), None)
         dice, problem = _dice_for(tool.player_input, arguments, ctx)
         if problem is not None:
             return ToolRun(_error(problem), None)
@@ -685,6 +691,28 @@ def _reaction_ask(details: str, pending: Mapping[str, Any]) -> Ask:
         details=" ".join(part for part in (original_text, details) if part),
         reaction=pending,
     )
+
+
+def _precheck(name: str, arguments: Mapping[str, Any], ctx: ToolContext | None) -> str | None:
+    """Why a player-input tool refuses the request before asking the player, or None to ask.
+
+    The named WorldTools method sees the arguments it accepts, so a tool's schema may carry
+    fields the check does not use. Its refusal reaches the GM exactly like the tool's own, which
+    lets the GM correct the request instead of the player rolling for an action that cannot
+    happen."""
+    if ctx is None:
+        return "this tool cannot run without a campaign"
+    method = getattr(ctx.world, name)
+    accepted = inspect.signature(method).parameters
+    call_arguments = {key: value for key, value in arguments.items() if key in accepted}
+    try:
+        method(**call_arguments)
+    except (InvalidInput, NotFound) as exc:
+        return str(exc)
+    except Exception:
+        logger.exception("precheck %s failed", name)
+        return "the tool failed"
+    return None
 
 
 def _unknown_tool(tool_calls: Mapping[str, ToolCall], name: str) -> str:

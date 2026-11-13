@@ -965,12 +965,17 @@ def _side_rolls(
     rolls = []
     for side, members in sides.items():
         bonus = max((_initiative_bonus(member, rules, spec) for member in members), default=0)
+        bonus_label = "bonus"
+        if spec is not None and rules.bonus_stat in spec.stats:
+            bonus_label = spec.stats[rules.bonus_stat].name
         roll = resolution.roll_die(rng or random.Random(), rules.die)
         rolls.append(
             {
                 "side": side,
+                "dice": rules.die,
                 "roll": roll,
                 "bonus": bonus,
+                "bonus_label": bonus_label,
                 "total": roll + bonus,
                 "party": any(member.kind == PC_KIND for member in members),
                 "members": [member.name for member in members],
@@ -1017,7 +1022,7 @@ def roll_side_initiative(
         raise InvalidInput("initiative is rolled only at the start of an encounter")
     rolls = _side_rolls(state, encounter, rules, character, rng)
     order = [name for entry in _roll_order(rolls, rules.tie) for name in entry["members"]]
-    record(db, campaign_id, InitiativeSettled(order=order, sides=True))
+    record(db, campaign_id, InitiativeSettled(order=order, sides=True, rolls=rolls))
     db.commit()
     return {"initiative": "sides", "rolls": rolls, "order": order}
 

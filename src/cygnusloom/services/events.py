@@ -13,7 +13,7 @@ characters by name, which is unique within a campaign and never changes."""
 from __future__ import annotations
 
 import json
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass, field, fields, replace
 from functools import cache, lru_cache
 from typing import Any, ClassVar
@@ -110,6 +110,74 @@ class GameEvent:
     def render(self) -> str | None:
         """The Log text, or None when the Log does not show this event."""
         raise NotImplementedError(f"{type(self).__name__} has no Log text")
+
+
+def roll_breakdown(
+    dice: str,
+    rolls: Sequence[int],
+    modifiers: Sequence[tuple[str, int]],
+    total: int,
+    *,
+    target: int | None = None,
+    target_label: str = "",
+    note: str = "",
+) -> dict[str, Any]:
+    """How one roll reached its total, for the Log: the dice, each die face, every named modifier,
+    the total, and the target it was measured against. Empty modifiers are left out."""
+    breakdown: dict[str, Any] = {
+        "dice": dice,
+        "rolls": list(rolls),
+        "modifiers": [{"label": label, "value": value} for label, value in modifiers if value],
+        "total": total,
+    }
+    if target is not None:
+        breakdown["target"] = target
+        breakdown["target_label"] = target_label
+    if note:
+        breakdown["note"] = note
+    return breakdown
+
+
+def breakdown_text(breakdown: Mapping[str, Any] | None) -> str:
+    """The Log text for a stored roll breakdown: `1d20 8 + 1 Stab + 1 Dexterity = 10 vs
+    difficulty 10`. Empty when there is no breakdown, so older events render as they did."""
+    if not breakdown:
+        return ""
+    dice = str(breakdown.get("dice") or "")
+    rolls = list(breakdown.get("rolls") or [])
+    nonzero = [
+        (str(modifier.get("label") or "modifier"), int(modifier.get("value", 0)))
+        for modifier in breakdown.get("modifiers") or []
+        if int(modifier.get("value", 0))
+    ]
+    total = int(breakdown.get("total", 0))
+    if dice:
+        if len(rolls) == 1:
+            parts = [f"{dice} {rolls[0]}"]
+        elif rolls:
+            parts = [f"{dice} [{', '.join(str(value) for value in rolls)}]"]
+        else:
+            parts = [dice]
+        note = str(breakdown.get("note") or "")
+        if note:
+            parts.append(f"({note})")
+        parts.extend(f"{value:+d} {label}" for label, value in nonzero)
+        text = f"{' '.join(parts)} = {total}"
+    elif nonzero:
+        # A breakdown with no dice is a flat bonus such as Shock. Lead with its first part so it
+        # reads as "Shock 2 +1 Dexterity = 3" rather than "+2 Shock +1 Dexterity = 3".
+        first_label, first_value = nonzero[0]
+        parts = [f"{first_label} {first_value}"]
+        parts.extend(f"{value:+d} {label}" for label, value in nonzero[1:])
+        text = " ".join(parts)
+        if len(nonzero) > 1:
+            text += f" = {total}"
+    else:
+        text = str(total)
+    target = breakdown.get("target")
+    if target is not None:
+        text += f" vs {breakdown.get('target_label') or 'target'} {target}"
+    return text
 
 
 def record(db: Session, campaign_id: int, event: GameEvent) -> int:
@@ -2594,6 +2662,10 @@ class InitiativeRolled(GameEvent):
 
     name: str
     passed: bool
+    # The die and score, when the engine recorded them. Older events carry only the outcome.
+    roll: int = 0
+    score: int = 0
+    dice: str = ""
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         encounter = state.encounter
@@ -2603,6 +2675,11 @@ class InitiativeRolled(GameEvent):
 
     def render(self) -> str:
         result = "passes" if self.passed else "fails"
+        if self.dice and self.roll:
+            return (
+                f"{self.name} rolls {self.dice} {self.roll} against a score of {self.score} "
+                f"and {result} the initiative save."
+            )
         return f"{self.name} {result} the initiative save."
 
 
@@ -2615,6 +2692,8 @@ class InitiativeSettled(GameEvent):
     order: list[str]
     # True when the order comes from a roll for each side rather than one for each character.
     sides: bool = False
+    # Each side's die, bonus, and total, when the engine recorded them.
+    rolls: list[dict[str, Any]] = field(default_factory=list)
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         encounter = state.encounter
@@ -2633,6 +2712,17 @@ class InitiativeSettled(GameEvent):
         _skip_defeated(encounter, state)
 
     def render(self) -> str:
+        if self.rolls:
+            parts = []
+            for entry in self.rolls:
+                breakdown = roll_breakdown(
+                    str(entry.get("dice", "")),
+                    [int(entry.get("roll", 0))],
+                    [(str(entry.get("bonus_label", "bonus")), int(entry.get("bonus", 0)))],
+                    int(entry.get("total", 0)),
+                )
+                parts.append(f"{entry.get('side', 'side')}: {breakdown_text(breakdown)}")
+            return "; ".join(parts) + ". Initiative is set: " + ", ".join(self.order) + "."
         return "Initiative is set: " + ", ".join(self.order) + "."
 
 
@@ -2885,6 +2975,11 @@ class Struck(GameEvent):
     shield_round: int = 0
     defeats: bool = False
     status: str = ""
+    # How the hit roll, damage roll, and Shock reached their totals, when the engine recorded them.
+    # Older events carry none, so the Log falls back to its original wording.
+    hit_breakdown: dict[str, Any] | None = None
+    damage_breakdown: dict[str, Any] | None = None
+    shock_breakdown: dict[str, Any] | None = None
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         character = state.characters[name_key(self.name)]
@@ -2904,13 +2999,17 @@ class Struck(GameEvent):
         weapon = f"{self.weapon} ({self.modifier})" if self.modifier else self.weapon
         if not self.hit:
             text = f"{self.attacker} swings the {weapon} at {self.name} and misses"
-            if self.to_hit is not None:
+            if self.hit_breakdown:
+                text += f" ({breakdown_text(self.hit_breakdown)})"
+            elif self.to_hit is not None:
                 text += f" (rolled {self.to_hit})"
             text += "."
             if self.shield_round:
                 text += " A shield turns the shock aside."
             if self.shock:
                 text += f" The shock still does {taken} harm"
+                if self.shock_breakdown:
+                    text += f" ({breakdown_text(self.shock_breakdown)})"
                 stats = ", ".join(stat.upper() for stat in self.harm)
                 if stats:
                     text += f" to {stats}"
@@ -2918,7 +3017,12 @@ class Struck(GameEvent):
             if self.defeats:
                 text += f" {self.name} is {self.status}."
             return text
-        text = f"{self.attacker} strikes {self.name} with the {weapon} for {self.raw}"
+        text = f"{self.attacker} strikes {self.name} with the {weapon}"
+        if self.hit_breakdown:
+            text += f" ({breakdown_text(self.hit_breakdown)})"
+        text += f" for {self.raw}"
+        if self.damage_breakdown:
+            text += f" ({breakdown_text(self.damage_breakdown)})"
         if self.armor:
             text += f", {self.armor} absorbed by armor"
         text += f"; {self.name} takes {taken} harm."
@@ -4151,11 +4255,20 @@ class MoveMade(GameEvent):
     cause: str = ""
     # The stat the roll added, or "" when the move rolled none.
     stat: str = ""
+    # How the roll reached its total, when the engine recorded it.
+    breakdown: dict[str, Any] | None = None
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         return None
 
     def render(self) -> str:
+        if self.breakdown:
+            text = f"{self.name} makes {self.move}: {breakdown_text(self.breakdown)}, {self.band}"
+            if self.text:
+                text = f"{text}. {self.text}"
+            if self.cause:
+                text = f"{text} ({self.cause})"
+            return text if text.endswith((".", "!", "?")) else f"{text}."
         sign = f"{self.bonus:+d}" if self.bonus else ""
         text = (
             f"{self.name} makes {self.move}: rolls {self.roll}{sign} for {self.total}, {self.band}"
@@ -4215,6 +4328,14 @@ class CheckMade(GameEvent):
     difficulty: int = 0
     success: bool = False
     cause: str = ""
+    # The individual modifiers behind `bonus`, so the Log can show each one.
+    stat_bonus: int = 0
+    condition_modifier: int = 0
+    situational_modifier: int = 0
+    # The check's dice and the faces rolled, and the whole breakdown when the engine recorded it.
+    dice: str = ""
+    rolls: list[int] = field(default_factory=list)
+    breakdown: dict[str, Any] | None = None
     # What worn armor took off the roll, or 0 when nothing did.
     armor_penalty: int = 0
     # A feature reaction that changed the roll and leaves no use to record, such as Lucky
@@ -4225,6 +4346,17 @@ class CheckMade(GameEvent):
         return None
 
     def render(self) -> str:
+        result = "succeeds" if self.success else "fails"
+        if self.breakdown:
+            text = (
+                f"{self.name} makes a {self.check or 'check'}: "
+                f"{breakdown_text(self.breakdown)} and {result}"
+            )
+            if self.cause:
+                text = f"{text} ({self.cause})"
+            if self.reaction:
+                return f"{text}. {self.reaction}"
+            return f"{text}."
         sign = f"{self.bonus:+d}" if self.bonus else ""
         used = []
         if self.skill_name:
@@ -4235,7 +4367,6 @@ class CheckMade(GameEvent):
         if self.armor_penalty:
             used.append(f"armor {self.armor_penalty:+d}")
         with_used = f" ({', '.join(used)})" if used else ""
-        result = "succeeds" if self.success else "fails"
         text = (
             f"{self.name} makes a {self.check or 'check'}{with_used}: rolls {self.roll}{sign} "
             f"for {self.total} against difficulty {self.difficulty} and {result}"

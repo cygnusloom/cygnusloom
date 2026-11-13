@@ -34,6 +34,7 @@ from cygnusloom.services.combat.attack import (  # noqa: F401
     attack,
     attack_dice,
     player_attack,
+    player_attack_check,
     resolve_attacks,
 )
 from cygnusloom.services.combat.constants import (  # noqa: F401

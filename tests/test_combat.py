@@ -545,6 +545,30 @@ def test_combat_rejects_an_unknown_unarmed_skill():
             },
             "'divisor' must be a whole number, at least 1",
         ),
+        (
+            {
+                "level_damage": {
+                    "template_kind": "profession",
+                    "templates": ["vanguard"],
+                    "counter": "renown",
+                    "divisor": 2,
+                    "weapons_only": "yes",
+                },
+            },
+            "'weapons_only' must be true or false",
+        ),
+        (
+            {
+                "level_damage": {
+                    "template_kind": "profession",
+                    "templates": ["vanguard"],
+                    "counter": "renown",
+                    "divisor": 2,
+                    "label": "",
+                },
+            },
+            "'label' must be a non-empty string",
+        ),
     ],
 )
 def test_combat_rejects_invalid_level_damage_rules(changes, message):
@@ -578,14 +602,11 @@ def test_bundled_combat_rules_keep_their_unarmed_and_level_damage_sources():
         "level",
         2,
     )
-    assert (
-        _level_damage_bonus(
-            WWN.combat,
-            SimpleNamespace(templates={"class": "warrior"}, counters={"level": 3}),
-            WWN.character,
-        )
-        == 2
-    )
+    assert WWN.combat.level_damage.weapons_only is True
+    assert WWN.combat.level_damage.label == "Killing Blow"
+    warrior = SimpleNamespace(templates={"class": "warrior"}, counters={"level": 3})
+    assert _level_damage_bonus(WWN.combat, warrior, WWN.character) == 2
+    assert _level_damage_bonus(WWN.combat, warrior, WWN.character, unarmed=True) == 0
 
 
 @pytest.mark.parametrize(
@@ -736,7 +757,8 @@ def test_roll_vs_defense_misses_a_blow_that_does_not_reach_the_armor(client_fact
     assert not any(_character(app, campaign_id, PC).harm.values())
     strike = _struck_events(app, campaign_id)[-1]
     assert strike.hit is False and strike.to_hit == 2
-    assert strike.render().endswith("swings the Claw at Mara and misses (rolled 2).")
+    text = strike.render()
+    assert text.endswith("swings the Claw at Mara and misses (1d20 2 = 2 vs AC 3).")
 
 
 def test_roll_vs_defense_lands_a_blow_that_reaches_the_armor(client_factory):
@@ -1529,6 +1551,66 @@ def test_player_attack_asks_for_damage_then_resolves_through_the_tool(client_fac
     assert "error" not in result
     assert result["raw"] == 3
     assert result["harm"] == {"hp": 3}
+
+
+def test_a_player_attack_prompt_is_refused_outside_the_characters_turn(client_factory):
+    """The engine refuses an out-of-turn attack before the player is asked to roll, so the GM
+    hears about it at once instead of the player rolling into an error. The GM may still force
+    the story's exception, and the prompt follows once the character's own turn comes."""
+    client, campaign_id, tools = _fight_client(client_factory)
+    _foe(tools, "Bo", hp=30)
+    with _db(client.app) as db:
+        record(
+            db,
+            campaign_id,
+            PcAdded(
+                name="Wren",
+                location=YARD,
+                stats={"hp": 6, "str": 10, "dex": 10, "wil": 10},
+            ),
+        )
+        db.commit()
+    tools.add_participant("Wren")
+    tools.give_item("Wren", "Sword", damage="1d8")
+    assert tools.player_initiative(1)["character"] == "Wren"
+    take_turn(tools, PC)
+    ctx = ToolContext(
+        world=replace(tools, rng=Rolls(1)),
+        speak=_no_speak,
+        ooc=lambda narrate: None,
+        rules={},
+        lookup_tools={},
+    )
+
+    def ask_for(character: str, force: bool = False) -> ToolRun | Ask:
+        arguments: dict[str, Any] = {
+            "target": "Bo",
+            "weapon": "Sword",
+            "character": character,
+            "prompt": "Roll your sword damage.",
+        }
+        if force:
+            arguments["force"] = True
+        request = ToolRequest(id="call_1", name="player_attack", arguments=json.dumps(arguments))
+        return asyncio.run(run_tool(LIBRARY.rule_sets["cairn2e"].tool_calls, request, ctx=ctx))
+
+    refused = ask_for("Wren")
+    assert isinstance(refused, ToolRun)
+    error = json.loads(refused.output)["error"]
+    assert "not Wren's" in error
+    assert "holds until their own turn" in error
+
+    # The player's insistence is the story override, and it still asks for the roll.
+    assert isinstance(ask_for("Wren", force=True), Ask)
+
+    # Wren's own turn reaches the player as a prompt, as does the next one after the attack.
+    take_turn(tools, "Wren")
+    assert isinstance(ask_for("Wren"), Ask)
+    replace(tools, rng=Rolls(4)).player_attack("Bo", "Sword", character="Wren")
+    spent = ask_for("Wren")
+    assert isinstance(spent, ToolRun)
+    assert "already attacked this turn" in json.loads(spent.output)["error"]
+    assert isinstance(ask_for("Wren", force=True), Ask)
 
 
 def test_a_defeated_foe_does_not_end_the_encounter_while_another_foe_stands(client_factory):
