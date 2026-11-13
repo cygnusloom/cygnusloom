@@ -314,13 +314,25 @@ def _assert_registered_with_file(icon_id: str) -> None:
     assert (ICON_DIR / registry[icon_id]["path"]).is_file(), icon_id
 
 
-@pytest.mark.parametrize("icon_id", _seed_map_icons() + [PLACE_FALLBACK_ICON])
-def test_every_map_icon_exists(icon_id: str):
-    _assert_registered_with_file(icon_id)
+def _rule_set_item_icons() -> list[str]:
+    magic = content_library().rule_sets["cairn2e"].magic
+    assert magic is not None
+    return sorted(magic.item_kind_icons.values())
 
 
-@pytest.mark.parametrize("icon_id", [*ITEM_KIND_ICONS.values(), WEAPON_ICON])
-def test_every_item_icon_exists(icon_id: str):
+@pytest.mark.parametrize(
+    "icon_id",
+    sorted(
+        {
+            *_seed_map_icons(),
+            PLACE_FALLBACK_ICON,
+            *ITEM_KIND_ICONS.values(),
+            WEAPON_ICON,
+            *_rule_set_item_icons(),
+        }
+    ),
+)
+def test_every_shipped_icon_is_registered_and_has_a_file(icon_id: str):
     _assert_registered_with_file(icon_id)
 
 
@@ -343,17 +355,6 @@ def test_item_icon_id_prefers_the_rule_set_icon_for_a_kind():
     assert item_icon_id("relic", "", {"relic": "potion"}) == "potion"
     assert item_icon_id("spellbook", "", {"spellbook": "tool"}) == "tool"
     assert item_icon_id("spellbook", "", {}) == "book"
-
-
-def _rule_set_item_icons() -> list[str]:
-    magic = content_library().rule_sets["cairn2e"].magic
-    assert magic is not None
-    return sorted(magic.item_kind_icons.values())
-
-
-@pytest.mark.parametrize("icon_id", _rule_set_item_icons())
-def test_every_rule_set_item_icon_exists(icon_id: str):
-    _assert_registered_with_file(icon_id)
 
 
 def test_place_without_icon_uses_fallback():

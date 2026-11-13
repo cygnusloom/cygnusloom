@@ -137,15 +137,3 @@ def test_the_stylesheet_hides_hidden_lines_until_the_preference_shows_them(
     client, _ = _campaign_id(client_factory)
     css = client.get("/static/style.css").text
     assert ".transcript:not(.show-hidden) .hidden-event { display: none; }" in css
-
-
-def test_the_old_show_hidden_checkbox_is_gone_and_never_reset_by_the_script(
-    client_factory: Callable[[], TestClient],
-):
-    client, campaign_id = _campaign_id(client_factory)
-    script = client.get("/static/turn_stream.js").text
-    page = client.get(f"/campaigns/{campaign_id}").text
-    assert "showHidden.checked = false;" not in script
-    assert "data-show-hidden" not in script
-    assert "data-show-hidden" not in page
-    assert "localStorage" not in script

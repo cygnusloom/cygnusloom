@@ -108,13 +108,6 @@ def _tool_call(**overrides: Any) -> list[dict[str, Any]]:
     ]
 
 
-def test_wwn_combat_loads_the_important_npc_defeat_label():
-    combat = content_library().rule_sets["worldswithoutnumber"].combat
-    assert combat is not None
-    assert combat.defeat["important_npc"] == "mortally wounded"
-    assert combat.defeat["npc"] == "dead"
-
-
 def test_wwn_combat_loads_every_defeat_label_in_the_mapping():
     combat = content_library().rule_sets["worldswithoutnumber"].combat
     assert combat is not None
