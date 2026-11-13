@@ -647,6 +647,27 @@ def test_player_turn_starts_automatically_and_ends_by_button(
     assert _encounter(app, campaign_id).encounter.acting == "Ada"
 
 
+def test_the_end_turn_button_updates_the_page_without_navigating(
+    client_factory: Callable[[], TestClient],
+):
+    """The End control takes the in-place path instead of a form navigation, then the page
+    takes the live view's fresh state."""
+    client, campaign_id = _encounter_with(client_factory, columns=10, rows=10)
+    app = client.app
+    _begin(app, campaign_id, "Pip")
+    _finish_gm_reply(app, campaign_id)
+    _end(app, campaign_id, "Pip", by_player=False)
+    _finish_gm_reply(app, campaign_id)
+    assert _state(app, campaign_id).encounter.acting == "Ada"
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert "End your turn" in page
+    assert f'action="/campaigns/{campaign_id}/encounter/turn/end" data-encounter-end' in page
+    script = client.get("/static/turn_stream.js").text
+    assert 'if (form.hasAttribute("data-encounter-end"))' in script
+    assert "async function endTurn(form)" in script
+    assert "await settle({ focusComposer: true, message });" in script
+
+
 def test_turn_buttons_refuse_the_wrong_participant(client_factory: Callable[[], TestClient]):
     client, campaign_id = _encounter_with(client_factory, columns=10, rows=10)
     app = client.app
