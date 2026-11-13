@@ -158,7 +158,7 @@
               {% else %}
               <p class="muted">{{ actor.name }} is taking their turn.{% if encounter.attacks_left is not none %} Attacks left: {{ encounter.attacks_left }} of {{ encounter.attacks_per_turn }}.{% endif %}{% if encounter.moves_left is not none %} Movement left: {{ encounter.moves_left }} of {{ encounter.move_cells }} cells.{% endif %}</p>
               {% endif %}
-              <form method="post" action="/campaigns/{{ campaign.id }}/encounter/turn/end" data-once>
+              <form method="post" action="/campaigns/{{ campaign.id }}/encounter/turn/end" data-encounter-end>
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <input type="hidden" name="name" value="{{ actor.name }}">
                 <button type="submit"{% if pending %} disabled{% endif %}>End {{ "your" if player_name == actor.name else actor.name ~ "'s" }} turn</button>

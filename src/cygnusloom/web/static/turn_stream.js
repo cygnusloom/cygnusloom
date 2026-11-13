@@ -5,15 +5,6 @@
     if (!(form instanceof HTMLFormElement)) return;
     if (form.dataset.confirm && !window.confirm(form.dataset.confirm)) {
       event.preventDefault();
-      return;
-    }
-    // Ending a turn can start the next player turn at once, so a second click must not end that
-    // new turn. Let the submission start, then disable the button.
-    const submitter = event.submitter;
-    if (form.hasAttribute("data-once") && submitter) {
-      window.setTimeout(() => {
-        submitter.disabled = true;
-      }, 0);
     }
   });
 
@@ -27,21 +18,52 @@
   const atBottom = () =>
     !transcript ||
     transcript.scrollHeight - transcript.scrollTop - transcript.clientHeight <= NEAR_BOTTOM_PX;
+  const scrollToBottom = () => {
+    if (transcript) transcript.scrollTop = transcript.scrollHeight;
+  };
   const updateJump = () => {
     if (jumpButton) jumpButton.hidden = atBottom();
+  };
+  // Keep the reader at the bottom, unless they scrolled up to read something earlier.
+  const scrollDown = () => {
+    if (followBottom) scrollToBottom();
+    updateJump();
   };
   const syncFollow = () => {
     followBottom = atBottom();
     updateJump();
   };
-  transcript?.addEventListener("scroll", syncFollow, { passive: true });
-  window.addEventListener("resize", updateJump);
-  jumpButton?.addEventListener("click", () => {
+  // Opening a campaign shows its newest message. The first scroll can come before the layout
+  // is final: a phone's browser chrome changes the viewport after the page renders, the window
+  // may be resized, an image can load, or a back-forward cache restore brings its own scroll
+  // position back. Pin the bottom again on those changes, and show the jump button as soon as
+  // the transcript is no longer at the bottom.
+  const pinBottom = () => {
     followBottom = true;
-    if (transcript) transcript.scrollTop = transcript.scrollHeight;
+    scrollToBottom();
     updateJump();
+  };
+  const keepBottom = () => {
+    if (followBottom) scrollToBottom();
+    updateJump();
+  };
+  pinBottom();
+  transcript?.addEventListener("scroll", syncFollow, { passive: true });
+  window.addEventListener("resize", keepBottom);
+  window.visualViewport?.addEventListener("resize", keepBottom);
+  window.addEventListener("pageshow", (event) => {
+    pinBottom();
+    // A restored page can put its old scroll position back after the event.
+    if (event.persisted) requestAnimationFrame(pinBottom);
   });
-  syncFollow();
+  // An image in a reply grows the transcript after it loads, without resizing its box.
+  transcript?.addEventListener("load", keepBottom, true);
+  // A transcript in a hidden view has no size yet; showing the Play view resizes it, and this
+  // observer then brings it to the bottom for a reader who has not scrolled away.
+  const transcriptResize =
+    transcript && "ResizeObserver" in window ? new ResizeObserver(keepBottom) : null;
+  transcriptResize?.observe(transcript);
+  jumpButton?.addEventListener("click", pinBottom);
 
   const composer = document.getElementById("composer");
   if (!composer || !composer.dataset.streamAction || !window.ReadableStream) return;
@@ -109,12 +131,6 @@
     }
     transcript.append(bubble);
     return { bubble, content, status, statusText, text: "", frame: 0 };
-  };
-
-  // Keep the reader at the bottom, unless they scrolled up to read something earlier.
-  const scrollDown = () => {
-    if (followBottom) transcript.scrollTop = transcript.scrollHeight;
-    updateJump();
   };
 
   // Log entries sit in the chat just before the reply they belong to.
@@ -502,6 +518,39 @@
     }
   };
 
+  // Ending a turn opens no GM reply, so the button posts and the page stays put; the live
+  // views then take the server's state. Ending can start the next character's turn at once, so
+  // the button locks for the request, and a refusal keeps the page with the server's reason.
+  async function endTurn(form) {
+    if (form.dataset.ending) return;
+    form.dataset.ending = "1";
+    const button = form.querySelector('button[type="submit"]');
+    if (button) button.disabled = true;
+    errorBox.hidden = true;
+    // Hold the live stream while the request lands; settle() then fetches the finished state.
+    localTurn = true;
+    let message = "";
+    try {
+      const response = await fetch(form.action, {
+        method: "POST",
+        body: new FormData(form),
+        credentials: "same-origin",
+      });
+      if (!response.ok && !response.redirected) {
+        const page = new DOMParser().parseFromString(await response.text(), "text/html");
+        message =
+          page.querySelector('main p[role="alert"]')?.textContent.trim() ||
+          "Could not end the turn. Try again.";
+      }
+    } catch {
+      message = "Could not end the turn. Try again.";
+    } finally {
+      delete form.dataset.ending;
+      localTurn = false;
+    }
+    await settle({ focusComposer: true, message });
+  }
+
   // BACKWARDS-COMPATIBILITY: 3 - an old page may still render the Begin form for a player
   // turn. Submit it without a page navigation and then take the fresh state.
   async function startPlayerTurn(form) {
@@ -672,6 +721,11 @@
   document.addEventListener("submit", async (event) => {
     const form = event.target;
     if (!(form instanceof HTMLFormElement)) return;
+    if (form.hasAttribute("data-encounter-end")) {
+      event.preventDefault();
+      await endTurn(form);
+      return;
+    }
     if (!form.hasAttribute("data-pending-action") && !form.hasAttribute("data-encounter-turn")) return;
     event.preventDefault();
     const data = new FormData(form);

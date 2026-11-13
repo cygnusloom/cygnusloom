@@ -483,7 +483,4 @@
   openHash();
   window.addEventListener("hashchange", openHash);
   window.addEventListener("load", openHash);
-
-  const transcript = document.querySelector("[data-transcript]");
-  if (transcript) transcript.scrollTop = transcript.scrollHeight;
 })();
