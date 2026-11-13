@@ -64,6 +64,8 @@ def plan_days(
     speed = journey.terrain_speeds[terrain]
     if road:
         speed *= journey.road_multiplier
+        if journey.road_speed_cap > 0:
+            speed = min(speed, journey.road_speed_cap)
     speed *= journey.weather_factors[weather]
     miles_per_day = round(speed * journey.day_hours, 2)
     miles = round(miles_per_day * days, 2)

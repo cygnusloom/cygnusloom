@@ -9,6 +9,7 @@
           "morning": "night"
         },
         "full": true,
+        "upkeep": true,
         "restores": [],
         "clears": [],
         "ends": ["rest"]
@@ -16,6 +17,7 @@
       "extended": {
         "days": 7,
         "full": true,
+        "upkeep": true,
         "restores": [],
         "clears": [],
         "ends": ["rest", "extended_rest"]

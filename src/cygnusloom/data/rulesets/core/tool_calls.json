@@ -239,6 +239,10 @@
         "force": {
           "type": "boolean",
           "description": "Set true only to create a custom NPC under the name of a published statblock. Without it, such a name is refused if stats are given."
+        },
+        "important": {
+          "type": "boolean",
+          "description": "Set true for a named NPC who has a personal statblock and matters enough to be mortally wounded rather than killed outright at 0 HP. Leave false for ordinary bystanders and unnamed folk."
         }
       },
       "required": [

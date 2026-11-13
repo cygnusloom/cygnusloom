@@ -642,13 +642,22 @@ def set_map_cells(
         on_this_map = state.encounter is not None and (
             name_key(state.encounter.map) == name_key(entry.name)
         )
-        if found is not None and found.blocks and on_this_map:
-            for key, where in state.encounter.cells.items():
+        if found is not None and found.blocks:
+            for key, where in entry.tokens.items():
                 if where == cell:
+                    holder = state.characters.get(key)
+                    label = holder.name if holder is not None else _token_name(key)
                     raise InvalidInput(
-                        f"column {column}, row {row} is occupied by "
-                        f"{state.characters[key].name}, so it cannot be walled off"
+                        f"column {column}, row {row} is occupied by {label}, "
+                        "so it cannot be walled off"
                     )
+            if on_this_map:
+                for key, where in state.encounter.cells.items():
+                    if where == cell:
+                        raise InvalidInput(
+                            f"column {column}, row {row} is occupied by "
+                            f"{state.characters[key].name}, so it cannot be walled off"
+                        )
         marks[cell] = CellMark(new_terrain, new_object, new_color, new_pattern, new_icon, new_label)
         touched.add(cell)
     record(
@@ -1165,6 +1174,11 @@ def place_participant(
             raise InvalidInput(
                 f"column {column}, row {row} is taken by {state.characters[other].name}"
             )
+    for other, cell in entry.tokens.items():
+        if other != key and cell == (column, row):
+            holder = state.characters.get(other)
+            label = holder.name if holder is not None else _token_name(other)
+            raise InvalidInput(f"column {column}, row {row} is taken by {label} on {entry.name}")
     target = (column, row)
     blocker = _blocks(entry, target, encounter_objects or {})
     if blocker:
@@ -1507,25 +1521,12 @@ def encounter_view(
 
 def _newest_map_at(state: CampaignState, place_name: str) -> EncounterMap | None:
     """The newest map set in a place, or None when it has none."""
-    matching = [
-        encounter_map
-        for encounter_map in state.maps.values()
-        if name_key(encounter_map.location) == name_key(place_name)
-    ]
-    if not matching:
-        return None
-    return max(enumerate(matching), key=lambda pair: (pair[1].created, pair[0]))[1]
+    return state.newest_map_at(place_name)
 
 
 def _local_map_for(state: CampaignState, current_location: str | None) -> EncounterMap | None:
     """The local map for a place: its newest map, or the newest map of its nearest parent."""
-    place = state.places.get(name_key(current_location)) if current_location else None
-    while place is not None:
-        entry = _newest_map_at(state, place.name)
-        if entry is not None:
-            return entry
-        place = state.places.get(name_key(place.parent)) if place.parent else None
-    return None
+    return state.local_map_for(current_location)
 
 
 def _inside_place(state: CampaignState, location: str | None, ancestor: str) -> bool:

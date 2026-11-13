@@ -596,7 +596,9 @@ def test_bundled_combat_rules_keep_their_unarmed_and_level_damage_sources():
         WWN.combat.level_damage.divisor,
     ) == (
         "class",
-        ("warrior", "adventurer_expert_warrior", "adventurer_warrior_mage"),
+        # The source gives Killing Blow to a full Warrior and says partial Warriors do not
+        # get it.
+        ("warrior",),
         "level",
         2,
     )

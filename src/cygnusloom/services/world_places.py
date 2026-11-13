@@ -140,7 +140,16 @@ class PlacesMixin:
     ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return update_location(
-                db, self.campaign_id, name, description, x, y, off_map, force, icon, summary
+                db,
+                self.campaign_id,
+                name,
+                description,
+                x,
+                y,
+                off_map,
+                force,
+                icon,
+                summary,
             )
 
     def describe_world(self, description: str) -> dict[str, Any]:

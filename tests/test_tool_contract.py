@@ -30,7 +30,7 @@ CONSOLIDATED_TOOLS = {
     "roll_tables": frozenset({"academia-arcana"}),
     "give_item": frozenset({"academia-arcana"}),
     "drop_item": frozenset({"academia-arcana"}),
-    "use_item": frozenset({"worldswithoutnumber", "academia-arcana"}),
+    "use_item": frozenset({"academia-arcana"}),
     "buy_item": frozenset(),
     "buy_service": frozenset(),
     "search_marketplace": frozenset(),

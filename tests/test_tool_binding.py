@@ -302,6 +302,7 @@ def test_core_binding_leaves_the_schemas_unchanged():
         "character",
         "description",
         "force",
+        "important",
         "location",
         "name",
         "personality",

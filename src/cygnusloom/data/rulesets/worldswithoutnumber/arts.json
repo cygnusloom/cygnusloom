@@ -21,7 +21,7 @@
     "id": "art_counter_magic",
     "name": "Counter Magic",
     "tag": "high",
-    "description": "Commit Effort for the day as an Instant action when a visible enemy mage casts a spell. Make an opposed Int/Magic or Cha/Magic check; if the caster wins, the spell fizzles and is wasted. It works only against actual spellcasters and at most once per round. The Effort returns the next morning."
+    "description": "Commit Effort for the day as an Instant action when a visible enemy mage casts a spell. Make an opposed Int/Magic or Cha/Magic check; if you win, the enemy's spell fizzles and is wasted. It works only against actual spellcasters and at most once per round. The Effort returns the next morning."
   },
   {
     "type": "feature",

@@ -26,6 +26,7 @@ from cygnusloom.llm.fake import FakeProvider
 from cygnusloom.rules import wwn
 from cygnusloom.services import campaigns as campaigns_service
 from cygnusloom.services import world as world_service
+from cygnusloom.services.clock import rest_target
 from cygnusloom.services.common import InvalidInput, session_scope
 from cygnusloom.services.events import (
     ArmorSet,
@@ -580,6 +581,8 @@ def test_the_level_summary_and_the_applied_level_grant_the_same_pools(
     ("class_id", "class2", "tradition", "spell_picks"),
     [
         ("mage", None, "high_mage", 2),
+        ("mage", None, "necromancer", 1),
+        ("mage", None, "elementalist", 1),
         ("healer", "mage_partial_2", "high_mage_partial", 1),
     ],
 )
@@ -1348,12 +1351,100 @@ def test_a_frail_character_recovers_no_hit_points_or_strain(
     tools.set_stat_max(NAME, "strain", 10, cause="a test")
     tools.harm_character(NAME, "hp", 5, "a test")
     tools.add_condition(NAME, "frail", "a test")
+    tools.give_item(NAME, "Rations, One Week")
+    tools.give_item(NAME, "Waterskin")
 
     tools.rest("night", reason="a test")
 
     character = _pc(app, campaign_id)
     assert character.harm["hp"] == 5
     assert "strain" not in character.harm
+
+
+def test_a_night_rest_eats_a_days_rations(client_factory):
+    """The source feeds a resting character; the engine spends the ration itself."""
+    app, campaign_id = _campaign(client_factory, class_id="warrior")
+    tools = _world_tools(app, campaign_id)
+    if not any(i.name == "Waterskin" for i in _pc(app, campaign_id).items):
+        tools.give_item(NAME, "Waterskin")
+    rations = next(i for i in _pc(app, campaign_id).items if i.name == "Rations, One Week")
+    tools.harm_character(NAME, "hp", 2, "a test")
+
+    result = tools.rest("night", reason="camp")
+
+    after = _pc(app, campaign_id)
+    left = next(i for i in after.items if i.name == "Rations, One Week")
+    assert left.uses == rations.uses - 1
+    assert NAME in result["recovered"]
+    # A night restores hit points equal to the character's level.
+    assert after.harm.get("hp", 0) == 1
+    assert after.marks.get("privation_food") is None
+
+
+def test_a_night_rest_begun_after_midnight_ends_the_same_morning():
+    """The night part is the six hours before morning. Resting two hours into it ends four
+    hours later at the next morning, not a day and four hours later."""
+    # Day 2, night, hour 2: four hours before the next morning boundary.
+    start = ((2 - 1) * len(WWN.clock.parts) + 3) * WWN.clock.hours_per_part + 2
+
+    assert rest_target(start, WWN.rests["night"], WWN.clock) == start + 4
+
+
+def test_stabilizing_without_a_heal_check_is_refused(client_factory):
+    app, campaign_id = _campaign(client_factory, class_id="warrior")
+    tools = _world_tools(app, campaign_id)
+    with Session(app.state.engine) as db:
+        record(db, campaign_id, CharacterDying(name=NAME, hours=1))
+        db.commit()
+
+    with pytest.raises(InvalidInput, match="Heal check"):
+        tools.stabilize(NAME, "A healer helps.")
+
+
+def test_a_character_without_food_or_water_is_held_back_and_gains_strain(
+    client_factory,
+):
+    app, campaign_id = _campaign(client_factory, class_id="warrior")
+    tools = _world_tools(app, campaign_id)
+    tools.set_stat_max(NAME, "strain", 10, cause="a test")
+    tools.drop_item(NAME, "Rations, One Week")
+    if any(i.name == "Waterskin" for i in _pc(app, campaign_id).items):
+        tools.drop_item(NAME, "Waterskin")
+    tools.harm_character(NAME, "hp", 2, "a test")
+
+    first = tools.rest("night", reason="no supplies")
+
+    character = _pc(app, campaign_id)
+    assert NAME in first["held_back"]
+    assert NAME not in first["recovered"]
+    assert character.harm.get("hp") == 2
+    assert character.harm.get("strain") == 2
+    assert character.marks.get("privation_food") == 1
+    assert character.marks.get("privation_water") == 1
+
+    second = tools.rest("night", reason="still no supplies")
+
+    character = _pc(app, campaign_id)
+    assert NAME in second["held_back"]
+    assert character.harm.get("strain") == 2 + 1 + 3
+    assert character.marks.get("privation_food") == 2
+    assert character.marks.get("privation_water") == 2
+
+
+def test_use_item_spends_a_torches_burn_time(client_factory):
+    app, campaign_id = _campaign(client_factory, class_id="warrior")
+    tools = _world_tools(app, campaign_id)
+    before = _pc(app, campaign_id)
+    torch = next(i for i in before.items if i.name == "Torch")
+    torches = sum(1 for i in before.items if i.name == "Torch")
+    if not torch.ready:
+        tools.ready_item(NAME, "Torch")
+
+    result = tools.use_item(NAME, "Torch")
+
+    assert result["used_up"] is True
+    after = _pc(app, campaign_id)
+    assert sum(1 for i in after.items if i.name == "Torch") == torches - 1
 
 
 def test_a_dual_mage_takes_two_partial_traditions(client_factory):
@@ -1764,8 +1855,19 @@ def test_indirect_condition_end_effects_refresh_defense(client_factory, ending: 
     assert _pc(app, campaign_id).armor == 17
 
     if ending == "rest":
+        tools.give_item(NAME, "Rations, One Week")
+        tools.give_item(NAME, "Waterskin")
         tools.rest("extended")
     elif ending == "aid":
+        tools.roll_check(
+            "skill",
+            NAME,
+            skill="heal",
+            stat="int",
+            difficulty=8,
+            cause="stabilizing a wound",
+            roll=12,
+        )
         tools.stabilize(NAME, "A healer helps.")
     elif ending == "aid_item":
         tools.use_item(NAME, "Bandages")

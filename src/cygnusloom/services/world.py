@@ -727,6 +727,10 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
 
     def stabilize(self, name: str, explanation: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:
+            hc = HookContext(db, self.campaign_id, self.hooks, self.inventory)
+            refusal = call_hook(self.hooks, "stabilize", hc, name, default="")
+            if refusal:
+                raise InvalidInput(refusal)
             return aid.stabilize(
                 db,
                 self.campaign_id,
@@ -1594,6 +1598,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
         natural: int | None = None,
         use_optional: bool = True,
         player_rolls_reaction: bool = False,
+        modifier: int = 0,
     ) -> dict[str, Any]:
         stat = magic_service.save_stat_id(self.character, stat)
         with session_scope(self.engine) as db:
@@ -1611,6 +1616,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 features=self.features,
                 use_optional=use_optional,
                 player_rolls_reaction=player_rolls_reaction,
+                modifier=modifier,
             )
 
     def place_names(self) -> list[str]:

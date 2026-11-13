@@ -211,5 +211,17 @@
         "description": "Slow: level at 6 XP, then 15, 24, 36, 51, 69, 87, 105, and 139."
       }
     ]
+  },
+  {
+    "type": "table",
+    "id": "site_wandering_check",
+    "options": [
+      "An encounter comes",
+      "All is quiet: only the wind",
+      "All is quiet: a distant drip",
+      "All is quiet: old dust settles",
+      "All is quiet: a beam creaks",
+      "All is quiet: nothing stirs"
+    ]
   }
 ]

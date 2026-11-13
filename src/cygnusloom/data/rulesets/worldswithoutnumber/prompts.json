@@ -8,7 +8,24 @@
   {
     "type": "prompt",
     "id": "mortal_wounds_clock",
-    "text": "A mortally wounded character has six rounds, and the engine counts them down when encounter turns end; an hour is the fallback only when no encounter is running. Do not roll or track the death timer yourself, and do not advance the clock with advance_time for it. Stabilize through aid before the rounds run out."
+    "text": "A mortally wounded character has six rounds, and the engine counts them down when encounter turns end; an hour is the fallback only when no encounter is running. Do not roll or track the death timer yourself, and do not advance the clock with advance_time for it. Stabilizing takes an Int/Heal or Dex/Heal check at difficulty 8 plus the full rounds since the fall, +2 without a healer's pouch: call roll_check first and call stabilize only on a success. Never stabilize without that check. Once a stabilized character is healed above 0 HP, call recover_character so the engine clears their defeated state and the map no longer shows them down."
+  },
+  {
+    "type": "prompt",
+    "id": "named_npc_important",
+    "text": "When create_npc makes a named NPC who has a personal statblock and can fight, pass important true. A named NPC then drops to mortal wounds at 0 HP instead of dying outright; ordinary bystanders and unnamed folk stay false."
+  },
+  {
+    "type": "prompt",
+    "id": "purchases_need_items",
+    "step": "state",
+    "text": "A purchase, sale, gift, or trade needs both sides recorded: give_item or drop_item for every item that changes hands, and transfer_currency for the coin. Never narrate that the player bought, sold, received, or handed over goods unless the item events exist; a coin transfer alone does not put bread, oil, or gear in a pack."
+  },
+  {
+    "type": "prompt",
+    "id": "travel_supplies_due",
+    "step": "state",
+    "text": "A travel result reports food, water, and firewood for every travel day. Spend the food and water with use_item for each traveler and day the journey covers, unless the journey ends with an immediate rest that the engine feeds; spend firewood for each night in the open. When the pack lacks a day's supply, apply the returned privation with add_strain instead of narrating a meal that was never eaten."
   },
   {
     "type": "prompt",
@@ -18,7 +35,7 @@
   {
     "type": "prompt",
     "id": "npc_morale_groups",
-    "text": "PCs never check Morale. Call the morale tool only for NPCs and monsters, at the first ally down, when half the group is down, or after a great reverse; on a failure, narrate rout, retreat, or surrender."
+    "text": "PCs never check Morale. Call the morale tool for every NPC or monster side, including NPC allies, at the first ally down, when half the group is down, or after a great reverse; on a failure, narrate rout, retreat, or surrender. Do not let an allied NPC fight on past a trigger without a check."
   },
   {
     "type": "prompt",
@@ -48,7 +65,7 @@
   {
     "type": "prompt",
     "id": "surprise_round",
-    "text": "When an ambush is possible, roll the ambushers' Dex/Sneak against the defenders' Wis/Notice with roll_check before the encounter begins. If the ambushers win, they take one full round before initiative is rolled; do not also roll initiative for that round."
+    "text": "When an ambush is possible, roll the ambushers' Dex/Sneak against the defenders' Wis/Notice with roll_check before the encounter begins. If the ambushers win, call surprise for each surprised defender; they lose their first turn, which is the source's free round. Do not also give the ambushers a separate round before initiative, and do not apply surprise twice."
   },
   {
     "type": "prompt",
@@ -58,7 +75,7 @@
   {
     "type": "prompt",
     "id": "rest_and_recovery",
-    "text": "When the party camps or sleeps through a night, call rest once for the party with length \"night\". A short breather is \"moments\" and returns only scene Effort. A week of bed rest is \"extended\" and ends Frail. Never add advance_time for the same time: the rest already restores HP equal to level, one System Strain, all castings, and scene and day Effort. Frail characters gain no HP or Strain from a single night."
+    "text": "When the party camps or sleeps through a night, call rest once for the party with length \"night\". A short breather is \"moments\" and returns only scene Effort. A week of bed rest is \"extended\" and ends Frail. The engine spends a day's food and water from each character's pack; if the pack lacks them, it records the privation and holds back that character's recovery. Never add advance_time for the same time: the rest already restores HP equal to level, one System Strain, all castings, and scene and day Effort. Frail characters gain no HP or Strain from a single night."
   },
   {
     "type": "prompt",
@@ -68,7 +85,7 @@
   {
     "type": "prompt",
     "id": "site_turns",
-    "text": "Exploring a site runs in 10-minute turns. The clock counts whole hours, so six turns make an hour: use advance_time with hours, not parts, once six turns have passed. Roll the site's wandering check with roll_tables dungeon_event every 1 to 6 turns, as alert as the site is. A torch burns 6 turns and a lantern 24. A conversation or a few actions does not consume an exploration turn. For foraging, privation, and travel, call roll_check for foraging and harm_character for hunger, thirst, and exposure."
+    "text": "Exploring a site runs in 10-minute turns. One search, listen, or careful action is one turn; do not collapse several turns into a single check. The clock counts whole hours, so six turns make an hour: once six turns have passed, call advance_time with hours 1, never with parts. In this rule set one part is six hours, so a part would silently eat most of a day. Roll the wandering check with roll_tables site_wandering_check every 1 to 6 turns, as alert as the site is; on a result of \"An encounter comes\" roll dungeon_event for what it is. Lighting a torch spends it with use_item and gives 6 turns of light; filling a lantern spends one oil pint and gives 24. The engine eats a day's food and water on a night's rest, so do not call use_item for rations. A conversation or a few actions does not consume an exploration turn. For foraging, privation, and travel, call roll_check for foraging and harm_character for hunger, thirst, and exposure."
   },
   {
     "type": "prompt",
@@ -78,7 +95,7 @@
   {
     "type": "prompt",
     "id": "advancement_loop",
-    "text": "Award gain_xp once per session or great achievement; it uses the campaign's experience track unless you override it. At a threshold call level_up during downtime, then call gain_growth for the background's Growth roll. A player character's level and its skill points, Focus, art, spell, and attribute choices belong to the player: calling level_up for the player character applies nothing, so tell the player to open the character sheet and level up there, and wait. Do not call spend_skill_point, learn_focus, learn_art, learn_spell, or improve_attribute for the player character unless the player has already told you the exact choice. Never raise a level or skill by narration alone."
+    "text": "Award gain_xp once per session or great achievement; it uses the campaign's experience track unless you override it. At a threshold call level_up during downtime. A player character's level and its skill points, Focus, art, spell, and attribute choices belong to the player: calling level_up for the player character applies nothing, so tell the player to open the character sheet and level up there, and wait. Do not call spend_skill_point, learn_focus, learn_art, learn_spell, or improve_attribute for the player character unless the player has already told you the exact choice. Never raise a level or skill by narration alone. Growth and Learning rolls happen during character creation, not on level-up."
   },
   {
     "type": "prompt",
@@ -105,6 +122,6 @@
   {
     "type": "prompt",
     "id": "travel",
-    "text": "Use travel for overland journeys between distant places. A travel day is ten hours of marching; the tool computes the pace from the terrain, road, and weather, moves the character, and advances the clock. Apply the returned food, water, and firewood needs with use_item; when the party lacks them, apply the returned privation rules with add_strain. Foraging takes half a day and a Wis/Survive check at the returned difficulty; use roll_check and grant what the roll earns. Do not use move_actor with mode overland for a long journey, and do not advance the clock again for the same travel."
+    "text": "Use travel for overland journeys between distant places. A travel day is ten hours of marching; the tool computes the pace from the terrain, road, and weather, moves the character, and advances the clock. The engine spends a day's food and water for each character when the party rests; for a journey longer than a day without a rest, spend the extra days with use_item. When supplies are lacking, apply the returned privation rules with add_strain. Foraging takes half a day and a Wis/Survive check at the returned difficulty; use roll_check and grant what the roll earns. Do not use move_actor with mode overland for a long journey, and do not advance the clock again for the same travel."
   }
 ]

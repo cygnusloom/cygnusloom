@@ -3,6 +3,9 @@
     "type": "hooks",
     "id": "wwn",
     "python_module": "wwn",
-    "after_rest": "after_rest"
+    "before_rest": "before_rest",
+    "held_back": "held_back",
+    "after_rest": "after_rest",
+    "stabilize": "stabilize"
   }
 ]

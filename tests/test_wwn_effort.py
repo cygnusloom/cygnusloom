@@ -117,6 +117,8 @@ def test_a_healer_and_second_partial_vowed_recovers_both_effort_pools(
 
     wwn_magic.commit_effort(NAME, "healer", 1, "scene", ctx)
     wwn_magic.commit_effort(NAME, "vowed", 1, "scene", ctx)
+    tools.give_item(NAME, "Rations, One Week")
+    tools.give_item(NAME, "Waterskin")
     tools.rest("night", reason="a test")
 
     character = _pc(app, campaign_id)
