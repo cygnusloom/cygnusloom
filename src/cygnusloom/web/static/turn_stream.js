@@ -1,13 +1,4 @@
 (() => {
-  // Forms marked data-confirm (rollback) ask before submitting. This runs even without streaming.
-  document.addEventListener("submit", (event) => {
-    const form = event.target;
-    if (!(form instanceof HTMLFormElement)) return;
-    if (form.dataset.confirm && !window.confirm(form.dataset.confirm)) {
-      event.preventDefault();
-    }
-  });
-
   const transcript = document.querySelector("[data-transcript]");
 
   // The transcript follows new content only while the reader is at the bottom. Scrolling up
@@ -524,8 +515,7 @@
   async function endTurn(form) {
     if (form.dataset.ending) return;
     form.dataset.ending = "1";
-    const button = form.querySelector('button[type="submit"]');
-    if (button) button.disabled = true;
+    window.cygnusBusy?.mark(form);
     errorBox.hidden = true;
     // Hold the live stream while the request lands; settle() then fetches the finished state.
     localTurn = true;
@@ -548,7 +538,10 @@
       delete form.dataset.ending;
       localTurn = false;
     }
+    // Keep the button's spinner until the fresh state is on the page. A refusal leaves this
+    // form in place, so it becomes pressable again with the server's reason beside it.
     await settle({ focusComposer: true, message });
+    window.cygnusBusy?.clear(form);
   }
 
   // BACKWARDS-COMPATIBILITY: 3 - an old page may still render the Begin form for a player
@@ -731,7 +724,10 @@
     const data = new FormData(form);
     const kind = data.get("kind");
     const answer = String(data.get("content") || "").trim();
-    if ((kind === "text" || kind === "choice") && !answer) return;
+    if ((kind === "text" || kind === "choice") && !answer) {
+      window.cygnusBusy?.clear(form);
+      return;
+    }
 
     // Encounter turn forms have no pending block, so their own controls are disabled instead.
     const controls = (form.closest("[data-pending]") ?? form).querySelectorAll("button, textarea");
@@ -767,6 +763,8 @@
       await settle({ focusComposer: true, message });
     } finally {
       localTurn = false;
+      // A form the live refresh did not replace can be tried again.
+      window.cygnusBusy?.clear(form);
     }
   });
 

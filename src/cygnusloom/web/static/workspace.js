@@ -408,12 +408,23 @@
       }
       return null;
     };
+    const loading = () => {
+      const note = document.createElement("p");
+      note.className = "muted loading-note";
+      const spinner = document.createElement("span");
+      spinner.className = "spinner";
+      spinner.setAttribute("aria-hidden", "true");
+      const text = document.createElement("span");
+      text.textContent = "Loading…";
+      note.append(spinner, text);
+      return note;
+    };
     const unavailable = "<p class=\"muted\">Could not load this reply's details.</p>";
     root.querySelectorAll("[data-turn-context-url]").forEach((button) => {
       on(button, "turn-context", "click", async () => {
         turnOpener = button;
-        bodies.context.textContent = "Loading…";
-        bodies.transcript.textContent = "Loading…";
+        bodies.context.replaceChildren(loading());
+        bodies.transcript.replaceChildren(loading());
         turnDialog.showModal();
         const [context, transcript] = await Promise.all([
           loadFragment(button.dataset.turnContextUrl),

@@ -106,6 +106,13 @@ button, .button {
   cursor: pointer;
   text-decoration: none;
 }
+/* A disabled control is still visible, but it no longer looks pressable. */
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+/* While a form posts, its submit button names the work and carries a spinner. */
+button.busy-button { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; }
 button.secondary, .button.secondary {
   background: var(--field);
   color: var(--text);
@@ -240,6 +247,7 @@ label.check input { width: auto; margin: 0; }
 .turn-status { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem; font-size: 0.85rem; color: var(--muted); }
 .turn-status[hidden] { display: none; }
 .spinner { width: 0.8rem; height: 0.8rem; flex: none; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+.loading-note { display: flex; align-items: center; gap: 0.5rem; }
 .pending-prompt { margin-top: 0.5rem; padding: 0.75rem; border: 1px solid var(--accent); border-radius: 6px; }
 .pending-prompt form { display: flex; gap: 0.5rem; align-items: flex-start; margin-top: 0.5rem; }
 .pending-prompt textarea { flex: 1; }
