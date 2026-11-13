@@ -214,6 +214,8 @@ async def create(request: Request) -> Response:
     label = form_text(form, "label")
     world_template = form_text(form, "world_template")
     rule_set = form_text(form, "rule_set")
+    # The model is optional: a blank choice keeps the server's default.
+    model = form_text(form, "model").strip()
     catalog = request.app.state.catalog
     models = catalog.model_ids()
     if not models:
@@ -232,7 +234,7 @@ async def create(request: Request) -> Response:
             label,
             world_template,
             rule_set,
-            catalog.default_model_id(),
+            model or catalog.default_model_id(),
         )
     except InvalidInput as exc:
         return _new_form(
@@ -243,6 +245,7 @@ async def create(request: Request) -> Response:
             label=label,
             world_template=world_template,
             rule_set=rule_set,
+            model=model,
         )
     return RedirectResponse(f"/campaigns/{campaign.id}", status_code=303)
 
@@ -1594,6 +1597,7 @@ def _new_form(
     label: str = "",
     world_template: str = "",
     rule_set: str = "",
+    model: str = "",
 ) -> Response:
     library = request.app.state.content
     # The rule set comes first and decides which worlds are offered, so start from a rule set
@@ -1622,6 +1626,12 @@ def _new_form(
     chosen_rule_set = library.rule_sets.get(rule_set)
     chosen_world = library.world_templates.get(world_template)
     default_labels = default_campaign_labels(request.app.state.engine, library, user.id)
+    # The model is an advanced choice: leaving it blank uses the server's default. A model that
+    # is no longer offered is forgotten, so the form always submits one the catalog knows.
+    models = request.app.state.catalog.specs()
+    default_model = request.app.state.catalog.default_model_id()
+    if model not in {spec.model_id for spec in models}:
+        model = ""
     return render(
         request,
         "new_campaign.html",
@@ -1631,6 +1641,9 @@ def _new_form(
         world_labels=default_labels,
         world_templates=library.world_templates.values(),
         rule_sets=library.rule_sets.values(),
+        models=models,
+        default_model=default_model,
+        selected_model=model,
         selected_world=world_template,
         selected_rule_set=rule_set,
         selected_world_blurb=(
