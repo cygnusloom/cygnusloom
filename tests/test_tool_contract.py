@@ -159,11 +159,10 @@ def test_tool_specs_match_the_enabled_catalog_for_each_step(rule_set_id: str) ->
     review = {
         c.name
         for c in calls.values()
-        if not c.journal_step
-        and c.name not in {"speak", "ooc", "set_music"}
-        and (
-            not c.lookup
-            or c.name
+        if c.review_step
+        or (
+            c.lookup
+            and c.name
             in {
                 "all_at_location",
                 "get_statblock",
@@ -172,7 +171,6 @@ def test_tool_specs_match_the_enabled_catalog_for_each_step(rule_set_id: str) ->
                 "lookup_rule",
             }
         )
-        and c.player_input is None
     }
 
     assert offered() == regular

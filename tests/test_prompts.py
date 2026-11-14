@@ -73,8 +73,8 @@ def test_turn_review_instruction_is_generic():
     assert "Formatting is also a fault" in TURN_REVIEW_INSTRUCTION
     assert "Tense is a rule, not a style choice" in TURN_REVIEW_INSTRUCTION
     assert "call undo_narration with the tense slip as the fault" in TURN_REVIEW_INSTRUCTION
-    assert "Call undo_narration before any tool that changes the record" in TURN_REVIEW_INSTRUCTION
-    assert "never add a speculative action" in TURN_REVIEW_INSTRUCTION
+    assert "The next round offers the record tools" in TURN_REVIEW_INSTRUCTION
+    assert "Never add a speculative action" in TURN_REVIEW_INSTRUCTION
     assert "Do not undo for style" in TURN_REVIEW_INSTRUCTION
     assert "tense, coverage, and formatting faults" in TURN_REVIEW_INSTRUCTION
     assert "An event the record does not hold is also a fault" in TURN_REVIEW_INSTRUCTION

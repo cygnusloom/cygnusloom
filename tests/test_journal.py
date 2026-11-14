@@ -462,6 +462,9 @@ def test_the_state_step_reasoning_goes_back_to_the_journal_and_narration(
             m for m in call["messages"] if m["role"] == "assistant" and m.get("tool_calls")
         ]
         assert [m.get("reasoning_content") for m in tool_turns] == ["Ada wants the bridge noted."]
+        asked = {call_["id"] for message in tool_turns for call_ in message["tool_calls"]}
+        answered = {m["tool_call_id"] for m in call["messages"] if m["role"] == "tool"}
+        assert asked <= answered
 
 
 def test_the_journal_panel_shows_the_text_and_has_an_empty_state(

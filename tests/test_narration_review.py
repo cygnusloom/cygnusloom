@@ -193,8 +193,9 @@ def test_an_undone_narration_is_retracted_and_written_again(
     narration_calls = _narration_calls(recorder, script)
     assert len(narration_calls) == 2
     assert "The last narration was set aside because:" in json.dumps(narration_calls[1])
-    # The undo ends its review, so the only other review call is the rewrite's pass.
-    assert len(_review_calls(recorder)) == 2
+    # The undo opens a repair round, which passes with no tools, then the rewrite's review
+    # passes.
+    assert len(_review_calls(recorder)) == 3
     undone = _undone_events(app, campaign_id)
     assert len(undone) == 1
     assert json.loads(undone[0].payload)["reason"] == UNDO["arguments"]["reason"]
@@ -269,7 +270,7 @@ def test_a_review_can_undo_and_fix_the_record_before_the_rewrite(
             "rounds": [[]],
             "text": "Ada stands in an empty hall.",
             "rewrite": "Ada finds a gate room behind the hall.",
-            "review": [[[UNDO, CREATE_GATE]]],
+            "review": [[[UNDO], [CREATE_GATE]]],
         }
     )
 
@@ -281,9 +282,14 @@ def test_a_review_can_undo_and_fix_the_record_before_the_rewrite(
         "Ada finds a gate room behind the hall.",
     )
     assert len(_undone_events(app, campaign_id)) == 1
+    # The undo opens the record tools; without the repair round, the rewrite could not be
+    # supported by the record.
+    first, repair = _review_calls(recorder)[:2]
+    assert "create_location" not in {spec["function"]["name"] for spec in first["tools"]}
+    assert "create_location" in {spec["function"]["name"] for spec in repair["tools"]}
 
 
-def test_review_offers_the_usual_tools_and_the_journal_tools(
+def test_review_offers_only_the_undo_and_the_review_lookups(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     client, campaign_id = _campaign_id(client_factory)
@@ -296,14 +302,17 @@ def test_review_offers_the_usual_tools_and_the_journal_tools(
     assert len(_narration_calls(recorder, script)) == 1
     review = _review_calls(recorder)[0]
     offered = {spec["function"]["name"] for spec in review["tools"]}
+    assert "undo_narration" in offered
+    assert "get_statblock" in offered
     assert {
         "create_location",
-        "get_statblock",
         "add_note",
         "move_actor",
-        "undo_narration",
-    } <= offered
-    assert {"append_journal", "replace_in_journal", "speak", "ooc"} & offered == set()
+        "append_journal",
+        "replace_in_journal",
+        "speak",
+        "ooc",
+    } & offered == set()
     journal = next(call for call in recorder.calls if is_journal_messages(call["messages"]))
     instruction = next(
         m["content"]
@@ -314,13 +323,14 @@ def test_review_offers_the_usual_tools_and_the_journal_tools(
     assert f"{MAX_JOURNAL_WORDS:,} words" in instruction
 
 
-def test_review_tools_keep_wwn_world_methods_and_drop_speech_and_ooc():
+def test_review_tools_are_the_undo_and_the_review_lookups():
     rule_set = content_library().rule_sets["worldswithoutnumber"]
     offered = {
         spec["function"]["name"] for spec in tool_specs(rule_set.tool_calls, review_step=True) or []
     }
-    assert {"undo_narration", "damage_faction_asset"} <= offered
-    assert {"speak", "ooc"} & offered == set()
+    assert "undo_narration" in offered
+    assert "damage_faction_asset" not in offered
+    assert {"speak", "ooc", "append_journal"} & offered == set()
 
 
 def test_the_review_sees_the_record_and_speech_but_not_the_state_step_draft(

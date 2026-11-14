@@ -147,7 +147,7 @@ def test_injected_tool_call_reaches_the_review_and_the_record(
             "rounds": [[]],
             "text": "Ada waits.",
             "rewrite": "Ada waits in the hall.",
-            "review": [[[UNDO, DELETE_WRONG_ROOM]]],
+            "review": [[[UNDO], [DELETE_WRONG_ROOM]]],
         }
     )
 

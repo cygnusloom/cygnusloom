@@ -12,6 +12,9 @@ from typing import TYPE_CHECKING, Any
 from sqlalchemy import Engine, select
 
 from cygnusloom.content.library import (
+    MAP_AMBIENTS,
+    MAP_PALETTES,
+    TERRAIN_PATTERNS,
     ContentLibrary,
     RuleSet,
     ToolCall,
@@ -151,6 +154,17 @@ SPEECH_RETRY = (
 # profile, and the intent carry the rest. The full transcript made the call slow and let an
 # earlier speaker's line bleed into the new one.
 SPEECH_CONTEXT_MESSAGES = 6
+# The state step keeps the latest rounds' tool results full and turns older ones into short
+# summaries, with a compact record log for the detail it no longer needs. The narration and
+# journal read the log, not the raw tool results; the review keeps the record but trims old
+# history.
+STATE_FULL_ROUNDS = 2
+STATE_TOOL_RESULT_CHARS = 400
+STATE_HISTORY_MESSAGES = 4
+STATE_LOG_LINES = 30
+NARRATION_HISTORY_MESSAGES = 6
+REVIEW_HISTORY_MESSAGES = 4
+REVIEW_FULL_ROUNDS = 2
 # An empty or malformed narration is requested again this many times before the turn fails.
 NARRATION_ATTEMPTS = 2
 NARRATION_RETRY = (
@@ -826,6 +840,9 @@ def _narration_messages(
     turn: Turn,
     log: list[str] | None = None,
     heading: str = "Turn log, everything in this turn so far, in order:",
+    *,
+    history_limit: int | None = None,
+    tool_exchange: str = "full",
 ) -> list[dict[str, Any]]:
     """What the narration step reads. The turn's opening system message predates the moves made
     in the turn, so the scene is rebuilt from the state as it is now, which also brings in the
@@ -834,7 +851,12 @@ def _narration_messages(
     the narration sees the tool calls but not that prose. The turn checklist and its finish tool
     are state-step bookkeeping, so they are left out too. `log` replaces the turn's own Log lines.
     The narration instruction is always last, after the log and any review note, even when a
-    review step added its own tool exchange to the turn."""
+    review step added its own tool exchange to the turn.
+
+    `history_limit` keeps only the last few pre-turn messages. `tool_exchange` is "full",
+    "compact" (summarize old tool results), or "none" (replace the raw results with a
+    placeholder). The narration keeps recent results because it must narrate their outcomes;
+    the journal reads the log instead."""
     state = _state(run.engine, run.campaign_id)
     instruction = narrate_instruction(run.rule_set, run.world)
     scene = system_parts(
@@ -848,11 +870,20 @@ def _narration_messages(
         run.setting,
         rule_info_mode=run.rule_info_mode,
     )
+    conversation = _without_checklist_exchange(turn.messages[1:])
+    if history_limit is not None:
+        conversation = _trim_conversation(conversation, history_limit)
+    if tool_exchange == "none":
+        conversation = _without_tool_results(conversation)
+    elif tool_exchange == "compact":
+        conversation, _ = _compact_old_tool_results(conversation, REVIEW_FULL_ROUNDS)
+    elif tool_exchange != "full":
+        raise ValueError(f"unknown tool exchange mode {tool_exchange!r}")
     messages: list[dict[str, Any]] = [
         {"role": "system", "content": "\n\n".join(p.content for p in scene)},
         *(
             _without_draft(m)
-            for m in _without_checklist_exchange(turn.messages[1:])
+            for m in conversation
             if not (
                 (m.get("role") == "system" and m.get("content") == instruction)
                 or _is_checklist_retry_message(m)
@@ -891,6 +922,160 @@ def _without_draft(message: dict[str, Any]) -> dict[str, Any]:
     if message.get("role") == "assistant" and message.get("tool_calls"):
         return {**message, "content": None}
     return message
+
+
+def _tool_name_map(messages: Sequence[dict[str, Any]]) -> dict[str, str]:
+    """The tool name for each call id in a message list."""
+    names: dict[str, str] = {}
+    for message in messages:
+        for call in message.get("tool_calls") or []:
+            if isinstance(call, dict):
+                names[call.get("id", "")] = call.get("function", {}).get("name", "tool")
+    return names
+
+
+def _short_tool_text(name: str, text: str) -> str:
+    flat = " ".join(text.split())
+    if len(flat) <= STATE_TOOL_RESULT_CHARS:
+        return f"{name}: {flat}"
+    return f"{name}: {flat[:STATE_TOOL_RESULT_CHARS]}..."
+
+
+def _compact_tool_content(name: str, content: str) -> str:
+    """A tool result made short enough for an old state round. Errors stay word for word;
+    a structured result keeps its useful fields; anything else is clipped."""
+    text = content or ""
+    if not text:
+        return text
+    try:
+        data = json.loads(text)
+    except (TypeError, ValueError):
+        return _short_tool_text(name, text)
+    if isinstance(data, dict) and data.get("error"):
+        return text
+    if isinstance(data, dict):
+        wanted = (
+            "created",
+            "added",
+            "placed",
+            "moved",
+            "removed",
+            "updated",
+            "deleted",
+            "changed",
+            "map",
+            "name",
+            "location",
+            "column",
+            "row",
+            "cost",
+            "moves_left",
+            "hp",
+            "armor",
+            "attacks",
+            "status",
+            "warning",
+            "summary",
+            "armed",
+        )
+        parts: list[str] = []
+        for key in wanted:
+            value = data.get(key)
+            if value in (None, "", [], {}):
+                continue
+            if isinstance(value, dict | list):
+                value = json.dumps(value, separators=(",", ":"))
+            parts.append(f"{key}={str(value)[:80]}")
+        if parts:
+            return f"{name}: " + "; ".join(parts)
+    return _short_tool_text(name, text)
+
+
+def _compact_old_tool_results(
+    messages: Sequence[dict[str, Any]], keep_rounds: int
+) -> tuple[list[dict[str, Any]], bool]:
+    """Keep the latest `keep_rounds` tool-result rounds full and summarize older results."""
+    names = _tool_name_map(messages)
+    starts = [
+        index
+        for index, message in enumerate(messages)
+        if message.get("role") == "assistant" and message.get("tool_calls")
+    ]
+    if len(starts) <= keep_rounds:
+        return list(messages), False
+    first_full = starts[-keep_rounds] if keep_rounds else len(messages)
+    changed = False
+    result: list[dict[str, Any]] = []
+    for index, message in enumerate(messages):
+        if index < first_full and message.get("role") == "tool":
+            name = names.get(message.get("tool_call_id", ""), "tool")
+            content = str(message.get("content") or "")
+            compact = _compact_tool_content(name, content)
+            if compact != content:
+                result.append({**message, "content": compact})
+                changed = True
+                continue
+        result.append(message)
+    return result, changed
+
+
+def _without_tool_results(messages: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Replace raw results with a short placeholder. The assistant tool calls and their
+    reasoning stay, and every call still has the result message providers require."""
+    return [
+        {**message, "content": "[result omitted]"} if message.get("role") == "tool" else message
+        for message in messages
+    ]
+
+
+def _trim_conversation(messages: Sequence[dict[str, Any]], keep: int) -> list[dict[str, Any]]:
+    """Keep the leading system message, the last `keep` history messages, and the current
+    turn from the last player message onward."""
+    head = [messages[0]] if messages and messages[0].get("role") == "system" else []
+    body = list(messages[len(head) :])
+    last_user = next(
+        (index for index in range(len(body) - 1, -1, -1) if body[index].get("role") == "user"),
+        None,
+    )
+    if last_user is None:
+        return list(messages)
+    history = body[:last_user]
+    if not keep:
+        history = []
+    elif len(history) > keep:
+        start = len(history) - keep
+        # A kept tool result needs the assistant call that asked for it.
+        while start > 0 and history[start].get("role") == "tool":
+            start -= 1
+        history = history[start:]
+    return [*head, *history, *body[last_user:]]
+
+
+def _state_messages(run: _Run, turn: Turn, state_message: dict[str, Any]) -> list[dict[str, Any]]:
+    """The state step's messages, with only the last few history messages, old tool results
+    compacted, and a short record log when a result was compacted."""
+    messages = _trim_conversation([*turn.messages], STATE_HISTORY_MESSAGES)
+    messages, compacted = _compact_old_tool_results(messages, STATE_FULL_ROUNDS)
+    if compacted:
+        log = _turn_log(run.engine, run.campaign_id, turn.opener)
+        if log:
+            lines = "\n".join(f"- {line}" for line in log[-STATE_LOG_LINES:])
+            messages.append(
+                {
+                    "role": "system",
+                    "content": "State so far (record changes; older tool results are "
+                    "summarized):\n" + lines,
+                }
+            )
+    messages.extend(
+        {"role": "system", "content": part.content}
+        for part in turn.context
+        if part.source == "Checklist retry" and part.role == "system"
+    )
+    messages.append(state_message)
+    if turn.speech:
+        messages.append(_queued_dialogue_note(turn.speech))
+    return messages
 
 
 def _flush(run: _Run) -> list[Logged]:
@@ -1416,7 +1601,12 @@ async def _write_journal(
         *(
             m
             for m in _narration_messages(
-                run, turn, log=log, heading="Log since the journal was last written, in order:"
+                run,
+                turn,
+                log=log,
+                heading="Log since the journal was last written, in order:",
+                history_limit=0,
+                tool_exchange="none",
             )
             if m.get("content") != narrate
         ),
@@ -1503,6 +1693,9 @@ def _review_view(
     turn: Turn,
     log: list[str] | None = None,
     heading: str = "Turn log, everything in this turn so far, in order:",
+    *,
+    history_limit: int | None = REVIEW_HISTORY_MESSAGES,
+    tool_exchange: str = "compact",
 ) -> list[dict[str, Any]]:
     """What the review reads before the narration. It leaves out the narration instruction and
     the narrator's rewrite note, and replaces the latter with a review note naming the fault the
@@ -1511,7 +1704,14 @@ def _review_view(
     instruction = narrate_instruction(run.rule_set, run.world)
     view = [
         message
-        for message in _narration_messages(run, turn, log=log, heading=heading)
+        for message in _narration_messages(
+            run,
+            turn,
+            log=log,
+            heading=heading,
+            history_limit=history_limit,
+            tool_exchange=tool_exchange,
+        )
         if not (
             message.get("role") == "system"
             and (
@@ -1659,7 +1859,12 @@ async def _narrate(
         yield Delta(forced)
         result.append((forced, ""))
         return
-    messages = _narration_messages(run, turn)
+    messages = _narration_messages(
+        run,
+        turn,
+        history_limit=NARRATION_HISTORY_MESSAGES,
+        tool_exchange="compact",
+    )
     reply = ""
     reasoning = ""
     malformed = False
@@ -1716,7 +1921,12 @@ async def _journal_step(run: _Run, turn: Turn) -> None:
     state = _state(run.engine, run.campaign_id)
     log = _turn_log(run.engine, run.campaign_id, state.journal_through or turn.opener)
     view = _review_view(
-        run, turn, log=log, heading="Log since the journal was last written, in order:"
+        run,
+        turn,
+        log=log,
+        heading="Log since the journal was last written, in order:",
+        history_limit=0,
+        tool_exchange="none",
     )
     view.append({"role": "system", "content": journal_instruction(state.clock.day, state.journal)})
     # One round: the step is written beside the narration, so every edit belongs in the same
@@ -1739,6 +1949,18 @@ async def _journal_step(run: _Run, turn: Turn) -> None:
     _record(run.engine, run.campaign_id, JournalStarted())
 
 
+_REVIEW_REPAIR_EXCLUDED = frozenset({"speak", "ooc", "set_music"})
+
+
+def _review_repair_tools(run: _Run) -> list[dict[str, Any]] | None:
+    """The record tools the review may use after an undo, to fix the fault it named. Speech and
+    the out-of-character step are left out, as they do not repair a record."""
+    tools = wire_tool_specs(run.tool_calls, mode=run.tool_schema_mode)
+    if tools is None:
+        return None
+    return [spec for spec in tools if spec["function"]["name"] not in _REVIEW_REPAIR_EXCLUDED]
+
+
 async def _review_narration(
     run: _Run,
     turn: Turn,
@@ -1746,11 +1968,10 @@ async def _review_narration(
     reasoning: str,
     result: list[_ReviewResult],
 ) -> AsyncIterator[TurnEvent]:
-    """Check the narration just written against the record. A review that finds a fault calls
-    undo_narration; only after that may it use the other tools to correct the record. A record
-    change without an undo is refused, so a passing narration is never sent back just because
-    the review touched the record. The caller writes the story again when `result` says the
-    narration was undone."""
+    """Check the narration just written against the record. The review passes with no tools,
+    or sets the narration aside and then uses the record tools to fix the fault it named. A
+    passing narration is never sent back for a record tweak. The caller writes the story again
+    when `result` says the narration was undone."""
     tools = wire_tool_specs(run.tool_calls, review_step=True, mode=run.tool_schema_mode)
     if tools is None:
         result.append(_ReviewResult(undone=False))
@@ -1772,6 +1993,7 @@ async def _review_narration(
         )
     view.append({"role": "system", "content": TURN_REVIEW_INSTRUCTION})
     undone = False
+    repairing = False
     for round_no in range(1, REVIEW_ROUNDS + 1):
         replied: list[ChatReply] = []
         async for event in _await_with_heartbeat(
@@ -1811,16 +2033,15 @@ async def _review_narration(
                 tool_result = ToolRun(
                     json.dumps(
                         {
-                            "error": "that tool is not available to the turn review; "
-                            "call undo_narration, then use an offered tool to correct the "
-                            "record"
+                            "error": "that tool is not available yet; call undo_narration "
+                            "if the record is wrong, or pass"
                         }
                     ),
                     None,
                 )
             elif request.name not in read_only and not undone:
-                # A record change before the narration is set aside would leave the player
-                # reading a story written from the old state. Refuse it instead of guessing.
+                # A record-changing review tool would leave the player reading a story written
+                # from the old state. Refuse it instead of guessing.
                 tool_result = ToolRun(
                     json.dumps(
                         {
@@ -1832,7 +2053,13 @@ async def _review_narration(
                 )
             elif request.name == UNDO_NARRATION and undone:
                 tool_result = ToolRun(
-                    json.dumps({"undone": "narration", "reason": step_text}), None
+                    json.dumps(
+                        {
+                            "error": "the narration is already set aside; fix the record "
+                            "fault or stop"
+                        }
+                    ),
+                    None,
                 )
             else:
                 if request.name == UNDO_NARRATION:
@@ -1876,9 +2103,27 @@ async def _review_narration(
             run.campaign_id,
             ReviewStepMade(messages=messages, context=_dicts(context)),
         )
+        if undone and not repairing:
+            # The undo opens the record tools. A second round lets the review fix the fault it
+            # named, then the story is written again from the corrected record.
+            repair = _review_repair_tools(run)
+            if not repair:
+                break
+            repairing = True
+            tools = repair
+            allowed = {spec["function"]["name"] for spec in tools}
+            read_only = {
+                tool.name for tool in run.tool_calls.values() if tool.lookup or tool.review_step
+            }
+            view.append(
+                {
+                    "role": "system",
+                    "content": "The narration is set aside. Use the offered tools only to "
+                    "correct the record fault you named, then stop.",
+                }
+            )
+            continue
         if undone:
-            # The undo records the fault, and any correction belongs in the same reply. Another
-            # round would only let the review rewrite the story or pile on more changes.
             break
     result.append(_ReviewResult(undone=undone))
 
@@ -1985,10 +2230,41 @@ async def _finish_checklist(
         yield entry
 
 
+def _id_list(values: Iterable[str], limit: int = 60) -> str:
+    ids = sorted(str(value) for value in values)
+    shown = ", ".join(ids[:limit])
+    return shown + (f", and {len(ids) - limit} more" if len(ids) > limit else "")
+
+
+def _map_option_line(run: _Run) -> str:
+    """The compact map ids the state step needs, so map_options is not a whole round."""
+    rule_set = run.rule_set
+    if not (rule_set.terrain or rule_set.encounter_objects or rule_set.encounter_templates):
+        return ""
+    parts = [
+        f"terrains {_id_list(rule_set.terrain)}",
+        f"objects {_id_list(rule_set.encounter_objects)}",
+        f"templates {_id_list(rule_set.encounter_templates)}",
+        f"patterns {_id_list(TERRAIN_PATTERNS)}",
+        f"palettes {_id_list(MAP_PALETTES)}",
+        f"ambients {_id_list(MAP_AMBIENTS)}",
+    ]
+    return (
+        "Map ids (already given; do not call map_options just to get them): "
+        + "; ".join(parts)
+        + "."
+    )
+
+
 async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
     """Run the reply until it is recorded or paused. Log entries are yielded as the steps that
     recorded them finish. A pause is recorded before the player hears of it."""
-    state_message = {"role": "system", "content": state_instruction(run.rule_set, run.world)}
+    map_line = _map_option_line(run)
+    state_message = {
+        "role": "system",
+        "content": state_instruction(run.rule_set, run.world)
+        + (f"\n\n{map_line}" if map_line else ""),
+    }
     while True:
         state = _state(run.engine, run.campaign_id)
         turn = _turn(state)
@@ -2147,17 +2423,7 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
             return
         yield Status("Managing state...")
         round_no = turn.rounds + 1
-        view = [*turn.messages]
-        # A checklist retry is state-step guidance, not conversation. It is kept in the turn's
-        # context and added here, so the narration never receives it.
-        view.extend(
-            {"role": "system", "content": part.content}
-            for part in turn.context
-            if part.source == "Checklist retry" and part.role == "system"
-        )
-        view.append(state_message)
-        if turn.speech:
-            view.append(_queued_dialogue_note(turn.speech))
+        view = _state_messages(run, turn, state_message)
         # The first round plans the turn, and keeps full effort. Later rounds carry out that
         # plan, apply tool results, and write the checklist; low effort halves their output
         # there without changing the tool calls. The prompt still requires any move and the

@@ -126,6 +126,7 @@ from cygnusloom.services.views import (
     _character_named,
     get_statblock,
     map_view,
+    npc_stat_line,
     present_rules_text,
     scene_view,
     speaker_profile,
@@ -1735,6 +1736,20 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 terrain=self.terrain,
                 encounter_objects=self.encounter_objects,
             )
+            if self.combat is not None:
+                # The roster's combat facts come back with the call, so a staged fight does not
+                # need a get_statblock round for every NPC.
+                state = load_state(db, self.campaign_id)
+                for entry in result["staged"]:
+                    line = npc_stat_line(
+                        state,
+                        entry["name"],
+                        self.character,
+                        self.combat,
+                        self.monsters,
+                    )
+                    if line:
+                        entry["stats"] = line
         self._resettle_individual_initiative()
         return result
 
