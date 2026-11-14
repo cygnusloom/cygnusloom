@@ -2427,11 +2427,11 @@ def _journal_passages(journal: str) -> dict[int, list[str]]:
 
 
 def _check_journal_budget(current: str, prospective: str) -> None:
-    """Refuse a journal edit that breaks the length budget unless it shortens the journal.
+    """Refuse a journal edit that breaks a day's length budget unless it shortens the journal.
 
     A journal that already runs long must stay editable, so shortening or replacing text is
     always allowed. Only 'Day N:' passages are checked, which leaves the opening's first passage
-    free to be written before it has a day heading."""
+    free to be written before it has a day heading. The journal has no total word budget."""
     if _journal_words(prospective) <= _journal_words(current):
         return
     passages = _journal_passages(prospective)
@@ -2449,12 +2449,6 @@ def _check_journal_budget(current: str, prospective: str) -> None:
                 f"Day {day} has {words} words, over the {MAX_JOURNAL_DAY_WORDS}-word limit for "
                 "one day; condense it with replace_in_journal and keep only the important facts"
             )
-    words = _journal_words(prospective)
-    if words > MAX_JOURNAL_WORDS:
-        raise InvalidInput(
-            f"the journal has {words} words, over the {MAX_JOURNAL_WORDS}-word limit; condense "
-            "the older days first"
-        )
 
 
 def append_journal(db: Session, campaign_id: int, text: str) -> dict[str, Any]:
@@ -2818,7 +2812,6 @@ def _note_with_id(state: CampaignState, note_id: int) -> Note:
 
 
 MAX_MARKET_RESULTS = 20
-MAX_JOURNAL_WORDS = 4000
 MAX_JOURNAL_DAY_WORDS = 200
 MAX_JOURNAL_RESULTS = 5
 MAX_JOURNAL_CONTEXT = 3

@@ -21,7 +21,7 @@ from cygnusloom.llm.base import ChatReply
 from cygnusloom.services.campaigns import get_turn_context
 from cygnusloom.services.events import CampaignState, load_state
 from cygnusloom.services.tools import tool_specs
-from cygnusloom.services.world_support import MAX_JOURNAL_DAY_WORDS, MAX_JOURNAL_WORDS
+from cygnusloom.services.world_support import MAX_JOURNAL_DAY_WORDS
 from tests.conftest import (
     content_library,
     csrf_token,
@@ -320,7 +320,7 @@ def test_review_offers_only_the_undo_and_the_review_lookups(
         if m["role"] == "system" and "Journal step." in (m.get("content") or "")
     )
     assert f"{MAX_JOURNAL_DAY_WORDS} words" in instruction
-    assert f"{MAX_JOURNAL_WORDS:,} words" in instruction
+    assert "4,000" not in instruction
 
 
 def test_review_tools_are_the_undo_and_the_review_lookups():

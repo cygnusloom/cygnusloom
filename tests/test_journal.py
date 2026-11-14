@@ -18,7 +18,7 @@ from cygnusloom.services.prompts import (
     OPENING_PROMPT,
     OPENING_REPLY_INSTRUCTION,
 )
-from cygnusloom.services.world_support import MAX_JOURNAL_DAY_WORDS, MAX_JOURNAL_WORDS
+from cygnusloom.services.world_support import MAX_JOURNAL_DAY_WORDS
 from tests.conftest import is_journal_edit_messages, is_journal_messages, is_review_messages
 from tests.test_campaigns import (
     _answer,
@@ -198,22 +198,23 @@ def test_a_second_passage_for_the_same_day_is_refused(
     assert _journal_state(app, campaign_id).journal == "Day 1: Ada crossed the bridge."
 
 
-def test_the_total_journal_word_budget_is_refused(
+def test_the_journal_has_no_total_word_budget(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     _, campaign_id = _campaign_id(client_factory)
-    days = MAX_JOURNAL_WORDS // MAX_JOURNAL_DAY_WORDS
+    days = 4000 // MAX_JOURNAL_DAY_WORDS + 1
     for day in range(1, days + 1):
         assert "error" not in _tool(
             app, campaign_id, "append_journal", {"text": _day_passage(day, MAX_JOURNAL_DAY_WORDS)}
         )
-    assert len(_journal_state(app, campaign_id).journal.split()) == MAX_JOURNAL_WORDS
+    assert len(_journal_state(app, campaign_id).journal.split()) > 4000
 
-    refused = _tool(app, campaign_id, "append_journal", {"text": _day_passage(days + 1, 3)})
+    added = _tool(app, campaign_id, "append_journal", {"text": _day_passage(days + 1, 3)})
 
-    assert "error" in refused
-    assert f"the journal has {MAX_JOURNAL_WORDS + 3} words" in refused["error"]
-    assert len(_journal_state(app, campaign_id).journal.split()) == MAX_JOURNAL_WORDS
+    assert "error" not in added
+    assert len(_journal_state(app, campaign_id).journal.split()) == (
+        days * MAX_JOURNAL_DAY_WORDS + 3
+    )
 
 
 def test_shortening_an_over_budget_journal_is_always_allowed(
@@ -237,11 +238,10 @@ def test_shortening_an_over_budget_journal_is_always_allowed(
     assert _journal_state(app, campaign_id).journal == "Day 1: Ada crossed the bridge."
 
 
-def test_the_journal_prompt_states_the_same_budget():
+def test_the_journal_prompt_states_the_day_budget():
     assert f"{MAX_JOURNAL_DAY_WORDS} words" in JOURNAL_RULES
-    assert f"{MAX_JOURNAL_WORDS:,} words" in JOURNAL_RULES
+    assert "4,000" not in JOURNAL_RULES
     assert "never append a second passage for the same day" in JOURNAL_RULES
-    assert "condense the older days first" in JOURNAL_RULES
 
 
 def test_a_routine_turn_updates_the_journal_in_its_own_call(
