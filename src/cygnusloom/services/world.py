@@ -1702,9 +1702,39 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
         with session_scope(self.engine) as db:
             return encounters.end_encounter(db, self.campaign_id)
 
-    def add_participant(self, name: str, side: str | None = None) -> dict[str, Any]:
+    def add_participant(
+        self, name: str, side: str | None = None, auto_place: bool = False
+    ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
-            result = encounters.add_participant(db, self.campaign_id, name, side)
+            result = encounters.add_participant(
+                db,
+                self.campaign_id,
+                name,
+                side,
+                encounter_objects=self.encounter_objects,
+                auto_place=auto_place,
+            )
+        self._resettle_individual_initiative()
+        return result
+
+    def stage_encounter(
+        self, roster: Sequence[Mapping[str, Any]], map: str | None = None
+    ) -> dict[str, Any]:
+        """Start an encounter if needed, then add and place a whole roster at once."""
+        with session_scope(self.engine) as db:
+            result = encounters.stage_encounter(
+                db,
+                self.campaign_id,
+                roster,
+                map,
+                rolls_initiative=self.combat is not None,
+                combat=self.combat,
+                character=self.character,
+                rng=self.rng,
+                grid=self.grid,
+                terrain=self.terrain,
+                encounter_objects=self.encounter_objects,
+            )
         self._resettle_individual_initiative()
         return result
 

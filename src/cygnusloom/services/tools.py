@@ -71,6 +71,7 @@ TOOL_GROUPS: dict[str, frozenset[str]] = {
             "roll_save",
             "player_initiative",
             "start_encounter",
+            "stage_encounter",
             "end_encounter",
             "add_participant",
             "remove_participant",
@@ -306,6 +307,15 @@ def state_tool_groups(
             "flee",
             "hostile",
             "encounter",
+            "ambush",
+            "bow",
+            "hired",
+            "band",
+            "trap",
+            "pits",
+            "guard",
+            "raid",
+            "troop",
         ),
     ):
         groups.add("combat")
@@ -405,9 +415,11 @@ def checklist_tool_spec(items: Mapping[str, str]) -> dict[str, Any]:
         "function": {
             "name": FINISH_STATE_STEP,
             "description": (
-                "Finish the state step after checking every area of the turn checklist. Call it "
-                "alone, after all other tool calls, with one short note per area: what changed, "
-                'or "no change". The notes are internal and are never shown to the player.'
+                "Finish the state step after checking every area of the turn checklist. Include "
+                "it in the same reply as your last changes; the engine runs it after the other "
+                "calls. Give one short note per area: what changed, or \"no change\". You do "
+                "not need the tool results to write the notes. The notes are internal and are "
+                "never shown to the player."
             ),
             "parameters": {
                 "type": "object",

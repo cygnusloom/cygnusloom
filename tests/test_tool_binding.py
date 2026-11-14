@@ -299,6 +299,8 @@ def test_core_binding_leaves_the_schemas_unchanged():
     calls = content_library().core.tool_calls
     assert sorted(calls["create_npc"].parameters["properties"]) == [
         "accent",
+        "armor",
+        "attacks",
         "character",
         "description",
         "force",
@@ -308,6 +310,7 @@ def test_core_binding_leaves_the_schemas_unchanged():
         "personality",
         "pronouns",
         "quirks",
+        "summary",
     ]
     assert calls["view_journal"].parameters["required"] == ["start_line"]
     assert calls["place_object"].parameters["required"] == [

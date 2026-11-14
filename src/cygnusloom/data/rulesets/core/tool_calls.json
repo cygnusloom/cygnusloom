@@ -202,7 +202,7 @@
     "id": "create_npc",
     "character_options": true,
     "npc_hp_tier": true,
-    "description": "Add an NPC to the campaign and place them at an existing location. Leave personality, accent, or quirks out to have them generated at random; give them only when the story calls for a specific trait. Give character options, such as appearance or biography, only when the story calls for them; anything left out is rolled or left blank. A name that matches a published statblock, such as a creature in the source material, takes that statblock's stats, armor, and attacks, so leave the stats out of the character options. Names must be unique among locations and NPCs.",
+    "description": "Add an NPC to the campaign and place them at an existing location. Leave personality, accent, or quirks out to have them generated at random; give them only when the story calls for a specific trait. Give character options, such as appearance or biography, only when the story calls for them; anything left out is rolled or left blank. A name that matches a published statblock, such as a creature in the source material, takes that statblock's stats, armor, and attacks, so leave the stats out of the character options. Give armor and attacks when the NPC is meant to fight; this arms them in the same call, so a whole band can be created before stage_encounter. Give summary when the player has met them and should see a brief entry on the Characters page. Names must be unique among locations and NPCs.",
     "parameters": {
       "properties": {
         "name": {
@@ -216,6 +216,66 @@
         "description": {
           "type": "string",
           "description": "Who the NPC is: appearance, role, and what they are doing. This is your own record and may hold secrets the player has not learned; the player never sees it. Use update_npc_knowledge for what the player can see."
+        },
+        "summary": {
+          "type": "string",
+          "description": "Optional. The brief, player-facing entry shown on the Characters page: what the player knows of them, with no GM-only secrets."
+        },
+        "armor": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Optional. What each hit against them absorbs. Give it when they are meant to fight."
+        },
+        "attacks": {
+          "type": "array",
+          "description": "Optional. The NPC's attacks, each with a name and dice such as '1d8'. Arms them in this same call. An attack with neither reach nor ranges is melee at the rule set's reach.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "The attack's name, such as 'claws'."
+              },
+              "dice": {
+                "type": "string",
+                "description": "The damage dice, such as '1d8' or '1d6+1d6'."
+              },
+              "shock": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Optional. The Shock the attack does on a miss, when the rule set has Shock. It needs shock_ac."
+              },
+              "shock_ac": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Optional. The highest armor the attack's Shock reaches through. Required when shock is given."
+              },
+              "flags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Leave out for a plain attack. The flags the rule set defines for attacks."
+              },
+              "reach": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Optional. How far the attack can strike in melee, in feet, when the rule set measures reach, such as 10 for a long weapon."
+              },
+              "ranges": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "description": "Optional. The band names and farthest distance in feet of a ranged attack, such as {\"short\": 30, \"long\": 60}. A distance of 0 means anywhere on the map."
+              }
+            },
+            "required": [
+              "name",
+              "dice"
+            ]
+          }
         },
         "pronouns": {
           "type": "string",
@@ -1479,7 +1539,7 @@
   {
     "type": "tool_call",
     "id": "create_local_map",
-    "description": "Create a local map for an indoor or small-scale place, such as a room, tavern, house, temple, crypt, cave, watchtower, market, camp, ship, hall, library, or cellar. A local map is used outside an encounter to show where the player character, NPCs, and props stand; when a fight starts on it, start_encounter on the same map and the tokens already placed carry into the fight. The template supplies the layout, size, and starting terrain. Use map_options to see the templates, and give a palette, ambient, or board colours when the place's mood matters; without them the template's own look is copied.",
+    "description": "Create a local map for an indoor or small-scale place, such as a room, tavern, house, temple, crypt, cave, watchtower, market, camp, ship, hall, library, or cellar. A local map is used outside an encounter to show where the player character, NPCs, and props stand; when a fight starts on it, start_encounter on the same map and the tokens already placed carry into the fight. The template supplies the layout, size, and starting terrain. Use map_options to see the templates, and give a palette, ambient, or board colours when the place's mood matters; without them the template's own look is copied. Give regions to paint broad terrain areas and tokens to place the cast in this same call.",
     "parameters": {
       "properties": {
         "name": {
@@ -1521,6 +1581,92 @@
         "grid_color": {
           "type": "string",
           "description": "A hex colour for the board's grid lines. Leave it out to use the template's colour."
+        },
+        "regions": {
+          "type": "array",
+          "description": "Optional. Rectangles to paint after the template loads, with the same fields as fill_map_cells. The corners may be in either order and are both included.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "from_column": {
+                "type": "integer",
+                "description": "The column of one corner."
+              },
+              "from_row": {
+                "type": "integer",
+                "description": "The row of the same corner."
+              },
+              "to_column": {
+                "type": "integer",
+                "description": "The column of the opposite corner."
+              },
+              "to_row": {
+                "type": "integer",
+                "description": "The row of the opposite corner."
+              },
+              "terrain": {
+                "type": "string",
+                "description": "The terrain id for every cell. Leave it out to keep the terrain."
+              },
+              "object": {
+                "type": "string",
+                "description": "The object id on every cell. Leave it out to keep the object."
+              },
+              "color": {
+                "type": "string",
+                "description": "A hex colour for the cells' ground. Leave it out to keep the colour."
+              },
+              "pattern": {
+                "type": "string",
+                "description": "A pattern id from map_options. Leave it out to keep the pattern."
+              },
+              "icon": {
+                "type": "string",
+                "description": "An icon id from map_options. Leave it out to keep the icon."
+              },
+              "label": {
+                "type": "string",
+                "description": "A short label for every cell. Leave it out to keep the label."
+              },
+              "force": {
+                "type": "boolean",
+                "default": false,
+                "description": "Allow a blocking object to close over a cell someone occupies. Set it only when the story insists."
+              }
+            },
+            "required": [
+              "from_column",
+              "from_row",
+              "to_column",
+              "to_row"
+            ]
+          }
+        },
+        "tokens": {
+          "type": "array",
+          "description": "Optional. Characters, NPCs, or props to place on the new map, with the same rules as place_map_token. A character must already be at the map's location.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "The name of the character, NPC, or prop."
+              },
+              "column": {
+                "type": "integer",
+                "description": "The cell's column, from 0 at the left edge."
+              },
+              "row": {
+                "type": "integer",
+                "description": "The cell's row, from 0 at the top edge."
+              }
+            },
+            "required": [
+              "name",
+              "column",
+              "row"
+            ]
+          }
         }
       },
       "required": [

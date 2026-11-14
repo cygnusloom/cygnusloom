@@ -61,6 +61,40 @@ def test_a_local_map_is_created_without_starting_an_encounter(
     assert state.encounter is None
 
 
+def test_a_local_map_can_paint_regions_and_place_tokens_in_one_call(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _campaign_id(client_factory)
+    _place_pc(client, campaign_id, TOWN)
+    created = _call(
+        client.app,
+        campaign_id,
+        "create_local_map",
+        {
+            "name": MAP,
+            "location": TOWN,
+            "description": "The common room.",
+            "template": "tavern",
+            "regions": [
+                {
+                    "from_column": 0,
+                    "from_row": 0,
+                    "to_column": 1,
+                    "to_row": 1,
+                    "terrain": "mud",
+                }
+            ],
+            "tokens": [{"name": "Ada", "column": 3, "row": 4}],
+        },
+    )
+    assert created["cells_changed"] == 4
+    assert created["tokens_placed"] == 1
+    entry = _map(client.app, campaign_id)
+    assert entry.marks[(0, 0)].terrain == "mud"
+    assert entry.marks[(1, 1)].terrain == "mud"
+    assert entry.tokens[name_key("Ada")] == (3, 4)
+
+
 def test_a_duplicate_map_name_points_at_the_existing_map(
     client_factory: Callable[[], TestClient],
 ):

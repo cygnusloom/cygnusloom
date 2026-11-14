@@ -3,7 +3,7 @@
     "type": "tool_call",
     "id": "add_participant",
     "requires": ["combat"],
-    "description": "Add a character to the encounter in progress, on a side. Player characters default to the party and NPCs to the foes. The turn order keeps each side together in the order the rule set's initiative set; when a side-initiative order is already settled, a late joiner joins their side's block. A character who is not at the encounter's location is still added, and the result carries a warning to act on. An NPC with no attacks is also warned about: give them attacks with update_npc before their turn if they are meant to fight.",
+    "description": "Add a character to the encounter in progress, on a side. Player characters default to the party and NPCs to the foes. The turn order keeps each side together in the order the rule set's initiative set; when a side-initiative order is already settled, a late joiner joins their side's block. A local map's token cell becomes their cell. Set auto_place true to put them on a free cell at their side's edge and report it; otherwise place them with place_participant. For a whole band, use stage_encounter. A character who is not at the encounter's location is still added, and the result carries a warning to act on. An NPC with no attacks is also warned about: give them attacks with update_npc before their turn if they are meant to fight.",
     "parameters": {
       "properties": {
         "name": {
@@ -11,6 +11,11 @@
         },
         "side": {
           "type": "string"
+        },
+        "auto_place": {
+          "type": "boolean",
+          "default": false,
+          "description": "Set true to put the character on a free cell at their side's edge and report it. Leave it false to place them with place_participant."
         }
       },
       "required": ["name"]
@@ -207,6 +212,52 @@
         }
       },
       "required": ["map"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "stage_encounter",
+    "requires": ["combat"],
+    "description": "Start an encounter on a map if none is in progress, then add and place a whole roster of characters at once, on their sides. Each entry may give a cell; without one the engine places the character on a free cell at their side's edge and reports it. Create any new NPCs with create_npc in the same round before this call: the calls run in order. Use this instead of start_encounter, add_participant, and place_participant for a band, a room of foes, or reinforcements.",
+    "parameters": {
+      "properties": {
+        "map": {
+          "type": "string",
+          "description": "The map to start the encounter on. Leave it out when an encounter is already in progress."
+        },
+        "roster": {
+          "type": "array",
+          "description": "The characters to add, in join order. Each needs a name; side and a cell are optional. Without a cell the engine places them at their side's edge.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "The character's name. They must already exist; create new NPCs with create_npc before this call."
+              },
+              "side": {
+                "type": "string",
+                "description": "The side to join. Player characters default to the party and NPCs to the foes."
+              },
+              "column": {
+                "type": "integer",
+                "description": "The cell's column, from 0 at the left edge. Give it with row, or leave both out to auto-place."
+              },
+              "row": {
+                "type": "integer",
+                "description": "The cell's row, from 0 at the top edge."
+              },
+              "force": {
+                "type": "boolean",
+                "default": false,
+                "description": "Allow a cell that is occupied or blocked. Set it only when the story insists."
+              }
+            },
+            "required": ["name"]
+          }
+        }
+      },
+      "required": ["roster"]
     }
   },
   {

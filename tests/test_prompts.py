@@ -17,6 +17,7 @@ from cygnusloom.services.prompts import (
     system_parts,
     turn_checklist,
 )
+from cygnusloom.services.tools import checklist_tool_spec
 from tests.conftest import content_library
 from tests.factories import rules_for
 
@@ -248,6 +249,23 @@ def test_the_state_step_requires_the_turn_checklist():
     assert STATE_CLOSING in text
     assert "finish_state_step" in text
     assert "The turn checklist does not apply to an out-of-character reply" in STATE_INSTRUCTION
+
+
+def test_the_state_step_batches_the_finish_call_and_leaves_prose_to_narration():
+    text = state_instruction(rules_for())
+    assert "Write no scene prose in this step" in text
+    assert "stage_encounter" in text
+    assert "include finish_state_step in the same reply" in STATE_CLOSING
+    assert "do not spend a separate round" in STATE_CLOSING
+    checklist, _ = turn_checklist(rules_for().checklist, {"combat"})
+    assert "including finish_state_step in the same reply" in checklist
+
+
+def test_the_finish_tool_invites_batching_into_the_last_change_round():
+    spec = checklist_tool_spec({"characters": "Characters"})
+    description = spec["function"]["description"]
+    assert "same reply as your last changes" in description
+    assert "You do not need the tool results" in description
 
 
 def test_turn_checklist_covers_core_areas_and_the_rule_sets_optional_groups():

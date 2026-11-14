@@ -150,8 +150,14 @@ def _encounter_with(
         "create_npc",
         {"name": "Pip", "location": TOWN, "description": "A scruffy courier."},
     )
-    assert _call(app, campaign_id, "add_participant", {"name": "Pip"})["added"] == "Pip"
-    assert _call(app, campaign_id, "add_participant", {"name": "Ada"})["added"] == "Ada"
+    assert (
+        _call(app, campaign_id, "add_participant", {"name": "Pip", "auto_place": False})["added"]
+        == "Pip"
+    )
+    assert (
+        _call(app, campaign_id, "add_participant", {"name": "Ada", "auto_place": False})["added"]
+        == "Ada"
+    )
     return client, campaign_id
 
 
@@ -240,6 +246,152 @@ def test_only_one_encounter_runs_and_participants_join_in_order(
     )
     refused = _call(app, campaign_id, "start_encounter", {"map": "Other Green"})
     assert "already in progress" in refused["error"]
+
+
+def test_a_joining_participant_is_placed_at_their_side_edge(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _encounter_with(client_factory, columns=10, rows=10)
+    app = client.app
+    _call(
+        app,
+        campaign_id,
+        "create_npc",
+        {"name": "Moss", "location": TOWN, "description": "A bramble."},
+    )
+
+    added = _call(app, campaign_id, "add_participant", {"name": "Moss", "auto_place": True})
+
+    assert added["side"] == "foes"
+    assert (added["column"], added["row"]) == (9, 0)
+    state = _encounter(app, campaign_id)
+    assert state.encounter is not None
+    assert state.encounter.cells[name_key("Moss")] == (9, 0)
+
+    manual = _call(app, campaign_id, "add_participant", {"name": "Pip"})
+    assert "column" not in manual
+
+
+def test_stage_encounter_starts_and_places_a_whole_roster(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = campaign_ready_fast(client_factory)
+    app = client.app
+    place_pc(client, campaign_id, TOWN)
+    assert "error" not in _call(
+        app,
+        campaign_id,
+        "create_encounter_map",
+        {"name": MAP, "location": TOWN, "columns": 12, "rows": 12, "description": "Yard."},
+    )
+    assert "error" not in _call(
+        app,
+        campaign_id,
+        "create_npc",
+        {
+            "name": "Mott",
+            "location": TOWN,
+            "description": "A foreman.",
+            "armor": 12,
+            "attacks": [{"name": "hook", "dice": "1d6+1"}],
+            "summary": "Rill's foreman, a heavy man in a tarred coat.",
+        },
+    )
+    assert "error" not in _call(
+        app,
+        campaign_id,
+        "create_npc",
+        {
+            "name": "Oss",
+            "location": TOWN,
+            "description": "A hired man.",
+            "attacks": [{"name": "hatchet", "dice": "1d6"}],
+        },
+    )
+
+    staged = _call(
+        app,
+        campaign_id,
+        "stage_encounter",
+        {
+            "map": MAP,
+            "roster": [
+                {"name": "Mott", "side": "foes", "column": 10, "row": 2},
+                {"name": "Oss", "side": "foes"},
+            ],
+        },
+    )
+
+    assert staged["started"] == "encounter"
+    assert [entry["name"] for entry in staged["staged"]] == ["Mott", "Oss"]
+    assert staged["staged"][0]["column"] == 10
+    state = _encounter(app, campaign_id)
+    assert state.encounter is not None
+    assert state.encounter.map == MAP
+    assert state.encounter.cells[name_key("Mott")] == (10, 2)
+    assert state.encounter.cells[name_key("Oss")] == (11, 0)
+    mott = state.characters[name_key("Mott")]
+    assert mott.armor == 12
+    assert mott.attacks == {"hook": "1d6+1"}
+    assert state.known[name_key("Mott")].summary == "Rill's foreman, a heavy man in a tarred coat."
+
+
+def test_stage_encounter_can_add_reinforcements_and_refuses_a_wrong_map(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _encounter_with(client_factory, columns=10, rows=10)
+    app = client.app
+    _call(
+        app,
+        campaign_id,
+        "create_npc",
+        {"name": "Moss", "location": TOWN, "description": "A bramble."},
+    )
+
+    added = _call(app, campaign_id, "stage_encounter", {"roster": [{"name": "Moss"}]})
+    assert added["started"] == "reinforcements"
+    assert added["staged"][0]["column"] == 9
+    wrong = _call(
+        app,
+        campaign_id,
+        "stage_encounter",
+        {"map": "Other", "roster": [{"name": "Moss"}]},
+    )
+    assert "encounter is on" in wrong["error"]
+
+
+def test_stage_encounter_validates_the_roster(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _encounter_with(client_factory, columns=10, rows=10)
+    app = client.app
+    _call(
+        app,
+        campaign_id,
+        "create_npc",
+        {"name": "Moss", "location": TOWN, "description": "A bramble."},
+    )
+    duplicate = _call(
+        app,
+        campaign_id,
+        "stage_encounter",
+        {"roster": [{"name": "Moss"}, {"name": "Moss"}]},
+    )
+    assert "more than once" in duplicate["error"]
+    half_cell = _call(
+        app,
+        campaign_id,
+        "stage_encounter",
+        {"roster": [{"name": "Moss", "column": 1}]},
+    )
+    assert "both column and row" in half_cell["error"]
+    unknown = _call(
+        app,
+        campaign_id,
+        "stage_encounter",
+        {"roster": [{"name": "Nobody"}]},
+    )
+    assert "no character named" in unknown["error"]
 
 
 def test_the_gm_can_reorder_the_encounter_and_keep_the_next_turn(
@@ -1110,7 +1262,12 @@ def test_the_roster_and_its_tokens_colour_each_side(client_factory: Callable[[],
         "create_npc",
         {"name": "Moss", "location": TOWN, "description": "A bramble."},
     )
-    added = _call(app, campaign_id, "add_participant", {"name": "Moss", "side": "wild things"})
+    added = _call(
+        app,
+        campaign_id,
+        "add_participant",
+        {"name": "Moss", "side": "wild things", "auto_place": False},
+    )
     assert added["side"] == "wild things"
     _place(app, campaign_id, "Ada", 2, 3, grid=None)
     _place(app, campaign_id, "Pip", 4, 4, grid=None)
