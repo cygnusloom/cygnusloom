@@ -388,7 +388,7 @@
     "type": "tool_call",
     "id": "harm_character",
     "extends": "core:tool_call/harm_character",
-    "description": "Harm a character outside combat, from a fall, poison, exposure, or privation. Use harm from an attack only through attack or player_attack. A PC brought to 0 HP is mortally wounded; an NPC is dead.",
+    "description": "Harm a character from a hazard such as a fall, poison, fire, or a sprung trap, in or out of an encounter. Use harm from an attack only through attack or player_attack. A PC brought to 0 HP is mortally wounded; an NPC is dead.",
     "parameters": {
       "properties": {
         "stat": {

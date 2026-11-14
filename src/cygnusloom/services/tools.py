@@ -88,6 +88,7 @@ TOOL_GROUPS: dict[str, frozenset[str]] = {
             "surprise",
             "stabilize",
             "harm_character",
+            "resolve_hazard",
             "heal_character",
             "add_condition",
             "end_condition",

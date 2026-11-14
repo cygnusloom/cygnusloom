@@ -106,6 +106,11 @@
   },
   {
     "type": "rule",
+    "id": "traps",
+    "text": "A trap calls for a save when it is sprung: Evasion to dodge a pit, deadfall, or blast, or Physical against poison. Spotting a hidden trap is a Wis/Notice check, and disarming a mundane one is Dex/Sneak. A fall deals 1d6 damage per 10 full feet, up to 20d6; a controlled slide may make a Dex or Str/Exert check at difficulty 7 + 1 per 10 full feet to halve the distance. A typical needle-trap poison costs half the victim's maximum HP on a failed Physical save. The Trapmaster focus's improvised trap costs the first victim a round if non-lethal, or deals 1d6 plus twice the builder's level with a save for half if dangerous."
+  },
+  {
+    "type": "rule",
     "id": "encumbrance",
     "text": "Items are the unit of encumbrance: a one-handed object is 1, a two-handed or heavy object is 2 or more, and 100 coins count as 1. A character can keep floor(Str/2) items Readied and Str items Stowed. Each 2 extra Readied or 4 extra Stowed items lower Move to 20 ft, and a further 2 or 4 lower it to 10 ft; more weight than that cannot be practically hauled."
   },

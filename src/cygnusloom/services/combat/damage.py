@@ -304,8 +304,9 @@ def harm_character(
     *,
     spec: CharacterSpec | None = None,
 ) -> dict[str, Any]:
-    """Harm a player character outside combat, such as from a fall or poison. Only the rule set's
-    outside-harm stats can take it. Harm that takes the overflow stat to 0 defeats the character."""
+    """Harm a character from a hazard rather than an attack, such as from a fall or poison.
+    Only the rule set's outside-harm stats can take it. Harm that takes the overflow stat to 0
+    defeats the character."""
     state = load_state(db, campaign_id)
     character = state.characters.get(name_key(name))
     if character is None:
@@ -313,7 +314,7 @@ def harm_character(
     _living(character, combat)
     if stat not in combat.outside_harm:
         options = ", ".join(combat.outside_harm) or "none"
-        raise InvalidInput(f"harm outside combat can only take {options}, not {stat!r}")
+        raise InvalidInput(f"hazard harm can only take {options}, not {stat!r}")
     value = whole_number(amount, "amount", 1, MAX_DAMAGE)
     before = current(character, stat)
     if character.invincible:
@@ -353,14 +354,14 @@ def harm_character(
                 campaign_id,
                 combat,
                 character.name,
-                cause=f"outside combat, with {stat} at 0",
+                cause=f"from a hazard rather than an attack, with {stat} at 0",
                 spec=spec,
             )
         else:
             record(
                 db,
                 campaign_id,
-                CharacterDied(name=character.name, cause=f"outside combat, with {stat} at 0"),
+                CharacterDied(name=character.name, cause=f"from a hazard rather than an attack, with {stat} at 0"),
             )
     db.commit()
     return {

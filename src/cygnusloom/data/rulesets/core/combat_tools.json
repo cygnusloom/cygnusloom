@@ -249,7 +249,7 @@
     "type": "tool_call",
     "id": "harm_character",
     "requires": ["combat"],
-    "description": "Harm a character outside combat, from a fall, poison, exposure, or a similar hazard. Narrate what hurt them. Use it only for harm that does not come from a combat attack.",
+    "description": "Harm a character from a hazard such as a fall, poison, fire, or a sprung trap, in or out of an encounter. Narrate what hurt them. Use it only for harm that does not come from an attack; an attack's harm goes through attack or player_attack.",
     "parameters": {
       "properties": {
         "amount": {
@@ -267,6 +267,60 @@
         }
       },
       "required": ["name", "stat", "amount", "cause"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "resolve_hazard",
+    "requires": ["combat"],
+    "description": "Resolve a trap, fall, fire, poison, or other hazard that catches the characters. Name the hazard and its NPC targets; the engine rolls each save and applies the damage and condition to those who fail. Use it whenever the fiction springs a hazard, including during an encounter, and for a trap the party prepared earlier: it is part of the world, and its trigger is honored now rather than waiting for a particular character's turn. A player character caught in the hazard rolls their own save: use the rule set's player-save tool first, then apply what it costs. Never use attack or player_attack for a hazard.",
+    "parameters": {
+      "properties": {
+        "hazard": {
+          "description": "The hazard, such as a hidden pit, deadfall, or burning oil.",
+          "type": "string"
+        },
+        "targets": {
+          "description": "The NPCs the hazard catches.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "save": {
+          "description": "The save stat id, such as save_evasion for a pit or save_physical for poison. Leave it out for a hazard that allows no save.",
+          "type": "string"
+        },
+        "save_modifier": {
+          "default": 0,
+          "description": "A bonus or penalty to the save, such as an easy pit's +2.",
+          "maximum": 20,
+          "minimum": -20,
+          "type": "integer"
+        },
+        "damage": {
+          "description": "Dice such as 1d6 for a ten-foot fall, or a whole number of points. Leave it out for a hazard that only applies a condition.",
+          "type": "string"
+        },
+        "half_on_save": {
+          "default": false,
+          "description": "True when a passed save halves the damage instead of avoiding it.",
+          "type": "boolean"
+        },
+        "condition": {
+          "description": "A condition id such as prone, applied to those who fail the save.",
+          "type": "string"
+        },
+        "stat": {
+          "description": "The stat the damage takes. Defaults to the rule set's HP or other outside-harm stat.",
+          "type": "string"
+        },
+        "cause": {
+          "description": "What hurt them, in a few words. Defaults to the hazard name.",
+          "type": "string"
+        }
+      },
+      "required": ["hazard", "targets"]
     }
   },
   {

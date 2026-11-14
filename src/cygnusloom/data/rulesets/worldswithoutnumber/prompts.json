@@ -123,5 +123,11 @@
     "type": "prompt",
     "id": "travel",
     "text": "Use travel for overland journeys between distant places. A travel day is ten hours of marching within a whole day of travel; the tool computes the pace from the terrain, road, and weather, moves the character, and advances the clock a full day for each travel day, including camp and rest. The engine spends a day's food and water for each character when the party rests; for a journey longer than a day without a rest, spend the extra days with use_item and set automatic true, because the rations are stowed in the pack. When supplies are lacking, apply the returned privation rules with add_strain. Foraging takes half a day and a Wis/Survive check at the returned difficulty; use roll_check and grant what the roll earns. Do not use move_actor with mode overland for a long journey unless the story truly requires the override and you set its force parameter, and do not advance the clock again for the same travel."
+  },
+  {
+    "type": "prompt",
+    "id": "traps",
+    "step": "state",
+    "text": "Traps and hazards follow the traps rule. Resolve a sprung trap with resolve_hazard in the state step: an unexpected pit or deadfall allows an Evasion save, poison a Physical save, and a fall deals 1d6 damage per 10 full feet. Add prone to those who fall into a pit. The Trapmaster focus's dangerous improvised trap deals 1d6 plus twice the builder's level, with a save for half. A player character caught rolls their own save with player_roll_save before the result is applied."
   }
 ]

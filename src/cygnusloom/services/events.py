@@ -4254,7 +4254,8 @@ class InjuryGained(GameEvent):
 
 @dataclass(frozen=True)
 class Harmed(GameEvent):
-    """Harm taken outside combat, which takes no armor. `defeats` is set when it took the stat that
+    """Harm taken from a hazard rather than an attack, which takes no armor. `defeats` is set
+    when it took the stat that
     decides defeat to 0; `status` is where that leaves the character."""
 
     kind: ClassVar[str] = "combat.harmed"

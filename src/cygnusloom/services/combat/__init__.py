@@ -64,6 +64,7 @@ from cygnusloom.services.combat.debug import (  # noqa: F401
     set_debug_stat,
     set_invincibility,
 )
+from cygnusloom.services.combat.hazard import resolve_hazard  # noqa: F401
 from cygnusloom.services.combat.initiative import (  # noqa: F401
     _no_initiative_pending,
     player_initiative,

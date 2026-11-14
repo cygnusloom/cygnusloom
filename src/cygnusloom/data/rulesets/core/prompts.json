@@ -37,6 +37,21 @@
   },
   {
     "type": "prompt",
+    "id": "hazards",
+    "step": "state",
+    "requires": [
+      "combat"
+    ],
+    "text": "Traps and other hazards are not attacks. When the fiction springs one, such as the party's prepared pit, a deadfall, fire, poison, or a fall, resolve it in this state step with resolve_hazard before you narrate, naming the save and damage the fiction gives. A trap the players prepared earlier is part of the world: honor its trigger when it comes, without requiring a fresh check to have placed it and without waiting for a particular character's turn, and never skip its harm because no one attacked. When the player springs a trap prepared for foes who were meant to come that way, the foes are where the plan expected them: the ambush, the lure, or the press of the fight brings them onto the trapped ground. Do not leave the trap empty because of a placement detail invented after the player committed to it, and when you place a trap for the player, put it where the enemy will actually cross. A hidden trap on an encounter map is a covered-pit, snare, or deadfall object until it springs; then set that cell's object to pit or clear the object with set_map_cells. The engine rolls each NPC's save and applies the harm and condition. A player character caught in the hazard rolls their own save with the rule set's player-save tool first, and what it costs is applied after. Use the rule set's source for the save and damage where it gives them, and choose fair numbers from the fiction where it does not."
+  },
+  {
+    "type": "prompt",
+    "id": "plans",
+    "step": "state",
+    "text": "Honor the player's preparations. When the player spends time, coin, or effort setting something up, such as a trap, an ambush, a disguise, a bribe, or a watch, give it the chance it was made for: the fiction should bring the moment it was designed for, and it works as well as the preparation warrants. Do not quietly nullify it with a detail invented after the fact, move the danger so it catches no one, or skip its effect because no roll was asked for; resolve what it does with the right tools. A plan may still fail, but for a reason the player could see coming, and the narration says what happened. When the player first proposes a preparation the fiction cannot support, say so then and offer what would work, rather than letting them build it and revealing it is useless when they use it."
+  },
+  {
+    "type": "prompt",
     "id": "scene_housekeeping",
     "step": "state",
     "text": "The Housekeeping block suggests what earlier scenes may have left behind at the place the player is in. It is a prompt for continuity, not a command: use it when it helps set the scene, and leave it alone when the story is better served by the place looking unchanged. When you use it, you might say in the location's description what the place looks like now, such as buried, burned, dragged off, rotted, or repaired, and move or remove bodies that are gone. Never invent a body or a fight the record does not list."

@@ -250,7 +250,7 @@
     "type": "tool_call",
     "id": "harm_character",
     "extends": "core:tool_call/harm_character",
-    "description": "Harm a player character outside combat, from a fall, poison, exposure, or a similar hazard. Only the outside-harm stats can take it. Narrate what hurt them. Harm that takes their STR to 0 defeats them. Use it only for harm that does not come from a combat attack.",
+    "description": "Harm a character from a hazard such as a fall, poison, fire, or a sprung trap, in or out of an encounter. Only the outside-harm stats can take it. Narrate what hurt them. Harm that takes their STR to 0 defeats them. Use it only for harm that does not come from a combat attack.",
     "parameters": {
       "properties": {
         "name": {

@@ -2297,6 +2297,40 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 spec=self.character,
             )
 
+    def resolve_hazard(
+        self,
+        hazard: str,
+        targets: list[str],
+        save: str = "",
+        save_modifier: int = 0,
+        damage: str = "",
+        half_on_save: bool = False,
+        condition: str = "",
+        stat: str = "",
+        cause: str = "",
+    ) -> dict[str, Any]:
+        """Resolve a trap, fall, fire, poison, or other hazard against its NPC victims."""
+        with session_scope(self.engine) as db:
+            return combat.resolve_hazard(
+                db,
+                self.campaign_id,
+                _required(self.combat, "combat"),
+                self.rng,
+                hazard,
+                targets,
+                save=save,
+                save_modifier=save_modifier,
+                damage=damage,
+                half_on_save=half_on_save,
+                condition=condition,
+                stat=stat,
+                cause=cause,
+                spec=self.character,
+                conditions=self.conditions,
+                features=self.features,
+                plus=self.plus,
+            )
+
     def set_debug_stat(self, name: str, stat: str, remaining: int) -> dict[str, Any]:
         """Set a player character's current score for one stat, for testing damage rules."""
         with session_scope(self.engine) as db:
