@@ -15,6 +15,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from sqlalchemy import Engine
+from sqlmodel import Session
 
 from cygnusloom.content.character import feature_choice_options, feature_choice_views
 from cygnusloom.content.library import (
@@ -24,6 +25,7 @@ from cygnusloom.content.library import (
     WorldContent,
 )
 from cygnusloom.rules.context import ToolContext
+from cygnusloom.services import counters as counter_service
 from cygnusloom.services import hireling_levels
 from cygnusloom.services.advancements import learnable_features
 from cygnusloom.services.common import InvalidInput, session_scope
@@ -124,6 +126,69 @@ def has_leveling_template(pc: Character, rule_set: RuleSet, rules: LevelUpRules)
         rule_set.character.templates.get(template_id) is not None
         and rule_set.character.templates[template_id].kind in rules.template_kinds
         for template_id in pc.templates.values()
+    )
+
+
+def start_level_rules(rule_set: RuleSet) -> LevelUpRules | None:
+    """The level-up rules a new character can choose a starting level with, if the rule set
+    has levels at all."""
+    return next(iter(rule_set.level_ups.values()), None)
+
+
+def start_level_options(rule_set: RuleSet) -> tuple[int, ...]:
+    """The starting levels the creation form offers, or an empty tuple without levels."""
+    rules = start_level_rules(rule_set)
+    return tuple(range(1, rules.max_level + 1)) if rules is not None else ()
+
+
+def check_start_level(rule_set: RuleSet, start_level: int) -> None:
+    """Refuse a starting level the rule set cannot grant."""
+    rules = start_level_rules(rule_set)
+    if rules is None:
+        raise InvalidInput("this rule set has no levels to start at")
+    if not isinstance(start_level, int) or not 1 <= start_level <= rules.max_level:
+        raise InvalidInput(f"the starting level must be from 1 to {rules.max_level}")
+
+
+def grant_start_level(
+    db: Session,
+    campaign_id: int,
+    rule_set: RuleSet,
+    name: str,
+    start_level: int,
+) -> None:
+    """Give a new character the experience their starting level implies, so the normal
+    advancement page offers every level from 2 up in turn and the player makes each level's
+    choices there. Level 1 earns nothing."""
+    check_start_level(rule_set, start_level)
+    rules = start_level_rules(rule_set)
+    assert rules is not None
+    if start_level == 1:
+        return
+    state = load_state(db, campaign_id)
+    character = state.characters.get(name_key(name))
+    if character is None:
+        raise InvalidInput(f"there is no character named {name!r}")
+    rate = state.options.get(rules.rate_option) or next(iter(rules.tracks))
+    track = rules.tracks.get(rate) or next(iter(rules.tracks.values()))
+    earned = track[start_level - 1]
+    counter = rule_set.counters[rules.xp_counter]
+    current = character.counters.get(rules.xp_counter, counter.initial)
+    if current >= earned:
+        return
+    counter_service.adjust_counter(
+        db,
+        campaign_id,
+        character.name,
+        rules.xp_counter,
+        earned - current,
+        counters=rule_set.counters,
+        conditions=rule_set.conditions,
+        combat=rule_set.combat,
+        rng=random.Random(),
+        plus=rule_set.plus,
+        reason=f"starting at level {start_level}",
+        spec=rule_set.character,
     )
 
 

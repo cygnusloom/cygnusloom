@@ -32,6 +32,7 @@ from cygnusloom.llm.base import (
 )
 from cygnusloom.services import combat, encounters
 from cygnusloom.services import credits as credit_service
+from cygnusloom.services import level_up as level_up_service
 from cygnusloom.services.accounts import public_name
 from cygnusloom.services.common import Conflict, InvalidInput, NotFound, session_scope
 from cygnusloom.services.events import (
@@ -311,11 +312,13 @@ def save_creation(
     table_genres: Sequence[str] | None = None,
     use_inventory_space: bool | None = None,
     use_survival_needs: bool | None = None,
+    start_level: int | None = None,
 ) -> None:
-    """Save the campaign options, the player character, the setting and story, and the table
-    genres together, so either all of them are saved or none is. A part left as None is not
-    saved. The character needs the options first. The setting and genres are captured on the
-    campaign-options creation page, not when the campaign is first made."""
+    """Save the campaign options, the player character, the setting and story, the table
+    genres, and the starting level together, so either all of them are saved or none is. A part
+    left as None is not saved. The character needs the options first. The setting, genres, and
+    starting level are captured on the campaign-options creation page, not when the campaign is
+    first made."""
     campaign = get_campaign(engine, owner_id, campaign_id)
     spec = campaign_spec(library, campaign)
     brief = None
@@ -345,10 +348,20 @@ def save_creation(
                     stored.use_inventory_space = use_inventory_space
                 if use_survival_needs is not None:
                     stored.use_survival_needs = use_survival_needs
+                if start_level is not None:
+                    stored.start_level = start_level
         if options is not None:
             set_campaign_options(db, campaign_id, spec, options)
         if character is not None:
             rule_set = library.rule_sets[campaign.rule_set]
+            # The starting level is a campaign option: every new character begins there, not
+            # only the campaign's first one.
+            starting_level = campaign.start_level
+            if first_character and start_level is not None:
+                starting_level = start_level
+            level_rules = level_up_service.start_level_rules(rule_set)
+            if level_rules is not None:
+                level_up_service.check_start_level(rule_set, starting_level)
             previous = state.player_character(owner_id)
             # A replacement for this player's out-of-play character gets an opening turn again.
             # A player joining a campaign already under way does not; the GM meets them on the
@@ -377,6 +390,10 @@ def save_creation(
                 player_id=owner_id,
                 opening=opening,
             )
+            if starting_level > 1 and level_rules is not None:
+                level_up_service.grant_start_level(
+                    db, campaign_id, rule_set, character.name, starting_level
+                )
         db.commit()
 
 
@@ -738,10 +755,11 @@ def update_campaign_settings(
     inventory_space: bool,
     survival_needs: bool,
     label: str,
+    start_level: int | None = None,
 ) -> Campaign:
     """Save the owner's manual campaign settings in one write: the model, the inventory and
-    survival-needs switches, and the label. They are configuration, not part of the log, so they
-    may change mid-game."""
+    survival-needs switches, the starting level for new characters, and the label. They are
+    configuration, not part of the log, so they may change mid-game."""
     if model not in allowed_models:
         raise InvalidInput("that model is not available")
     label = (label or "").strip()
@@ -754,6 +772,8 @@ def update_campaign_settings(
         campaign.model = model
         campaign.use_inventory_space = inventory_space
         campaign.use_survival_needs = survival_needs
+        if start_level is not None:
+            campaign.start_level = start_level
         campaign.name = label
         db.add(campaign)
         db.commit()
