@@ -4,7 +4,7 @@ import json
 import httpx
 import pytest
 
-from cygnusloom.llm.base import ChatReply, LLMError, ToolRequest, complete
+from cygnusloom.llm.base import ChatReply, LLMError, ToolRequest, complete, with_options
 from cygnusloom.llm.openai_compat import OpenAICompatProvider
 from cygnusloom.services.campaigns import _text_message, _tool_call_message
 
@@ -75,6 +75,52 @@ def test_tools_are_sent_and_tool_requests_are_parsed():
         "social_roll",
         '{"relationship": 1}',
     )
+
+
+def test_request_options_are_merged_without_replacing_the_request_shape():
+    seen = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["body"] = json.loads(request.content)
+        return _json_reply({"role": "assistant", "content": "ok"})
+
+    provider = _provider(handler).with_options(
+        reasoning_effort="low",
+        max_tokens=50,
+        model="other-model",
+        messages=[],
+        tools=[],
+    )
+    asyncio.run(complete(provider, "deepseek-flash", MESSAGES))
+
+    assert seen["body"]["reasoning_effort"] == "low"
+    assert seen["body"]["max_tokens"] == 50
+    assert seen["body"]["model"] == "deepseek-flash"
+    assert seen["body"]["messages"] == MESSAGES
+    assert "tools" not in seen["body"]
+
+
+def test_a_provider_view_applies_its_options_to_every_call():
+    bodies = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        bodies.append(json.loads(request.content))
+        return _json_reply({"role": "assistant", "content": "ok"})
+
+    provider = with_options(_provider(handler), reasoning_effort="none")
+
+    asyncio.run(complete(provider, "deepseek-flash", MESSAGES))
+    asyncio.run(complete(provider, "deepseek-flash", MESSAGES))
+
+    assert [body["reasoning_effort"] for body in bodies] == ["none", "none"]
+
+
+def test_with_options_leaves_an_unsupported_provider_alone():
+    class Bare:
+        name = "bare"
+
+    bare = Bare()
+    assert with_options(bare, reasoning_effort="low") is bare
 
 
 def test_tools_key_is_omitted_when_no_tools_are_given():

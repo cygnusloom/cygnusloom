@@ -31,7 +31,9 @@ from cygnusloom.services.events import (
     load_state,
     record,
 )
+from cygnusloom.services.state import Turn
 from cygnusloom.services.tools import ToolRun, run_tool
+from cygnusloom.services.turns import SPEECH_CONTEXT_MESSAGES, _speech_messages
 from tests.conftest import content_library, csrf_token
 from tests.factories import (
     campaign_ready_fast,
@@ -1124,6 +1126,31 @@ def test_campaign_page_escapes_character_names(client_factory: Callable[[], Test
     page = client.get(f"/campaigns/{campaign_id}").text
     assert "&lt;b&gt;Zed&lt;/b&gt;" in page
     assert "<b>Zed</b>" not in page
+
+
+def test_the_speech_prompt_keeps_only_the_recent_exchange():
+    """The whole transcript made the speech call slow and let an earlier line bleed in."""
+    turn = Turn(
+        opener=1,
+        text="latest",
+        rounds=2,
+        messages=[
+            {"role": "system", "content": "scene"},
+            *[
+                {
+                    "role": "user" if index % 2 == 0 else "assistant",
+                    "content": f"line {index}",
+                }
+                for index in range(20)
+            ],
+        ],
+    )
+    _, _, messages = _speech_messages(
+        CampaignState(), turn, "Mara", "Speaker: Mara", "Warn Ada.", False, 40
+    )
+    assert len(messages) == 1 + SPEECH_CONTEXT_MESSAGES
+    assert messages[1]["content"] == "line 14"
+    assert messages[-1]["content"] == "line 19"
 
 
 def test_speech_is_a_separate_call_and_only_the_narration_is_saved(

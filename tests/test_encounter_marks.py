@@ -128,7 +128,7 @@ def test_template_creates_a_map_with_its_size_background_and_marks(
     assert entry.marks[(1, 1)] == CellMark("floor", "")
 
 
-def test_template_size_can_be_overridden_and_out_of_bounds_marks_are_refused(
+def test_template_size_can_be_overridden_and_small_sizes_grow_to_fit(
     client_factory: Callable[[], TestClient],
 ):
     client, campaign_id = _campaign_id(client_factory)
@@ -141,10 +141,12 @@ def test_template_size_can_be_overridden_and_out_of_bounds_marks_are_refused(
     assert (entry.columns, entry.rows) == (12, 8)
     assert len(entry.marks) == 80
 
-    refused = _call(app, campaign_id, "create_encounter_map", {**base, "name": "Short", "rows": 5})
-    assert "column 0, row 5" in refused["error"]
-    assert "outside the 10 by 5 map" in refused["error"]
-    assert name_key("Short") not in _state(app, campaign_id).maps
+    # A size too small to hold the template grows to fit instead of failing the call.
+    short = _call(app, campaign_id, "create_encounter_map", {**base, "name": "Short", "rows": 5})
+    assert (short["columns"], short["rows"]) == (10, 8)
+    grown = _state(app, campaign_id).maps[name_key("Short")]
+    assert (grown.columns, grown.rows) == (10, 8)
+    assert len(grown.marks) == 80
 
 
 def test_unknown_template_lists_the_known_ids(client_factory: Callable[[], TestClient]):
@@ -221,6 +223,107 @@ def test_set_map_cells_sets_and_clears_keys(client_factory: Callable[[], TestCli
     assert _map(app, campaign_id).marks[(2, 2)] == CellMark("grass", "")
     _paint(app, campaign_id, [{"column": 1, "row": 1, "terrain": ""}])
     assert (1, 1) not in _map(app, campaign_id).marks
+
+
+def test_fill_map_cells_paints_one_rectangle_from_two_corners(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _started(client_factory, {"columns": 10, "rows": 10})
+    app = client.app
+    filled = _call(
+        app,
+        campaign_id,
+        "fill_map_cells",
+        {
+            "map": MAP,
+            "from_column": 6,
+            "from_row": 4,
+            "to_column": 1,
+            "to_row": 2,
+            "terrain": "mud",
+            "pattern": "reeds",
+        },
+    )
+    assert filled == {"map": MAP, "changed": 18}
+    marks = _map(app, campaign_id).marks
+    for column in range(1, 7):
+        for row in range(2, 5):
+            assert marks[(column, row)] == CellMark("mud", "", "", "reeds", "", "")
+    assert (0, 2) not in marks and (1, 1) not in marks and (7, 4) not in marks
+
+    cleared = _call(
+        app,
+        campaign_id,
+        "fill_map_cells",
+        {
+            "map": MAP,
+            "from_column": 1,
+            "from_row": 2,
+            "to_column": 6,
+            "to_row": 4,
+            "terrain": "",
+            "pattern": "",
+        },
+    )
+    assert cleared == {"map": MAP, "changed": 18}
+    assert not any(
+        (column, row) in _map(app, campaign_id).marks
+        for column in range(1, 7)
+        for row in range(2, 5)
+    )
+
+
+def test_fill_map_cells_validates_bounds_fields_and_size(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _started(client_factory, {"columns": 10, "rows": 10})
+    app = client.app
+    off_map = _call(
+        app,
+        campaign_id,
+        "fill_map_cells",
+        {
+            "map": MAP,
+            "from_column": 0,
+            "from_row": 0,
+            "to_column": 10,
+            "to_row": 0,
+            "terrain": "mud",
+        },
+    )
+    assert "from 0 to 9" in off_map["error"]
+    empty = _call(
+        app,
+        campaign_id,
+        "fill_map_cells",
+        {"map": MAP, "from_column": 0, "from_row": 0, "to_column": 1, "to_row": 1},
+    )
+    assert "at least one of terrain" in empty["error"]
+    assert _map(app, campaign_id).marks == {}
+
+    wide_client, wide_campaign = _campaign_id(client_factory)
+    wide_app = wide_client.app
+    _place_pc(wide_client, wide_campaign, TOWN)
+    assert "error" not in _call(
+        wide_app,
+        wide_campaign,
+        "create_encounter_map",
+        {"name": "Wide", "location": TOWN, "description": "Open.", "columns": 20, "rows": 20},
+    )
+    too_many = _call(
+        wide_app,
+        wide_campaign,
+        "fill_map_cells",
+        {
+            "map": "Wide",
+            "from_column": 0,
+            "from_row": 0,
+            "to_column": 19,
+            "to_row": 10,
+            "terrain": "mud",
+        },
+    )
+    assert "at most 200 cells" in too_many["error"]
 
 
 def test_blocked_destination_is_refused_even_for_the_first_placement(

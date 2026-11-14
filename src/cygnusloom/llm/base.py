@@ -67,6 +67,17 @@ class Provider(Protocol):
         ...
 
 
+def with_options(provider: Provider, **options: Any) -> Provider:
+    """A view of `provider` that adds request fields such as `reasoning_effort`.
+
+    A provider that does not support options is returned unchanged, so a scripted test
+    provider keeps working."""
+    build = getattr(provider, "with_options", None)
+    if build is None:
+        return provider
+    return build(**options)
+
+
 async def complete(provider: Provider, model: str, messages: list[dict[str, Any]]) -> str:
     """A plain text reply with no tools, such as a summary."""
     return (await provider.chat(model, messages)).text.strip()

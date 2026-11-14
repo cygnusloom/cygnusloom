@@ -331,10 +331,11 @@ def create_map(
     """Create a map at a location. A map is not necessarily an encounter: outside one it is a
     local map that shows the player character, NPCs, and props where they stand. With a
     `template`, its size, background, and look come from the template and its cells become
-    marks; `columns` and `rows`, if given, override the template size, and a palette, ambient,
-    or colour the caller gives overrides the template's. Without a template, columns and rows
-    are required and the map starts empty. A location may have several maps; the newest is its
-    local map, and an encounter can start on any of them.
+    marks; `columns` and `rows`, if given, override the template size, though a size too small
+    to hold the template's cells is raised to fit them, and a palette, ambient, or colour the
+    caller gives overrides the template's. Without a template, columns and rows are required
+    and the map starts empty. A location may have several maps; the newest is its local map,
+    and an encounter can start on any of them.
 
     A caller that is already holding the campaign state, and keeping it current, can pass it
     as `state`; otherwise the state is loaded from the log."""
@@ -366,6 +367,15 @@ def create_map(
         columns = layout.columns if columns is None else columns
         rows = layout.rows if rows is None else rows
         columns, rows = _size(columns, rows)
+        # A caller that gives a size smaller than the template would otherwise get a failed
+        # call for a cell just outside the map, then have to retry with the template's size.
+        # Grow to fit instead: the template's layout is the part that cannot be cropped.
+        needed_columns = max((cell.column for cell in layout.cells), default=-1) + 1
+        needed_rows = max((cell.row for cell in layout.cells), default=-1) + 1
+        columns, rows = _size(
+            max(columns, layout.columns, needed_columns),
+            max(rows, layout.rows, needed_rows),
+        )
         marks = _template_marks(layout, columns, rows)
     elif columns is None or rows is None:
         raise InvalidInput("columns and rows are required unless a template is given")
@@ -673,6 +683,79 @@ def set_map_cells(
     )
     db.commit()
     return {"map": entry.name, "changed": len(touched)}
+
+
+def fill_map_cells(
+    db: Session,
+    campaign_id: int,
+    name: str,
+    from_column: int,
+    from_row: int,
+    to_column: int,
+    to_row: int,
+    terrain: Mapping[str, EncounterTerrain] | None = None,
+    encounter_objects: Mapping[str, EncounterObject] | None = None,
+    force: bool = False,
+    *,
+    terrain_id: str | None = None,
+    object_id: str | None = None,
+    color: str | None = None,
+    pattern: str | None = None,
+    icon: str | None = None,
+    label: str | None = None,
+) -> dict[str, Any]:
+    """Fill a rectangle of cells with one terrain, object, colour, pattern, icon, or label.
+
+    The corners may be given in either order, and both are included. This is the compact form
+    of set_map_cells for a whole floor, reed bed, or other broad area: the GM sends one small
+    call instead of one cell object per square."""
+    state = load_state(db, campaign_id)
+    entry = _map_named(state, name)
+    for corner, value, size in (
+        ("from_column", from_column, entry.columns),
+        ("to_column", to_column, entry.columns),
+        ("from_row", from_row, entry.rows),
+        ("to_row", to_row, entry.rows),
+    ):
+        if not _is_int(value) or not 0 <= value < size:
+            raise InvalidInput(
+                f"{corner} must be a whole number from 0 to {size - 1} on {entry.name}"
+            )
+    left, right = sorted((from_column, to_column))
+    top, bottom = sorted((from_row, to_row))
+    count = (right - left + 1) * (bottom - top + 1)
+    if count > MAX_CELLS_PER_CALL:
+        raise InvalidInput(f"fill at most {MAX_CELLS_PER_CALL} cells in one call, not {count}")
+    fields = {
+        key: value
+        for key, value in (
+            ("terrain", terrain_id),
+            ("object", object_id),
+            ("color", color),
+            ("pattern", pattern),
+            ("icon", icon),
+            ("label", label),
+        )
+        if value is not None
+    }
+    if not fields:
+        raise InvalidInput(
+            "give at least one of terrain, object, color, pattern, icon, or label to fill"
+        )
+    cells = [
+        {"column": column, "row": row, **fields}
+        for row in range(top, bottom + 1)
+        for column in range(left, right + 1)
+    ]
+    return set_map_cells(
+        db,
+        campaign_id,
+        entry.name,
+        cells,
+        terrain,
+        encounter_objects,
+        force=force,
+    )
 
 
 def delete_map(db: Session, campaign_id: int, name: str) -> dict[str, Any]:
