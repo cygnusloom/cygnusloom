@@ -1592,7 +1592,7 @@
   {
     "type": "tool_call",
     "id": "set_map_cells",
-    "description": "Set the terrain, object, colour, pattern, icon, or label of cells on a map, inside or outside an encounter. Use it for fixed furniture, doors, stairs, water, and other props on a local map, and to vary its tiles. Ids come from map_options. A custom colour overrides the terrain colour, a custom icon overrides the object icon, and the label appears in the tooltip. A cell with a blocking object cannot be entered.",
+    "description": "Set the terrain, object, colour, pattern, icon, or label of cells on a map, inside or outside an encounter. Use it for fixed furniture, doors, stairs, water, and other props on a local map, and to vary its tiles. For a whole rectangle with the same fields, call fill_map_cells instead of listing every cell. Ids come from map_options. A custom colour overrides the terrain colour, a custom icon overrides the object icon, and the label appears in the tooltip. A cell with a blocking object cannot be entered.",
     "parameters": {
       "properties": {
         "map": {
@@ -1653,6 +1653,71 @@
       "required": [
         "map",
         "cells"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "fill_map_cells",
+    "description": "Fill a rectangle of cells on a map with the same terrain, object, colour, pattern, icon, or label. Use it for a broad area such as a floor, reed bed, water, or a cleared yard instead of listing every cell with set_map_cells. The rectangle includes both corners, and the corners may be given in either order. At most 200 cells. A cell with a blocking object cannot be entered.",
+    "parameters": {
+      "properties": {
+        "map": {
+          "type": "string",
+          "description": "The name of the map."
+        },
+        "from_column": {
+          "type": "integer",
+          "description": "The column of one corner, from 0 at the left edge."
+        },
+        "from_row": {
+          "type": "integer",
+          "description": "The row of the same corner, from 0 at the top edge."
+        },
+        "to_column": {
+          "type": "integer",
+          "description": "The column of the opposite corner."
+        },
+        "to_row": {
+          "type": "integer",
+          "description": "The row of the opposite corner."
+        },
+        "terrain": {
+          "type": "string",
+          "description": "The terrain id for every cell, such as mud or floor. Empty clears it; leave it out to keep each cell's terrain."
+        },
+        "object": {
+          "type": "string",
+          "description": "The object id on every cell, such as wall or crate. Empty clears it; leave it out to keep each cell's object."
+        },
+        "color": {
+          "type": "string",
+          "description": "A hex colour for the cells' ground, such as #7a2f3a. Empty clears it; leave it out to keep each cell's colour."
+        },
+        "pattern": {
+          "type": "string",
+          "description": "A pattern id from map_options, such as tiles, bricks, wood, or reeds. Empty clears it; leave it out to keep each cell's pattern."
+        },
+        "icon": {
+          "type": "string",
+          "description": "An icon id from map_options to draw instead of the object's own icon. Empty clears it; leave it out to keep each cell's icon."
+        },
+        "label": {
+          "type": "string",
+          "description": "A short label for every cell, at most 60 characters, shown in the tooltip. Empty clears it; leave it out to keep each cell's label."
+        },
+        "force": {
+          "type": "boolean",
+          "default": false,
+          "description": "Set true only when the story needs a blocking object to close over a cell someone occupies. Normally leave it false."
+        }
+      },
+      "required": [
+        "map",
+        "from_column",
+        "from_row",
+        "to_column",
+        "to_row"
       ]
     }
   },

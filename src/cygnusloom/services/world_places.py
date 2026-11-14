@@ -261,6 +261,44 @@ class PlacesMixin:
         """Set terrain or objects on map cells, inside or outside an encounter."""
         return self.set_encounter_map_cells(map, cells, force=force)
 
+    def fill_map_cells(
+        self,
+        map: str,
+        from_column: int,
+        from_row: int,
+        to_column: int,
+        to_row: int,
+        terrain: str | None = None,
+        object: str | None = None,
+        color: str | None = None,
+        pattern: str | None = None,
+        icon: str | None = None,
+        label: str | None = None,
+        force: bool = False,
+    ) -> dict[str, Any]:
+        """Fill a rectangle of map cells with one terrain, object, colour, pattern, icon, or
+        label. The corners may be given in either order and are both included. Use it for a
+        whole floor or other broad area instead of listing every cell with set_map_cells."""
+        with session_scope(self.engine) as db:
+            return encounters.fill_map_cells(
+                db,
+                self.campaign_id,
+                map,
+                from_column,
+                from_row,
+                to_column,
+                to_row,
+                self.terrain,
+                self.encounter_objects,
+                force=force,
+                terrain_id=terrain,
+                object_id=object,
+                color=color,
+                pattern=pattern,
+                icon=icon,
+                label=label,
+            )
+
     def set_encounter_map_cells(
         self, map: str, cells: list[Mapping[str, Any]], force: bool = False
     ) -> dict[str, Any]:

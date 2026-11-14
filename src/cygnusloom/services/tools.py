@@ -106,6 +106,7 @@ TOOL_GROUPS: dict[str, frozenset[str]] = {
             "create_local_map",
             "update_local_map",
             "set_map_cells",
+            "fill_map_cells",
             "place_map_token",
             "remove_map_token",
             "create_encounter_map",

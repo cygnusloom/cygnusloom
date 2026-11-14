@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import json
 import logging
 from collections.abc import AsyncIterator, Mapping
@@ -22,6 +23,7 @@ class OpenAICompatProvider:
         api_key: str | None = None,
         client: httpx.AsyncClient | None = None,
         stream_usage: bool = True,
+        request_options: Mapping[str, Any] | None = None,
     ):
         self.name = name
         self._base_url = base_url.rstrip("/")
@@ -31,6 +33,14 @@ class OpenAICompatProvider:
         # field, so the admin can switch this off per model; a rejection is also retried once
         # without it.
         self._stream_usage = stream_usage
+        # Extra body fields for every request, such as a lower reasoning effort.
+        self._request_options = dict(request_options or {})
+
+    def with_options(self, **options: Any) -> OpenAICompatProvider:
+        """A shallow clone that adds options to every request; the client is shared."""
+        clone = copy.copy(self)
+        clone._request_options = {**self._request_options, **options}
+        return clone
 
     async def chat(
         self,
@@ -38,7 +48,9 @@ class OpenAICompatProvider:
         messages: list[dict[str, Any]],
         tools: list[dict[str, Any]] | None = None,
     ) -> ChatReply:
-        request = self._request(_body(model, messages, tools), "application/json")
+        request = self._request(
+            _body(model, messages, tools, options=self._request_options), "application/json"
+        )
         try:
             response = await self._client.send(request)
         except httpx.HTTPError as exc:
@@ -72,7 +84,14 @@ class OpenAICompatProvider:
         supports OpenAI's `stream_options`. A server that rejects that field is retried once
         without it, so streaming still works and usage falls back to estimation."""
         request = self._request(
-            _body(model, messages, tools, stream=True, include_usage=self._stream_usage),
+            _body(
+                model,
+                messages,
+                tools,
+                stream=True,
+                include_usage=self._stream_usage,
+                options=self._request_options,
+            ),
             "text/event-stream",
         )
         try:
@@ -92,7 +111,10 @@ class OpenAICompatProvider:
                 )
                 raise LLMError(f"provider {self.name} returned HTTP {response.status_code}")
             logger.info("provider %s rejected stream usage; retrying without it", self.name)
-            request = self._request(_body(model, messages, tools, stream=True), "text/event-stream")
+            request = self._request(
+                _body(model, messages, tools, stream=True, options=self._request_options),
+                "text/event-stream",
+            )
             try:
                 response = await self._client.send(request, stream=True)
             except httpx.HTTPError as exc:
@@ -158,6 +180,7 @@ def _body(
     tools: list[dict[str, Any]] | None,
     stream: bool = False,
     include_usage: bool = False,
+    options: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     body: dict[str, Any] = {"model": model, "messages": messages}
     if tools:
@@ -166,6 +189,11 @@ def _body(
         body["stream"] = True
         if include_usage:
             body["stream_options"] = {"include_usage": True}
+    # A stage may lower its reasoning effort, for example for prose. These fields must never
+    # replace the request's own shape.
+    for key, value in (options or {}).items():
+        if key not in {"model", "messages", "tools", "stream", "stream_options"}:
+            body[key] = value
     return body
 
 

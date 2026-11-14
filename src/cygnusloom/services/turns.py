@@ -28,6 +28,7 @@ from cygnusloom.llm.base import (
     TextDelta,
     ToolRequest,
     complete,
+    with_options,
 )
 from cygnusloom.llm.registry import ProviderFactory
 from cygnusloom.rules.context import ToolContext, brief
@@ -146,6 +147,10 @@ SPEECH_RETRY = (
     "Your last reply was empty. Write the line now: only the words the speaker says aloud, "
     "one line, and nothing else."
 )
+# The speech step needs the immediate exchange, not the whole campaign: the summary, the
+# profile, and the intent carry the rest. The full transcript made the call slow and let an
+# earlier speaker's line bleed into the new one.
+SPEECH_CONTEXT_MESSAGES = 6
 # An empty or malformed narration is requested again this many times before the turn fails.
 NARRATION_ATTEMPTS = 2
 NARRATION_RETRY = (
@@ -585,6 +590,10 @@ class _Run:
     # NPC lines being written beside the state step. Set once the run exists, because the
     # tool context needs to queue through it.
     speech: _SpeechJobs = field(init=False, repr=False)
+    # The same model at lower reasoning effort for the journal's bounded edit and for state
+    # rounds after the first, where the plan is already set. Speech, narration, review, and
+    # the planning round keep full effort.
+    provider_low: Provider = field(init=False, repr=False)
 
     @property
     def tool_calls(self) -> Mapping[str, ToolCall]:
@@ -751,6 +760,11 @@ def _start_run(
     )
     speech = _SpeechJobs(run)
     run.speech = speech
+    # Low effort is for the journal's bounded edit and for state rounds after the first,
+    # where the plan is already set; it cuts the deliberation out of those calls. Speech,
+    # narration, review, and the planning round keep normal effort, where lower effort cost
+    # fidelity.
+    run.provider_low = MeteredProvider(with_options(provider, reasoning_effort="low"), meter)
     return run
 
 
@@ -970,7 +984,7 @@ def _speech_messages(
     system = "\n\n".join(parts)
     conversation = [
         m for m in turn.messages[1:] if m["role"] in ("user", "assistant") and "tool_calls" not in m
-    ]
+    ][-SPEECH_CONTEXT_MESSAGES:]
     label = f"Speech step (round {turn.rounds})"
     return system, label, [{"role": "system", "content": system}, *conversation]
 
@@ -1180,6 +1194,8 @@ class _SpeechJobs:
             self._order.append(key)
 
     async def _write(self, job: _SpeechJob) -> tuple[str, bool]:
+        # Speech keeps the turn model's full effort. With reasoning disabled it once wrote
+        # another speaker's earlier line as scene prose, which the review then rewrote twice.
         reply = ""
         for attempt in range(SPEECH_ATTEMPTS):
             request = (
@@ -1705,7 +1721,7 @@ async def _journal_step(run: _Run, turn: Turn) -> None:
     view.append({"role": "system", "content": journal_instruction(state.clock.day, state.journal)})
     # One round: the step is written beside the narration, so every edit belongs in the same
     # request. A model that asks for another round would only delay the player's reply.
-    step = await run.provider.chat(run.model_name, view, tools)
+    step = await run.provider_low.chat(run.model_name, view, tools)
     failed = False
     for request in step.tool_requests:
         result = await run_tool(run.tool_calls, request, ctx=run.ctx)
@@ -2142,9 +2158,14 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
         view.append(state_message)
         if turn.speech:
             view.append(_queued_dialogue_note(turn.speech))
+        # The first round plans the turn, and keeps full effort. Later rounds carry out that
+        # plan, apply tool results, and write the checklist; low effort halves their output
+        # there without changing the tool calls. The prompt still requires any move and the
+        # speak call a beat turns on, so fewer rounds never means a thinner turn.
+        state_provider = run.provider if turn.rounds == 0 or turn.opening else run.provider_low
         replied: list[ChatReply] = []
         async for event in _await_with_heartbeat(
-            run.provider.chat(run.model_name, view, tools), replied
+            state_provider.chat(run.model_name, view, tools), replied
         ):
             yield event
         step = replied[0]
