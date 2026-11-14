@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import re
 from collections.abc import Callable
+from types import SimpleNamespace
 from typing import Any
 
 from fastapi import FastAPI
@@ -18,6 +19,7 @@ from cygnusloom.services.campaigns import (
 )
 from cygnusloom.services.events import ChatGM, record
 from cygnusloom.services.prompts import STATE_INSTRUCTION
+from cygnusloom.services.turns import _map_option_line, _trim_conversation
 from tests.conftest import NARRATE_TEXT, is_review_messages, without_journal
 from tests.test_campaigns import _answer, _campaign_id, _send, _signed_in
 from tests.test_context import (
@@ -114,6 +116,83 @@ def test_recorded_system_text_is_exactly_what_the_model_received(
     assert state_call[0] == {"role": "system", "content": "\n\n".join(p.content for p in base)}
     assert final_call[-1] == {"role": "system", "content": NARRATE_TEXT}
     assert all(message["content"] != STATE_INSTRUCTION for message in final_call)
+
+
+def test_state_step_gets_compact_old_results_and_the_turn_log(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    recorder = _recording_provider()
+    app.state.providers = lambda model_id: (recorder, model_id)
+    client, campaign_id = _campaign_id(client_factory)
+    move = {
+        "name": "move_actor",
+        "arguments": {
+            "name": "Ada",
+            "location": "Mossbell Hollow",
+            "mode": "in_settlement",
+        },
+    }
+    _send(
+        client,
+        campaign_id,
+        _script({"rounds": [[move], [move], [move]], "text": "Ada settles in."}),
+    )
+
+    calls = without_journal(recorder.calls)
+    state_call = next(
+        call["messages"]
+        for call in reversed(calls)
+        if any(
+            message["role"] == "system"
+            and str(message["content"]).startswith("State management step.")
+            for message in call["messages"]
+        )
+    )
+    results = [message for message in state_call if message["role"] == "tool"]
+    assert len(results) == 3
+    # Only the newest two rounds keep their full result; the oldest is summarized.
+    assert results[0]["content"].startswith("move_actor: ")
+    assert results[1]["content"].startswith("{")
+    assert any(
+        message["role"] == "system" and "State so far" in str(message["content"])
+        for message in state_call
+    )
+
+
+def test_trimming_history_keeps_a_tool_call_with_its_result():
+    messages = [
+        {"role": "system", "content": "system"},
+        {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [{"id": "call-1", "function": {"name": "move_actor"}}],
+        },
+        {"role": "tool", "tool_call_id": "call-1", "content": "{}"},
+        {"role": "user", "content": "next"},
+        {"role": "assistant", "content": "reply"},
+    ]
+
+    trimmed = _trim_conversation(messages, keep=1)
+
+    roles = [message["role"] for message in trimmed]
+    assert roles == ["system", "assistant", "tool", "user", "assistant"]
+
+
+def test_map_ids_are_given_to_the_state_step():
+    run = SimpleNamespace(
+        rule_set=SimpleNamespace(
+            terrain={"forest": object(), "road": object()},
+            encounter_objects={"cart": object()},
+            encounter_templates={"yard": object()},
+        )
+    )
+
+    line = _map_option_line(run)
+
+    assert "terrains forest, road" in line
+    assert "objects cart" in line
+    assert "templates yard" in line
+    assert "do not call map_options" in line
 
 
 def test_context_shows_history_and_this_turns_tool_rounds(

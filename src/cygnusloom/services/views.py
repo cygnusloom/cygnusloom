@@ -1288,10 +1288,10 @@ def _npc_state_name(npc: Character) -> str:
 
 # A crowded place would otherwise repeat every statblock in every prompt. The rest stay a
 # lookup away.
-_NPC_STAT_LIMIT = 8
+_NPC_STAT_LIMIT = 12
 
 
-def _npc_stat_line(
+def npc_stat_line(
     state: CampaignState,
     name: str,
     spec: CharacterSpec,
@@ -1331,7 +1331,7 @@ def _npc_stat_lines(
         if key in seen:
             continue
         seen.add(key)
-        line = _npc_stat_line(state, name, spec, combat, monsters)
+        line = npc_stat_line(state, name, spec, combat, monsters)
         if line is None:
             continue
         if len(lines) >= _NPC_STAT_LIMIT:

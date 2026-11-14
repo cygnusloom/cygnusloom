@@ -27,9 +27,6 @@ from cygnusloom.services.common import InvalidInput, NotFound
 logger = logging.getLogger(__name__)
 
 _PYTHON_TYPES: dict[str, type] = {"string": str, "array": list, "object": dict}
-# The turn review must not speak for an NPC or restart the out-of-character step. Those tools
-# stay in the state step's list, but are left out of the review's.
-_REVIEW_STEP_EXCLUDED = frozenset({"speak", "ooc", "set_music"})
 # The review may read these to check the record, even though they cannot change it.
 _REVIEW_LOOKUPS = frozenset(
     {"all_at_location", "get_statblock", "lookup_condition", "lookup_feature", "lookup_rule"}
@@ -238,9 +235,9 @@ def tool_specs(
     review_step: bool = False,
 ) -> list[dict[str, Any]] | None:
     """The tool list for a chat request, or None when there are no tools for it. The journal step
-    gets only its own tools; the turn review step gets the usual tools plus its own; every other
-    step gets the usual tools. The review loop refuses a record-changing tool until the review
-    has set the narration aside, so the record and the narration stay in step."""
+    gets only its own tools; the turn review gets only its undo tool and the review lookups, so
+    it judges the narration instead of rewriting the record; every other step gets the usual
+    tools."""
     if journal_step:
         selected = [tool for tool in tool_calls.values() if tool.journal_step]
     elif review_step:
@@ -248,9 +245,7 @@ def tool_specs(
             tool
             for tool in tool_calls.values()
             if not tool.journal_step
-            and tool.name not in _REVIEW_STEP_EXCLUDED
-            and (not tool.lookup or tool.name in _REVIEW_LOOKUPS)
-            and tool.player_input is None
+            and (tool.review_step or (tool.lookup and tool.name in _REVIEW_LOOKUPS))
         ]
     else:
         selected = [
@@ -417,7 +412,7 @@ def checklist_tool_spec(items: Mapping[str, str]) -> dict[str, Any]:
             "description": (
                 "Finish the state step after checking every area of the turn checklist. Include "
                 "it in the same reply as your last changes; the engine runs it after the other "
-                "calls. Give one short note per area: what changed, or \"no change\". You do "
+                'calls. Give one short note per area: what changed, or "no change". You do '
                 "not need the tool results to write the notes. The notes are internal and are "
                 "never shown to the player."
             ),

@@ -2054,3 +2054,25 @@ def test_light_armor_has_no_check_penalty(client_factory):
 
     assert result["armor_penalty"] == 0
     assert _pc(client.app, campaign_id).equipped_armor == "Buff Coat"
+
+
+def test_stage_encounter_returns_the_roster_combat_stats(client_factory):
+    _, _, tools = _wwn_campaign(client_factory)
+    tools.create_location(YARD, "Cobbles around a dry well.")
+    tools.create_encounter_map(MAP, YARD, 10, 10, "Open cobbles.")
+    tools.create_monster(
+        "Mott",
+        YARD,
+        description="A foreman.",
+        stats=_stats(hp=6),
+        armor=12,
+        attacks=[{"name": "hook", "dice": "1d6"}],
+        force=True,
+    )
+
+    staged = tools.stage_encounter([{"name": "Mott", "side": "foes"}], MAP)
+
+    stats = staged["staged"][0]["stats"]
+    assert "HP 6/6" in stats
+    assert "Armor: 12" in stats
+    assert "hook" in stats
