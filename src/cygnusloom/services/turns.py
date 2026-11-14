@@ -162,7 +162,11 @@ STATE_FULL_ROUNDS = 2
 STATE_TOOL_RESULT_CHARS = 400
 STATE_HISTORY_MESSAGES = 4
 STATE_LOG_LINES = 30
+# Only the newest tool round's thinking is useful. Earlier reasoning is a draft of work
+# already done and costs thousands of tokens on every later round.
+STATE_REASONING_ROUNDS = 1
 NARRATION_HISTORY_MESSAGES = 6
+NARRATION_REASONING_ROUNDS = 1
 REVIEW_HISTORY_MESSAGES = 4
 REVIEW_FULL_ROUNDS = 2
 # An empty or malformed narration is requested again this many times before the turn fails.
@@ -187,7 +191,7 @@ UNDO_NARRATION = "undo_narration"
 REVIEW_UNDONE_NOTE = "the narration did not match the record"
 # A long model call would otherwise leave the player's stream silent, and a silent stream looks
 # exactly like a hung page. Every this many seconds of waiting, the turn sends a status line.
-HEARTBEAT_SECONDS = 15.0
+HEARTBEAT_SECONDS = 4.0
 HEARTBEAT_MESSAGE = "Still working..."
 JOURNAL_ROUNDS = 3
 # A state-step reply that leaves out part of the turn checklist is asked for again this many
@@ -429,7 +433,7 @@ def _history_message(m: ChatMessage, multiplayer: bool = False) -> dict[str, Any
     return {"role": m.role, "content": f"{who}: {m.content}" if who else m.content}
 
 
-def _tool_call_message(step: ChatReply) -> dict[str, Any]:
+def _tool_call_message(step: ChatReply, *, keep_reasoning: bool = True) -> dict[str, Any]:
     """The assistant message that records a step's tool requests, as the model sees it. Thinking
     models reject it with HTTP 400 when the key is missing, even if the reasoning is empty."""
     message: dict[str, Any] = {
@@ -444,7 +448,9 @@ def _tool_call_message(step: ChatReply) -> dict[str, Any]:
             for request in step.tool_requests
         ],
     }
-    message["reasoning_content"] = step.reasoning
+    # A state round's thinking is a draft. Keeping it would rewrite the prefix every round
+    # and lose the provider's prompt-cache hits; the calls and results carry the decisions.
+    message["reasoning_content"] = step.reasoning if keep_reasoning else ""
     return message
 
 
@@ -879,6 +885,7 @@ def _narration_messages(
         conversation, _ = _compact_old_tool_results(conversation, REVIEW_FULL_ROUNDS)
     elif tool_exchange != "full":
         raise ValueError(f"unknown tool exchange mode {tool_exchange!r}")
+    conversation = _without_old_reasoning(conversation, NARRATION_REASONING_ROUNDS)
     messages: list[dict[str, Any]] = [
         {"role": "system", "content": "\n\n".join(p.content for p in scene)},
         *(
@@ -1028,6 +1035,34 @@ def _without_tool_results(messages: Sequence[dict[str, Any]]) -> list[dict[str, 
     ]
 
 
+def _without_old_reasoning(
+    messages: Sequence[dict[str, Any]], keep_rounds: int
+) -> list[dict[str, Any]]:
+    """Blank the thinking on tool-call rounds older than the newest `keep_rounds`. The key
+    stays because thinking models reject an assistant message without it; the calls and
+    results carry what the earlier rounds decided."""
+    starts = [
+        index
+        for index, message in enumerate(messages)
+        if message.get("role") == "assistant" and message.get("tool_calls")
+    ]
+    if len(starts) <= keep_rounds:
+        return list(messages)
+    first_full = starts[-keep_rounds] if keep_rounds else len(messages)
+    result: list[dict[str, Any]] = []
+    for index, message in enumerate(messages):
+        if (
+            index < first_full
+            and message.get("role") == "assistant"
+            and message.get("tool_calls")
+            and message.get("reasoning_content")
+        ):
+            result.append({**message, "reasoning_content": ""})
+        else:
+            result.append(message)
+    return result
+
+
 def _trim_conversation(messages: Sequence[dict[str, Any]], keep: int) -> list[dict[str, Any]]:
     """Keep the leading system message, the last `keep` history messages, and the current
     turn from the last player message onward."""
@@ -1056,6 +1091,7 @@ def _state_messages(run: _Run, turn: Turn, state_message: dict[str, Any]) -> lis
     compacted, and a short record log when a result was compacted."""
     messages = _trim_conversation([*turn.messages], STATE_HISTORY_MESSAGES)
     messages, compacted = _compact_old_tool_results(messages, STATE_FULL_ROUNDS)
+    messages = _without_old_reasoning(messages, STATE_REASONING_ROUNDS)
     if compacted:
         log = _turn_log(run.engine, run.campaign_id, turn.opener)
         if log:
@@ -2500,7 +2536,7 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
             run.campaign_id,
             StateStepMade(
                 requests=[asdict(request) for request in requests],
-                messages=[_tool_call_message(recorded)],
+                messages=[_tool_call_message(recorded, keep_reasoning=False)],
                 context=_dicts(context),
             ),
         )
@@ -2538,16 +2574,6 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
             ):
                 yield event
             reply, reasoning = written[0]
-            if journal_task is not None:
-                try:
-                    await journal_task
-                except asyncio.CancelledError:
-                    raise
-                except Exception:
-                    # The journal is a convenience, not part of the story. The next turn
-                    # covers whatever this one missed.
-                    logger.exception("the journal step for campaign %s failed", run.campaign_id)
-                journal_task = None
             if review_round >= NARRATION_REVIEWS:
                 break
             reviewed: list[_ReviewResult] = []
@@ -2555,6 +2581,18 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
                 yield event
             if not reviewed[0].undone:
                 break
+        if journal_task is not None:
+            # The journal reads only the record, so the review does not wait for it. It
+            # finishes beside the review instead of adding its time before review starts.
+            try:
+                await journal_task
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                # The journal is a convenience, not part of the story. The next turn
+                # covers whatever this one missed.
+                logger.exception("the journal step for campaign %s failed", run.campaign_id)
+            journal_task = None
     finally:
         if journal_task is not None and not journal_task.done():
             journal_task.cancel()

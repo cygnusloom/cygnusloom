@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from collections.abc import AsyncIterator, Callable
 from dataclasses import replace
 from typing import Any
@@ -420,7 +421,49 @@ def test_each_journal_step_covers_only_the_log_since_the_last_one(
     assert not set(first_log.splitlines()[1:]) & set(second_log.splitlines()[1:])
 
 
-def test_the_state_step_reasoning_goes_back_to_the_journal_and_narration(
+def test_the_review_starts_before_the_journal_finishes(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    client, campaign_id = _campaign_id(client_factory)
+    recorder = _recording_provider()
+    review_started = asyncio.Event()
+    waited_for_review = False
+    chat = recorder.chat
+
+    async def ordered_chat(
+        model: str, messages: list[dict[str, Any]], tools: list[dict[str, Any]] | None = None
+    ) -> ChatReply:
+        nonlocal waited_for_review
+        if is_journal_messages(messages):
+            try:
+                await asyncio.wait_for(review_started.wait(), timeout=2)
+            except TimeoutError:
+                waited_for_review = True
+        elif is_review_messages(messages):
+            review_started.set()
+        return await chat(model, messages, tools)
+
+    recorder.chat = ordered_chat
+    app.state.providers = lambda model_id: (recorder, model_id)
+    script = _script(
+        {
+            "text": "Ada looks over the empty yard.",
+            "journal": [
+                [
+                    {
+                        "name": "append_journal",
+                        "arguments": {"text": "Day 1: Ada looks over the yard."},
+                    }
+                ]
+            ],
+        }
+    )
+
+    assert _send(client, campaign_id, script).status_code == 303
+    assert not waited_for_review
+
+
+def test_the_state_step_reasoning_is_not_replayed_to_the_journal_or_narration(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     client, campaign_id = _day_campaign(client_factory)
@@ -461,7 +504,7 @@ def test_the_state_step_reasoning_goes_back_to_the_journal_and_narration(
         tool_turns = [
             m for m in call["messages"] if m["role"] == "assistant" and m.get("tool_calls")
         ]
-        assert [m.get("reasoning_content") for m in tool_turns] == ["Ada wants the bridge noted."]
+        assert [m.get("reasoning_content") for m in tool_turns] == [""]
         asked = {call_["id"] for message in tool_turns for call_ in message["tool_calls"]}
         answered = {m["tool_call_id"] for m in call["messages"] if m["role"] == "tool"}
         assert asked <= answered

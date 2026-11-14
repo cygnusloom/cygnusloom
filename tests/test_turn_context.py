@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import re
 from collections.abc import Callable
+from dataclasses import replace
 from types import SimpleNamespace
 from typing import Any
 
@@ -11,6 +12,7 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session
 
 from cygnusloom.config import Settings
+from cygnusloom.llm.base import ChatReply
 from cygnusloom.services.accounts import set_show_internal_thinking
 from cygnusloom.services.campaigns import (
     get_turn_context,
@@ -19,8 +21,8 @@ from cygnusloom.services.campaigns import (
 )
 from cygnusloom.services.events import ChatGM, record
 from cygnusloom.services.prompts import STATE_INSTRUCTION
-from cygnusloom.services.turns import _map_option_line, _trim_conversation
-from tests.conftest import NARRATE_TEXT, is_review_messages, without_journal
+from cygnusloom.services.turns import _map_option_line, _trim_conversation, _without_old_reasoning
+from tests.conftest import NARRATE_TEXT, is_journal_messages, is_review_messages, without_journal
 from tests.test_campaigns import _answer, _campaign_id, _send, _signed_in
 from tests.test_context import (
     RecordingProvider,
@@ -157,6 +159,79 @@ def test_state_step_gets_compact_old_results_and_the_turn_log(
         message["role"] == "system" and "State so far" in str(message["content"])
         for message in state_call
     )
+
+
+def test_the_state_step_does_not_resend_old_reasoning(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    client, campaign_id = _campaign_id(client_factory)
+    recorder = _recording_provider()
+    chat = recorder.chat
+
+    async def thinking_chat(
+        model: str, messages: list[dict[str, Any]], tools: list[dict[str, Any]] | None = None
+    ) -> ChatReply:
+        reply = await chat(model, messages, tools)
+        if (
+            tools is not None
+            and reply.tool_requests
+            and not is_journal_messages(messages)
+            and not is_review_messages(messages)
+        ):
+            reply = replace(reply, reasoning="a plan that must not be replayed")
+        return reply
+
+    recorder.chat = thinking_chat
+    app.state.providers = lambda model_id: (recorder, model_id)
+    lookup = {"name": "list_lookups", "arguments": {}}
+    script = _script({"rounds": [[lookup], [lookup]], "text": "Done."})
+
+    assert _send(client, campaign_id, script).status_code == 303
+
+    state_calls = [
+        call["messages"]
+        for call in without_journal(recorder.calls)
+        if any(
+            message["role"] == "system"
+            and str(message["content"]).startswith("State management step.")
+            for message in call["messages"]
+        )
+    ]
+    assert len(state_calls) >= 2
+    replayed = [
+        message
+        for messages in state_calls
+        for message in messages
+        if message["role"] == "assistant" and message.get("tool_calls")
+    ]
+    assert replayed
+    assert all(message.get("reasoning_content") == "" for message in replayed)
+
+
+def test_old_tool_rounds_lose_their_reasoning_but_keep_the_calls():
+    messages = [
+        {"role": "system", "content": "system"},
+        {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [{"id": "call-1"}],
+            "reasoning_content": "first plan",
+        },
+        {"role": "tool", "tool_call_id": "call-1", "content": "{}"},
+        {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [{"id": "call-2"}],
+            "reasoning_content": "second plan",
+        },
+        {"role": "tool", "tool_call_id": "call-2", "content": "{}"},
+    ]
+
+    trimmed = _without_old_reasoning(messages, keep_rounds=1)
+
+    assert trimmed[1]["reasoning_content"] == ""
+    assert trimmed[3]["reasoning_content"] == "second plan"
+    assert trimmed[1]["tool_calls"] == messages[1]["tool_calls"]
 
 
 def test_trimming_history_keeps_a_tool_call_with_its_result():
