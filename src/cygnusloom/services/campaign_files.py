@@ -21,6 +21,7 @@ from cygnusloom import CAMPAIGN_MAJOR_VERSION, __version__
 from cygnusloom.content.definitions import ContentError
 from cygnusloom.content.library import ContentLibrary, read_table_genres
 from cygnusloom.db.models import Campaign, Event, utcnow
+from cygnusloom.services import level_up as level_up_service
 from cygnusloom.services.campaigns import (
     MAX_MODEL,
     MAX_NAME,
@@ -120,6 +121,7 @@ def export_campaign(engine: Engine, owner_id: int, campaign_id: int) -> tuple[st
             "table_genres": genres,
             "use_inventory_space": campaign.use_inventory_space,
             "use_survival_needs": campaign.use_survival_needs,
+            "start_level": campaign.start_level,
             "created_at": as_utc(campaign.created_at).isoformat(),
         },
         "events": events,
@@ -185,6 +187,7 @@ def import_campaign(
             table_genres=json.dumps(list(config["table_genres"])),
             use_inventory_space=config["use_inventory_space"],
             use_survival_needs=config["use_survival_needs"],
+            start_level=config["start_level"],
             created_at=config["created_at"],
         )
         db.add(campaign)
@@ -463,6 +466,14 @@ def _read_campaign(data: dict[str, Any], library: ContentLibrary) -> dict[str, A
     use_survival_needs = data.get("use_survival_needs", True)
     if not isinstance(use_survival_needs, bool):
         raise InvalidInput("use_survival_needs must be true or false")
+    start_level = data.get("start_level", 1)
+    if not isinstance(start_level, int) or isinstance(start_level, bool):
+        raise InvalidInput("start_level must be a whole number")
+    level_rules = level_up_service.start_level_rules(rules)
+    if level_rules is None:
+        start_level = 1
+    elif not 1 <= start_level <= level_rules.max_level:
+        raise InvalidInput(f"start_level must be from 1 to {level_rules.max_level}")
     created_at = _read_time(data.get("created_at"), "campaign")
     return {
         "name": _text(data, "name", MAX_NAME),
@@ -473,6 +484,7 @@ def _read_campaign(data: dict[str, Any], library: ContentLibrary) -> dict[str, A
         "table_genres": genres,
         "use_inventory_space": use_inventory_space,
         "use_survival_needs": use_survival_needs,
+        "start_level": start_level,
         "created_at": created_at,
     }
 

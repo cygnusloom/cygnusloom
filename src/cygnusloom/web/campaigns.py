@@ -446,15 +446,16 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
     table_genres: list[str] | None = None
     use_inventory_space: bool | None = None
     use_survival_needs: bool | None = None
+    start_level = 1
     try:
         campaign = get_campaign(engine, user.id, campaign_id)
+        rule_set = library.rule_sets.get(campaign.rule_set)
         state = campaign_world(engine, user.id, campaign_id).state
-        options_pending, character_pending = _creation_pending(
-            state, library.rule_sets.get(campaign.rule_set), user.id
-        )
+        options_pending, character_pending = _creation_pending(state, rule_set, user.id)
         if not options_pending and not character_pending:
             raise InvalidInput("this campaign's options and player character are already set")
         initial_setup = not state.pcs()
+        start_level = campaign.start_level
         # Read the brief even for a replacement character so an error can show it again, but only
         # apply it before the campaign's first player character exists. A replacement character
         # or a player joining later must not rewrite the campaign's setting and story.
@@ -465,6 +466,13 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
             ]
             use_inventory_space = form_text(form, "use_inventory_space") == "1"
             use_survival_needs = form_text(form, "use_survival_needs") == "1"
+            if rule_set is not None and level_up_service.start_level_rules(rule_set) is not None:
+                raw_level = form_text(form, "start_level")
+                if raw_level:
+                    try:
+                        start_level = int(raw_level)
+                    except ValueError:
+                        raise InvalidInput("the starting level must be a whole number") from None
         options = None
         if options_pending:
             options = campaign_submission_from_form(campaign_spec(library, campaign), form)
@@ -483,6 +491,7 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
                     table_genres=table_genres,
                     use_inventory_space=use_inventory_space,
                     use_survival_needs=use_survival_needs,
+                    start_level=start_level,
                 )
             spec = character_spec(library, campaign)
             submitted = submission_from_form(spec, form)
@@ -506,6 +515,7 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
             table_genres=table_genres,
             use_inventory_space=use_inventory_space,
             use_survival_needs=use_survival_needs,
+            start_level=start_level if initial_setup else None,
         )
     except InvalidInput as exc:
         return _campaign_page(
@@ -518,6 +528,7 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
             table_genres=table_genres,
             use_inventory_space=use_inventory_space,
             use_survival_needs=use_survival_needs,
+            start_level=start_level,
         )
     except Conflict as exc:
         return _campaign_page(
@@ -530,9 +541,18 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
             table_genres=table_genres,
             use_inventory_space=use_inventory_space,
             use_survival_needs=use_survival_needs,
+            start_level=start_level,
         )
     if character is not None:
         request.session.pop(key, None)
+        if (
+            start_level > 1
+            and rule_set is not None
+            and level_up_service.start_level_rules(rule_set) is not None
+        ):
+            # The starting level's experience is in place, so the normal advancement pages take
+            # the player through each level's gains and choices before play begins.
+            return RedirectResponse(f"/campaigns/{campaign_id}/advancement", status_code=303)
     return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
 
 
@@ -1058,13 +1078,26 @@ async def change_survival_needs(request: Request, campaign_id: int) -> Response:
 
 @router.post("/{campaign_id}/settings")
 async def change_campaign_settings(request: Request, campaign_id: int) -> Response:
-    """Save the owner's model, campaign name, and inventory choice from the Settings page."""
+    """Save the owner's model, campaign name, and campaign choices from the Settings page."""
     user = page_user(request)
     await verify_csrf(request)
     form = await request.form()
+    engine = request.app.state.engine
+    library = request.app.state.content
+    start_level: int | None = None
     try:
+        campaign = get_campaign(engine, user.id, campaign_id)
+        rule_set = library.rule_sets.get(campaign.rule_set)
+        if rule_set is not None and level_up_service.start_level_rules(rule_set) is not None:
+            raw_level = form_text(form, "start_level")
+            if raw_level:
+                try:
+                    start_level = int(raw_level)
+                except ValueError:
+                    raise InvalidInput("the starting level must be a whole number") from None
+                level_up_service.check_start_level(rule_set, start_level)
         update_campaign_settings(
-            request.app.state.engine,
+            engine,
             request.app.state.catalog.model_ids(),
             user.id,
             campaign_id,
@@ -1072,6 +1105,7 @@ async def change_campaign_settings(request: Request, campaign_id: int) -> Respon
             inventory_space=form_text(form, "use_inventory_space") == "1",
             survival_needs=form_text(form, "use_survival_needs") == "1",
             label=form_text(form, "label"),
+            start_level=start_level,
         )
     except InvalidInput as exc:
         return _campaign_page(request, user, campaign_id, 400, str(exc))
@@ -1749,6 +1783,7 @@ def _campaign_page(
     table_genres: Sequence[str] | None = None,
     use_inventory_space: bool | None = None,
     use_survival_needs: bool | None = None,
+    start_level: int | None = None,
     fragment: bool = False,
 ) -> Response:
     engine = request.app.state.engine
@@ -1864,6 +1899,10 @@ def _campaign_page(
             options=campaign_view(options) if options_pending else None,
             show_character=character_pending,
             character=character,
+            start_levels=(
+                level_up_service.start_level_options(rule_set) if rule_set is not None else ()
+            ),
+            start_level=(campaign.start_level if start_level is None else start_level),
             fallen=viewer_pc,
             promotable=promotable,
             is_owner=is_owner,
@@ -1977,6 +2016,9 @@ def _campaign_page(
         "pending": pending,
         "advancement_due": advancement_due,
         "advancement_available": advancement_available,
+        "start_levels": (
+            level_up_service.start_level_options(rule_set) if rule_set is not None else ()
+        ),
         "factions": faction_views(world.state, rule_set.tallies if rule_set else {}),
         "projects": sorted(
             world.state.projects.values(),

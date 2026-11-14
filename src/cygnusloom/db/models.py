@@ -189,7 +189,9 @@ class Campaign(SQLModel, table=True):
     by default, for the rule set's slot limits; turning it off lets characters carry anything
     reasonable. `use_survival_needs` is a per-campaign switch, on by default, for food, water,
     and rest privation; turning it off means rests spend no supplies and hunger and thirst are
-    not tracked."""
+    not tracked. `start_level` is the level every new player character begins at in a rule set
+    with levels, on by default; the levels above 1 are taken on the normal level-up pages right
+    after creation."""
 
     __tablename__ = "campaign"
 
@@ -207,6 +209,7 @@ class Campaign(SQLModel, table=True):
     force_credit_charges: bool = Field(default=False)
     use_inventory_space: bool = Field(default=True)
     use_survival_needs: bool = Field(default=True)
+    start_level: int = Field(default=1)
     created_at: datetime = Field(default_factory=utcnow)
 
 

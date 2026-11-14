@@ -184,8 +184,9 @@ TRADITION_PICKS: dict[str, dict[str, str]] = {
 }
 
 
-def _campaign(
-    client_factory: Callable[[], TestClient],
+def _creation_fields(
+    client: TestClient,
+    campaign_id: int,
     *,
     class_id: str = "warrior",
     class2: str | None = None,
@@ -193,15 +194,9 @@ def _campaign(
     tradition2: str | None = None,
     options: dict[str, str] | None = None,
     kit: str | None = None,
-    name: str = NAME,
-) -> tuple[FastAPI, int]:
-    """A campaign with one player character of the chosen class, created through the form."""
-    client = _signed_in(client_factory)
-    response = _new_campaign(
-        client, world_template="unwritten-world", rule_set="worldswithoutnumber"
-    )
-    assert response.status_code == 303
-    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
+) -> dict[str, str]:
+    """The creation form fields for a WWN character, with the stat roll pinned and every
+    choice named, as the page offers them."""
     with pytest.MonkeyPatch.context() as patch:
         patch.setattr(campaigns_service, "roll_stats", _fixed_roll)
         page = client.get(f"/campaigns/{campaign_id}").text
@@ -229,8 +224,48 @@ def _campaign(
         if tradition2 is not None:
             fields["template-tradition2"] = tradition2
             fields.update(TRADITION2_PICKS[tradition2])
-        fields = _named_picks(fields)
+        return _named_picks(fields)
+
+
+def _campaign(
+    client_factory: Callable[[], TestClient],
+    *,
+    class_id: str = "warrior",
+    class2: str | None = None,
+    tradition: str | None = None,
+    tradition2: str | None = None,
+    options: dict[str, str] | None = None,
+    kit: str | None = None,
+    name: str = NAME,
+    start_level: int | None = None,
+) -> tuple[FastAPI, int]:
+    """A campaign with one player character of the chosen class, created through the form."""
+    client = _signed_in(client_factory)
+    response = _new_campaign(
+        client, world_template="unwritten-world", rule_set="worldswithoutnumber"
+    )
+    assert response.status_code == 303
+    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
+    fields = _creation_fields(
+        client,
+        campaign_id,
+        class_id=class_id,
+        class2=class2,
+        tradition=tradition,
+        tradition2=tradition2,
+        options=options,
+        kit=kit,
+    )
+    if start_level is None:
         create_character_direct(client, campaign_id, name=name, fields=fields)
+    else:
+        response = _create_character(
+            client,
+            campaign_id,
+            name=name,
+            fields={**fields, "start_level": str(start_level)},
+        )
+        assert response.status_code == 303, response.text
     return client.app, campaign_id
 
 

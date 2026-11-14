@@ -60,6 +60,21 @@
       {% endif %}
       {% if show_setting %}
       <div class="creation-grid campaign-brief">
+        {% if start_levels|length > 1 %}
+        <section class="creation-panel" aria-labelledby="panel-start-level">
+          <h3 id="panel-start-level">Starting level</h3>
+          <p class="muted">The level every new character in this campaign begins at. It is set to level 1 by default; raise it when the story starts with seasoned adventurers or when players join a campaign already under way.</p>
+          <label>
+            New characters start at
+            <select name="start_level">
+              {% for level in start_levels %}
+                <option value="{{ level }}"{% if level == start_level %} selected{% endif %}>Level {{ level }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <p class="muted">Every level above 1 is gained right after the character is created, one at a time, on the normal level-up pages, so each character's gains and picks are still chosen by their player.</p>
+        </section>
+        {% endif %}
         <section class="creation-panel" aria-labelledby="panel-setting">
           <h3 id="panel-setting">Setting / story (optional)</h3>
           <label>
