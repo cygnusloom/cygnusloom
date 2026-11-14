@@ -108,6 +108,12 @@ def test_movement_within_a_local_map_is_recorded_before_the_narration():
     assert "only when a place_map_token or place_participant result records the move" in told
 
 
+def test_the_state_step_batches_independent_calls_into_fewer_rounds():
+    assert "Work in as few rounds as you can" in STATE_INSTRUCTION
+    assert "Make the lookups together first" in STATE_INSTRUCTION
+    assert "never look up a fact the turn orientation already gives you" in STATE_INSTRUCTION
+
+
 def test_speech_instruction_without_a_ruleset_cap_adds_the_global_two_sentence_limit():
     text = speech_instruction(None)
     assert "say it, one sentence where you can and two at most, and under 40 words." in text

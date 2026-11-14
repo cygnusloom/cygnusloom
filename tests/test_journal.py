@@ -18,7 +18,7 @@ from cygnusloom.services.prompts import (
     OPENING_REPLY_INSTRUCTION,
 )
 from cygnusloom.services.world_support import MAX_JOURNAL_DAY_WORDS, MAX_JOURNAL_WORDS
-from tests.conftest import is_journal_edit_messages, is_journal_messages
+from tests.conftest import is_journal_edit_messages, is_journal_messages, is_review_messages
 from tests.test_campaigns import (
     _answer,
     _campaign_id,
@@ -243,7 +243,7 @@ def test_the_journal_prompt_states_the_same_budget():
     assert "condense the older days first" in JOURNAL_RULES
 
 
-def test_a_routine_turn_updates_the_journal_in_the_same_call_as_the_review(
+def test_a_routine_turn_updates_the_journal_in_its_own_call(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     client, campaign_id = _campaign_id(client_factory)
@@ -267,13 +267,21 @@ def test_a_routine_turn_updates_the_journal_in_the_same_call_as_the_review(
 
     assert _journal_state(app, campaign_id).journal == "Day 1: Ada looks over the empty yard."
     journal_calls = _journal_calls(recorder.calls)
-    # One round calls the journal tool; the next returns the review verdict.
-    assert len(journal_calls) == 2
+    # The concurrent journal step makes one call and records every edit in it.
+    assert len(journal_calls) == 1
     for call in journal_calls:
         offered = {spec["function"]["name"] for spec in call["tools"]}
-        assert {"append_journal", "replace_in_journal", "undo_narration"} <= offered
-        assert any("Journal and review step." in (m.get("content") or "") for m in call["messages"])
-    assert not any(is_journal_messages(call["messages"]) for call in recorder.calls)
+        assert {"append_journal", "replace_in_journal"} <= offered
+        assert "undo_narration" not in offered
+        assert any("Journal step." in (m.get("content") or "") for m in call["messages"])
+    assert any(is_journal_messages(call["messages"]) for call in recorder.calls)
+    # The review is a separate, journal-free call.
+    review_calls = [call for call in recorder.calls if is_review_messages(call["messages"])]
+    assert review_calls
+    for call in review_calls:
+        offered = {spec["function"]["name"] for spec in call["tools"]}
+        assert "undo_narration" in offered
+        assert not ({"append_journal", "replace_in_journal"} & offered)
     assert _saved(app, campaign_id)[1:] == [
         ("user", script),
         ("assistant", "Ada looks over the empty yard."),
@@ -307,7 +315,7 @@ def test_a_discovery_within_a_day_updates_the_journal_too(
     assert _journal_state(app, campaign_id).journal == "Day 1: Ada finds the gate room."
 
 
-def test_a_day_end_turn_updates_the_journal_in_the_same_review_call(
+def test_a_day_end_turn_updates_the_journal_in_its_own_call(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     client, campaign_id = _day_campaign(client_factory)
@@ -338,15 +346,12 @@ def test_a_day_end_turn_updates_the_journal_in_the_same_review_call(
     assert _journal_state(app, campaign_id).journal == "Day 2: Ada crossed the bridge."
 
     journal_calls = _journal_calls(recorder.calls)
-    # The journal tool round and the review verdict round are both the combined step.
-    assert len(journal_calls) == 2
+    assert len(journal_calls) == 1
     for call in journal_calls:
         offered = {spec["function"]["name"] for spec in call["tools"]}
-        assert {"append_journal", "replace_in_journal", "undo_narration"} <= offered
+        assert {"append_journal", "replace_in_journal"} <= offered
         assert any("Campaign day 2." in (m.get("content") or "") for m in call["messages"])
-    narration = next(i for i, call in enumerate(recorder.calls) if call["tools"] is None)
-    assert narration < recorder.calls.index(journal_calls[0])
-    assert not any(is_journal_messages(call["messages"]) for call in recorder.calls)
+    assert any(is_journal_messages(call["messages"]) for call in recorder.calls)
 
 
 def _journal_steps(app: FastAPI, campaign_id: int) -> int:

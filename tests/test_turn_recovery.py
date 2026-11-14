@@ -17,6 +17,7 @@ from cygnusloom.services import turns as turns_service
 from cygnusloom.services.campaigns import list_messages
 from cygnusloom.services.events import events_since
 from tests import factories
+from tests.test_tools import ROLL
 
 
 def _stream(client: TestClient, campaign_id: int, text: str) -> list[dict[str, Any]]:
@@ -101,7 +102,50 @@ def _speech_script() -> str:
     )
 
 
-def test_a_silent_speech_step_is_a_tool_error_not_a_dead_turn(
+def test_queued_speech_survives_a_prompt_and_is_written_on_resume(
+    client_factory: Callable[[], TestClient], app: FastAPI
+) -> None:
+    """A line queued before a prompt is written when the player answers, not lost."""
+    fake = FakeProvider()
+    app.state.providers = lambda model_id: (fake, model_id)
+    client, campaign_id = factories.campaign_ready(client_factory)
+    factories.place_pc(client, campaign_id)
+    script = "__FAKE__:" + json.dumps(
+        {
+            "turns": [
+                {
+                    "rounds": [
+                        [
+                            {
+                                "name": "speak",
+                                "arguments": {"npc": "Mara Thistledown", "intent": "Warn Ada."},
+                            },
+                            ROLL,
+                        ]
+                    ],
+                    "text": "Mara looks up from her kettle.",
+                }
+            ]
+        }
+    )
+
+    before = _kinds(app, campaign_id)
+    factories.send_message(client, campaign_id, script)
+
+    kinds = _kinds(app, campaign_id)
+    assert "speech.queued" in kinds
+    assert "speech.written" not in kinds[len(before) :]
+    assert kinds.count("chat.gm") == before.count("chat.gm")
+
+    factories.answer(client, campaign_id, "roll")
+
+    kinds = _kinds(app, campaign_id)
+    assert "speech.written" in kinds[len(before) :]
+    assert kinds.count("chat.gm") == before.count("chat.gm") + 1
+    assert "Warn Ada." in json.dumps(fake.calls[-1])
+
+
+def test_a_silent_speech_step_is_a_dropped_line_not_a_dead_turn(
     client_factory: Callable[[], TestClient], app: FastAPI
 ) -> None:
     """Three empty attempts must not throw away a reply the player has waited for."""

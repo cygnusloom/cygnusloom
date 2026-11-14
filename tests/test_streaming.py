@@ -59,7 +59,7 @@ def test_stream_sends_status_then_deltas_then_saved(
     assert events[-1] == {"type": "saved", "event_id": _assistant_ids(app, campaign_id)[-1]}
 
 
-# A day ending updates the journal in the same step as the review. Only Cairn has advance_time.
+# A day ending updates the journal; only Cairn has advance_time.
 ADVANCE_DAY = {"name": "advance_time", "arguments": {"days": 1}}
 
 
@@ -77,7 +77,7 @@ def test_each_phase_shows_a_status_and_only_the_narration_is_streamed(
         "Managing state...",
         "Finishing the state step...",
         "Narrating...",
-        "Updating the journal and reviewing the turn...",
+        "Reviewing the turn...",
     ]
     narrating_at = events.index({"type": "status", "text": "Narrating..."})
     assert _deltas(events[:narrating_at]) == ""
@@ -94,7 +94,9 @@ def test_state_steps_offer_tools_and_the_narration_does_not(
 
     _stream(client, campaign_id, _script({"rounds": [[ADVANCE_DAY]], "text": "Done."}))
 
+    # Two state rounds, the concurrent journal call, the narration, and the review.
     assert [call["tools"] is not None for call in recorder.calls] == [
+        True,
         True,
         True,
         False,

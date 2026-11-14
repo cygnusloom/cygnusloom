@@ -414,7 +414,9 @@ def _combat_lines(
             lines.append(f"Attacks per action: {template.attacks_per_action}")
     if any(character.harm.values()):
         harm = ", ".join(
-            f"{spec.stats[stat].name} {amount}" for stat, amount in character.harm.items() if amount
+            f"{spec.stats[stat].name if stat in spec.stats else stat.upper()} {amount}"
+            for stat, amount in character.harm.items()
+            if amount
         )
         lines.append(f"Harm: {harm}")
     if character.defeated:
@@ -938,6 +940,8 @@ def world_state_text(
     currency: str = "",
     housekeeping: HousekeepingRules | None = None,
     track_survival_needs: bool = True,
+    character: CharacterSpec | None = None,
+    monsters: Mapping[str, MonsterTemplate] | None = None,
 ) -> str:
     """The GM's orientation at the start of a turn: the campaign options, the day, the player
     character and where they are, the NPCs there, the factions and their cup, and any encounter in
@@ -1044,6 +1048,18 @@ def world_state_text(
                 lines.append(f"Housekeeping suggestions at {place.name}:")
                 lines.extend(f"- {task.text}" for task in tasks)
     lines.extend(_player_lines(state, pcs))
+    if state.encounter is None and character is not None and combat is not None:
+        # The state step otherwise spends a round on get_statblock for facts it can see here.
+        locations: list[str] = []
+        for player in pcs:
+            if player.retired or player.location is None or player.location in locations:
+                continue
+            locations.append(player.location)
+        names = [npc.name for location in locations for npc in _npcs_at(state, location)]
+        heading = (
+            "NPC combat stats where the players are:" if multiplayer else "NPC combat stats here:"
+        )
+        lines.extend(_npc_stat_lines(state, names, character, combat, monsters, heading))
     hirelings = [c for c in state.characters.values() if c.hireling]
     if hirelings:
         controller = "the players" if multiplayer else "the player"
@@ -1087,7 +1103,17 @@ def world_state_text(
             "Survival needs are not tracked in this campaign; rests spend no rations or "
             "water, and hunger and thirst are not conditions."
         )
-    lines.extend(_encounter_lines(state, grid, combat, terrain, encounter_objects))
+    lines.extend(
+        _encounter_lines(
+            state,
+            grid,
+            combat,
+            terrain,
+            encounter_objects,
+            character=character,
+            monsters=monsters,
+        )
+    )
     if state.encounter is None:
         if multiplayer:
             seen: set[str] = set()
@@ -1260,6 +1286,69 @@ def _npc_state_name(npc: Character) -> str:
     return f"{npc.name} ({'; '.join(tags)})" if tags else npc.name
 
 
+# A crowded place would otherwise repeat every statblock in every prompt. The rest stay a
+# lookup away.
+_NPC_STAT_LIMIT = 8
+
+
+def _npc_stat_line(
+    state: CampaignState,
+    name: str,
+    spec: CharacterSpec,
+    combat: CombatRules,
+    monsters: Mapping[str, MonsterTemplate] | None,
+) -> str | None:
+    """One NPC's combat facts for the turn orientation, or None when it has no stats. The GM
+    sees these every turn, so a fight or a social scene does not need a get_statblock round for
+    facts already here."""
+    character = state.characters.get(name_key(name))
+    if character is None or character.kind != NPC_KIND or not character.stats:
+        return None
+    parts: list[str] = []
+    hp = hit_points(character, combat.hit_pool)
+    if hp is not None:
+        parts.append(f"HP {hp[0]}/{hp[1]}")
+    for line in _combat_lines(character, spec, combat, monsters):
+        if line.startswith(("Armor:", "Attacks:", "Attacks per action:", "Status:")):
+            parts.append(line)
+    return f"{character.name}: {'; '.join(parts)}." if parts else None
+
+
+def _npc_stat_lines(
+    state: CampaignState,
+    names: Sequence[str],
+    spec: CharacterSpec,
+    combat: CombatRules,
+    monsters: Mapping[str, MonsterTemplate] | None,
+    heading: str,
+) -> list[str]:
+    """The combat facts of the NPCs worth showing, with a note that no lookup is needed."""
+    seen: set[str] = set()
+    lines: list[str] = []
+    remaining = 0
+    for name in names:
+        key = name_key(name)
+        if key in seen:
+            continue
+        seen.add(key)
+        line = _npc_stat_line(state, name, spec, combat, monsters)
+        if line is None:
+            continue
+        if len(lines) >= _NPC_STAT_LIMIT:
+            remaining += 1
+            continue
+        lines.append(f"- {line}")
+    if not lines:
+        return []
+    if remaining:
+        lines.append(f"And {remaining} more here; use get_statblock for those.")
+    else:
+        lines.append(
+            "Do not call get_statblock for an NPC listed above; its combat facts are here."
+        )
+    return [heading, *lines]
+
+
 def _place_here_lines(
     state: CampaignState, location: str, npc_heading: str, object_heading: str
 ) -> list[str]:
@@ -1357,6 +1446,8 @@ def _encounter_lines(
     combat: CombatRules | None,
     terrain: Mapping[str, EncounterTerrain] | None = None,
     encounter_objects: Mapping[str, EncounterObject] | None = None,
+    character: CharacterSpec | None = None,
+    monsters: Mapping[str, MonsterTemplate] | None = None,
 ) -> list[str]:
     view = encounters.encounter_view(state, grid, combat, terrain, encounter_objects)
     if view is None:
@@ -1412,6 +1503,18 @@ def _encounter_lines(
         status = f", {who['status']}" if who["status"] else ""
         lines.append(
             f"- {who['number']}. {who['name']} ({kind}, {who['side']} side{status}), {where}{gap}."
+        )
+    if character is not None and combat is not None:
+        names = [who["name"] for who in view["participants"] if not who["is_pc"]]
+        lines.extend(
+            _npc_stat_lines(
+                state,
+                names,
+                character,
+                combat,
+                monsters,
+                "NPC combat stats in the encounter:",
+            )
         )
     return lines
 

@@ -22,7 +22,12 @@ from cygnusloom.services.campaigns import get_turn_context
 from cygnusloom.services.events import CampaignState, load_state
 from cygnusloom.services.tools import tool_specs
 from cygnusloom.services.world_support import MAX_JOURNAL_DAY_WORDS, MAX_JOURNAL_WORDS
-from tests.conftest import content_library, csrf_token, is_review_messages
+from tests.conftest import (
+    content_library,
+    csrf_token,
+    is_journal_messages,
+    is_review_messages,
+)
 from tests.test_campaigns import _campaign_id, _place_pc, _send
 from tests.test_tools import _recording_provider, _saved, _saved_ids, _script
 
@@ -154,7 +159,9 @@ def test_a_sound_narration_passes_review_and_is_saved_once(
     assert "Ada waits." in json.dumps(review["messages"])
     offered = {spec["function"]["name"] for spec in review["tools"]}
     assert "undo_narration" in offered
-    assert {"append_journal", "replace_in_journal"} <= offered
+    # The journal is its own concurrent call, not part of the review's authority.
+    assert {"append_journal", "replace_in_journal"} & offered == set()
+    assert any(is_journal_messages(call["messages"]) for call in recorder.calls)
     assert _saved(app, campaign_id)[-1] == ("assistant", "Ada waits.")
     assert _undone_events(app, campaign_id) == []
 
@@ -295,14 +302,13 @@ def test_review_offers_the_usual_tools_and_the_journal_tools(
         "add_note",
         "move_actor",
         "undo_narration",
-        "append_journal",
-        "replace_in_journal",
     } <= offered
-    assert {"speak", "ooc"} & offered == set()
+    assert {"append_journal", "replace_in_journal", "speak", "ooc"} & offered == set()
+    journal = next(call for call in recorder.calls if is_journal_messages(call["messages"]))
     instruction = next(
         m["content"]
-        for m in review["messages"]
-        if m["role"] == "system" and "Journal and review step." in (m.get("content") or "")
+        for m in journal["messages"]
+        if m["role"] == "system" and "Journal step." in (m.get("content") or "")
     )
     assert f"{MAX_JOURNAL_DAY_WORDS} words" in instruction
     assert f"{MAX_JOURNAL_WORDS:,} words" in instruction
