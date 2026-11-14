@@ -2,15 +2,28 @@
 
 from __future__ import annotations
 
+import asyncio
+import json
 from dataclasses import replace
+from types import SimpleNamespace
 
 import pytest
 
 from cygnusloom.services.common import InvalidInput
-from cygnusloom.services.events import ConditionAdded, Harmed
+from cygnusloom.services.events import CharacterSaved, ConditionAdded, Harmed
+from cygnusloom.services.tools import Ask, RollAnswer, ToolRequest, run_tool
 from tests.conftest import bundled_library
 from tests.test_combat import Rolls
-from tests.test_wwn_combat import FOE, OTHER_FOE, YARD, _events, _fight, _foe
+from tests.test_wwn_combat import (
+    FOE,
+    OTHER_FOE,
+    PC,
+    WWN,
+    YARD,
+    _events,
+    _fight,
+    _foe,
+)
 
 
 def test_a_sprung_trap_rolls_an_npc_save_and_applies_damage_and_prone(client_factory):
@@ -93,6 +106,48 @@ def test_a_hazard_that_defeats_the_last_foe_ends_the_encounter(client_factory):
     assert result["encounter_ended"] is True
     assert result["results"][0]["status"] == "dead"
     assert tools.all_at_location(YARD)["npcs"][0]["defeated"] is True
+
+
+def test_a_trap_catches_the_player_character_through_their_own_save(client_factory):
+    """A hazard on a player character is the player's roll, then the same harm and condition.
+    The tool rolls only NPCs; the GM asks for the player's save with player_roll_save."""
+    app, campaign_id, tools = _fight(client_factory)
+    ctx = SimpleNamespace(world=tools)
+    request = ToolRequest(
+        id="call_1",
+        name="player_roll_save",
+        arguments=json.dumps(
+            {
+                "character": PC,
+                "save": "evasion",
+                "cause": "a hidden pit trap",
+                "prompt": "Roll an Evasion save against the pit.",
+            }
+        ),
+    )
+
+    ask = asyncio.run(run_tool(WWN.tool_calls, request, None, ctx=ctx))
+    assert isinstance(ask, Ask)
+
+    run = asyncio.run(run_tool(WWN.tool_calls, request, RollAnswer(1), ctx=ctx))
+    assert not isinstance(run, Ask)
+    saved = json.loads(run.output)
+    assert (saved["roll"], saved["passed"]) == (1, False)
+
+    tools.harm_character(PC, "hp", 3, "a hidden pit trap")
+    tools.add_condition(PC, "prone", "a hidden pit trap")
+
+    [event] = _events(app, campaign_id, CharacterSaved.kind)
+    assert (event.name, event.stat, event.roll, event.passed) == (
+        PC,
+        "save_evasion",
+        1,
+        False,
+    )
+    [harmed] = _events(app, campaign_id, Harmed.kind)
+    assert (harmed.name, harmed.taken) == (PC, 3)
+    [condition] = _events(app, campaign_id, ConditionAdded.kind)
+    assert (condition.name, condition.condition) == (PC, "prone")
 
 
 def test_a_hazard_refuses_a_player_character_and_names_the_player_save(client_factory):
