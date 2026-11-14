@@ -1,7 +1,8 @@
 """Give each campaign a starting level for its new player characters.
 
-The column defaults to 1, so existing campaigns start new characters at level 1. A rule set
-without levels ignores it; the campaign's rule set supplies the highest level it allows.
+The columns default to 1 and true, so existing campaigns start new characters at level 1 and
+follow the campaign owner's level as it rises. A rule set without levels ignores them; the
+campaign's rule set supplies the highest level it allows.
 
 Revision ID: 0019_campaign_start_level
 Revises: 0018_campaign_survival_needs
@@ -27,7 +28,12 @@ def upgrade() -> None:
         "campaign",
         sa.Column("start_level", sa.Integer(), nullable=False, server_default="1"),
     )
+    op.add_column(
+        "campaign",
+        sa.Column("follow_owner_level", sa.Boolean(), nullable=False, server_default=sa.true()),
+    )
 
 
 def downgrade() -> None:
+    op.drop_column("campaign", "follow_owner_level")
     op.drop_column("campaign", "start_level")

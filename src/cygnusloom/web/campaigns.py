@@ -447,6 +447,7 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
     use_inventory_space: bool | None = None
     use_survival_needs: bool | None = None
     start_level = 1
+    follow_owner_level: bool | None = None
     try:
         campaign = get_campaign(engine, user.id, campaign_id)
         rule_set = library.rule_sets.get(campaign.rule_set)
@@ -466,6 +467,11 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
             ]
             use_inventory_space = form_text(form, "use_inventory_space") == "1"
             use_survival_needs = form_text(form, "use_survival_needs") == "1"
+            raw_follow = [
+                value for value in form.getlist("follow_owner_level") if isinstance(value, str)
+            ]
+            if raw_follow:
+                follow_owner_level = "1" in raw_follow
             if rule_set is not None and level_up_service.start_level_rules(rule_set) is not None:
                 raw_level = form_text(form, "start_level")
                 if raw_level:
@@ -492,6 +498,7 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
                     use_inventory_space=use_inventory_space,
                     use_survival_needs=use_survival_needs,
                     start_level=start_level,
+                    follow_owner_level=follow_owner_level,
                 )
             spec = character_spec(library, campaign)
             submitted = submission_from_form(spec, form)
@@ -516,6 +523,7 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
             use_inventory_space=use_inventory_space,
             use_survival_needs=use_survival_needs,
             start_level=start_level if initial_setup else None,
+            follow_owner_level=follow_owner_level if initial_setup else None,
         )
     except InvalidInput as exc:
         return _campaign_page(
@@ -529,6 +537,7 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
             use_inventory_space=use_inventory_space,
             use_survival_needs=use_survival_needs,
             start_level=start_level,
+            follow_owner_level=follow_owner_level,
         )
     except Conflict as exc:
         return _campaign_page(
@@ -542,6 +551,7 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
             use_inventory_space=use_inventory_space,
             use_survival_needs=use_survival_needs,
             start_level=start_level,
+            follow_owner_level=follow_owner_level,
         )
     if character is not None:
         request.session.pop(key, None)
@@ -1085,17 +1095,28 @@ async def change_campaign_settings(request: Request, campaign_id: int) -> Respon
     engine = request.app.state.engine
     library = request.app.state.content
     start_level: int | None = None
+    follow_owner_level: bool | None = None
     try:
         campaign = get_campaign(engine, user.id, campaign_id)
         rule_set = library.rule_sets.get(campaign.rule_set)
         if rule_set is not None and level_up_service.start_level_rules(rule_set) is not None:
-            raw_level = form_text(form, "start_level")
-            if raw_level:
-                try:
-                    start_level = int(raw_level)
-                except ValueError:
-                    raise InvalidInput("the starting level must be a whole number") from None
-                level_up_service.check_start_level(rule_set, start_level)
+            raw_follow = [
+                value for value in form.getlist("follow_owner_level") if isinstance(value, str)
+            ]
+            if raw_follow:
+                follow_owner_level = "1" in raw_follow
+            if follow_owner_level is False:
+                raw_level = form_text(form, "start_level")
+                if raw_level:
+                    try:
+                        start_level = int(raw_level)
+                    except ValueError:
+                        raise InvalidInput("the starting level must be a whole number") from None
+                    level_up_service.check_start_level(rule_set, start_level)
+            elif follow_owner_level is True:
+                # Following starts at once, so the option shows the owner's current level.
+                state = campaign_world(engine, user.id, campaign_id).state
+                start_level = level_up_service.owner_pc_level(state, rule_set)
         update_campaign_settings(
             engine,
             request.app.state.catalog.model_ids(),
@@ -1106,6 +1127,7 @@ async def change_campaign_settings(request: Request, campaign_id: int) -> Respon
             survival_needs=form_text(form, "use_survival_needs") == "1",
             label=form_text(form, "label"),
             start_level=start_level,
+            follow_owner_level=follow_owner_level,
         )
     except InvalidInput as exc:
         return _campaign_page(request, user, campaign_id, 400, str(exc))
@@ -1784,6 +1806,7 @@ def _campaign_page(
     use_inventory_space: bool | None = None,
     use_survival_needs: bool | None = None,
     start_level: int | None = None,
+    follow_owner_level: bool | None = None,
     fragment: bool = False,
 ) -> Response:
     engine = request.app.state.engine
@@ -1833,6 +1856,18 @@ def _campaign_page(
     viewer_pc = world.state.player_character(user.id)
     world_map = map_view(world.state, rule_set.world_terrain if rule_set else None, pc=viewer_pc)
     options_pending, character_pending = _creation_pending(world.state, rule_set, user.id)
+    # The starting level follows the campaign owner's character while the campaign says so, and
+    # otherwise stands at the level the owner chose. An error re-render keeps what was sent.
+    follow_owner_level = (
+        campaign.follow_owner_level if follow_owner_level is None else follow_owner_level
+    )
+    if start_level is None:
+        owner_level = (
+            level_up_service.owner_pc_level(world.state, rule_set)
+            if follow_owner_level and rule_set is not None
+            else None
+        )
+        start_level = owner_level if owner_level is not None else campaign.start_level
     is_owner = campaign.owner_id == user.id
     members = list_members(engine, campaign.id, world.state)
     invites = list_invites(engine, campaign.id) if is_owner else []
@@ -1902,7 +1937,8 @@ def _campaign_page(
             start_levels=(
                 level_up_service.start_level_options(rule_set) if rule_set is not None else ()
             ),
-            start_level=(campaign.start_level if start_level is None else start_level),
+            start_level=start_level,
+            follow_owner_level=follow_owner_level,
             fallen=viewer_pc,
             promotable=promotable,
             is_owner=is_owner,
@@ -2019,6 +2055,8 @@ def _campaign_page(
         "start_levels": (
             level_up_service.start_level_options(rule_set) if rule_set is not None else ()
         ),
+        "start_level": start_level,
+        "follow_owner_level": follow_owner_level,
         "factions": faction_views(world.state, rule_set.tallies if rule_set else {}),
         "projects": sorted(
             world.state.projects.values(),

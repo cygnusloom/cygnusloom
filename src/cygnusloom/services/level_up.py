@@ -24,6 +24,7 @@ from cygnusloom.content.library import (
     RuleSet,
     WorldContent,
 )
+from cygnusloom.db.models import Campaign
 from cygnusloom.rules.context import ToolContext
 from cygnusloom.services import counters as counter_service
 from cygnusloom.services import hireling_levels
@@ -190,6 +191,44 @@ def grant_start_level(
         reason=f"starting at level {start_level}",
         spec=rule_set.character,
     )
+
+
+def owner_pc_level(state: Any, rule_set: RuleSet) -> int | None:
+    """The level of the campaign owner's player character, or None when the rule set has no
+    levels or the owner has no character yet."""
+    rules = start_level_rules(rule_set)
+    if rules is None:
+        return None
+    owner_id = getattr(state, "owner_id", None)
+    if owner_id is None:
+        return None
+    pc = state.player_character(owner_id)
+    if pc is None or pc.kind != PC_KIND:
+        return None
+    counter = rule_set.counters.get(rules.level_counter)
+    if counter is None:
+        return None
+    level = pc.counters.get(rules.level_counter, counter.initial)
+    return level if isinstance(level, int) else None
+
+
+def sync_owner_start_level(db: Session, campaign_id: int, rule_set: RuleSet, name: str) -> None:
+    """Keep the campaign's starting level equal to the owner's character level while the
+    campaign follows it. Only a change to the owner's own level moves it."""
+    state = load_state(db, campaign_id)
+    owner_id = getattr(state, "owner_id", None)
+    owner = state.player_character(owner_id) if owner_id is not None else None
+    if owner is None or name_key(owner.name) != name_key(name):
+        return
+    campaign = db.get(Campaign, campaign_id)
+    if campaign is None or not campaign.follow_owner_level:
+        return
+    level = owner_pc_level(state, rule_set)
+    if level is None or level == campaign.start_level:
+        return
+    campaign.start_level = level
+    db.add(campaign)
+    db.commit()
 
 
 def controlled_characters(state: Any, player_id: int) -> list[Character]:
@@ -540,6 +579,10 @@ def _apply_level(
     changes = _plan_picks(view, engine, campaign_id, rule_set, ctx, form)
     view.level_up.apply_level(view.character, ctx)
     _apply_changes(view, changes, ctx, form)
+    # While the campaign follows the owner's level, a new character joins at the level the
+    # owner's own character has reached.
+    with session_scope(engine) as db:
+        sync_owner_start_level(db, campaign_id, rule_set, view.character)
     # A hireling is always the employer's level. Queue the catch-up levels; the player still
     # makes the choices for them on this page.
     hireling_levels.sync_employer(ctx.world, view.character)
