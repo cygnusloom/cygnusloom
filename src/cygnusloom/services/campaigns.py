@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import difflib
 import json
 import random
 import re
@@ -1154,6 +1155,8 @@ def context_usage(
             track_survival_needs=campaign.use_survival_needs,
             currency=(rule_set.marketplace.currency if rule_set and rule_set.marketplace else ""),
             housekeeping=rule_set.housekeeping if rule_set else None,
+            character=rule_set.character if rule_set else None,
+            monsters=rule_set.monsters if rule_set else None,
         ),
         present_rules_text(state, all_rules),
         campaign.setting,
@@ -1228,14 +1231,61 @@ def _keep_newest(text: str, budget_tokens: int) -> str:
     return kept[index + 1 :] if index != -1 else kept
 
 
+# Words that carry no identity in a place name. Leaving them out lets "The Old Mill" and
+# "Mill" match without asking the model.
+_PLACE_NOISE = frozenset(
+    {"the", "a", "an", "of", "at", "in", "on", "by", "to", "and", "old", "new", "little", "great"}
+)
+
+
+def _place_words(name: str) -> tuple[str, ...]:
+    return tuple(
+        word for word in re.findall(r"[a-z0-9]+", name.casefold()) if word not in _PLACE_NOISE
+    )
+
+
+def _similar_place_word(first: str, second: str) -> bool:
+    """Whether two name words could be the same word: equal, one a stem of the other, or a
+    spelling that differs by a letter or two."""
+    if first == second:
+        return True
+    if (
+        len(first) >= 4
+        and len(second) >= 4
+        and (first.startswith(second) or second.startswith(first))
+    ):
+        return True
+    return difflib.SequenceMatcher(None, first, second).ratio() >= 0.8
+
+
+def _place_may_repeat(name: str, existing: str) -> bool:
+    """Whether two place names are close enough that the model should judge them. A similar
+    word or one name inside the other is the only way two ordinary names are the same place."""
+    words = _place_words(name)
+    other = _place_words(existing)
+    if not words or not other:
+        return True
+    if any(_similar_place_word(word, candidate) for word in words for candidate in other):
+        return True
+    return " ".join(words) in " ".join(other) or " ".join(other) in " ".join(words)
+
+
 async def _repeated_place(
     provider: Provider, model_name: str, names: Sequence[str], name: str
 ) -> str | None:
-    """The existing place that `name` repeats, or None. The model judges the wording, so a name
-    that repeats a place in other words is caught too."""
+    """The existing place that `name` repeats, or None. A name with no words in common with any
+    existing place is clearly new, so it is answered without a model call. Otherwise the model
+    judges the wording, so a name that repeats a place in other words is caught too."""
     if not names:
         return None
-    listing = "\n".join(f"- {existing}" for existing in names)
+    folded = " ".join(_place_words(name))
+    for existing in names:
+        if folded and folded == " ".join(_place_words(existing)):
+            return existing
+    candidates = [existing for existing in names if _place_may_repeat(name, existing)]
+    if not candidates:
+        return None
+    listing = "\n".join(f"- {existing}" for existing in candidates)
     messages = [
         {"role": "system", "content": NAME_CHECK_PROMPT},
         {"role": "user", "content": f"Existing places:\n{listing}\n\nNew place: {name}"},
@@ -1244,7 +1294,7 @@ async def _repeated_place(
     if not reply.upper().startswith("REPEAT:"):
         return None
     named = reply.split(":", 1)[1].strip().casefold()
-    return next((existing for existing in names if existing.casefold() == named), None)
+    return next((existing for existing in candidates if existing.casefold() == named), None)
 
 
 async def _summarize(

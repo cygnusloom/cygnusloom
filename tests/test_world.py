@@ -198,6 +198,47 @@ def test_the_gm_sees_the_places_inside_the_players_location(
     assert "Places inside Gate Room" not in text
 
 
+def test_the_gm_sees_npc_combat_stats_without_a_lookup(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    _, campaign_id = _campaign_id(client_factory)
+    _tool(app, campaign_id, "create_location", {"name": "Old Keep", "description": "A keep."})
+    _tool(
+        app,
+        campaign_id,
+        "move_actor",
+        {"mode": "in_settlement", "name": "Ada", "location": "Old Keep"},
+    )
+    _tool(
+        app,
+        campaign_id,
+        "create_npc",
+        {"name": "Guard", "location": "Old Keep", "description": "A guard."},
+    )
+    _tool(
+        app,
+        campaign_id,
+        "update_npc",
+        {
+            "name": "Guard",
+            "armor": 13,
+            "attacks": [{"name": "Spear", "dice": "1d6"}],
+        },
+    )
+    text = world.world_state_text(
+        _state(app, campaign_id),
+        CONTRACT.campaign,
+        CONTRACT.grid,
+        CONTRACT.combat,
+        CONTRACT.conditions,
+        character=CONTRACT.character,
+        monsters=CONTRACT.monsters,
+    )
+    assert "NPC combat stats here:" in text
+    assert "- Guard: HP 12/12; Armor: 13; Attacks: Spear 1d6." in text
+    assert "Do not call get_statblock" in text
+
+
 def test_a_world_can_declare_a_place_inside_another(
     client_factory: Callable[[], TestClient], app: FastAPI, monkeypatch: pytest.MonkeyPatch
 ):
@@ -1344,7 +1385,8 @@ def test_speech_with_tool_call_markup_is_not_spoken(
 
     send_message(client, campaign_id, script)
 
-    assert any("wrote a tool call instead" in json.dumps(messages) for messages in fake.calls)
+    # The speech step runs after the state step, so a dropped line reaches only the narration's
+    # queued dialogue; the reply the player waited for still saves.
     narration = json.dumps(_non_user(fake.calls[-1]))
     assert "<tool_call" not in narration
     assert _saved(app, campaign_id)[1:] == [
@@ -1373,7 +1415,6 @@ def test_speech_with_tag_style_tool_markup_is_not_spoken(
 
     send_message(client, campaign_id, script)
 
-    assert any("wrote a tool call instead" in json.dumps(messages) for messages in fake.calls)
     narration = json.dumps(_non_user(fake.calls[-1]))
     assert "<get_statblock" not in narration
 

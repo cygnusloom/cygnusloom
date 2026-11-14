@@ -60,6 +60,7 @@ from cygnusloom.services.events import (
     OocStarted,
     PromptShown,
     ReviewStepMade,
+    SpeechQueued,
     SpeechWritten,
     StateStepMade,
     SummaryUpdated,
@@ -85,7 +86,6 @@ from cygnusloom.services.prompts import (
     OPENING_REPLY_INSTRUCTION,
     TURN_REVIEW_INSTRUCTION,
     journal_instruction,
-    journal_review_instruction,
     narrate_instruction,
     opening_prompt,
     speech_instruction,
@@ -582,6 +582,9 @@ class _Run:
     rule_info_mode: str = "brief"
     # Groups the model asked for with load_tool during this turn.
     extra_groups: set[str] = field(default_factory=set)
+    # NPC lines being written beside the state step. Set once the run exists, because the
+    # tool context needs to queue through it.
+    speech: _SpeechJobs = field(init=False, repr=False)
 
     @property
     def tool_calls(self) -> Mapping[str, ToolCall]:
@@ -597,8 +600,12 @@ def _tool_context(
     rule_set: RuleSet,
     world: WorldContent,
     table_genres: Sequence[str] | None = None,
+    speak_handler: Callable[[str, str, str, bool], Awaitable[None]] | None = None,
 ) -> ToolContext:
     async def speak(speaker: str, profile: str, intent: str, replace: bool) -> None:
+        if speak_handler is not None:
+            await speak_handler(speaker, profile, intent, replace)
+            return
         await _speak(
             engine,
             provider,
@@ -704,7 +711,13 @@ def _start_run(
     metered = MeteredProvider(provider, meter)
     world = library.world_content(campaign.world_template, campaign.rule_set)
     template = library.world_templates.get(campaign.world_template)
-    return _Run(
+    speech: _SpeechJobs | None = None
+
+    async def queue_speech(speaker: str, profile: str, intent: str, replace: bool) -> None:
+        assert speech is not None, "the speech queue is ready before any tool runs"
+        await speech.queue(speaker, profile, intent, replace)
+
+    run = _Run(
         engine=engine,
         campaign_id=campaign.id or 0,
         model=campaign.model,
@@ -723,6 +736,7 @@ def _start_run(
             rule_set,
             world,
             table_genres=effective_table_genres(campaign.table_genres, rule_set),
+            speak_handler=queue_speech,
         ),
         cursor=_newest(engine, campaign.id),
         opening=opening_prompt(template),
@@ -735,6 +749,9 @@ def _start_run(
         tool_schema_mode=getattr(settings, "tool_schema_mode", "brief"),
         rule_info_mode=getattr(settings, "rule_info_mode", "brief"),
     )
+    speech = _SpeechJobs(run)
+    run.speech = speech
+    return run
 
 
 def _turn_log(engine: Engine, campaign_id: int, after: int) -> list[str]:
@@ -785,6 +802,8 @@ def _world_text(run: _Run, state: CampaignState) -> str:
         track_survival_needs=run.tracks_survival_needs,
         currency=rule_set.marketplace.currency if rule_set.marketplace else "",
         housekeeping=rule_set.housekeeping,
+        character=rule_set.character,
+        monsters=rule_set.monsters,
     )
 
 
@@ -921,6 +940,41 @@ async def _stream_with_heartbeat(
             pending.cancel()
 
 
+def _speech_messages(
+    state: CampaignState,
+    turn: Turn,
+    speaker: str,
+    profile: str,
+    intent: str,
+    replace: bool,
+    sentence_cap: int | None,
+    previous: str = "",
+) -> tuple[str, str, list[dict[str, Any]]]:
+    """The speech step's system prompt, its label, and its messages. It gets no rules or tool
+    instructions: it only writes words, and those instructions get copied into dialogue as
+    tool-call markup."""
+    queued = next(
+        (line for line in turn.speech if line["speaker"].casefold() == speaker.casefold()), None
+    )
+    parts = [speech_instruction(sentence_cap)]
+    if state.summary:
+        parts.append("Summary of earlier events in this campaign:\n" + state.summary)
+    parts.append(profile)
+    if replace:
+        amended = previous or (queued["dialogue"] if queued else "")
+        if amended:
+            parts.append(
+                f"The line already queued for {speaker}, which this intent replaces: {amended}"
+            )
+    parts.append(f"Intent: {intent}")
+    system = "\n\n".join(parts)
+    conversation = [
+        m for m in turn.messages[1:] if m["role"] in ("user", "assistant") and "tool_calls" not in m
+    ]
+    label = f"Speech step (round {turn.rounds})"
+    return system, label, [{"role": "system", "content": system}, *conversation]
+
+
 async def _speak(
     engine: Engine,
     provider: Provider,
@@ -933,10 +987,10 @@ async def _speak(
     sentence_cap: int | None,
     tool_names: Iterable[str],
 ) -> None:
-    """Ask the speech step for an NPC's words and record them for the narration. The speech step
-    sees the conversation as text, without the tool calls, so it writes dialogue rather than
-    narration. Each NPC gets one queued line per reply, so the narration never repeats a speaker.
-    With `replace`, the new line takes the queued line's place; a failed attempt keeps the old one."""
+    """Ask the speech step for an NPC's words and record them for the narration.
+
+    This is the direct path used outside a turn run. A turn queues the intent instead, so the
+    state step does not wait for the words (see `_SpeechJobs`)."""
     state = _state(engine, campaign_id)
     turn = _turn(state)
     queued = next(
@@ -947,24 +1001,9 @@ async def _speak(
             f"{speaker} already has dialogue for this reply; put everything they say in one intent, "
             "or pass replace: true to rewrite that line"
         )
-    # The speech step gets no rules or tool instructions: it only writes words, and those
-    # instructions get copied into dialogue as tool-call markup.
-    parts = [speech_instruction(sentence_cap)]
-    if state.summary:
-        parts.append("Summary of earlier events in this campaign:\n" + state.summary)
-    parts.append(profile)
-    if queued:
-        parts.append(
-            f"The line already queued for {speaker}, which this intent replaces: "
-            f"{queued['dialogue']}"
-        )
-    parts.append(f"Intent: {intent}")
-    system = "\n\n".join(parts)
-    conversation = [
-        m for m in turn.messages[1:] if m["role"] in ("user", "assistant") and "tool_calls" not in m
-    ]
-    label = f"Speech step (round {turn.rounds})"
-    speech = [{"role": "system", "content": system}, *conversation]
+    system, label, speech = _speech_messages(
+        state, turn, speaker, profile, intent, replace, sentence_cap
+    )
     reply = ""
     for attempt in range(SPEECH_ATTEMPTS):
         request = speech if attempt == 0 else [*speech, {"role": "system", "content": SPEECH_RETRY}]
@@ -997,6 +1036,219 @@ async def _speak(
             f"the speech step returned no words for {speaker}; narrate the reply without their "
             "quoted line, or call speak again with a simpler intent"
         )
+
+
+@dataclass
+class _SpeechJob:
+    """One NPC line being written while the state step continues. `fallback` is the line this
+    replacement amends, kept until the new line is known to be usable."""
+
+    speaker: str
+    replace: bool
+    system: str
+    label: str
+    request: list[dict[str, Any]]
+    fallback: tuple[str, bool] | None = None
+    task: asyncio.Task[tuple[str, bool]] | None = None
+
+
+class _SpeechJobs:
+    """The NPC lines waiting for the speech step in one reply.
+
+    The state step's `speak` call records the intent and returns at once; the speech step runs as
+    its own task beside the next state round. Lines are written in parallel, then recorded in the
+    order the GM asked for them, before narration. Each speaker still gets its own speech prompt,
+    so one NPC's voice cannot bleed into another's.
+    """
+
+    def __init__(self, run: _Run) -> None:
+        self._run = run
+        self._jobs: dict[str, _SpeechJob] = {}
+        self._order: list[str] = []
+
+    async def queue(self, speaker: str, profile: str, intent: str, replace: bool) -> None:
+        state = _state(self._run.engine, self._run.campaign_id)
+        turn = _turn(state)
+        key = name_key(speaker)
+        queued = next(
+            (
+                entry
+                for entry in turn.speech_queue
+                if name_key(str(entry.get("speaker", ""))) == key
+            ),
+            None,
+        ) or next(
+            (line for line in turn.speech if line["speaker"].casefold() == speaker.casefold()), None
+        )
+        if queued and not replace:
+            raise InvalidInput(
+                f"{speaker} already has dialogue for this reply; put everything they say in one "
+                "intent, or pass replace: true to rewrite that line"
+            )
+        fallback = await self._settle_before_replace(key) if replace else None
+        amended = (
+            (
+                fallback[0]
+                if fallback is not None
+                else str(queued.get("intent", ""))
+                if isinstance(queued, Mapping)
+                else ""
+            )
+            if replace
+            else ""
+        )
+        _record(
+            self._run.engine,
+            self._run.campaign_id,
+            SpeechQueued(speaker=speaker, profile=profile, intent=intent, replace=replace),
+        )
+        # The record above changes the queued line the new speech prompt describes, so read
+        # the turn again before it is built.
+        state = _state(self._run.engine, self._run.campaign_id)
+        self._start(
+            state,
+            _turn(state),
+            {"speaker": speaker, "profile": profile, "intent": intent, "replace": replace},
+            fallback=fallback,
+            previous=amended,
+        )
+
+    async def _settle_before_replace(self, key: str) -> tuple[str, bool] | None:
+        """Wait for the line this replacement amends, so a failed rewrite keeps a line to fall
+        back on, as the direct speech step did. The line is not recorded until the replacement
+        fails: a recorded line would also reach the narration as a second line."""
+        old = self._jobs.get(key)
+        if old is None or old.task is None:
+            self._cancel(key)
+            return None
+        try:
+            reply, malformed = await old.task
+        except asyncio.CancelledError:
+            self._cancel(key)
+            raise
+        except Exception as exc:
+            self._cancel(key)
+            if isinstance(exc, LLMError):
+                raise
+            raise LLMError("the speech step failed") from exc
+        self._cancel(key)
+        return (reply, malformed) if reply and not malformed else None
+
+    def ensure_started(self, state: CampaignState, turn: Turn) -> None:
+        """Start a task for every queued line, such as after a resumed reply, and forget one
+        whose line was already written or replaced."""
+        wanted = {name_key(str(entry.get("speaker", ""))): entry for entry in turn.speech_queue}
+        for key in list(self._jobs):
+            if key not in wanted:
+                self._cancel(key)
+        for key, entry in wanted.items():
+            if key not in self._jobs:
+                self._start(state, turn, entry)
+
+    def _start(
+        self,
+        state: CampaignState,
+        turn: Turn,
+        entry: Mapping[str, Any],
+        fallback: tuple[str, bool] | None = None,
+        previous: str = "",
+    ) -> None:
+        speaker = str(entry.get("speaker", ""))
+        replace = bool(entry.get("replace", False))
+        system, label, request = _speech_messages(
+            state,
+            turn,
+            speaker,
+            str(entry.get("profile", "")),
+            str(entry.get("intent", "")),
+            replace,
+            self._run.rule_set.sentence_cap,
+            previous=previous,
+        )
+        job = _SpeechJob(
+            speaker=speaker,
+            replace=replace,
+            system=system,
+            label=label,
+            request=request,
+            fallback=fallback,
+        )
+        job.task = asyncio.create_task(self._write(job), name=f"speech-{self._run.campaign_id}")
+        key = name_key(speaker)
+        self._jobs[key] = job
+        if key not in self._order:
+            self._order.append(key)
+
+    async def _write(self, job: _SpeechJob) -> tuple[str, bool]:
+        reply = ""
+        for attempt in range(SPEECH_ATTEMPTS):
+            request = (
+                job.request
+                if attempt == 0
+                else [*job.request, {"role": "system", "content": SPEECH_RETRY}]
+            )
+            reply = (await complete(self._run.provider, self._run.model_name, request)).strip()
+            if reply:
+                break
+        malformed = _is_tool_markup(reply, (tool.name for tool in self._run.tool_calls.values()))
+        return reply, malformed
+
+    async def collect(self, turn: Turn) -> Turn:
+        """Wait for the queued lines, record them in request order, and return the turn with
+        them. A provider failure aborts the reply before any line is recorded, so Continue
+        retries the queue cleanly."""
+        jobs = [self._jobs[key] for key in self._order if key in self._jobs]
+        if not jobs:
+            return turn
+        results = await asyncio.gather(
+            *(job.task for job in jobs if job.task is not None), return_exceptions=True
+        )
+        error = next((result for result in results if isinstance(result, BaseException)), None)
+        if error is not None:
+            self.cancel()
+            if isinstance(error, asyncio.CancelledError):
+                raise error
+            if isinstance(error, LLMError):
+                raise error
+            raise LLMError("the speech step failed") from error
+        events: list[GameEvent] = []
+        for job, result in zip(jobs, results, strict=True):
+            assert not isinstance(result, BaseException)
+            reply, malformed = result
+            if (malformed or not reply) and job.fallback is not None:
+                # A failed rewrite keeps the line it was amending.
+                reply, malformed = job.fallback
+            if malformed or not reply:
+                logger.warning("speech step wrote no usable line for %s", job.speaker)
+            events.append(self._line_event(job, reply, malformed))
+        _record(self._run.engine, self._run.campaign_id, *events)
+        self._jobs.clear()
+        self._order.clear()
+        return _turn(_state(self._run.engine, self._run.campaign_id))
+
+    def _line_event(self, job: _SpeechJob, reply: str, malformed: bool) -> SpeechWritten:
+        return SpeechWritten(
+            speaker=job.speaker,
+            dialogue="" if malformed else reply,
+            replace=job.replace,
+            context=_dicts(
+                [
+                    ContextPart("system", job.label, job.system),
+                    ContextPart("assistant", f"{job.label} reply", reply),
+                ]
+            ),
+        )
+
+    def cancel(self) -> None:
+        for key in list(self._jobs):
+            self._cancel(key)
+
+    def _cancel(self, key: str) -> None:
+        job = self._jobs.pop(key, None)
+        if job is not None and job.task is not None and not job.task.done():
+            job.task.cancel()
+        if key in self._order:
+            self._order.remove(key)
 
 
 async def _begin(run: _Run, turn: Turn) -> AsyncIterator[TurnEvent]:
@@ -1433,50 +1685,64 @@ async def _narrate(
     result.append((reply, reasoning))
 
 
+async def _journal_step(run: _Run, turn: Turn) -> None:
+    """Bring the journal up to date while the narration is being written.
+
+    The journal reads only the record, never the narration, so it can run beside the narration
+    instead of in the review's call. A journal step that fails leaves the journal as it was; the
+    next turn writes the missing days."""
+    tools = wire_tool_specs(run.tool_calls, journal_step=True, mode=run.tool_schema_mode)
+    if tools is None:
+        return
+    # The journal covers the log since the last journal step, which can reach back past this
+    # turn after an out-of-character reply or a failed reply. Read that log before this step's
+    # JournalStarted marks it covered.
+    state = _state(run.engine, run.campaign_id)
+    log = _turn_log(run.engine, run.campaign_id, state.journal_through or turn.opener)
+    view = _review_view(
+        run, turn, log=log, heading="Log since the journal was last written, in order:"
+    )
+    view.append({"role": "system", "content": journal_instruction(state.clock.day, state.journal)})
+    # One round: the step is written beside the narration, so every edit belongs in the same
+    # request. A model that asks for another round would only delay the player's reply.
+    step = await run.provider.chat(run.model_name, view, tools)
+    failed = False
+    for request in step.tool_requests:
+        result = await run_tool(run.tool_calls, request, ctx=run.ctx)
+        if isinstance(result, Ask):
+            raise LLMError("the journal step asked the player a question")
+        if _tool_failed(result):
+            failed = True
+            logger.warning("journal tool %s failed: %s", request.name, result.output)
+    if failed:
+        # Leave the log for the next turn so the journal can try the day again.
+        return
+    # Mark the covered log only after the step succeeded. A failed or cancelled journal step
+    # must leave `journal_through` where it was, so the next turn writes the same days again
+    # instead of losing them.
+    _record(run.engine, run.campaign_id, JournalStarted())
+
+
 async def _review_narration(
     run: _Run,
     turn: Turn,
     narration: str,
     reasoning: str,
     result: list[_ReviewResult],
-    journal: bool = False,
 ) -> AsyncIterator[TurnEvent]:
     """Check the narration just written against the record. A review that finds a fault calls
     undo_narration; only after that may it use the other tools to correct the record. A record
     change without an undo is refused, so a passing narration is never sent back just because
     the review touched the record. The caller writes the story again when `result` says the
-    narration was undone. With `journal`, the same step first brings the journal up to date, so a
-    normal turn needs one model call for both instead of a separate journal call."""
+    narration was undone."""
     tools = wire_tool_specs(run.tool_calls, review_step=True, mode=run.tool_schema_mode)
     if tools is None:
         result.append(_ReviewResult(undone=False))
         return
-    journal_tools = (
-        wire_tool_specs(run.tool_calls, journal_step=True, mode=run.tool_schema_mode) or []
-    )
-    journal = journal and bool(journal_tools)
-    journal_names: set[str] = set()
-    if journal:
-        tools = [*tools, *journal_tools]
-        journal_names = {spec["function"]["name"] for spec in journal_tools}
     allowed = {spec["function"]["name"] for spec in tools}
     read_only = {tool.name for tool in run.tool_calls.values() if tool.lookup or tool.review_step}
-    yield Status(
-        "Updating the journal and reviewing the turn..." if journal else "Reviewing the turn..."
-    )
-    journal_state = None
-    if journal:
-        # The journal covers the log since the last journal step, which can reach back past this
-        # turn after an out-of-character reply or a failed reply. Read that log before this step's
-        # JournalStarted marks it covered.
-        journal_state = _state(run.engine, run.campaign_id)
-        log = _turn_log(run.engine, run.campaign_id, journal_state.journal_through or turn.opener)
-        _record(run.engine, run.campaign_id, JournalStarted())
-        view = _review_view(
-            run, turn, log=log, heading="Log since the journal was last written, in order:"
-        )
-    else:
-        view = _review_view(run, turn)
+    yield Status("Reviewing the turn...")
+    view = _review_view(run, turn)
     view.append(_text_message(narration, reasoning))
     hidden = _review_only_context(turn)
     if hidden:
@@ -1488,17 +1754,7 @@ async def _review_narration(
                 + lines,
             }
         )
-    if journal and journal_state is not None:
-        view.append(
-            {
-                "role": "system",
-                "content": journal_review_instruction(
-                    journal_state.clock.day, journal_state.journal
-                ),
-            }
-        )
-    else:
-        view.append({"role": "system", "content": TURN_REVIEW_INSTRUCTION})
+    view.append({"role": "system", "content": TURN_REVIEW_INSTRUCTION})
     undone = False
     for round_no in range(1, REVIEW_ROUNDS + 1):
         replied: list[ChatReply] = []
@@ -1546,10 +1802,9 @@ async def _review_narration(
                     ),
                     None,
                 )
-            elif request.name not in read_only and request.name not in journal_names and not undone:
+            elif request.name not in read_only and not undone:
                 # A record change before the narration is set aside would leave the player
-                # reading a story written from the old state. Refuse it instead of guessing. The
-                # journal is the exception: it is written from the record, not the narration.
+                # reading a story written from the old state. Refuse it instead of guessing.
                 tool_result = ToolRun(
                     json.dumps(
                         {
@@ -1721,6 +1976,9 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
     while True:
         state = _state(run.engine, run.campaign_id)
         turn = _turn(state)
+        # A queued line starts as soon as its intent is recorded, and a resumed reply starts
+        # whatever the log still has waiting.
+        run.speech.ensure_started(state, turn)
         text = run.opening if turn.opening else turn.text
         groups = state_tool_groups(state, text) | run.extra_groups
         tools = wire_tool_specs(
@@ -1782,6 +2040,10 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
         if turn.narrating:
             break
         if turn.ooc:
+            if turn.speech_queue:
+                # The out-of-character reply still hands any queued line to the narration that
+                # follows it.
+                turn = await run.speech.collect(turn)
             yield Status("Replying out of character...")
             round_no = turn.rounds + 1
             view = list(turn.messages)
@@ -1956,6 +2218,9 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
             ),
         )
 
+    if turn.speech_queue:
+        # The state step is over; wait for the lines it queued before the narration needs them.
+        turn = await run.speech.collect(turn)
     injection = _take_debug_injection(run)
     forced_narration = ""
     if injection is not None and injection.mode == "tool":
@@ -1964,30 +2229,48 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
         turn = _turn(_state(run.engine, run.campaign_id))
     elif injection is not None and injection.mode == "narration":
         forced_narration = injection.text
-    # The journal is updated every turn, in the same model call as the first review. Only the
-    # campaign opening writes it before there is a narration to review.
+    # The journal reads only the record, so it is written beside the narration instead of in
+    # the review's call. Only the campaign opening writes it before the narration exists.
+    journal_tools = wire_tool_specs(run.tool_calls, journal_step=True, mode=run.tool_schema_mode)
+    journal_task: asyncio.Task[None] | None = (
+        asyncio.create_task(_journal_step(run, turn), name=f"journal-{run.campaign_id}")
+        if journal_tools is not None
+        else None
+    )
     reply = ""
     reasoning = ""
-    for review_round in range(NARRATION_REVIEWS + 1):
-        turn = _turn(_state(run.engine, run.campaign_id))
-        written: list[tuple[str, str]] = []
-        async for event in _narrate(
-            run,
-            turn,
-            written,
-            forced=forced_narration if review_round == 0 else "",
-        ):
-            yield event
-        reply, reasoning = written[0]
-        if review_round >= NARRATION_REVIEWS:
-            break
-        reviewed: list[_ReviewResult] = []
-        async for event in _review_narration(
-            run, turn, reply, reasoning, reviewed, journal=review_round == 0
-        ):
-            yield event
-        if not reviewed[0].undone:
-            break
+    try:
+        for review_round in range(NARRATION_REVIEWS + 1):
+            turn = _turn(_state(run.engine, run.campaign_id))
+            written: list[tuple[str, str]] = []
+            async for event in _narrate(
+                run,
+                turn,
+                written,
+                forced=forced_narration if review_round == 0 else "",
+            ):
+                yield event
+            reply, reasoning = written[0]
+            if journal_task is not None:
+                try:
+                    await journal_task
+                except asyncio.CancelledError:
+                    raise
+                except Exception:
+                    # The journal is a convenience, not part of the story. The next turn
+                    # covers whatever this one missed.
+                    logger.exception("the journal step for campaign %s failed", run.campaign_id)
+                journal_task = None
+            if review_round >= NARRATION_REVIEWS:
+                break
+            reviewed: list[_ReviewResult] = []
+            async for event in _review_narration(run, turn, reply, reasoning, reviewed):
+                yield event
+            if not reviewed[0].undone:
+                break
+    finally:
+        if journal_task is not None and not journal_task.done():
+            journal_task.cancel()
     event_id = _finish_reply(run, turn, reply, reasoning)
     yield Saved(event_id)
 
@@ -1997,8 +2280,13 @@ async def _carry_on(run: _Run) -> AsyncIterator[TurnEvent]:
     if not turn.begun:
         async for event in _begin(run, turn):
             yield event
-    async for event in _drive(run):
-        yield event
+    try:
+        async for event in _drive(run):
+            yield event
+    finally:
+        # A reply that pauses at a prompt or is abandoned must not leave speech tasks writing
+        # into a turn nobody is following. The intent stays in the log, so Continue writes it.
+        run.speech.cancel()
 
 
 async def _answer(

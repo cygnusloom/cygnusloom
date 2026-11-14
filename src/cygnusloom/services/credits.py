@@ -12,7 +12,9 @@ stored per-reply totals are what an administrator reads to choose a model's turn
 
 from __future__ import annotations
 
+import logging
 import math
+import time as clock
 from collections.abc import AsyncIterator, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime, time
@@ -37,6 +39,8 @@ MAX_BALANCE = 1_000_000_000
 MAX_TURN_PRICE = 1_000_000
 # Fixed by the bundled Authentik blueprint, unlike the configurable administrator roles.
 CREDIT_EXEMPT_ROLE = "cygnusloom-credit-exempt"
+
+logger = logging.getLogger(__name__)
 
 
 def validate_credits(value: int, *, label: str = "credits") -> int:
@@ -402,8 +406,10 @@ class MeteredProvider:
         messages: list[dict[str, Any]],
         tools: list[dict[str, Any]] | None = None,
     ) -> ChatReply:
+        started = clock.perf_counter()
         reply = await self._provider.chat(model, messages, tools)
         self._meter.record(messages, reply)
+        _log_call("chat", model, messages, tools, started, reply)
         return reply
 
     async def stream(
@@ -412,10 +418,44 @@ class MeteredProvider:
         messages: list[dict[str, Any]],
         tools: list[dict[str, Any]] | None = None,
     ) -> AsyncIterator[TextDelta | ChatReply]:
+        started = clock.perf_counter()
+        first_delta = 0.0
         async for item in self._provider.stream(model, messages, tools):
             if isinstance(item, ChatReply):
                 self._meter.record(messages, item)
+                _log_call("stream", model, messages, tools, started, item, first_delta)
+            elif isinstance(item, TextDelta) and not first_delta:
+                first_delta = clock.perf_counter() - started
             yield item
+
+
+def _log_call(
+    kind: str,
+    model: str,
+    messages: Sequence[Mapping[str, Any]],
+    tools: Sequence[Any] | None,
+    started: float,
+    reply: ChatReply,
+    first_delta: float = 0.0,
+) -> None:
+    """One debug line per provider call, so a slow turn can be split into its steps."""
+    if not logger.isEnabledFor(logging.DEBUG):
+        return
+    usage = reply.usage
+    detail = f" first delta {first_delta:.2f}s," if first_delta else ""
+    logger.debug(
+        "provider %s %s: %.2fs%s %d messages, %d tools, in=%d out=%d cached=%d reasoning=%d",
+        model,
+        kind,
+        clock.perf_counter() - started,
+        detail,
+        len(messages),
+        len(tools or ()),
+        usage.input_tokens if usage else -1,
+        usage.output_tokens if usage else -1,
+        usage.cached_tokens if usage else -1,
+        usage.reasoning_tokens if usage else -1,
+    )
 
 
 @dataclass(frozen=True)

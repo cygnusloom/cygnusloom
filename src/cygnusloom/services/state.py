@@ -531,6 +531,10 @@ class Turn:
     prompt: Ask | None = None
     # NPC lines written this turn that the narration has not seen yet: {"speaker", "dialogue"}.
     speech: list[dict[str, str]] = field(default_factory=list)
+    # Dialogue intents waiting for the speech step. The engine writes these while the state
+    # step continues, then hands the lines to the narration: {"speaker", "profile", "intent",
+    # "replace"}.
+    speech_queue: list[dict[str, Any]] = field(default_factory=list)
     # What a turn review found wrong with the narration it set aside, so the next narration can
     # correct it. Cleared when that narration is accepted.
     revision: str = ""

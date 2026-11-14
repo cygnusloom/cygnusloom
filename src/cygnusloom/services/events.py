@@ -13,12 +13,15 @@ characters by name, which is unique within a campaign and never changes."""
 from __future__ import annotations
 
 import json
+import pickle
+import threading
+from collections import OrderedDict
 from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass, field, fields, replace
 from functools import cache, lru_cache
 from typing import Any, ClassVar
 
-from sqlalchemy import delete, func
+from sqlalchemy import Engine, delete, func
 from sqlmodel import Session, select
 
 from cygnusloom.db.models import Campaign, Event, User
@@ -229,7 +232,7 @@ def _payload_fields(cls: type[GameEvent]) -> frozenset[str]:
     return frozenset(f.name for f in fields(cls))
 
 
-@lru_cache(maxsize=1024)
+@lru_cache(maxsize=2048)
 def _decode_event(kind: str, payload: str) -> GameEvent:
     """Decode one stored payload. The result is shared by every fold that reads that row.
 
@@ -248,22 +251,132 @@ def decode(row: Event) -> GameEvent:
     return _decode_event(row.kind, row.payload)
 
 
-def load_state(db: Session, campaign_id: int, before: int | None = None) -> CampaignState:
-    """Fold the campaign's log into its state. With `before`, only the events before that id."""
-    statement = select(Event).where(Event.campaign_id == campaign_id)
+@dataclass(frozen=True)
+class _StateCacheEntry:
+    """One folded state kept for reuse: its state, and where in the log it stops."""
+
+    packed: bytes
+    count: int
+    last_id: int
+    last_seq: int
+
+
+# A fold replays the whole log, and a turn folds it many times. The newest fold of each
+# campaign view is kept here; a later load unpacks it and applies only the events appended
+# since. Entries are per process, like the turn jobs: a deployment with several worker
+# processes simply folds once per process, and every write invalidates the matching entries
+# in the process that made it.
+_STATE_CACHE_LIMIT = 8
+# The engine is part of the key: campaign ids restart at 1 in every test database, and two
+# servers in one process must not share a fold.
+_STATE_CACHE: OrderedDict[tuple[Engine, int, int | None], _StateCacheEntry] = OrderedDict()
+_STATE_CACHE_LOCK = threading.Lock()
+
+
+def _cached_fold(engine: Engine, campaign_id: int, before: int | None) -> _StateCacheEntry | None:
+    key = (engine, campaign_id, before)
+    with _STATE_CACHE_LOCK:
+        entry = _STATE_CACHE.get(key)
+        if entry is not None:
+            _STATE_CACHE.move_to_end(key)
+        return entry
+
+
+def _store_fold(
+    engine: Engine,
+    campaign_id: int,
+    before: int | None,
+    state: CampaignState,
+    count: int,
+    last_id: int,
+    last_seq: int,
+) -> None:
+    packed = pickle.dumps(state, protocol=pickle.HIGHEST_PROTOCOL)
+    key = (engine, campaign_id, before)
+    with _STATE_CACHE_LOCK:
+        _STATE_CACHE[key] = _StateCacheEntry(packed, count, last_id, last_seq)
+        _STATE_CACHE.move_to_end(key)
+        while len(_STATE_CACHE) > _STATE_CACHE_LIMIT:
+            _STATE_CACHE.popitem(last=False)
+
+
+def invalidate_state_cache(campaign_id: int | None = None, engine: Engine | None = None) -> None:
+    """Forget folded states after the log changed in a way a plain append cannot describe,
+    such as a rollback. Without a campaign id, every campaign in `engine` is forgotten, or
+    every campaign at all, which tests use to isolate each other."""
+    with _STATE_CACHE_LOCK:
+        if campaign_id is None:
+            if engine is None:
+                _STATE_CACHE.clear()
+                return
+            for key in [key for key in _STATE_CACHE if key[0] is engine]:
+                del _STATE_CACHE[key]
+            return
+        for key in [
+            key
+            for key in _STATE_CACHE
+            if key[1] == campaign_id and (engine is None or key[0] is engine)
+        ]:
+            del _STATE_CACHE[key]
+
+
+def _log_bounds(db: Session, campaign_id: int, before: int | None) -> tuple[int, int, int]:
+    """The number of events, the newest event id, and the newest seq in the view."""
+    statement = select(func.count(Event.id), func.max(Event.id), func.max(Event.seq)).where(
+        Event.campaign_id == campaign_id
+    )
     if before is not None:
         statement = statement.where(Event.id < before)
-    # The owner is configuration rather than part of the log, but a character with no recorded
-    # player belongs to it, so the fold needs it once.
-    state = CampaignState(
-        owner_id=db.exec(select(Campaign.owner_id).where(Campaign.id == campaign_id)).one_or_none()
-    )
-    for row in db.exec(statement.order_by(Event.seq)):
+    count, last_id, last_seq = db.exec(statement).one()
+    return int(count or 0), int(last_id or 0), int(last_seq or 0)
+
+
+def _apply_rows(state: CampaignState, rows: Sequence[Event]) -> None:
+    for row in rows:
         event = decode(row)
         event.apply(state, row.id or 0)
         if state.turn is not None and not isinstance(event, TurnFailed):
             state.turn.failed = None
+
+
+def load_state(db: Session, campaign_id: int, before: int | None = None) -> CampaignState:
+    """Fold the campaign's log into its state. With `before`, only the events before that id.
+
+    The newest fold of each campaign view is cached, so a load after the turn made more
+    events unpacks that state and applies only the new rows. Rollbacks call
+    `invalidate_state_cache`, since a deleted row is not an append."""
+    # The owner is configuration rather than part of the log, but a character with no recorded
+    # player belongs to it, so the fold needs it once.
+    owner_id = db.exec(select(Campaign.owner_id).where(Campaign.id == campaign_id)).one_or_none()
+    engine = db.get_bind()
+    count, last_id, last_seq = _log_bounds(db, campaign_id, before)
+    cached = _cached_fold(engine, campaign_id, before)
+    if cached is not None and cached.count <= count and cached.last_id <= last_id:
+        appended_statement = select(Event).where(
+            Event.campaign_id == campaign_id, Event.id > cached.last_id
+        )
+        if before is not None:
+            appended_statement = appended_statement.where(Event.id < before)
+        appended = list(db.exec(appended_statement.order_by(Event.seq)))
+        # A later fold must be the cached one plus whole rows. A count that does not add up, or
+        # a seq that went backwards, means rows were removed or replaced, so fold from the start.
+        if cached.count + len(appended) == count and all(
+            (row.seq or 0) > cached.last_seq for row in appended
+        ):
+            state = pickle.loads(cached.packed)
+            state.owner_id = owner_id
+            _apply_rows(state, appended)
+            _resolve_player_names(db, state)
+            _store_fold(engine, campaign_id, before, state, count, last_id, last_seq)
+            return state
+    statement = select(Event).where(Event.campaign_id == campaign_id)
+    if before is not None:
+        statement = statement.where(Event.id < before)
+    state = CampaignState(owner_id=owner_id)
+    rows = list(db.exec(statement.order_by(Event.seq)))
+    _apply_rows(state, rows)
     _resolve_player_names(db, state)
+    _store_fold(engine, campaign_id, before, state, count, last_id, last_seq)
     return state
 
 
@@ -318,6 +431,7 @@ def last_event_id(db: Session, campaign_id: int) -> int:
 def truncate(db: Session, campaign_id: int, after: int) -> None:
     """Remove the campaign's events after `after`."""
     db.exec(delete(Event).where(Event.campaign_id == campaign_id, Event.id > after))
+    invalidate_state_cache(campaign_id, db.get_bind())
 
 
 def _open_turn(state: CampaignState) -> Turn:
@@ -1595,6 +1709,37 @@ class ToolRan(GameEvent):
 
 
 @dataclass(frozen=True)
+class SpeechQueued(GameEvent):
+    """One NPC's dialogue intent, waiting for the speech step. The state step returns at once and
+    the engine writes the line while the state step goes on, so the player does not wait a model
+    round for each speaker. `replace` rewrites the speaker's waiting line instead of adding one."""
+
+    kind: ClassVar[str] = "speech.queued"
+    hidden: ClassVar[bool] = True
+    channel: ClassVar[Channel] = Channel.INTERNAL
+
+    speaker: str
+    profile: str
+    intent: str
+    replace: bool = False
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        turn = _open_turn(state)
+        entry = {
+            "speaker": self.speaker,
+            "profile": self.profile,
+            "intent": self.intent,
+            "replace": self.replace,
+        }
+        key = name_key(self.speaker)
+        for index, queued in enumerate(turn.speech_queue):
+            if name_key(str(queued.get("speaker", ""))) == key:
+                turn.speech_queue[index] = entry
+                return
+        turn.speech_queue.append(entry)
+
+
+@dataclass(frozen=True)
 class SpeechWritten(GameEvent):
     """An NPC's line, written by a speech step during a tool run. The narration reads the lines
     in order. An empty `dialogue` is kept in the context only. A `replace` line takes the place of
@@ -1612,6 +1757,12 @@ class SpeechWritten(GameEvent):
     def apply(self, state: CampaignState, event_id: int) -> None:
         turn = _open_turn(state)
         turn.context.extend(_parts(self.context))
+        key = name_key(self.speaker)
+        turn.speech_queue = [
+            queued
+            for queued in turn.speech_queue
+            if name_key(str(queued.get("speaker", ""))) != key
+        ]
         if not self.dialogue:
             return
         line = {"speaker": self.speaker, "dialogue": self.dialogue}
