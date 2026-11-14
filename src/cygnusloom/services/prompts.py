@@ -71,7 +71,11 @@ STATE_INSTRUCTION = (
     "or acts. Move an NPC's token the same way when the scene moves them. When a whole "
     "rectangle of cells shares one terrain, object, colour, pattern, icon, or label, call "
     "fill_map_cells with two opposite corners instead of listing every cell in set_map_cells. "
-    "Call speak only when the moment turns "
+    "If you are creating the map in this turn and already know its terrain and cast, give "
+    "create_local_map those regions and tokens in the same call instead of following it with "
+    "fills and placements. When a band joins a fight, create any new NPCs with create_npc and then call "
+    "stage_encounter once with the whole roster in the same round; do not add and place them one "
+    "at a time. Call speak only when the moment turns "
     "on what is said: the player character has spoken to an NPC, an NPC must give information the "
     "player needs, or the scene needs an exchange. Most actions need no dialogue at all: describe "
     "what the player sees, what happens, and what people do instead. Do not give an NPC a comment, "
@@ -135,15 +139,18 @@ STATE_INSTRUCTION = (
     "Settings page for those. "
     "Use buy_item only for objects a character keeps, and buy_service for rooms, meals, "
     "passage, tolls, and other services that are not carried. "
-    "Do not narrate here; the narration comes in the next step. When several changes do not depend on "
+    "Write no scene prose in this step: the narration step writes it. Do not narrate here; the "
+    "narration comes in the next step. When several changes do not depend on "
     "each other, make every one of their tool calls in this same reply: three NPCs, a location and "
     "its people, or a pile of setting facts are one round, not one round each. Every extra round "
     "costs the player another wait."
 )
 # Closes the state step after the ruleset's fragments.
 STATE_CLOSING = (
-    "When nothing else needs to change, call finish_state_step with the turn checklist from the "
-    'system prompt: one short note for every area, what changed or "no change".'
+    "When nothing else needs to change, include finish_state_step in the same reply as your last "
+    "changes, with the turn checklist from the system prompt: one short note for every area, "
+    'what changed or "no change". You do not need the tool results to write the notes. The '
+    "engine runs it after the other calls, so do not spend a separate round on it."
 )
 
 
@@ -161,8 +168,8 @@ def turn_checklist(
     lines = [
         (
             "Turn checklist. The state step is not finished until you have checked every area. "
-            "Finish by calling finish_state_step, alone, with one short note per area, in this "
-            'order; each is what changed, or "no change":'
+            "Finish by including finish_state_step in the same reply as your last changes, with "
+            'one short note per area, in this order; each is what changed, or "no change":'
         ),
         *(f"- {item.id}: {item.text}" for item in items),
         (

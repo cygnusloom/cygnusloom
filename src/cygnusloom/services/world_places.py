@@ -9,6 +9,7 @@ from cygnusloom.content.icons import icon_registry
 from cygnusloom.content.library import MAP_AMBIENTS, MAP_PALETTES, TERRAIN_PATTERNS
 from cygnusloom.services import encounters
 from cygnusloom.services.common import (
+    InvalidInput,
     session_scope,
 )
 from cygnusloom.services.events import (
@@ -214,10 +215,23 @@ class PlacesMixin:
         ambient: str = "",
         background_color: str = "",
         grid_color: str = "",
+        regions: Sequence[Mapping[str, Any]] | None = None,
+        tokens: Sequence[Mapping[str, Any]] | None = None,
     ) -> dict[str, Any]:
         """Make a local map at a location from a layout template. It is used outside an encounter
         to show characters and props where they stand, and becomes the encounter map when an
-        encounter starts on it. The template's palette and ambient are copied unless given."""
+        encounter starts on it. The template's palette and ambient are copied unless given.
+
+        `regions` paints rectangles of terrain and `tokens` places the cast, so a scene that needs
+        both is one call. A character in `tokens` must already be at the map's location."""
+        if regions is not None and (
+            isinstance(regions, str) or not isinstance(regions, Sequence)
+        ):
+            raise InvalidInput("regions must be a list of rectangles")
+        if tokens is not None and (
+            isinstance(tokens, str) or not isinstance(tokens, Sequence)
+        ):
+            raise InvalidInput("tokens must be a list of placements")
         with session_scope(self.engine) as db:
             result = encounters.create_map(
                 db,
@@ -234,7 +248,60 @@ class PlacesMixin:
                 background_color=background_color,
                 grid_color=grid_color,
             )
+            cells_changed = 0
+            for region in regions or []:
+                if not isinstance(region, Mapping):
+                    raise InvalidInput("each region must be an object with two corners")
+                missing = [
+                    key
+                    for key in ("from_column", "from_row", "to_column", "to_row")
+                    if key not in region
+                ]
+                if missing:
+                    raise InvalidInput(
+                        "each region needs from_column, from_row, to_column, and to_row"
+                    )
+                filled = encounters.fill_map_cells(
+                    db,
+                    self.campaign_id,
+                    name,
+                    region["from_column"],
+                    region["from_row"],
+                    region["to_column"],
+                    region["to_row"],
+                    self.terrain,
+                    self.encounter_objects,
+                    force=bool(region.get("force", False)),
+                    terrain_id=region.get("terrain"),
+                    object_id=region.get("object"),
+                    color=region.get("color"),
+                    pattern=region.get("pattern"),
+                    icon=region.get("icon"),
+                    label=region.get("label"),
+                )
+                cells_changed += filled["changed"]
+            tokens_placed = 0
+            for token in tokens or []:
+                if not isinstance(token, Mapping):
+                    raise InvalidInput("each token must be an object with a name and cell")
+                missing = [key for key in ("name", "column", "row") if key not in token]
+                if missing:
+                    raise InvalidInput("each token needs a name, column, and row")
+                encounters.place_map_token(
+                    db,
+                    self.campaign_id,
+                    name,
+                    token["name"],
+                    token["column"],
+                    token["row"],
+                    self.encounter_objects,
+                )
+                tokens_placed += 1
         result["created"] = "local map"
+        if regions is not None:
+            result["cells_changed"] = cells_changed
+        if tokens is not None:
+            result["tokens_placed"] = tokens_placed
         return result
 
     def place_map_token(self, map: str, name: str, column: int, row: int) -> dict[str, Any]:

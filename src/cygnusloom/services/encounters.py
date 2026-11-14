@@ -1121,11 +1121,52 @@ def end_encounter(db: Session, campaign_id: int) -> dict[str, Any]:
     return {"ended": "encounter", "map": encounter.map}
 
 
+def _free_side_cell(
+    entry: EncounterMap,
+    objects: Mapping[str, EncounterObject],
+    occupied: set[tuple[int, int]],
+    side: str,
+) -> tuple[int, int] | None:
+    """A free cell at a side's edge of the map, so a joining band starts together."""
+    if side == PARTY_SIDE:
+        target = (0.0, entry.rows - 1)
+    elif side == FOES_SIDE:
+        target = (entry.columns - 1, 0.0)
+    else:
+        target = ((entry.columns - 1) / 2, (entry.rows - 1) / 2)
+    candidates = [
+        (column, row)
+        for row in range(entry.rows)
+        for column in range(entry.columns)
+        if (column, row) not in occupied and not _blocks(entry, (column, row), objects)
+    ]
+    if not candidates:
+        return None
+    return min(
+        candidates,
+        key=lambda cell: (
+            (cell[0] - target[0]) ** 2 + (cell[1] - target[1]) ** 2,
+            cell[1],
+            cell[0],
+        ),
+    )
+
+
 def add_participant(
-    db: Session, campaign_id: int, name: str, side: str | None = None
+    db: Session,
+    campaign_id: int,
+    name: str,
+    side: str | None = None,
+    *,
+    encounter_objects: Mapping[str, EncounterObject] | None = None,
+    auto_place: bool = False,
 ) -> dict[str, Any]:
     """Add a character to the encounter on a side. Player characters default to the party and
-    other characters to the foes. A side is any name the GM gives it."""
+    other characters to the foes. A side is any name the GM gives it.
+
+    A local map's token cell becomes the participant's cell. With `auto_place`, a character
+    without a token is placed on a free cell at their side's edge; the GM can move them
+    afterward. A character not at the encounter's location is not placed."""
     state = load_state(db, campaign_id)
     encounter = _encounter(state)
     character = _character(state, name)
@@ -1145,14 +1186,26 @@ def add_participant(
     record(db, campaign_id, ParticipantJoined(name=character.name, side=side))
     # A local map's token cell becomes the participant's cell, so a fight that starts on the
     # map does not need everyone placed again. The token stays on the map for when it is over.
+    placed: tuple[int, int] | None = None
     if token is not None and token not in encounter.cells.values():
+        placed = token
+    elif (
+        auto_place
+        and entry is not None
+        and character.location == encounter.location
+    ):
+        occupied = set(encounter.cells.values()) | set(entry.tokens.values())
+        placed = _free_side_cell(entry, encounter_objects or {}, occupied, side)
+    if placed is not None:
         record(
             db,
             campaign_id,
-            ParticipantPlaced(name=character.name, column=token[0], row=token[1], cost=0),
+            ParticipantPlaced(name=character.name, column=placed[0], row=placed[1], cost=0),
         )
     db.commit()
     result: dict[str, Any] = {"added": character.name, "side": side}
+    if placed is not None:
+        result["column"], result["row"] = placed
     warnings = []
     if character.location != encounter.location:
         where = character.location or "nowhere in particular"
@@ -1160,11 +1213,131 @@ def add_participant(
             f"{character.name} is at {where}, not at {encounter.location}, where the "
             "encounter is. Move them there first if they should be here."
         )
+    elif entry is not None and auto_place and placed is None:
+        warnings.append(
+            f"there is no free cell for {character.name} on {entry.name}; place them with "
+            "place_participant."
+        )
     if character.kind == NPC_KIND and not character.attacks:
         warnings.append(
             f"{character.name} has no attacks; give them attacks with update_npc before "
             "their turn if they are meant to fight."
         )
+    if warnings:
+        result["warning"] = " ".join(warnings)
+    return result
+
+
+def stage_encounter(
+    db: Session,
+    campaign_id: int,
+    roster: Sequence[Mapping[str, Any]],
+    map_name: str | None = None,
+    *,
+    rolls_initiative: bool = False,
+    combat: CombatRules | None = None,
+    character: CharacterSpec | None = None,
+    rng: random.Random | None = None,
+    grid: EncounterGrid | None = None,
+    terrain: Mapping[str, EncounterTerrain] | None = None,
+    encounter_objects: Mapping[str, EncounterObject] | None = None,
+) -> dict[str, Any]:
+    """Start an encounter if none is running, then add and place a whole roster at once.
+
+    A roster entry is a mapping with `name`, optional `side`, and optional `column`/`row`.
+    Without a cell, the engine places the character at their side's edge. A character who is not
+    at the encounter's location still joins, with the usual warning. The caller creates any new
+    NPCs first; the calls run in order."""
+    if not isinstance(roster, Sequence) or isinstance(roster, str):
+        raise InvalidInput("roster must be a list of participants")
+    entries: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for item in roster:
+        if not isinstance(item, Mapping):
+            raise InvalidInput("each roster entry needs a name, side, and optional cell")
+        name = item.get("name")
+        if not isinstance(name, str) or not name.strip():
+            raise InvalidInput("each roster entry needs a name")
+        key = name_key(name)
+        if key in seen:
+            raise InvalidInput(f"{name} appears more than once in the roster")
+        seen.add(key)
+        column, row = item.get("column"), item.get("row")
+        if (column is None) != (row is None):
+            raise InvalidInput(f"{name} needs both column and row, or neither")
+        if column is not None and (not _is_int(column) or not _is_int(row)):
+            raise InvalidInput(f"{name}'s column and row must be whole numbers")
+        entries.append(
+            {
+                "name": name.strip(),
+                "side": item.get("side"),
+                "column": column,
+                "row": row,
+                "force": bool(item.get("force", False)),
+            }
+        )
+    state = load_state(db, campaign_id)
+    started = state.encounter is None
+    if started:
+        if map_name is None:
+            raise InvalidInput("give the map to start an encounter on")
+        start_encounter(
+            db,
+            campaign_id,
+            map_name,
+            rolls_initiative=rolls_initiative,
+            combat=combat,
+            character=character,
+            rng=rng,
+        )
+        state = load_state(db, campaign_id)
+    encounter = _encounter(state)
+    if map_name is not None and name_key(map_name) != name_key(encounter.map):
+        raise InvalidInput(
+            f"the encounter is on {encounter.map}; use that map, or end it before starting "
+            "another"
+        )
+    staged: list[dict[str, Any]] = []
+    warnings: list[str] = []
+    for entry in entries:
+        added = add_participant(
+            db,
+            campaign_id,
+            entry["name"],
+            entry["side"],
+            encounter_objects=encounter_objects,
+            auto_place=entry["column"] is None,
+        )
+        column, row = added.get("column"), added.get("row")
+        if entry["column"] is not None:
+            placed = place_participant(
+                db,
+                campaign_id,
+                entry["name"],
+                entry["column"],
+                entry["row"],
+                grid,
+                terrain,
+                encounter_objects,
+                force=entry["force"],
+            )
+            column, row = placed["column"], placed["row"]
+        staged.append(
+            {
+                "name": added["added"],
+                "side": added["side"],
+                "column": column,
+                "row": row,
+            }
+        )
+        warning = added.get("warning")
+        if warning:
+            warnings.append(warning)
+    result: dict[str, Any] = {
+        "started": "encounter" if started else "reinforcements",
+        "map": encounter.map,
+        "staged": staged,
+    }
     if warnings:
         result["warning"] = " ".join(warnings)
     return result

@@ -42,6 +42,9 @@ class PeopleMixin:
         hp_tier: str | None = None,
         pronouns: str | None = None,
         important: bool = False,
+        armor: int | None = None,
+        attacks: Sequence[Mapping[str, Any]] | None = None,
+        summary: str | None = None,
     ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             result = create_npc(
@@ -68,6 +71,23 @@ class PeopleMixin:
             )
             if result["statblock"] is None:
                 self._initialize_generated_defense(db, name)
+            if armor is not None or attacks is not None:
+                update_npc(
+                    db,
+                    self.campaign_id,
+                    self.character,
+                    self.rng,
+                    name,
+                    armor=armor,
+                    attacks=attacks,
+                    armor_max=self.combat.armor_max if self.combat else 0,
+                    defense_base=self.combat.defense_base if self.combat else 0,
+                    plus=self.plus,
+                )
+                result["armed"] = True
+            if summary is not None:
+                describe_character(db, self.campaign_id, name, summary)
+                result["summary"] = summary
             db.commit()
             return result
 

@@ -79,8 +79,14 @@ def _started(
         "create_npc",
         {"name": "Pip", "location": TOWN, "description": "A scruffy courier."},
     )
-    assert _call(app, campaign_id, "add_participant", {"name": "Pip"})["added"] == "Pip"
-    assert _call(app, campaign_id, "add_participant", {"name": "Ada"})["added"] == "Ada"
+    assert (
+        _call(app, campaign_id, "add_participant", {"name": "Pip", "auto_place": False})["added"]
+        == "Pip"
+    )
+    assert (
+        _call(app, campaign_id, "add_participant", {"name": "Ada", "auto_place": False})["added"]
+        == "Ada"
+    )
     return client, campaign_id
 
 
