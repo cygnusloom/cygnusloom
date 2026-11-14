@@ -63,16 +63,18 @@
         {% if start_levels|length > 1 %}
         <section class="creation-panel" aria-labelledby="panel-start-level">
           <h3 id="panel-start-level">Starting level</h3>
-          <p class="muted">The level every new character in this campaign begins at. It is set to level 1 by default; raise it when the story starts with seasoned adventurers or when players join a campaign already under way.</p>
+          <p class="muted">Where this campaign's characters begin. It is set to level 1 by default; raise it when the story starts with seasoned adventurers.</p>
+          <label class="show-hidden-option"><input type="checkbox" name="follow_owner_level" value="1"{% if follow_owner_level %} checked{% endif %}> New characters follow the campaign owner's character level</label>
+          <input type="hidden" name="follow_owner_level" value="0">
           <label>
-            New characters start at
+            Starting level
             <select name="start_level">
               {% for level in start_levels %}
                 <option value="{{ level }}"{% if level == start_level %} selected{% endif %}>Level {{ level }}</option>
               {% endfor %}
             </select>
           </label>
-          <p class="muted">Every level above 1 is gained right after the character is created, one at a time, on the normal level-up pages, so each character's gains and picks are still chosen by their player.</p>
+          <p class="muted">The first character begins here, and every level above 1 is gained right after creation on the normal level-up pages, so their player chooses each level's gains and picks. While following, a character joining later begins at the owner's current level and this value keeps up with it; turn following off to keep a fixed level.</p>
         </section>
         {% endif %}
         <section class="creation-panel" aria-labelledby="panel-setting">

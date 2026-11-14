@@ -313,12 +313,13 @@ def save_creation(
     use_inventory_space: bool | None = None,
     use_survival_needs: bool | None = None,
     start_level: int | None = None,
+    follow_owner_level: bool | None = None,
 ) -> None:
     """Save the campaign options, the player character, the setting and story, the table
     genres, and the starting level together, so either all of them are saved or none is. A part
-    left as None is not saved. The character needs the options first. The setting, genres, and
-    starting level are captured on the campaign-options creation page, not when the campaign is
-    first made."""
+    left as None is not saved. The character needs the options first. The setting, genres,
+    starting level, and follow switch are captured on the campaign-options creation page, not
+    when the campaign is first made."""
     campaign = get_campaign(engine, owner_id, campaign_id)
     spec = campaign_spec(library, campaign)
     brief = None
@@ -337,28 +338,37 @@ def save_creation(
         # Only the campaign's first character sets the shared options, setting, and genres. A
         # player joining a campaign already under way makes their character and nothing else.
         first_character = not state.pcs()
-        if first_character:
-            stored = db.get(Campaign, campaign_id)
-            if stored is not None:
-                if brief is not None:
-                    stored.setting = brief
-                if genres is not None:
-                    stored.table_genres = json.dumps(list(genres))
-                if use_inventory_space is not None:
-                    stored.use_inventory_space = use_inventory_space
-                if use_survival_needs is not None:
-                    stored.use_survival_needs = use_survival_needs
-                if start_level is not None:
-                    stored.start_level = start_level
+        stored = db.get(Campaign, campaign_id)
+        if first_character and stored is not None:
+            if brief is not None:
+                stored.setting = brief
+            if genres is not None:
+                stored.table_genres = json.dumps(list(genres))
+            if use_inventory_space is not None:
+                stored.use_inventory_space = use_inventory_space
+            if use_survival_needs is not None:
+                stored.use_survival_needs = use_survival_needs
+            if start_level is not None:
+                stored.start_level = start_level
+            if follow_owner_level is not None:
+                stored.follow_owner_level = follow_owner_level
         if options is not None:
             set_campaign_options(db, campaign_id, spec, options)
         if character is not None:
             rule_set = library.rule_sets[campaign.rule_set]
             # The starting level is a campaign option: every new character begins there, not
-            # only the campaign's first one.
+            # only the campaign's first one. While the campaign follows the owner's level, a
+            # character joining later starts at the level the owner's own character has reached.
             starting_level = campaign.start_level
-            if first_character and start_level is not None:
-                starting_level = start_level
+            if first_character:
+                if start_level is not None:
+                    starting_level = start_level
+            elif campaign.follow_owner_level:
+                owner_level = level_up_service.owner_pc_level(state, rule_set)
+                if owner_level is not None:
+                    starting_level = owner_level
+                    if stored is not None:
+                        stored.start_level = owner_level
             level_rules = level_up_service.start_level_rules(rule_set)
             if level_rules is not None:
                 level_up_service.check_start_level(rule_set, starting_level)
@@ -756,10 +766,11 @@ def update_campaign_settings(
     survival_needs: bool,
     label: str,
     start_level: int | None = None,
+    follow_owner_level: bool | None = None,
 ) -> Campaign:
     """Save the owner's manual campaign settings in one write: the model, the inventory and
-    survival-needs switches, the starting level for new characters, and the label. They are
-    configuration, not part of the log, so they may change mid-game."""
+    survival-needs switches, the starting level for new characters and its follow switch, and
+    the label. They are configuration, not part of the log, so they may change mid-game."""
     if model not in allowed_models:
         raise InvalidInput("that model is not available")
     label = (label or "").strip()
@@ -774,6 +785,8 @@ def update_campaign_settings(
         campaign.use_survival_needs = survival_needs
         if start_level is not None:
             campaign.start_level = start_level
+        if follow_owner_level is not None:
+            campaign.follow_owner_level = follow_owner_level
         campaign.name = label
         db.add(campaign)
         db.commit()

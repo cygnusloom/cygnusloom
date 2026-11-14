@@ -515,6 +515,20 @@
       .querySelectorAll("[data-compendium] .compendium-toolbar")
       .forEach((toolbar) => toolbarObserver.observe(toolbar));
   };
+  // A campaign that follows its owner's level keeps the manual starting level in step: while
+  // the box is checked the level comes from the character, so the select cannot be changed.
+  const bindStartingLevel = (root) => {
+    root.querySelectorAll("[data-follow-owner-level]").forEach((checkbox) => {
+      const select = checkbox.closest("form")?.querySelector("[data-start-level]");
+      if (!select) return;
+      const sync = () => {
+        select.disabled = checkbox.checked;
+      };
+      on(checkbox, "follow-owner-level", "change", sync);
+      sync();
+    });
+  };
+
   const initWorkspace = (root = document) => {
     initTabs(root);
     bindViewLinks(root);
@@ -524,6 +538,7 @@
     bindMessageEditButtons(root);
     bindTurnContextButtons(root);
     bindStatblockNames(root);
+    bindStartingLevel(root);
     bindComposer(root);
     measureCompendiumToolbars(root);
     observeCompendiumToolbars();

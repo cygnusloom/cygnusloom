@@ -191,7 +191,9 @@ class Campaign(SQLModel, table=True):
     and rest privation; turning it off means rests spend no supplies and hunger and thirst are
     not tracked. `start_level` is the level every new player character begins at in a rule set
     with levels, on by default; the levels above 1 are taken on the normal level-up pages right
-    after creation."""
+    after creation. `follow_owner_level`, on by default, keeps that level equal to the campaign
+    owner's character level as it rises, so a character joining later begins at the table's
+    level."""
 
     __tablename__ = "campaign"
 
@@ -210,6 +212,7 @@ class Campaign(SQLModel, table=True):
     use_inventory_space: bool = Field(default=True)
     use_survival_needs: bool = Field(default=True)
     start_level: int = Field(default=1)
+    follow_owner_level: bool = Field(default=True)
     created_at: datetime = Field(default_factory=utcnow)
 
 

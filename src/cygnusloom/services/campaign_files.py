@@ -122,6 +122,7 @@ def export_campaign(engine: Engine, owner_id: int, campaign_id: int) -> tuple[st
             "use_inventory_space": campaign.use_inventory_space,
             "use_survival_needs": campaign.use_survival_needs,
             "start_level": campaign.start_level,
+            "follow_owner_level": campaign.follow_owner_level,
             "created_at": as_utc(campaign.created_at).isoformat(),
         },
         "events": events,
@@ -188,6 +189,7 @@ def import_campaign(
             use_inventory_space=config["use_inventory_space"],
             use_survival_needs=config["use_survival_needs"],
             start_level=config["start_level"],
+            follow_owner_level=config["follow_owner_level"],
             created_at=config["created_at"],
         )
         db.add(campaign)
@@ -244,11 +246,20 @@ def import_campaign(
                 row.payload = json.dumps(entry.payload, ensure_ascii=False, separators=(",", ":"))
                 db.add(row)
         db.flush()
+        state = None
         if not opaque:
             try:
-                load_state(db, campaign.id)
+                state = load_state(db, campaign.id)
             except Exception as exc:
                 raise InvalidInput(f"the campaign log could not be replayed: {exc}") from exc
+            if campaign.follow_owner_level:
+                # The imported account owns every character now, so its own character is the
+                # level later joiners follow.
+                level = level_up_service.owner_pc_level(
+                    state, library.rule_sets[config["rule_set"]]
+                )
+                if level is not None:
+                    campaign.start_level = level
         db.commit()
         db.refresh(campaign)
     return ImportResult(
@@ -474,6 +485,9 @@ def _read_campaign(data: dict[str, Any], library: ContentLibrary) -> dict[str, A
         start_level = 1
     elif not 1 <= start_level <= level_rules.max_level:
         raise InvalidInput(f"start_level must be from 1 to {level_rules.max_level}")
+    follow_owner_level = data.get("follow_owner_level", True)
+    if not isinstance(follow_owner_level, bool):
+        raise InvalidInput("follow_owner_level must be true or false")
     created_at = _read_time(data.get("created_at"), "campaign")
     return {
         "name": _text(data, "name", MAX_NAME),
@@ -485,6 +499,7 @@ def _read_campaign(data: dict[str, Any], library: ContentLibrary) -> dict[str, A
         "use_inventory_space": use_inventory_space,
         "use_survival_needs": use_survival_needs,
         "start_level": start_level,
+        "follow_owner_level": follow_owner_level,
         "created_at": created_at,
     }
 
