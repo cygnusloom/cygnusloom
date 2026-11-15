@@ -33,16 +33,16 @@
   </section>
   {% endif %}
   <div class="creation-toolbar">
-    {% if show_character %}
-    <form method="post" action="{% if respec %}/campaigns/{{ campaign.id }}/respec/reroll{% else %}/campaigns/{{ campaign.id }}/character/reroll{% endif %}" class="character-reroll">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      {% if respec %}<input type="hidden" name="character" value="{{ respec.name }}">{% endif %}
-      <button type="submit" class="secondary">Reroll stats</button>
-    </form>
-    {% endif %}
     <button type="button" class="secondary" data-randomize="all">Randomize all</button>
     <button type="button" class="secondary" data-randomize="unchosen">Randomize all not chosen</button>
   </div>
+  {% if show_character %}
+  {# The stats panel's Randomize button submits this form when scripts are off. #}
+  <form method="post" action="{% if respec %}/campaigns/{{ campaign.id }}/respec/reroll{% else %}/campaigns/{{ campaign.id }}/character/reroll{% endif %}" class="character-reroll" id="character-reroll" data-reroll-form>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    {% if respec %}<input type="hidden" name="character" value="{{ respec.name }}">{% endif %}
+  </form>
+  {% endif %}
   <form method="post" action="{% if respec %}/campaigns/{{ campaign.id }}/respec{% else %}/campaigns/{{ campaign.id }}/creation{% endif %}" class="creation-form"{% if character.skill_progression %} data-skill-first-level="{{ character.skill_progression.first_level }}" data-skill-creation-maximum="{{ character.skill_progression.creation_maximum }}"{% endif %}>
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     {% if respec %}
@@ -161,15 +161,21 @@
             <div class="panel-heading">
               <h3 id="panel-stats">Stats</h3>
               <div class="panel-actions">
+                {% if character.can_reroll %}
+                <button type="submit" class="secondary" form="character-reroll" data-reroll-stats title="Roll the rule set's dice for new stats">Randomize</button>
+                {% endif %}
+                {% if character.can_standard %}
+                <button type="button" class="secondary" data-standard-stats title="Use the rule set's standard array">Standard array</button>
+                {% endif %}
                 <button type="button" class="secondary" data-randomize-stats>Random swap</button>
                 <button type="button" class="secondary" data-reset-stats>Reset</button>
               </div>
             </div>
-            <p class="muted panel-hint" data-stat-hint>Select two attributes to trade their values. A rolled group allows one swap.</p>
+            <p class="muted panel-hint" data-stat-hint>{% if character.can_reroll %}Randomize rolls new values. {% endif %}{% if character.can_standard %}Standard array fills the rule set's array. {% endif %}Select two attributes to trade their values. A rolled group allows one swap.</p>
             <div class="stat-grid">
               {% for stat in character.stats %}
                 {% if stat.group %}
-                <div class="stat-card" data-stat-card data-stat-id="{{ stat.id }}" data-stat-group="{{ stat.group }}" data-stat-rolled="{{ stat.value }}"{% if stat.assigned %} data-stat-assigned{% endif %} data-stat-bands='{{ stat.modifier_bands|tojson }}'>
+                <div class="stat-card" data-stat-card data-stat-id="{{ stat.id }}" data-stat-group="{{ stat.group }}" data-stat-rolled="{{ stat.value }}"{% if stat.assigned %} data-stat-assigned{% endif %}{% if stat.standard is not none %} data-stat-standard="{{ stat.standard }}"{% endif %} data-stat-bands='{{ stat.modifier_bands|tojson }}'>
                   <button type="button" class="stat-swap" data-stat-select aria-pressed="false">
                     <span class="stat-name">{{ stat.name }}</span>
                     <span class="stat-value" data-stat-value>{{ stat.value }}</span>

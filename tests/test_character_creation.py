@@ -3,15 +3,21 @@ from __future__ import annotations
 import html
 import re
 from collections.abc import Callable
+from dataclasses import replace
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
+from cygnusloom.config import Settings
+from cygnusloom.llm.fake import FakeProvider
 from cygnusloom.services import campaigns as campaigns_service
 from cygnusloom.services import world
 from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.events import load_state
+from cygnusloom.web import campaigns as campaigns_web
+from cygnusloom.web.app import create_app
+from tests.conftest import bundled_library, csrf_token
 from tests.test_campaigns import _create_character, _new_campaign, _send, _signed_in
 
 STAT_SELECT_RE = re.compile(r'<select name="stat-(\w+)"[^>]*>(.*?)</select>', re.DOTALL)
@@ -221,9 +227,63 @@ def test_stats_have_their_own_randomize_button_and_rolled_swap_groups(
     client, campaign_id = _cairn_campaign(client_factory)
     page = client.get(f"/campaigns/{campaign_id}").text
     assert page.count("data-randomize-stats") == 1
+    assert page.count("data-reroll-stats") == 1
+    assert "data-reroll-form" in page
     assert 'data-stat-group="attributes"' in page
     assert "data-stat-rolled=" in page
     assert "data-stat-assigned" not in page
+
+
+def test_randomize_rolls_new_stats_and_keeps_the_rest_of_the_form(
+    client_factory: Callable[[], TestClient], monkeypatch: pytest.MonkeyPatch
+):
+    client, campaign_id = _cairn_campaign(client_factory)
+    token = csrf_token(client, f"/campaigns/{campaign_id}")
+    fresh = {"str": 3, "dex": 18, "wil": 9, "hp": 6}
+    monkeypatch.setattr(campaigns_web, "roll_player_stats", lambda *args, **kwargs: dict(fresh))
+
+    response = client.post(
+        f"/campaigns/{campaign_id}/character/reroll",
+        data={"csrf_token": token},
+        headers={"Accept": "application/json"},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"stats": fresh}
+    # The session keeps the new roll, so the form shows it and the submission is checked against it.
+    assert _rolled_stats(client.get(f"/campaigns/{campaign_id}").text) == fresh
+    # Without scripts the same button submits its form and reloads the page instead.
+    plain = client.post(
+        f"/campaigns/{campaign_id}/character/reroll",
+        data={"csrf_token": token},
+        follow_redirects=False,
+    )
+    assert plain.status_code == 303
+
+
+def test_the_widget_offers_the_standard_array_the_rule_set_names(
+    settings: Settings, fake: FakeProvider
+) -> None:
+    library = bundled_library()
+    base = library.rule_sets["cairn2e"]
+    standard = {"str": 15, "dex": 14, "wil": 13}
+    stats = {
+        stat_id: replace(stat, standard=standard[stat_id]) if stat_id in standard else stat
+        for stat_id, stat in base.character.stats.items()
+    }
+    rule_set = replace(base, character=replace(base.character, stats=stats))
+    content = replace(library, rule_sets={**library.rule_sets, "cairn2e": rule_set})
+    app = create_app(settings, fake_provider=fake, content=content)
+    with TestClient(app) as client:
+        signed_in = _signed_in(lambda: client)
+        campaign_id = _new_cairn_campaign(signed_in)
+        page = signed_in.get(f"/campaigns/{campaign_id}").text
+
+    assert page.count("data-standard-stats") == 1
+    assert 'data-stat-standard="15"' in page
+    assert 'data-stat-standard="14"' in page
+    assert 'data-stat-standard="13"' in page
 
 
 def test_name_dice_draws_on_the_suggested_names_of_the_backgrounds(
@@ -244,10 +304,12 @@ def test_every_choice_opens_a_dialog_and_radios_are_not_required(
     page = client.get(f"/campaigns/{campaign_id}").text
     groups = set(re.findall(r'<input type="radio" name="([\w-]+)"', page))
     dialog_ids = re.findall(r'<dialog id="(choice-dialog-[\w-]+)"', page)
-    opened = re.findall(r'data-open-choice="(choice-dialog-[\w-]+)"', page)
-    assert {f"choice-dialog-{name}" for name in groups} == set(dialog_ids)
-    assert sorted(dialog_ids) == sorted(opened)
+    opened = set(re.findall(r'data-open-choice="(choice-dialog-[\w-]+)"', page))
+    assert {f"choice-dialog-{name}" for name in groups} == set(dialog_ids) == opened
     assert len(dialog_ids) == len(set(dialog_ids))
+    for dialog_id in dialog_ids:
+        # The chosen value and the Choose button both open the dialog.
+        assert page.count(f'data-open-choice="{dialog_id}"') == 2
     for tag in re.findall(r'<input type="radio"[^>]*>', page):
         attributes = re.sub(r'"[^"]*"', '""', tag)
         assert " required" not in attributes

@@ -95,7 +95,7 @@
       return section;
     };
     const addOption = (option) => {
-      if (!option.value || !group) return;
+      if (!option.value || option.hidden || !group) return;
       const button = document.createElement("button");
       button.type = "button";
       button.className = "choice pick-option";
@@ -180,6 +180,17 @@
 
   const syncPickControls = () => {
     for (const control of pickControls) syncPickControl(control);
+  };
+
+  // The campaign and compendium pages regroup or filter their options when the chosen rule set
+  // changes. Rebuilding keeps each dialog in step with its select.
+  window.cygnusPicks = {
+    rebuild() {
+      for (const control of pickControls) {
+        buildPickDialog(control);
+        syncPickControl(control);
+      }
+    },
   };
 
   const syncReplacementDetails = () => {
@@ -835,6 +846,7 @@
     statGroups.set(card.dataset.statGroup, members);
   }
   const statHint = document.querySelector("[data-stat-hint]");
+  const statHintDefault = statHint ? statHint.textContent : "";
   const setStatHint = (text) => {
     if (statHint) statHint.textContent = text;
   };
@@ -876,8 +888,7 @@
   };
   const statGroupIsAssigned = (members) =>
     members.some((card) => card.hasAttribute("data-stat-assigned"));
-  const defaultStatHint = () =>
-    "Select two attributes to trade their values. A rolled group allows one swap.";
+  const defaultStatHint = () => statHintDefault;
   const resetStats = () => {
     clearStatSelection();
     changedStatGroups.clear();
@@ -940,6 +951,65 @@
       );
     }
     setStatHint("Random swap applied. Reset restores the rolled values.");
+  };
+
+  // A rule set's source material may give a standard array. It replaces each of its groups in
+  // stat order, and the same one swap still applies.
+  const standardStats = () => {
+    clearStatSelection();
+    changedStatGroups.clear();
+    for (const members of statGroups.values()) {
+      if (!members.every((card) => card.dataset.statStandard !== undefined)) continue;
+      for (const card of members) setStatValue(card, Number(card.dataset.statStandard));
+    }
+    setStatHint("Standard array applied. Randomize rolls new values; Reset restores the roll.");
+  };
+
+  // Randomize asks the server for a fresh roll, which the session keeps so the submission is
+  // checked against it, then updates the cards in place so the rest of the form is untouched.
+  const rerollForm = document.querySelector("[data-reroll-form]");
+  const rerollButton = document.querySelector("[data-reroll-stats]");
+  const applyRoll = (stats) => {
+    clearStatSelection();
+    changedStatGroups.clear();
+    for (const card of statCards) {
+      const value = stats[card.dataset.statId];
+      if (!Number.isInteger(value)) continue;
+      card.dataset.statRolled = String(value);
+      setStatValue(card, value);
+    }
+  };
+  const rerollStats = async () => {
+    if (!rerollForm || !rerollButton || rerollButton.disabled) return;
+    const token = rerollForm.querySelector('input[name="csrf_token"]')?.value ?? "";
+    rerollButton.disabled = true;
+    rerollButton.setAttribute("aria-busy", "true");
+    setStatHint("Rolling new stats…");
+    try {
+      const response = await fetch(rerollForm.action, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({ csrf_token: token }),
+        credentials: "same-origin",
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload || typeof payload.stats !== "object") {
+        setStatHint(
+          payload?.error || "The stats could not be rolled again. Reload the page to try.",
+        );
+        return;
+      }
+      applyRoll(payload.stats);
+      setStatHint("New stats rolled. Random swap trades a pair; Reset restores this roll.");
+    } catch {
+      setStatHint("The stats could not be rolled again. Reload the page to try.");
+    } finally {
+      rerollButton.disabled = false;
+      rerollButton.removeAttribute("aria-busy");
+    }
   };
 
   // Do not select the same tagged feature twice.
@@ -1007,6 +1077,26 @@
     if (!rollName() && input && !input.value.trim()) input.focus();
   };
 
+  // Enter in a picker's search box must not submit the surrounding form, since the pickers sit
+  // inside the campaign and character forms.
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    if (event.target.closest?.("[data-pick-search], [data-choice-search]")) {
+      event.preventDefault();
+    }
+  });
+
+  // The chosen value opens the same dialog as the Choose button, including from the keyboard.
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    const summary = event.target.closest?.(
+      ".pick-summary[data-open-pick], .choice-state[data-open-choice]",
+    );
+    if (!summary) return;
+    event.preventDefault();
+    summary.click();
+  });
+
   document.addEventListener("click", (event) => {
     const target = event.target;
 
@@ -1044,24 +1134,28 @@
 
     const pickOption = target.closest(".pick-option");
     if (pickOption) {
+      // Choosing can rebuild this dialog (the campaign pickers regroup after a rule set change),
+      // which replaces the button, so hold the dialog itself first.
+      const dialog = pickOption.closest("dialog");
       const control = pickControlsByName.get(
-        pickOption.closest(".pick-dialog")?.id.replace(/^pick-dialog-/, "") ?? "",
+        dialog?.id.replace(/^pick-dialog-/, "") ?? "",
       );
       if (control) {
         choosePickValue(control, pickOption.dataset.value);
-        pickOption.closest("dialog")?.close();
+        dialog?.close();
       }
       return;
     }
 
     const clearPick = target.closest("[data-clear-pick]");
     if (clearPick) {
+      const dialog = clearPick.closest("dialog");
       const control = pickControlsByName.get(
-        clearPick.closest(".pick-dialog")?.id.replace(/^pick-dialog-/, "") ?? "",
+        dialog?.id.replace(/^pick-dialog-/, "") ?? "",
       );
       if (control) {
         choosePickValue(control, "");
-        clearPick.closest("dialog")?.close();
+        dialog?.close();
       }
       return;
     }
@@ -1118,6 +1212,17 @@
 
     if (target.closest("[data-name-dice]")) {
       rollName();
+      return;
+    }
+
+    if (target.closest("[data-standard-stats]")) {
+      standardStats();
+      return;
+    }
+
+    if (target.closest("[data-reroll-stats]")) {
+      event.preventDefault();
+      rerollStats();
       return;
     }
 

@@ -575,8 +575,8 @@ def test_other_accounts_cannot_change_a_campaign_label(
 def test_new_campaign_form_offers_world_and_rule_set(client_factory: Callable[[], TestClient]):
     client = _signed_in(client_factory)
     page = client.get("/campaigns/new").text
-    assert '<select name="rule_set" required>' in page
-    assert '<select name="world_template" required>' in page
+    assert re.search(r'<select name="rule_set"[^>]* required', page)
+    assert re.search(r'<select name="world_template"[^>]* required', page)
     assert '<option value="testhollow"' in page
     assert '<option value="rolltest"' in page
 
@@ -586,8 +586,8 @@ def test_new_campaign_form_shows_a_blurb_for_each_rule_set_and_world(
 ):
     client = _signed_in(client_factory)
     page = client.get("/campaigns/new").text
-    assert 'data-blurb="Test-only rule set with a player roll.' in page
-    assert 'data-blurb="A magical forest of mushroom gnomes.' in page
+    assert 'data-detail="Test-only rule set with a player roll.' in page
+    assert 'data-detail="A magical forest of mushroom gnomes.' in page
 
 
 def test_create_rejects_unknown_world_template(client_factory: Callable[[], TestClient]):

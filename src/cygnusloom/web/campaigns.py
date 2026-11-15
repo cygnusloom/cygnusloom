@@ -411,12 +411,19 @@ async def delete_campaign(request: Request, campaign_id: int) -> Response:
 
 @router.post("/{campaign_id}/character/reroll")
 async def reroll_character_stats(request: Request, campaign_id: int) -> Response:
+    """Roll the player's starting stats again. The stats panel asks for JSON so it can update
+    the cards in place; a browser without scripts posts the form and gets a new page."""
     user = page_user(request)
     await verify_csrf(request)
+    wants_json = "application/json" in request.headers.get("accept", "")
     try:
-        _roll_stats(request, user, campaign_id)
+        rolled = _roll_stats(request, user, campaign_id)
     except InvalidInput as exc:
+        if wants_json:
+            return JSONResponse({"error": str(exc)}, status_code=400)
         return _campaign_page(request, user, campaign_id, 400, str(exc))
+    if wants_json:
+        return JSONResponse({"stats": rolled})
     return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
 
 
@@ -1925,18 +1932,22 @@ def _new_form(
         for world in library.world_templates.values()
         if world.rule_set is None or world.rule_set == rule_set
     ]
+    recommended_ids = library.recommended_world_ids(rule_set)
     if world_template not in {world.id for world in worlds}:
-        # Prefer the configured world, then a world built for this rule set over a generic one
-        # when the form first opens.
+        # Prefer the configured world, then a world recommended for this rule set, when the
+        # form first opens.
         preferred = []
         if configured is not None and configured.rule_set == rule_set:
             preferred = [world for world in worlds if world.id == configured.world_template]
         if not preferred:
-            preferred = [world for world in worlds if world.rule_set == rule_set]
+            preferred = [world for world in worlds if world.id in recommended_ids]
         world_template = (preferred or worlds)[0].id if worlds else ""
     chosen_rule_set = library.rule_sets.get(rule_set)
     chosen_world = library.world_templates.get(world_template)
     default_labels = default_campaign_labels(request.app.state.engine, library, user.id)
+    # The world picker shows the worlds recommended for the chosen rule set first, then the rest.
+    # Its script regroups the options when the rule set changes, so every world is rendered.
+    world_templates = list(library.world_templates.values())
     # The model is an advanced choice: leaving it blank uses the server's default. A model that
     # is no longer offered is forgotten, so the form always submits one the catalog knows.
     models = request.app.state.catalog.specs()
@@ -1950,19 +1961,18 @@ def _new_form(
         error=error,
         campaign_label=label or default_labels.get(world_template, ""),
         world_labels=default_labels,
-        world_templates=library.world_templates.values(),
+        recommended_worlds=[world for world in world_templates if world.id in recommended_ids],
+        other_worlds=[world for world in world_templates if world.id not in recommended_ids],
+        world_recommendations={
+            world.id: library.recommending_rule_sets(world.id) for world in world_templates
+        },
         rule_sets=library.rule_sets.values(),
         models=models,
         default_model=default_model,
         selected_model=model,
         selected_world=world_template,
         selected_rule_set=rule_set,
-        selected_world_blurb=(
-            (chosen_world.blurb or chosen_world.description) if chosen_world else ""
-        ),
-        selected_rule_set_blurb=(
-            (chosen_rule_set.blurb or chosen_rule_set.description) if chosen_rule_set else ""
-        ),
+        selected_rule_set_name=(chosen_rule_set.name if chosen_rule_set else ""),
         selected_rule_set_third_party=bool(chosen_rule_set and chosen_rule_set.third_party),
         selected_world_third_party=bool(chosen_world and chosen_world.third_party),
     )

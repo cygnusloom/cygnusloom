@@ -156,6 +156,29 @@ def _skill_spec():
     )
 
 
+def _standard_spec():
+    return build_character(
+        [
+            Definition(
+                "stat",
+                ident,
+                {
+                    "type": "stat",
+                    "id": ident,
+                    "name": ident.title(),
+                    "formula": "3d6",
+                    "swap_group": "attributes",
+                    "standard": standard,
+                },
+            )
+            for ident, standard in (("str", 15), ("dex", 14), ("con", 13))
+        ],
+        {},
+        {},
+        "standard-form-test",
+    )
+
+
 def _generic_form(*, role: str = "dual", culture: str = "north") -> FormData:
     return FormData(
         [
@@ -165,6 +188,14 @@ def _generic_form(*, role: str = "dual", culture: str = "north") -> FormData:
             ("template-second_domain", "water_second"),
         ]
     )
+
+
+def test_creation_view_exposes_a_standard_array_in_stat_order():
+    view = creation_view(_standard_spec(), {"str": 8, "dex": 9, "con": 10})
+
+    assert view["can_reroll"] is True
+    assert view["can_standard"] is True
+    assert [stat["standard"] for stat in view["stats"]] == [15, 14, 13]
 
 
 def test_creation_view_exposes_generic_compatibility_requirements_and_choice_keys():

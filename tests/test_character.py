@@ -146,6 +146,114 @@ def test_stats_outside_a_group_cannot_change():
         check_swaps(SPEC, rolled, chosen)
 
 
+def _standard_spec() -> CharacterSpec:
+    definitions = [
+        Definition(
+            "stat",
+            ident,
+            {
+                "type": "stat",
+                "id": ident,
+                "name": ident.title(),
+                "formula": "3d6",
+                "swap_group": "attributes",
+                "standard": standard,
+            },
+        )
+        for ident, standard in (("str", 15), ("dex", 14), ("con", 13))
+    ]
+    return build_character(definitions, {}, {}, "standard-array-test")
+
+
+def test_a_standard_array_replaces_the_rolled_attributes():
+    check_swaps(
+        _standard_spec(),
+        {"str": 8, "dex": 9, "con": 10},
+        {"str": 15, "dex": 14, "con": 13},
+    )
+
+
+def test_a_standard_array_allows_one_swap():
+    spec = _standard_spec()
+    rolled = {"str": 8, "dex": 9, "con": 10}
+    check_swaps(spec, rolled, {"str": 14, "dex": 15, "con": 13})
+    with pytest.raises(CharacterError, match="one swap"):
+        check_swaps(spec, rolled, {"str": 14, "dex": 13, "con": 15})
+
+
+def test_values_that_match_neither_the_roll_nor_the_standard_array_are_rejected():
+    with pytest.raises(CharacterError, match="standard array"):
+        check_swaps(
+            _standard_spec(),
+            {"str": 8, "dex": 9, "con": 10},
+            {"str": 15, "dex": 15, "con": 13},
+        )
+
+
+@pytest.mark.parametrize(
+    "definition, message",
+    [
+        (
+            {"id": "str", "name": "Str", "formula": "3d6", "standard": 15},
+            "needs a 'swap_group'",
+        ),
+        (
+            {
+                "id": "str",
+                "name": "Str",
+                "formula": "3d6",
+                "swap_group": "attributes",
+                "standard": 19,
+            },
+            "within the stat's roll",
+        ),
+        (
+            {
+                "id": "str",
+                "name": "Str",
+                "formula": "3d6",
+                "swap_group": "attributes",
+                "standard": "high",
+            },
+            "whole number",
+        ),
+    ],
+)
+def test_a_bad_standard_value_is_rejected(definition, message):
+    with pytest.raises(ContentError, match=message):
+        build_character([Definition("stat", "str", {"type": "stat", **definition})], {}, {}, "test")
+
+
+def test_every_stat_in_a_rolled_group_needs_a_standard():
+    definitions = [
+        Definition(
+            "stat",
+            "str",
+            {
+                "type": "stat",
+                "id": "str",
+                "name": "Str",
+                "formula": "3d6",
+                "swap_group": "attributes",
+                "standard": 15,
+            },
+        ),
+        Definition(
+            "stat",
+            "dex",
+            {
+                "type": "stat",
+                "id": "dex",
+                "name": "Dex",
+                "formula": "3d6",
+                "swap_group": "attributes",
+            },
+        ),
+    ]
+    with pytest.raises(ContentError, match="every stat a 'standard' or none"):
+        build_character(definitions, {}, {}, "test")
+
+
 def test_resolve_rolls_missing_stats():
     sheet = resolve(SPEC, {}, random.Random(0), plus=PLUS)
     for stat in SPEC.stats.values():

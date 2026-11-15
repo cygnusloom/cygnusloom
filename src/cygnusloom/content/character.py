@@ -163,6 +163,9 @@ class Stat:
     high: int
     # The pool a stat with no formula is assigned from. Every stat in its group shares the pool.
     values: tuple[int, ...] = ()
+    # The stat's value in the rule set's standard array. A rolled swap group gives every stat
+    # one, and the player may use the array instead of the roll.
+    standard: int | None = None
     # The modifier bands a score falls into, as (minimum, modifier) pairs with rising minimums.
     # A score takes the modifier of the highest minimum it reaches. With no bands the modifier
     # is the score itself, which is how Cairn reads its stats.
@@ -784,6 +787,20 @@ def _stat(definition: Definition, template: str) -> Stat:
     if match is None:
         raise ContentError(f"{label}: 'formula' must be a dice formula such as '3d6'")
     count, sides = int(match.group(1)), int(match.group(2))
+    standard = definition.data.get("standard")
+    if standard is not None:
+        if isinstance(standard, bool) or not isinstance(standard, int):
+            raise ContentError(f"{label}: 'standard' must be a whole number")
+        if swap is None:
+            raise ContentError(f"{label}: a stat with 'standard' needs a 'swap_group'")
+        if plus_modifier:
+            raise ContentError(f"{label}: a stat with 'standard' cannot add a 'plus_modifier'")
+        if not count <= standard <= count * sides:
+            raise ContentError(
+                f"{label}: 'standard' must be within the stat's roll ({count}-{count * sides})"
+            )
+        if minimum is not None and standard < minimum:
+            raise ContentError(f"{label}: 'standard' must be at least its 'minimum'")
     return Stat(
         id=definition.id,
         name=name,
@@ -791,6 +808,7 @@ def _stat(definition: Definition, template: str) -> Stat:
         swap_group=swap,
         low=count,
         high=count * sides,
+        standard=standard,
         modifier_bands=bands,
         plus_modifier=plus_modifier,
         minimum=minimum,
@@ -823,7 +841,7 @@ def _modifier_bands(value: object, label: str) -> tuple[tuple[int, int], ...]:
 
 def _derived_stat(definition: Definition, label: str, name: str) -> Stat:
     data = definition.data
-    for key in ("formula", "values", "swap_group", "modifier", "plus_modifier"):
+    for key in ("formula", "values", "swap_group", "modifier", "plus_modifier", "standard"):
         if key in data:
             raise ContentError(f"{label}: a stat with 'derived' takes no {key!r}")
     return Stat(
@@ -992,6 +1010,8 @@ def _assigned_stat(
 ) -> Stat:
     if "formula" in definition.data:
         raise ContentError(f"{label}: give 'formula' or 'values', not both")
+    if "standard" in definition.data:
+        raise ContentError(f"{label}: a stat with 'values' takes no 'standard'")
     values = definition.data["values"]
     if (
         not isinstance(values, list)
@@ -1017,7 +1037,8 @@ def _assigned_stat(
 
 def _check_groups(stats: Mapping[str, Stat], template: str) -> None:
     """Every stat in a swap group must be rolled, or every one assigned from the same pool with a
-    pool as big as the group."""
+    pool as big as the group. A rolled group gives either every stat a standard array value or
+    none of them."""
     groups: dict[str | None, list[Stat]] = {}
     for stat in stats.values():
         if stat.swap_group is not None:
@@ -1027,6 +1048,13 @@ def _check_groups(stats: Mapping[str, Stat], template: str) -> None:
         if len(assigned) > 1:
             raise ContentError(f"{template}: stats in swap group {group!r} mix rolled and assigned")
         if not members[0].values:
+            standards = [m.standard for m in members]
+            if any(standard is not None for standard in standards) and any(
+                standard is None for standard in standards
+            ):
+                raise ContentError(
+                    f"{template}: swap group {group!r} must give every stat a 'standard' or none"
+                )
             continue
         pool = sorted(members[0].values)
         if any(sorted(m.values) != pool for m in members):
@@ -3025,14 +3053,15 @@ def _apply_plus_modifiers(spec: CharacterSpec, stats: dict[str, int]) -> None:
 
 
 def check_swaps(spec: CharacterSpec, rolled: Mapping[str, int], chosen: Mapping[str, int]) -> None:
-    """A player keeps the rolled stats, except that each swap group may swap one pair of values.
-    Stats outside a group must keep their rolled value. A derived stat is computed, not chosen."""
-    groups: dict[str | None, list[str]] = {}
-    assigned = {s.id for s in spec.stats.values() if s.formula is None and s.derived is None}
+    """A player keeps the rolled stats, or a group's standard array, except that each swap group
+    may swap one pair of values. Stats outside a group must keep their rolled value. A derived
+    stat is computed, not chosen."""
+    groups: dict[str | None, list[Stat]] = {}
     for stat in spec.stats.values():
         if stat.derived is None:
-            groups.setdefault(stat.swap_group, []).append(stat.id)
-    for group, ids in groups.items():
+            groups.setdefault(stat.swap_group, []).append(stat)
+    for group, members in groups.items():
+        ids = [stat.id for stat in members]
         before = [rolled[i] for i in ids]
         after = [chosen[i] for i in ids]
         if group is None:
@@ -3040,11 +3069,22 @@ def check_swaps(spec: CharacterSpec, rolled: Mapping[str, int], chosen: Mapping[
                 names = ", ".join(ids)
                 raise CharacterError(f"stats {names} cannot be changed from their rolled values")
             continue
-        if sorted(before) != sorted(after):
-            raise CharacterError(f"stats in group {group!r} must be the rolled values, reordered")
-        if ids[0] in assigned:
+        if any(stat.values for stat in members):
+            if sorted(before) != sorted(after):
+                raise CharacterError(
+                    f"stats in group {group!r} must be the rolled values, reordered"
+                )
             continue
-        if sum(b != a for b, a in zip(before, after)) > 2:
+        standard = [stat.standard for stat in members]
+        options = [before]
+        if all(value is not None for value in standard):
+            options.append([value for value in standard if value is not None])
+        if not any(sorted(option) == sorted(after) for option in options):
+            choices = " or the standard array" if len(options) > 1 else ""
+            raise CharacterError(
+                f"stats in group {group!r} must be the rolled values{choices}, reordered"
+            )
+        if not any(sum(b != a for b, a in zip(option, after)) <= 2 for option in options):
             raise CharacterError(f"stats in group {group!r} allow one swap")
 
 
