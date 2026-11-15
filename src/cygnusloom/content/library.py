@@ -3430,6 +3430,7 @@ CHARACTER_DEFINITION_KEYS: Mapping[str, frozenset[str]] = {
             "minimum",
             "values",
             "formula",
+            "standard",
         }
     ),
     "skill": frozenset({"type", "id", "name", "description"}),

@@ -62,6 +62,7 @@ def creation_view(spec: CharacterSpec, rolled: dict[str, int]) -> dict[str, Any]
             "value": rolled[stat.id],
             "group": stat.swap_group,
             "assigned": stat.formula is None,
+            "standard": stat.standard,
             "options": [
                 {"value": value, "modifier": stat.modifier(value)}
                 for value in (
@@ -142,6 +143,14 @@ def creation_view(spec: CharacterSpec, rolled: dict[str, int]) -> dict[str, Any]
     ]
     return {
         "stats": stats,
+        # A rule set whose stats use dice can roll a fresh set; one that assigns a pool cannot.
+        "can_reroll": any(
+            stat.formula is not None and stat.derived is None for stat in spec.stats.values()
+        ),
+        # A rule set whose source material gives a standard array may fill it in place of a roll.
+        "can_standard": any(
+            stat.standard is not None and stat.derived is None for stat in spec.stats.values()
+        ),
         "kinds": kinds,
         "choice_fields": choice_fields,
         "text_fields": text_fields,
