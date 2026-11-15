@@ -1015,7 +1015,8 @@
   };
   const rerollStats = async () => {
     if (!rerollForm || !rerollButton || rerollButton.disabled) return;
-    const token = rerollForm.querySelector('input[name="csrf_token"]')?.value ?? "";
+    // The whole form travels, not just the token: a respec's roll is kept under the character
+    // the form names, so it must reach the route with the request.
     rerollButton.disabled = true;
     rerollButton.setAttribute("aria-busy", "true");
     setStatHint("Rolling new stats…");
@@ -1026,7 +1027,7 @@
           Accept: "application/json",
           "Content-Type": "application/x-www-form-urlencoded",
         },
-        body: new URLSearchParams({ csrf_token: token }),
+        body: new URLSearchParams(new FormData(rerollForm)),
         credentials: "same-origin",
       });
       const payload = await response.json().catch(() => null);
