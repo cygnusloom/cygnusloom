@@ -1189,11 +1189,22 @@ def _skill_name(spec: CharacterSpec, skill_id: str) -> str:
     return skill.name if skill is not None else skill_id
 
 
+def _standard_arrays(spec: CharacterSpec) -> dict[str, list[int]]:
+    """The rule set's standard array per swap group, in stat order."""
+    arrays: dict[str, list[int]] = {}
+    for stat in spec.stats.values():
+        if stat.standard is not None and stat.swap_group is not None:
+            arrays.setdefault(stat.swap_group, []).append(stat.standard)
+    return arrays
+
+
 def _character_creation_draft(spec: CharacterSpec, rule_set: RuleSet) -> _Draft:
     lines = [rule_set.description] if rule_set.description else []
     kinds = spec.kinds()
     if kinds:
         lines.append("Template kinds: " + ", ".join(kind_label(kind) for kind in kinds))
+    for group, values in _standard_arrays(spec).items():
+        lines.append(f"Standard array ({group}): " + ", ".join(str(value) for value in values))
     if spec.optional_kinds:
         lines.append(
             "Optional selections: " + ", ".join(kind_label(kind) for kind in spec.optional_kinds)
@@ -1233,6 +1244,8 @@ def _stat_draft(stat: Stat) -> _Draft:
         lines.append(f"Range: {stat.low}-{stat.high}")
     if stat.swap_group:
         lines.append(f"Swap group: {stat.swap_group}")
+    if stat.standard is not None:
+        lines.append(f"Standard array value: {stat.standard}")
     if stat.plus_modifier:
         lines.append(f"Adds the {stat.plus_modifier} modifier")
     if stat.minimum is not None:

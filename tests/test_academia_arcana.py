@@ -704,6 +704,18 @@ def test_creation_form_pluralizes_feature_picks(
     assert "Potionss" not in page
 
 
+def test_creation_form_has_no_randomize_for_assigned_stats(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    client = signed_in_client(client_factory)
+    campaign_id = create_campaign(client, world_template=WORLD, rule_set=RULE_SET)
+    choose_campaign_options(client, campaign_id, RULE_SET)
+
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert "data-stat-assigned" in page
+    assert "data-reroll-stats" not in page
+
+
 def test_creation_form_limits_spells_to_the_chosen_subjects(
     client_factory: Callable[[], TestClient],
 ) -> None:

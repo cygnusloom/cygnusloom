@@ -408,12 +408,19 @@ async def delete_campaign(request: Request, campaign_id: int) -> Response:
 
 @router.post("/{campaign_id}/character/reroll")
 async def reroll_character_stats(request: Request, campaign_id: int) -> Response:
+    """Roll the player's starting stats again. The stats panel asks for JSON so it can update
+    the cards in place; a browser without scripts posts the form and gets a new page."""
     user = page_user(request)
     await verify_csrf(request)
+    wants_json = "application/json" in request.headers.get("accept", "")
     try:
-        _roll_stats(request, user, campaign_id)
+        rolled = _roll_stats(request, user, campaign_id)
     except InvalidInput as exc:
+        if wants_json:
+            return JSONResponse({"error": str(exc)}, status_code=400)
         return _campaign_page(request, user, campaign_id, 400, str(exc))
+    if wants_json:
+        return JSONResponse({"stats": rolled})
     return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
 
 

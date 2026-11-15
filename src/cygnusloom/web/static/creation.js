@@ -846,6 +846,7 @@
     statGroups.set(card.dataset.statGroup, members);
   }
   const statHint = document.querySelector("[data-stat-hint]");
+  const statHintDefault = statHint ? statHint.textContent : "";
   const setStatHint = (text) => {
     if (statHint) statHint.textContent = text;
   };
@@ -887,8 +888,7 @@
   };
   const statGroupIsAssigned = (members) =>
     members.some((card) => card.hasAttribute("data-stat-assigned"));
-  const defaultStatHint = () =>
-    "Select two attributes to trade their values. A rolled group allows one swap.";
+  const defaultStatHint = () => statHintDefault;
   const resetStats = () => {
     clearStatSelection();
     changedStatGroups.clear();
@@ -951,6 +951,65 @@
       );
     }
     setStatHint("Random swap applied. Reset restores the rolled values.");
+  };
+
+  // A rule set's source material may give a standard array. It replaces each of its groups in
+  // stat order, and the same one swap still applies.
+  const standardStats = () => {
+    clearStatSelection();
+    changedStatGroups.clear();
+    for (const members of statGroups.values()) {
+      if (!members.every((card) => card.dataset.statStandard !== undefined)) continue;
+      for (const card of members) setStatValue(card, Number(card.dataset.statStandard));
+    }
+    setStatHint("Standard array applied. Randomize rolls new values; Reset restores the roll.");
+  };
+
+  // Randomize asks the server for a fresh roll, which the session keeps so the submission is
+  // checked against it, then updates the cards in place so the rest of the form is untouched.
+  const rerollForm = document.querySelector("[data-reroll-form]");
+  const rerollButton = document.querySelector("[data-reroll-stats]");
+  const applyRoll = (stats) => {
+    clearStatSelection();
+    changedStatGroups.clear();
+    for (const card of statCards) {
+      const value = stats[card.dataset.statId];
+      if (!Number.isInteger(value)) continue;
+      card.dataset.statRolled = String(value);
+      setStatValue(card, value);
+    }
+  };
+  const rerollStats = async () => {
+    if (!rerollForm || !rerollButton || rerollButton.disabled) return;
+    const token = rerollForm.querySelector('input[name="csrf_token"]')?.value ?? "";
+    rerollButton.disabled = true;
+    rerollButton.setAttribute("aria-busy", "true");
+    setStatHint("Rolling new stats…");
+    try {
+      const response = await fetch(rerollForm.action, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({ csrf_token: token }),
+        credentials: "same-origin",
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload || typeof payload.stats !== "object") {
+        setStatHint(
+          payload?.error || "The stats could not be rolled again. Reload the page to try.",
+        );
+        return;
+      }
+      applyRoll(payload.stats);
+      setStatHint("New stats rolled. Random swap trades a pair; Reset restores this roll.");
+    } catch {
+      setStatHint("The stats could not be rolled again. Reload the page to try.");
+    } finally {
+      rerollButton.disabled = false;
+      rerollButton.removeAttribute("aria-busy");
+    }
   };
 
   // Do not select the same tagged feature twice.
@@ -1153,6 +1212,17 @@
 
     if (target.closest("[data-name-dice]")) {
       rollName();
+      return;
+    }
+
+    if (target.closest("[data-standard-stats]")) {
+      standardStats();
+      return;
+    }
+
+    if (target.closest("[data-reroll-stats]")) {
+      event.preventDefault();
+      rerollStats();
       return;
     }
 
