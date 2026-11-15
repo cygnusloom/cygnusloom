@@ -2,6 +2,7 @@
   {
     "type": "template",
     "id": "warrior",
+    "icon": "sword",
     "kind": "class",
     "name": "Warrior",
     "description": "A fighter trained to end battles. You roll a d6 for hit points with a +2 class bonus at first level, add +1 to attack rolls, and gain one free combat-related Focus, one free Focus of any kind, and the Killing Blow and Veteran's Luck abilities.",
@@ -48,6 +49,7 @@
   {
     "type": "template",
     "id": "expert",
+    "icon": "tool",
     "kind": "class",
     "name": "Expert",
     "description": "A skilled professional who solves problems with training and nerve. You roll a d6 for hit points each level, gain one free non-combat Focus, one free Focus of any kind, and the Masterful Expertise and Quick Learner abilities.",
@@ -87,6 +89,7 @@
   {
     "type": "template",
     "id": "healer",
+    "icon": "potion",
     "kind": "class",
     "name": "Healer (Partial)",
     "description": "A spellcaster of curative arts. Heal as a bonus skill, the Healing Touch art, and one more art of their choice, with more arts as they advance. The Healer is a partial class: choose a second partial class from the second-class panel. A Healer may pair with a Vowed, a Partial Warrior, a Partial Expert, or a Partial Mage with a partial tradition.",
@@ -119,6 +122,7 @@
   {
     "type": "template",
     "id": "vowed",
+    "icon": "staff",
     "kind": "class",
     "name": "Vowed (Partial)",
     "description": "A bodily adept who refines inner power into supernatural martial arts. A non-combat bonus skill appropriate to their order (subject to GM approval), Martial Style, Unarmed Might, and Unarmored Defense, plus one more art of their choice, with more arts as they advance. The Vowed is a partial class: choose a second partial class from the second-class panel. A Vowed may pair with a Healer, a Partial Warrior, a Partial Expert, or a Partial Mage with a partial tradition.",
@@ -151,6 +155,7 @@
   {
     "type": "template",
     "id": "mage",
+    "icon": "wand",
     "kind": "class",
     "name": "Mage",
     "description": "A spellcaster bound to one magical tradition. You roll a d6 for hit points with a -1 class penalty at first level, gain one free Focus of any kind, and learn the arts and spells of your tradition.",
@@ -166,6 +171,7 @@
   {
     "type": "template",
     "id": "adventurer_expert_warrior",
+    "icon": "backpack",
     "kind": "class",
     "name": "Adventurer: Expert and Warrior",
     "description": "A dabbler who combines the Expert's training with the Warrior's fighting edge. You roll a d6 with a +2 class bonus at first level, add +1 to attack rolls, and gain one free Expert Focus, one free Warrior Focus, and one free Focus of any kind.",
@@ -236,6 +242,7 @@
   {
     "type": "template",
     "id": "adventurer_expert_mage",
+    "icon": "backpack",
     "kind": "class",
     "name": "Adventurer: Expert and Mage",
     "description": "A seeker who pairs practical training with spellcraft from one tradition. You roll a d6 for hit points, gain one free non-combat Focus and one free Focus of any kind, and learn the arts and spells of your tradition.",
@@ -276,6 +283,7 @@
   {
     "type": "template",
     "id": "adventurer_warrior_mage",
+    "icon": "backpack",
     "kind": "class",
     "name": "Adventurer: Warrior and Mage",
     "description": "A fighter who also wields one tradition's magic. You roll a d6 with a +2 class bonus at first level, add +1 to attack rolls, gain one free Warrior Focus and one free Focus of any kind, and learn the arts and spells of your tradition.",
@@ -322,6 +330,7 @@
   {
     "type": "template",
     "id": "adventurer_mage_mage",
+    "icon": "backpack",
     "kind": "class",
     "name": "Adventurer: Mage and Mage",
     "description": "A spellcaster who follows two traditions at once, trading depth for range. You roll a d6 with a -1 class penalty at first level, gain one free Focus of any kind, and learn the arts and spells of both traditions.",
@@ -345,6 +354,7 @@
   {
     "type": "template",
     "id": "no_tradition",
+    "icon": "rune-circle",
     "kind": "tradition",
     "name": "No Tradition",
     "description": "A character with no magical training. Warriors, Experts, Healers, Vowed, and Adventurers without a spellcasting partial class choose this.",
@@ -360,6 +370,7 @@
   {
     "type": "template",
     "id": "high_mage",
+    "icon": "rune-circle",
     "kind": "tradition",
     "name": "High Mage",
     "description": "The classical tradition of formal spells, sigils, and disciplined study. A full High Mage picks two arts and four first-level spells, and learns two more spells each level.",
@@ -380,6 +391,7 @@
   {
     "type": "template",
     "id": "high_mage_partial",
+    "icon": "rune-circle",
     "kind": "tradition",
     "choice_key": "high_mage",
     "name": "High Mage, Partial",
@@ -401,6 +413,7 @@
   {
     "type": "template",
     "id": "necromancer",
+    "icon": "bones",
     "kind": "tradition",
     "name": "Necromancer",
     "description": "A tradition concerned with death, the body's remains, and the powers that linger around them. A full Necromancer picks one art and four first-level spells, and may learn High Magic or Necromancer spells.",
@@ -421,6 +434,7 @@
   {
     "type": "template",
     "id": "necromancer_partial",
+    "icon": "bones",
     "kind": "tradition",
     "choice_key": "necromancer",
     "name": "Necromancer, Partial",
@@ -448,6 +462,7 @@
   {
     "type": "template",
     "id": "elementalist",
+    "icon": "elemental",
     "kind": "tradition",
     "name": "Elementalist",
     "description": "A tradition that treats the raw elements as living forces to be courted and commanded. A full Elementalist gains Elemental Resilience and Elemental Sparks, picks one more art and four first-level spells, and may learn High Magic or Elementalist spells.",
@@ -475,6 +490,7 @@
   {
     "type": "template",
     "id": "elementalist_partial",
+    "icon": "elemental",
     "kind": "tradition",
     "choice_key": "elementalist",
     "name": "Elementalist, Partial",
@@ -509,6 +525,7 @@
   {
     "type": "template",
     "id": "high_mage_partial_2",
+    "icon": "rune-circle",
     "kind": "tradition2",
     "choice_key": "high_mage",
     "name": "Second Tradition: High Mage, Partial",
@@ -529,6 +546,7 @@
   {
     "type": "template",
     "id": "necromancer_partial_2",
+    "icon": "bones",
     "kind": "tradition2",
     "choice_key": "necromancer",
     "name": "Second Tradition: Necromancer, Partial",
@@ -549,6 +567,7 @@
   {
     "type": "template",
     "id": "elementalist_partial_2",
+    "icon": "elemental",
     "kind": "tradition2",
     "choice_key": "elementalist",
     "name": "Second Tradition: Elementalist, Partial",

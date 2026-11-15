@@ -2,6 +2,7 @@
   {
     "type": "rule_set",
     "id": "cairn2e",
+    "icon": "campfire",
     "name": "Cairn 2e",
     "blurb": "A rules-light game of desperate survival in a dark, weird wilderness. Roll 3d6 for your attributes and see how long you last.",
     "third_party": true,

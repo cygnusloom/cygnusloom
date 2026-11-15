@@ -554,6 +554,8 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 }
 .map-scalebar span { display: block; width: 2.4rem; height: 0.25rem; border: 1px solid var(--text); border-top: 0; }
 .item-icon { width: 1.6rem; height: 1.6rem; vertical-align: -0.35em; margin-right: 0.45rem; }
+.inline-icon { width: 1.1rem; height: 1.1rem; vertical-align: -0.2em; margin-right: 0.3rem; }
+.choice-icon { width: 1.25rem; height: 1.25rem; vertical-align: -0.25em; margin-right: 0.4rem; }
 .compendium-icon {
   width: 2rem; height: 2rem; vertical-align: -0.45em; margin-right: 0.5rem;
 }
@@ -843,7 +845,8 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 
 /* A chosen option keeps its summary line and a short explanation; the rest open in a dialog. */
 .choice-picker { display: flex; align-items: flex-start; gap: 0.5rem; min-width: 0; }
-.choice-state { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.15rem; }
+.choice-state { flex: 1; min-width: 0; display: flex; flex-direction: row; align-items: center; gap: 0.55rem; }
+.choice-state-text { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
 .choice-summary { min-width: 0; overflow-wrap: anywhere; color: var(--muted); }
 .choice-summary.is-chosen { color: var(--text); font-weight: 600; }
 .choice-summary-detail { font-size: 0.9em; overflow-wrap: anywhere; }
@@ -873,7 +876,9 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 .campaign-picker-credits { margin: 0.4rem 0 0; font-size: 0.85rem; }
 .pick-heading { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
 .pick-label { flex: 1; min-width: 0; font-weight: 600; }
-.pick-summary { display: flex; flex-direction: column; gap: 0.15rem; }
+.pick-summary { display: flex; flex-direction: row; align-items: center; gap: 0.55rem; }
+.pick-summary-text { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
+.pick-icon { flex: none; width: 1.5rem; height: 1.5rem; }
 .pick-summary-value { color: var(--muted); overflow-wrap: anywhere; }
 .pick-summary-value.is-chosen { color: var(--text); font-weight: 600; }
 .pick-summary-detail { font-size: 0.9em; overflow-wrap: anywhere; }
@@ -883,7 +888,9 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 .pick-group { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr)); gap: 0.5rem; }
 .pick-group[hidden] { display: none; }
 .pick-group-title { grid-column: 1 / -1; margin: 0; color: var(--muted); font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
-.pick-option { width: 100%; margin: 0; background: var(--field); color: var(--text); font-weight: 400; text-align: left; }
+.pick-options .pick-option { width: 100%; margin: 0; background: var(--field); color: var(--text); font-weight: 400; text-align: left; display: flex; align-items: flex-start; gap: 0.55rem; }
+.pick-option .pick-icon { flex: none; width: 1.75rem; height: 1.75rem; }
+.pick-option .pick-body { display: flex; flex-direction: column; min-width: 0; flex: 1; }
 .pick-option:hover:not(:disabled), .pick-option:focus-visible { border-color: var(--accent); }
 .pick-option.is-selected { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, transparent); }
 .pick-option:disabled { opacity: 0.45; cursor: not-allowed; }

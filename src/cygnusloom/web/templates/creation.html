@@ -4,7 +4,7 @@
 {% block play %}
 <section class="view creation" data-view="play" aria-labelledby="creation-title">
   <h1 id="creation-title">{{ campaign.name }}</h1>
-  <p class="muted">{{ world.name if world else campaign.world_template }} · {{ rule_set.name if rule_set else campaign.rule_set }} · {{ campaign.model }}</p>
+  <p class="muted">{% if world %}<img class="inline-icon" src="{{ icon_path(world.icon) }}" alt="">{{ world.name }}{% else %}{{ campaign.world_template }}{% endif %} · {% if rule_set %}<img class="inline-icon" src="{{ icon_path(rule_set.icon) }}" alt="">{{ rule_set.name }}{% else %}{{ campaign.rule_set }}{% endif %} · {{ campaign.model }}</p>
   {% if is_owner and not single_player %}
   <details class="share-campaign">
     <summary>Share this campaign</summary>
@@ -188,10 +188,10 @@
                 {{ choice("template-" ~ group.kind, "", "None", "Leave this unchosen.") }}
               {% endif %}
               {% for template in group.templates %}
-                {{ choice("template-" ~ group.kind, template.id, template.name, template.description, data_select=group.kind, data_compatible_with=template.compatible_with, data_template_requirements=template.template_requirements, data_choice_key=template.choice_key, summary=template.summary, grants=template.grants) }}
+                {{ choice("template-" ~ group.kind, template.id, template.name, template.description, data_select=group.kind, data_compatible_with=template.compatible_with, data_template_requirements=template.template_requirements, data_choice_key=template.choice_key, summary=template.summary, grants=template.grants, icon=template.icon) }}
               {% endfor %}
               {% if group.starting_silver %}
-                {{ choice("template-" ~ group.kind, "", group.starting_silver.label, group.starting_silver.description, data_select=group.kind, summary=group.starting_silver.description) }}
+                {{ choice("template-" ~ group.kind, "", group.starting_silver.label, group.starting_silver.description, data_select=group.kind, summary=group.starting_silver.description, icon="coin") }}
               {% endif %}
             {% endcall %}
           </fieldset>
@@ -213,7 +213,7 @@
                       {% for group in template.picks.groups %}
                         <optgroup label="{{ group.tag }}" data-tag="{{ group.tag }}">
                           {% for feature in group.features %}
-                            <option value="{{ feature.id }}" data-title="{{ feature.name }}" data-detail="{{ feature.detail }}" data-rank="{{ feature.rank }}">{{ feature.name }}</option>
+                            <option value="{{ feature.id }}" data-title="{{ feature.name }}" data-detail="{{ feature.detail }}" data-rank="{{ feature.rank }}"{% if feature.icon %} data-icon="{{ icon_path(feature.icon) }}"{% endif %}>{{ feature.name }}</option>
                           {% endfor %}
                         </optgroup>
                       {% endfor %}
@@ -232,7 +232,7 @@
                     {% call pick_control("pick-skill-" ~ template.id ~ "-" ~ pick.id ~ "-" ~ index, "Skill " ~ (index + 1), pick.hint) %}
                       <option value="">Roll</option>
                       {% for option in pick.options %}
-                        <option value="{{ option.value }}" data-title="{{ option.title }}" data-detail="{{ option.detail or '' }}">{{ option.title }}</option>
+                        <option value="{{ option.value }}" data-title="{{ option.title }}" data-detail="{{ option.detail or '' }}"{% if option.icon %} data-icon="{{ icon_path(option.icon) }}"{% endif %}>{{ option.title }}</option>
                       {% endfor %}
                     {% endcall %}
                   {% endfor %}
@@ -251,7 +251,7 @@
                       {% call pick_control("pick-feature-" ~ template.id ~ "-" ~ pick.id ~ "-" ~ index, pick.noun|capitalize ~ " " ~ (index + 1), pick.hint, "data-feature-choice") %}
                         <option value="">Roll</option>
                         {% for option in pick.options %}
-                          <option value="{{ option.value }}" data-title="{{ option.title }}" data-description="{{ option.detail or '' }}" data-feature-tag="{{ option.tag }}" data-rank="{{ option.rank }}" data-repeatable="{{ 'true' if option.repeatable else 'false' }}" data-ordered="{{ 'true' if option.ordered else 'false' }}" data-has-next-rank="{{ 'true' if option.has_next_rank else 'false' }}">{{ option.title }}{% if option.rank %} (rank {{ option.rank }}){% endif %}</option>
+                          <option value="{{ option.value }}" data-title="{{ option.title }}" data-description="{{ option.detail or '' }}" data-feature-tag="{{ option.tag }}" data-rank="{{ option.rank }}"{% if option.icon %} data-icon="{{ icon_path(option.icon) }}"{% endif %} data-repeatable="{{ 'true' if option.repeatable else 'false' }}" data-ordered="{{ 'true' if option.ordered else 'false' }}" data-has-next-rank="{{ 'true' if option.has_next_rank else 'false' }}">{{ option.title }}{% if option.rank %} (rank {{ option.rank }}){% endif %}</option>
                         {% endfor %}
                       {% endcall %}
                       <label data-feature-repeat-mode hidden>
@@ -296,9 +296,10 @@
                       <select name="skill-replacement-{{ group.kind }}">
                         <option value="">Roll an eligible skill</option>
                         {% for option in group.options %}
-                          <option value="{{ option.value }}" data-detail="{{ option.detail }}">{{ option.title }}</option>
+                          <option value="{{ option.value }}" data-detail="{{ option.detail }}"{% if option.icon %} data-icon="{{ icon_path(option.icon) }}"{% endif %}>{{ option.title }}</option>
                         {% endfor %}
                       </select>
+                      <img class="choice-icon" data-replacement-icon alt="" hidden>
                       <span class="muted replacement-detail" data-replacement-detail></span>
                     </label>
                   </div>

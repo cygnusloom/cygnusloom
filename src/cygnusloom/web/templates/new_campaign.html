@@ -9,7 +9,7 @@
       <div class="campaign-picker">
         {% call pick_control("rule_set", "Rule set", "Choose the game system this campaign plays with.", "required", empty="Choose a rule set", roll=false, clear=false) %}
           {% for rule_set in rule_sets %}
-            <option value="{{ rule_set.id }}" data-title="{{ rule_set.name }}" data-detail="{{ rule_set.blurb or rule_set.description }}" data-third-party="{{ '1' if rule_set.third_party else '0' }}"{% if rule_set.id == selected_rule_set %} selected{% endif %}>{{ rule_set.name }}</option>
+            <option value="{{ rule_set.id }}" data-title="{{ rule_set.name }}" data-detail="{{ rule_set.blurb or rule_set.description }}" data-icon="{{ icon_path(rule_set.icon) }}" data-third-party="{{ '1' if rule_set.third_party else '0' }}"{% if rule_set.id == selected_rule_set %} selected{% endif %}>{{ rule_set.name }}</option>
           {% endfor %}
         {% endcall %}
         <p class="muted campaign-picker-credits">

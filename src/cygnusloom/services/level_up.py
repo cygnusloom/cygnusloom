@@ -407,7 +407,13 @@ def _skill_view(
             targets.append({"level": target, "cost": cost, "minimum_level": minimum})
         if targets:
             skills.append(
-                {"id": skill.id, "name": skill.name, "current": current, "targets": targets}
+                {
+                    "id": skill.id,
+                    "name": skill.name,
+                    "icon": skill.icon,
+                    "current": current,
+                    "targets": targets,
+                }
             )
     return {
         "id": pick.id,

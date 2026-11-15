@@ -2,6 +2,7 @@
   {
     "type": "world",
     "id": "twin-lakes",
+    "icon": "water",
     "name": "Twin Lakes",
     "rule_set": "cairn2e",
     "blurb": "A mystery around the Twin Lakes: a butcher has vanished, and a tithingman is overdue with the tithe.",

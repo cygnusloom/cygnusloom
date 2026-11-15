@@ -316,6 +316,7 @@ def _build(
             text=world_text,
             source="world",
             group="Overview",
+            icon=world.icon,
         ),
     )
     location_names = {location.id: location.name for location in world.locations}
@@ -435,6 +436,7 @@ def _build(
                 summary=_first_sentence(skill.description),
                 text=skill.description,
                 group="Skills",
+                icon=skill.icon,
             ),
             "skill",
         )
@@ -1171,6 +1173,7 @@ def _template_draft(template: Template, spec: CharacterSpec) -> _Draft:
         text="\n".join(lines),
         tags=(template.kind,),
         group=kind_label(template.kind),
+        icon=template.icon,
     )
 
 
@@ -1229,6 +1232,7 @@ def _character_creation_draft(spec: CharacterSpec, rule_set: RuleSet) -> _Draft:
         summary="How characters are built with this rule set",
         text="\n".join(lines),
         group="Overview",
+        icon=rule_set.icon,
     )
 
 

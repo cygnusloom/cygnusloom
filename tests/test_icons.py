@@ -11,7 +11,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from cygnusloom.content.definitions import ContentError
-from cygnusloom.content.icons import resolve_icon
+from cygnusloom.content.icons import FALLBACK_TEMPLATE, resolve_icon, template_fallback
+from cygnusloom.web.character_form import creation_view
 from cygnusloom.web.icons import (
     ICON_DIR,
     ITEM_KIND_ICONS,
@@ -23,6 +24,8 @@ from cygnusloom.web.icons import (
     place_icon_path,
 )
 from tests.conftest import content_library
+from tests.factories import signed_in_client
+from tests.test_character_creation import _cairn_campaign
 from tests.test_combat import PC, _fight_client
 
 SVG_NS = "{http://www.w3.org/2000/svg}"
@@ -82,6 +85,7 @@ REQUIRED = {
         "aberration",
         "plant-creature",
         "spirit",
+        "horse",
     ],
     "places": [
         "city",
@@ -235,6 +239,7 @@ REQUIRED = {
         "generic-item",
     ],
     "tokens": ["pc", "npc", "hireling", "monster", "group", "neutral"],
+    "emblems": ["eye", "fist", "handshake", "lute", "skill", "speech"],
 }
 
 _EXTERNAL_REF = re.compile(r"(https?:|data:|//)", re.IGNORECASE)
@@ -398,6 +403,59 @@ def test_every_bundled_monster_place_and_item_has_an_icon():
     for world in library.world_templates.values():
         for place in world.locations:
             assert place.icon in registry, f"{world.id}: {place.name} has no icon"
+
+
+def test_every_bundled_rule_set_world_template_and_skill_has_an_icon():
+    library = content_library()
+    registry = _registry()
+    for name, rule_set in library.rule_sets.items():
+        assert rule_set.icon in registry, f"{name}: the rule set has no icon"
+        for template in rule_set.character.templates.values():
+            assert template.icon in registry, f"{name}: {template.name} has no icon"
+        for skill in rule_set.character.skills.values():
+            assert skill.icon in registry, f"{name}: {skill.name} has no icon"
+    for world in library.world_templates.values():
+        assert world.icon in registry, f"{world.id}: the world has no icon"
+
+
+def test_template_icons_fall_back_by_kind():
+    assert template_fallback("background") == "scroll"
+    assert template_fallback("class") == "sword"
+    assert template_fallback("class2") == "sword"
+    assert template_fallback("tradition") == "rune-circle"
+    assert template_fallback("kit") == "backpack"
+    assert template_fallback("playbook") == "book"
+    assert template_fallback("homebrew") == FALLBACK_TEMPLATE
+
+
+def test_new_campaign_pickers_offer_rule_set_and_world_icons(
+    client_factory: Callable[[], TestClient],
+):
+    client = signed_in_client(client_factory)
+    page = client.get("/campaigns/new").text
+    assert (
+        f'data-icon="{icon_path(content_library().rule_sets["worldswithoutnumber"].icon)}"' in page
+    )
+    assert f'data-icon="{icon_path(content_library().world_templates["twin-lakes"].icon)}"' in page
+
+
+def test_character_choices_and_picks_carry_their_icons(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _cairn_campaign(client_factory)
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert '<img class="choice-icon" src="/static/icons/items/gem.svg" alt="">' in page
+    assert 'data-icon="/static/icons/items/gem.svg"' in page
+
+
+def test_skill_pick_options_carry_icons():
+    spec = content_library().rule_sets["worldswithoutnumber"].character
+    rolled = {stat.id: 10 for stat in spec.stats.values() if stat.derived is None}
+    view = creation_view(spec, rolled)
+    backgrounds = next(kind for kind in view["kinds"] if kind["kind"] == "background")
+    options = backgrounds["templates"][0]["skill_picks"][0]["options"]
+    assert options
+    assert all(option["icon"] in _registry() for option in options)
 
 
 def test_campaign_pack_draws_item_icons(client_factory: Callable[[], TestClient]):

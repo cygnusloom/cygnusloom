@@ -23,6 +23,26 @@ FALLBACK_PLACE = "town"
 FALLBACK_ITEM = "generic-item"
 FALLBACK_WEAPON = "weapon"
 FALLBACK_CREATURE = "beast"
+FALLBACK_RULE_SET = "book"
+FALLBACK_WORLD = "globe"
+FALLBACK_SKILL = "skill"
+# A template's fallback follows its kind, so a new background reads as a background even when its
+# author names no icon.
+TEMPLATE_FALLBACKS = {
+    "background": "scroll",
+    "class": "sword",
+    "class2": "sword",
+    "tradition": "rune-circle",
+    "tradition2": "rune-circle",
+    "kit": "backpack",
+    "playbook": "book",
+}
+FALLBACK_TEMPLATE = "scroll"
+
+
+def template_fallback(kind: str) -> str:
+    """The icon a template of `kind` shows when it names no icon and borrows no looks."""
+    return TEMPLATE_FALLBACKS.get(kind.removesuffix("2"), FALLBACK_TEMPLATE)
 
 
 @lru_cache(maxsize=1)

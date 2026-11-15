@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Handshake</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 28 L14 22 L26 30 L32 27 L38 30 L50 22 L60 28" stroke="#c9b08a" stroke-width="5"/>
+    <path d="M14 22 L24 36 Q28 41 32 37 Q36 41 40 36 L50 22" fill="#f5f0e4"/>
+    <path d="M24 36 L20 40 Q18 43 21 45 Q24 47 26 44 L30 39 M40 36 L44 40 Q46 43 43 45 Q40 47 38 44 L34 39"/>
+  </g>
+</svg>
