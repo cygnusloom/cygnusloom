@@ -527,6 +527,46 @@ def test_the_respec_form_can_roll_the_stats_again(
     assert _rolled_stats(response.text) == RESPEC_STATS
 
 
+def test_the_respec_form_rolls_the_stats_in_place_for_the_script(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _cairn_ready(client_factory)
+    _enable_respec(client.app, campaign_id)
+    page = client.get(f"/campaigns/{campaign_id}?respec={PC}").text
+    token = remember_csrf_token(client, page)
+
+    with pinned_stats(RESPEC_STATS):
+        response = client.post(
+            f"/campaigns/{campaign_id}/respec/reroll",
+            data={"csrf_token": token, "character": PC},
+            headers={"accept": "application/json"},
+        )
+
+    assert response.status_code == 200
+    assert response.json() == {"stats": RESPEC_STATS}
+    # The in-place roll is kept for the rebuild, so the player submits the values they saw.
+    page = client.get(f"/campaigns/{campaign_id}?respec={PC}").text
+    assert _rolled_stats(page) == RESPEC_STATS
+
+
+def test_a_respec_reroll_names_the_character_it_is_for(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _cairn_ready(client_factory)
+    _enable_respec(client.app, campaign_id)
+    page = client.get(f"/campaigns/{campaign_id}?respec={PC}").text
+    token = remember_csrf_token(client, page)
+
+    response = client.post(
+        f"/campaigns/{campaign_id}/respec/reroll",
+        data={"csrf_token": token},
+        headers={"accept": "application/json"},
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {"error": "choose a character to respec"}
+
+
 def test_a_hireling_respec_keeps_its_flavor_and_rebuilds_its_sheet(
     client_factory: Callable[[], TestClient],
 ):

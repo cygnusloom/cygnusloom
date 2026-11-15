@@ -595,12 +595,24 @@ async def start_respec(request: Request, campaign_id: int) -> Response:
 
 @router.post("/{campaign_id}/respec/reroll")
 async def reroll_respec_stats(request: Request, campaign_id: int) -> Response:
-    """Roll the stats a rebuilding player is choosing between again."""
+    """Roll the stats a rebuilding player is choosing between again. The stats panel asks for
+    JSON so it can update the cards in place, the way the creation page's Randomize does; a
+    browser without scripts posts the form and gets the form again."""
     user = page_user(request)
     await verify_csrf(request)
+    wants_json = "application/json" in request.headers.get("accept", "")
     form = await request.form()
     name = form_text(form, "character").strip()
-    _roll_respec_stats(request, user, campaign_id, name)
+    try:
+        if not name:
+            raise InvalidInput("choose a character to respec")
+        rolled = _roll_respec_stats(request, user, campaign_id, name)
+    except InvalidInput as exc:
+        if wants_json:
+            return JSONResponse({"error": str(exc)}, status_code=400)
+        return _campaign_page(request, user, campaign_id, 400, str(exc), respec=name)
+    if wants_json:
+        return JSONResponse({"stats": rolled})
     return RedirectResponse(f"/campaigns/{campaign_id}?respec={quote(name)}", status_code=303)
 
 
