@@ -38,26 +38,70 @@
           {% if credits_blocked %}<p role="alert">{{ credit_message }} <a href="/credits">Get more credits</a></p>{% endif %}
         {% endif %}
       {% endif %}
-      <fieldset class="model-options">
-        <legend class="muted">Tracking</legend>
-        <label><input type="checkbox" name="use_inventory_space" value="1"{% if campaign.use_inventory_space %} checked{% endif %}> Track item slots and their limits</label>
-        <label><input type="checkbox" name="use_survival_needs" value="1"{% if campaign.use_survival_needs %} checked{% endif %}> Track food, water, and rest needs</label>
-      </fieldset>
-      {% if start_levels|length > 1 %}
-      <fieldset class="model-options">
-        <legend class="muted">Starting level</legend>
-        <label><input type="checkbox" name="follow_owner_level" value="1" data-follow-owner-level{% if follow_owner_level %} checked{% endif %}> Follow the campaign owner's character level</label>
-        <input type="hidden" name="follow_owner_level" value="0">
-        <label>New characters start at
-          <select name="start_level" data-start-level{% if follow_owner_level %} disabled{% endif %}>
-            {% for level in start_levels %}
-              <option value="{{ level }}"{% if level == start_level %} selected{% endif %}>Level {{ level }}</option>
+      <h4 class="settings-subheading">Campaign options</h4>
+      <p class="muted">Every character in this campaign shares these. Changes apply from the next reply on.</p>
+      <div class="creation-grid campaign-options-grid">
+        {% for field in campaign_options.choice_fields %}
+        <section class="creation-panel" aria-labelledby="settings-option-{{ field.id }}">
+          <h3 id="settings-option-{{ field.id }}">{{ field.name }}</h3>
+          {% if field.description %}<p class="muted panel-hint">{{ field.description }}</p>{% endif %}
+          <select name="campaign-{{ field.id }}" aria-label="{{ field.name }}">
+            {% for option in field.options %}
+              <option value="{{ option.value }}"{% if option.value == field.value %} selected{% endif %}{% if option.detail %} title="{{ option.detail }}"{% endif %}>{{ option.title }}</option>
             {% endfor %}
           </select>
-        </label>
-      </fieldset>
-      {% endif %}
-      <p class="muted">Without inventory space, characters may carry anything reasonable: no capacity checks, no penalty item, and no drain from a full pack. Without survival needs, rests spend no rations or water, and hunger and thirst are not tracked.{% if start_levels|length > 1 %} While following, new characters join at the campaign owner's current level and the starting level above keeps up with it.{% endif %}</p>
+        </section>
+        {% endfor %}
+        {% for field in campaign_options.text_fields %}
+        <section class="creation-panel" aria-labelledby="settings-option-{{ field.id }}">
+          <h3 id="settings-option-{{ field.id }}">{{ field.name }}</h3>
+          {% if field.description %}<p class="muted panel-hint">{{ field.description }}</p>{% endif %}
+          <input type="text" name="campaign-{{ field.id }}" value="{{ field.value }}" maxlength="2000" aria-label="{{ field.name }}">
+        </section>
+        {% endfor %}
+        <section class="creation-panel" aria-labelledby="settings-setting-panel">
+          <h3 id="settings-setting-panel">Setting / story (optional)</h3>
+          <textarea name="setting" rows="6" maxlength="4000" placeholder="Describe the kind of setting or story you want to play. Leave blank to let the world and rule set lead." aria-labelledby="settings-setting-panel">{{ campaign_setting }}</textarea>
+          <p class="muted">Tell Cygnus what kind of world or story you want. Blank is ignored.</p>
+        </section>
+        <section class="creation-panel table-genres" aria-labelledby="settings-table-genres-panel">
+          <h3 id="settings-table-genres-panel">Creative and lore tables</h3>
+          <p class="muted">These genres choose which generation tables the GM is offered. The rule set's own choice is checked; leave it alone unless you want a different kind of setting.</p>
+          <input type="hidden" name="table_genres_present" value="1">
+          <div class="genre-options">
+            {% for genre in available_table_genres %}
+              <label><input type="checkbox" name="table_genres" value="{{ genre }}"{% if genre in selected_table_genres %} checked{% endif %}> {{ genre.replace("-", " ").capitalize() }}</label>
+            {% endfor %}
+          </div>
+        </section>
+        <section class="creation-panel campaign-tracking" aria-labelledby="settings-tracking-panel">
+          <h3 id="settings-tracking-panel">Tracking</h3>
+          <label><input type="checkbox" name="use_inventory_space" value="1"{% if campaign.use_inventory_space %} checked{% endif %}> Track item slots and their limits</label>
+          <label><input type="checkbox" name="use_survival_needs" value="1"{% if campaign.use_survival_needs %} checked{% endif %}> Track food, water, and rest needs</label>
+          <p class="muted">Without inventory space, characters may carry anything reasonable: no capacity checks, no penalty item, and no drain from a full pack. Without survival needs, rests spend no rations or water, and hunger and thirst are not tracked.</p>
+        </section>
+        {% if start_levels|length > 1 %}
+        <section class="creation-panel" aria-labelledby="settings-start-level-panel">
+          <h3 id="settings-start-level-panel">Starting level</h3>
+          <label class="show-hidden-option"><input type="checkbox" name="follow_owner_level" value="1" data-follow-owner-level{% if follow_owner_level %} checked{% endif %}> Follow the campaign owner's character level</label>
+          <input type="hidden" name="follow_owner_level" value="0">
+          <label>New characters start at
+            <select name="start_level" data-start-level{% if follow_owner_level %} disabled{% endif %}>
+              {% for level in start_levels %}
+                <option value="{{ level }}"{% if level == start_level %} selected{% endif %}>Level {{ level }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <p class="muted">While following, new characters join at the campaign owner's current level and the starting level keeps up with it.</p>
+        </section>
+        {% endif %}
+        <section class="creation-panel campaign-respec" aria-labelledby="settings-respec-panel">
+          <h3 id="settings-respec-panel">Character rebuilding</h3>
+          <input type="hidden" name="allow_respec" value="0">
+          <label><input type="checkbox" name="allow_respec" value="1"{% if allow_respec %} checked{% endif %}> Let players respec their characters</label>
+          <p class="muted">When on, a player may rebuild their player character or a hireling they play for. The character keeps their name, pronouns, description, flavor details, and gear, while levels, experience, advancement picks, stats, skills, and features start over. Nothing can be respecced during a turn or an encounter.</p>
+        </section>
+      </div>
       <button type="submit">Save</button>
     </form>
   </section>
@@ -82,7 +126,7 @@
     <h3 id="settings-game-summary-title">Game</h3>
     <p><strong>{{ campaign.name }}</strong></p>
     <p class="muted">The campaign owner chooses the model for every reply.{% if credit_price and not single_player %} {{ campaign.model }} costs {{ credit_price }} credits per reply and the owner has {{ credit_balance }} credits.{% elif not single_player %} {{ campaign.model }} is free.{% endif %}</p>
-    <p class="muted">{% if campaign.use_inventory_space %}Inventory space is tracked: item slots and their limits apply.{% else %}Inventory space is not tracked: characters may carry anything reasonable.{% endif %} {% if campaign.use_survival_needs %}Food, water, and rest needs are tracked.{% else %}Food, water, and rest needs are not tracked.{% endif %}{% if start_levels|length > 1 %} New characters start at level {{ start_level }}{% if follow_owner_level %}, following the campaign owner's character level{% endif %}.{% endif %}</p>
+    <p class="muted">{% if campaign.use_inventory_space %}Inventory space is tracked: item slots and their limits apply.{% else %}Inventory space is not tracked: characters may carry anything reasonable.{% endif %} {% if campaign.use_survival_needs %}Food, water, and rest needs are tracked.{% else %}Food, water, and rest needs are not tracked.{% endif %}{% if start_levels|length > 1 %} New characters start at level {{ start_level }}{% if follow_owner_level %}, following the campaign owner's character level{% endif %}.{% endif %} {% if campaign.allow_respec %}Players may respec their characters.{% else %}Players may not respec their characters.{% endif %}</p>
   </section>
   {% endif %}
 </section>

@@ -16,13 +16,15 @@
     "type": "character_field",
     "id": "signature-spell",
     "name": "Signature Spell",
-    "description": "The personal spell that is yours alone: its name, what it looks like, and what it does."
+    "description": "The personal spell that is yours alone: its name, what it looks like, and what it does.",
+    "flavor": true
   },
   {
     "type": "character_field",
     "id": "ambition",
     "name": "Ambition",
-    "description": "What you want from the academy, in one or two sentences."
+    "description": "What you want from the academy, in one or two sentences.",
+    "flavor": true
   },
   {
     "type": "campaign_field",

@@ -212,6 +212,25 @@
   {% endfor %}
 {%- endmacro %}
 
+{# The controls a player has over a character they play: rewriting the details they own, and,
+   when the campaign allows it, rebuilding the character from scratch. #}
+{% macro character_actions(campaign, csrf_token, name, source, can_edit=false, can_respec=false) -%}
+  {% if can_edit or can_respec %}
+  <div class="character-detail-links">
+    {% if can_edit %}
+    <button type="button" class="secondary" data-edit-character="{{ name }}" data-edit-from="{{ source }}">Edit details</button>
+    {% endif %}
+    {% if can_respec %}
+    <form method="post" action="/campaigns/{{ campaign.id }}/respec/start" class="character-respec-form" data-confirm="Respec {{ name }}? Their levels, experience, and advancement picks are refunded, and you build them again.">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="character" value="{{ name }}">
+      <button type="submit" class="secondary">Respec</button>
+    </form>
+    {% endif %}
+  </div>
+  {% endif %}
+{%- endmacro %}
+
 {% macro choice(name, value, title, detail=None, data_select=None, freeform=false, group=None, data_compatible_with=None, data_template_requirements=None, data_choice_key=None, summary=None, grants=None) -%}
   <label class="choice"{% if data_compatible_with is not none %} data-compatible-with='{{ data_compatible_with|tojson }}'{% endif %}{% if data_template_requirements is not none %} data-template-requirements='{{ data_template_requirements|tojson }}'{% endif %}>
     <input type="radio" name="{{ name }}" value="{{ value }}" data-title="{{ title }}"{% if summary %} data-summary="{{ summary }}"{% endif %}{% if data_select %} data-template-select="{{ data_select }}"{% endif %}{% if data_choice_key is not none %} data-choice-key="{{ data_choice_key }}"{% endif %}{% if freeform %} data-freeform{% endif %}{% if group %} data-group="{{ group }}"{% endif %}>
@@ -244,7 +263,8 @@
 
 {# A choice from a table, as a panel in the creation grid. The options open in a dialog. #}
 {# A restriction is {field, values, groups}: while the field takes one of the values, only options in the groups can be chosen. #}
-{% macro choice_panel(name, label, options, description=None, restriction=None) -%}
+{# A flavor field also takes the player's own words, so it shows a write-in box under the choices. #}
+{% macro choice_panel(name, label, options, description=None, restriction=None, freeform=false) -%}
   <fieldset class="creation-panel" data-choice-panel="{{ name }}" data-choice-label="{{ label }}" aria-labelledby="panel-{{ name }}"{% if restriction %} data-restrict-field="field-{{ restriction.field }}" data-restrict-values='{{ restriction['values']|tojson }}' data-restrict-groups='{{ restriction['groups']|tojson }}'{% endif %}>
     <h3 id="panel-{{ name }}">{{ label }}</h3>
     {% if description %}<p class="muted panel-hint">{{ description }}</p>{% endif %}
@@ -253,6 +273,12 @@
         {{ choice(name, option.value, option.title, option.detail, group=option.group, summary=option.summary) }}
       {% endfor %}
     {% endcall %}
+    {% if freeform %}
+    <label class="flavor-write-in">
+      Or write your own
+      <input type="text" name="{{ name }}-freeform" maxlength="2000" autocomplete="off" aria-label="Write your own {{ label|lower }}">
+    </label>
+    {% endif %}
   </fieldset>
 {%- endmacro %}
 

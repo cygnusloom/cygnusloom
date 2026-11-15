@@ -269,19 +269,29 @@ def seed_campaign(
 
 
 def set_campaign_options(
-    db: Session, campaign_id: int, campaign: CampaignSpec, submitted: Mapping[str, Any]
+    db: Session,
+    campaign_id: int,
+    campaign: CampaignSpec,
+    submitted: Mapping[str, Any],
+    *,
+    replace: bool = False,
 ) -> dict[str, Any]:
-    """Record the campaign's shared options. They are chosen once, so the campaign's omen and
-    the like cannot change after the characters are made."""
+    """Record the campaign's shared options, such as its omen or experience track. They are
+    chosen before the first character and may be changed later from the campaign's settings;
+    `replace` allows that later change. The options reach the GM through the world state, so a
+    change applies from the next reply. Nothing is recorded when the values are unchanged."""
     if not campaign.fields:
-        raise InvalidInput("this campaign has no options to choose")
+        if submitted:
+            raise InvalidInput("this campaign has no options to choose")
+        return {"chosen": "campaign"}
     state = load_state(db, campaign_id)
-    if state.options:
+    if state.options and not replace:
         raise InvalidInput("the campaign options are already chosen")
     problem = check_arguments(campaign_schema(campaign), dict(submitted))
     if problem is not None:
         raise InvalidInput(problem)
-    record(db, campaign_id, CampaignOptionsChosen(options=dict(submitted)))
+    if dict(state.options) != dict(submitted):
+        record(db, campaign_id, CampaignOptionsChosen(options=dict(submitted)))
     return {"chosen": "campaign"}
 
 

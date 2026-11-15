@@ -4,6 +4,7 @@ for the character, and `campaign-<id>` for the campaign options, which share one
 
 from __future__ import annotations
 
+from collections.abc import Collection, Mapping
 from typing import Any
 
 from starlette.datastructures import FormData
@@ -30,6 +31,8 @@ PICK_PREFIX = "pick-"
 SKILL_PICK_PREFIX = PICK_PREFIX + "skill-"
 FEATURE_PICK_PREFIX = PICK_PREFIX + "feature-"
 FEATURE_REPEAT_PREFIX = "repeat-feature-"
+# A flavor field's write-in box, so a player may use their own words instead of the table's.
+WRITE_IN_SUFFIX = "-freeform"
 SKILL_REPLACEMENT_PREFIX = "skill-replacement-"
 CAMPAIGN_PREFIX = "campaign-"
 PRONOUNS_FIELD = "pronouns"
@@ -130,13 +133,19 @@ def creation_view(spec: CharacterSpec, rolled: dict[str, int]) -> dict[str, Any]
             "name": field.name,
             "description": field.description,
             "restriction": _restriction_view(field.restriction),
+            "flavor": field.flavor,
             "options": _option_views(spec, spec.tables[field.table]),
         }
         for field in spec.fields.values()
         if field.table is not None
     ]
     text_fields = [
-        {"id": field.id, "name": field.name, "description": field.description}
+        {
+            "id": field.id,
+            "name": field.name,
+            "description": field.description,
+            "flavor": field.flavor,
+        }
         for field in spec.fields.values()
         if field.table is None
     ]
@@ -183,20 +192,28 @@ def _pronoun_options() -> list[dict[str, Any]]:
     return options
 
 
-def campaign_view(spec: CampaignSpec) -> dict[str, Any]:
-    """What the campaign options form shows: each campaign option as a panel."""
+def campaign_view(spec: CampaignSpec, values: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    """What the campaign options form shows: each campaign option as a panel. `values` are the
+    options in force, so a settings page can show and change them."""
+    current = values or {}
     choice_fields = [
         {
             "id": field.id,
             "name": field.name,
             "description": field.description,
+            "value": current.get(field.id, ""),
             "options": _option_views(spec, spec.tables[field.table]),
         }
         for field in spec.fields.values()
         if field.table is not None
     ]
     text_fields = [
-        {"id": field.id, "name": field.name, "description": field.description}
+        {
+            "id": field.id,
+            "name": field.name,
+            "description": field.description,
+            "value": current.get(field.id, ""),
+        }
         for field in spec.fields.values()
         if field.table is None
     ]
@@ -215,11 +232,16 @@ def campaign_submission_from_form(spec: CampaignSpec, form: FormData) -> dict[st
     return options
 
 
-def submission_from_form(spec: CharacterSpec, form: FormData) -> dict[str, Any]:
+def submission_from_form(
+    spec: CharacterSpec, form: FormData, *, only_fields: Collection[str] | None = None
+) -> dict[str, Any]:
     """The arguments a player's form stands for. Every template, table, and choice must be
     given: the player picks each one or rolls it with a dice button. Text fields may be blank.
     Groups the rule set does not define are left out, since the schema does not allow them.
-    A blank skill or feature pick is left out, so `resolve` rolls it."""
+    A blank skill or feature pick is left out, so `resolve` rolls it. `fields` limits the
+    rule set's fields to the ones the form shows, such as a respec's mechanical fields.
+    A flavor field takes the player's own words, typed into the field's write-in box, in place
+    of one of its table's options."""
     stats: dict[str, Any] = {}
     for stat in spec.stats.values():
         if stat.derived is not None:
@@ -255,7 +277,13 @@ def submission_from_form(spec: CharacterSpec, form: FormData) -> dict[str, Any]:
         templates[kind] = template_id
     fields = {}
     for field in spec.fields.values():
+        if only_fields is not None and field.id not in only_fields:
+            continue
         value = form_text(form, FIELD_PREFIX + field.id)
+        if field.table is not None and field.flavor:
+            written = form_text(form, f"{FIELD_PREFIX}{field.id}{WRITE_IN_SUFFIX}").strip()
+            if written:
+                value = written
         if value:
             fields[field.id] = value
         elif field.table is not None:
@@ -318,11 +346,7 @@ def submission_from_form(spec: CharacterSpec, form: FormData) -> dict[str, Any]:
             chosen = [
                 value
                 for index in range(pick.count)
-                if (
-                    value := form_text(
-                        form, f"feature-choice-{feature.id}-{pick.id}-{index}"
-                    )
-                )
+                if (value := form_text(form, f"feature-choice-{feature.id}-{pick.id}-{index}"))
             ]
             if chosen:
                 feature_choices[f"{feature.id}:{pick.id}"] = chosen

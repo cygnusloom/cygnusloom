@@ -470,7 +470,13 @@ def test_npc_character_values_come_from_the_lookup(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     _, campaign_id = _campaign_id(client_factory)
-    field = next(iter(option_fields(CAIRN.character)))
+    # A flavor field also takes the GM's own words, so the lookup still binds the mechanical
+    # choices: a template's table, or a field the rule set does not mark as flavor.
+    field = next(
+        field_id
+        for field_id in option_fields(CAIRN.character)
+        if field_id not in CAIRN.character.fields or not CAIRN.character.fields[field_id].flavor
+    )
     value = choice_options(CAIRN.character, field)["options"][0]["value"]
     with _db(app) as db, pytest.raises(InvalidInput, match=repr(field)):
         world.create_npc(

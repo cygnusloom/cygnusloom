@@ -193,7 +193,8 @@ class Campaign(SQLModel, table=True):
     with levels, on by default; the levels above 1 are taken on the normal level-up pages right
     after creation. `follow_owner_level`, on by default, keeps that level equal to the campaign
     owner's character level as it rises, so a character joining later begins at the table's
-    level."""
+    level. `allow_respec`, off by default, lets each player rebuild their character's sheet,
+    refunding its levels, experience, and advancement picks."""
 
     __tablename__ = "campaign"
 
@@ -213,6 +214,7 @@ class Campaign(SQLModel, table=True):
     use_survival_needs: bool = Field(default=True)
     start_level: int = Field(default=1)
     follow_owner_level: bool = Field(default=True)
+    allow_respec: bool = Field(default=False)
     created_at: datetime = Field(default_factory=utcnow)
 
 

@@ -1,12 +1,12 @@
 [
-  {"type": "character_field", "id": "physique", "name": "Physique", "description": "Build and bearing, from frail to towering.", "table": "physique"},
-  {"type": "character_field", "id": "skin", "name": "Skin", "description": "Complexion and visible marks.", "table": "skin"},
-  {"type": "character_field", "id": "hair", "name": "Hair", "description": "Hair colour and style.", "table": "hair"},
-  {"type": "character_field", "id": "face", "name": "Face", "description": "The face others remember.", "table": "face"},
-  {"type": "character_field", "id": "speech", "name": "Speech", "description": "How the character sounds when they speak.", "table": "speech"},
-  {"type": "character_field", "id": "clothing", "name": "Clothing", "description": "What they wear day to day.", "table": "clothing"},
-  {"type": "character_field", "id": "virtue", "name": "Virtue", "description": "A quality they admire in themselves.", "table": "virtue"},
-  {"type": "character_field", "id": "vice", "name": "Vice", "description": "A flaw they cannot quite shake.", "table": "vice"},
-  {"type": "character_field", "id": "bond", "name": "Bond", "description": "The person or promise they hold to.", "table": "bond"},
+  {"type": "character_field", "id": "physique", "name": "Physique", "description": "Build and bearing, from frail to towering.", "table": "physique", "flavor": true},
+  {"type": "character_field", "id": "skin", "name": "Skin", "description": "Complexion and visible marks.", "table": "skin", "flavor": true},
+  {"type": "character_field", "id": "hair", "name": "Hair", "description": "Hair colour and style.", "table": "hair", "flavor": true},
+  {"type": "character_field", "id": "face", "name": "Face", "description": "The face others remember.", "table": "face", "flavor": true},
+  {"type": "character_field", "id": "speech", "name": "Speech", "description": "How the character sounds when they speak.", "table": "speech", "flavor": true},
+  {"type": "character_field", "id": "clothing", "name": "Clothing", "description": "What they wear day to day.", "table": "clothing", "flavor": true},
+  {"type": "character_field", "id": "virtue", "name": "Virtue", "description": "A quality they admire in themselves.", "table": "virtue", "flavor": true},
+  {"type": "character_field", "id": "vice", "name": "Vice", "description": "A flaw they cannot quite shake.", "table": "vice", "flavor": true},
+  {"type": "character_field", "id": "bond", "name": "Bond", "description": "The person or promise they hold to.", "table": "bond", "flavor": true},
   {"type": "campaign_field", "id": "omen", "name": "Omen", "description": "A sign that follows the campaign.", "table": "omen"}
 ]

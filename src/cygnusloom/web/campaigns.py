@@ -27,6 +27,7 @@ from cygnusloom.db.models import User
 from cygnusloom.llm.base import LLMError
 from cygnusloom.llm.presets import PRESETS
 from cygnusloom.services import campaign_files
+from cygnusloom.services import character_fields as character_field_service
 from cygnusloom.services import credits as credit_service
 from cygnusloom.services import level_up as level_up_service
 from cygnusloom.services.accounts import public_name, set_show_internal_thinking
@@ -61,6 +62,7 @@ from cygnusloom.services.campaigns import (
     list_messages,
     pending_turn,
     promote_hireling_to_character,
+    respec_character,
     resume_turn,
     roll_player_stats,
     rollback_to,
@@ -116,6 +118,7 @@ from cygnusloom.services.music import music_view
 from cygnusloom.services.tools import check_arguments
 from cygnusloom.services.views import get_statblock, map_view, scene_view, story_view, time_view
 from cygnusloom.web.character_form import (
+    WRITE_IN_SUFFIX,
     campaign_submission_from_form,
     campaign_view,
     creation_view,
@@ -446,6 +449,7 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
     table_genres: list[str] | None = None
     use_inventory_space: bool | None = None
     use_survival_needs: bool | None = None
+    allow_respec: bool | None = None
     start_level = 1
     follow_owner_level: bool | None = None
     try:
@@ -467,6 +471,7 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
             ]
             use_inventory_space = form_text(form, "use_inventory_space") == "1"
             use_survival_needs = form_text(form, "use_survival_needs") == "1"
+            allow_respec = form_text(form, "allow_respec") == "1"
             raw_follow = [
                 value for value in form.getlist("follow_owner_level") if isinstance(value, str)
             ]
@@ -497,6 +502,7 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
                     table_genres=table_genres,
                     use_inventory_space=use_inventory_space,
                     use_survival_needs=use_survival_needs,
+                    allow_respec=allow_respec,
                     start_level=start_level,
                     follow_owner_level=follow_owner_level,
                 )
@@ -522,6 +528,7 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
             table_genres=table_genres,
             use_inventory_space=use_inventory_space,
             use_survival_needs=use_survival_needs,
+            allow_respec=allow_respec,
             start_level=start_level if initial_setup else None,
             follow_owner_level=follow_owner_level if initial_setup else None,
         )
@@ -536,6 +543,7 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
             table_genres=table_genres,
             use_inventory_space=use_inventory_space,
             use_survival_needs=use_survival_needs,
+            allow_respec=allow_respec,
             start_level=start_level,
             follow_owner_level=follow_owner_level,
         )
@@ -550,6 +558,7 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
             table_genres=table_genres,
             use_inventory_space=use_inventory_space,
             use_survival_needs=use_survival_needs,
+            allow_respec=allow_respec,
             start_level=start_level,
             follow_owner_level=follow_owner_level,
         )
@@ -563,6 +572,89 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
             # The starting level's experience is in place, so the normal advancement pages take
             # the player through each level's gains and choices before play begins.
             return RedirectResponse(f"/campaigns/{campaign_id}/advancement", status_code=303)
+    return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
+
+
+@router.post("/{campaign_id}/respec/start")
+async def start_respec(request: Request, campaign_id: int) -> Response:
+    """Open the respec form for a character. The form itself checks the option, who plays the
+    character, and that no turn or encounter is running."""
+    page_user(request)
+    await verify_csrf(request)
+    form = await request.form()
+    name = form_text(form, "character").strip()
+    return RedirectResponse(f"/campaigns/{campaign_id}?respec={quote(name)}", status_code=303)
+
+
+@router.post("/{campaign_id}/respec/reroll")
+async def reroll_respec_stats(request: Request, campaign_id: int) -> Response:
+    """Roll the stats a rebuilding player is choosing between again."""
+    user = page_user(request)
+    await verify_csrf(request)
+    form = await request.form()
+    name = form_text(form, "character").strip()
+    _roll_respec_stats(request, user, campaign_id, name)
+    return RedirectResponse(f"/campaigns/{campaign_id}?respec={quote(name)}", status_code=303)
+
+
+@router.post("/{campaign_id}/respec")
+async def submit_respec(request: Request, campaign_id: int) -> Response:
+    """Rebuild the player's character, or a hireling they play for, from the creation form. The
+    character keeps their name, pronouns, flavor details, gear, and place in the story, while
+    levels, experience, and advancement picks are refunded."""
+    user = page_user(request)
+    await verify_csrf(request)
+    form = await request.form()
+    engine = request.app.state.engine
+    library = request.app.state.content
+    name = form_text(form, "character").strip()
+    starting_level = 1
+    try:
+        campaign = get_campaign(engine, user.id, campaign_id)
+        rule_set = library.rule_sets.get(campaign.rule_set)
+        if rule_set is None:
+            raise InvalidInput("that campaign's rule set is no longer available")
+        spec = character_spec(library, campaign)
+        rolled = request.session.get(_respec_roll_key(campaign_id, name))
+        rolled_stats = {stat.id for stat in spec.stats.values() if stat.derived is None}
+        if not isinstance(rolled, dict) or set(rolled) != rolled_stats:
+            _roll_respec_stats(request, user, campaign_id, name)
+            return _campaign_page(
+                request,
+                user,
+                campaign_id,
+                400,
+                "Your stats were rolled again. Review them and rebuild your character.",
+                respec=name,
+            )
+        mechanical = tuple(field.id for field in spec.fields.values() if not field.flavor)
+        submitted = submission_from_form(spec, form, only_fields=mechanical)
+        problem = check_arguments(character_schema(spec), submitted)
+        if problem:
+            raise InvalidInput(problem)
+        starting_level = respec_character(
+            engine,
+            library,
+            user.id,
+            campaign_id,
+            name=name,
+            rolled=rolled,
+            submitted=submitted,
+        )
+    except InvalidInput as exc:
+        return _campaign_page(request, user, campaign_id, 400, str(exc), respec=name)
+    except Conflict as exc:
+        return _campaign_page(request, user, campaign_id, 409, str(exc), respec=name)
+    request.session.pop(_respec_roll_key(campaign_id, name), None)
+    _flash(request, f"{name} has been respecced.")
+    if (
+        starting_level > 1
+        and rule_set is not None
+        and level_up_service.start_level_rules(rule_set) is not None
+    ):
+        return RedirectResponse(
+            f"/campaigns/{campaign_id}/advancement?character={quote(name)}", status_code=303
+        )
     return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
 
 
@@ -730,7 +822,7 @@ async def convert_campaign_page(request: Request, campaign_id: int) -> Response:
 @router.get("/{campaign_id}")
 def campaign_page(request: Request, campaign_id: int) -> Response:
     user = page_user(request)
-    return _campaign_page(request, user, campaign_id)
+    return _campaign_page(request, user, campaign_id, respec=request.query_params.get("respec", ""))
 
 
 @router.get("/{campaign_id}/live")
@@ -1025,6 +1117,113 @@ def statblock_fragment(request: Request, campaign_id: int, name: str = "") -> Re
     )
 
 
+@router.get("/{campaign_id}/character/edit")
+def character_edit_fragment(request: Request, campaign_id: int, character: str = "") -> Response:
+    """The details a player may change on a character they play, for the dialog opened from a
+    character sheet or the Characters page. A player character offers its flavor fields; a
+    hireling offers its mechanical fields, since its flavor belongs to the GM."""
+    user = page_user(request)
+    engine = request.app.state.engine
+    library = request.app.state.content
+    campaign = get_campaign(engine, user.id, campaign_id)
+    rule_set = library.rule_sets.get(campaign.rule_set)
+    if rule_set is None:
+        raise NotFound("this campaign's rule set is not available")
+    try:
+        target, fields = character_field_service.character_fields(
+            engine, user.id, campaign_id, character, rule_set.character
+        )
+    except InvalidInput as exc:
+        raise NotFound(str(exc)) from exc
+    return render_fragment(
+        request,
+        "_character_edit.html",
+        character=target,
+        campaign=campaign,
+        fields=_editable_field_views(rule_set.character, target, fields),
+        source=request.query_params.get("from", ""),
+    )
+
+
+@router.post("/{campaign_id}/character/fields")
+async def change_character_fields(request: Request, campaign_id: int) -> Response:
+    """Save the flavor details a player changed on their character, or the mechanical details of
+    a hireling they play for."""
+    user = page_user(request)
+    await verify_csrf(request)
+    form = await request.form()
+    engine = request.app.state.engine
+    library = request.app.state.content
+    campaign = get_campaign(engine, user.id, campaign_id)
+    rule_set = library.rule_sets.get(campaign.rule_set)
+    if rule_set is None:
+        return _campaign_page(
+            request, user, campaign_id, 400, "that rule set is no longer available"
+        )
+    name = form_text(form, "character")
+    source = form_text(form, "from")
+    try:
+        _, fields = character_field_service.character_fields(
+            engine, user.id, campaign_id, name, rule_set.character
+        )
+        submitted: dict[str, str] = {}
+        for field in fields:
+            field_name = f"field-{field.id}"
+            written_name = f"{field_name}{WRITE_IN_SUFFIX}"
+            if field_name not in form and written_name not in form:
+                # A partial form must not clear a field it never showed.
+                continue
+            value = form_text(form, field_name)
+            if field.table is not None and field.flavor:
+                written = form_text(form, written_name).strip()
+                if written:
+                    value = written
+            submitted[field.id] = value
+        character_field_service.set_character_fields(
+            engine, user.id, campaign_id, name, submitted, rule_set.character
+        )
+    except InvalidInput as exc:
+        return _campaign_page(request, user, campaign_id, 400, str(exc))
+    _flash(request, "Character details saved.")
+    anchor = "#view-characters" if source == "characters" else "#view-play"
+    return RedirectResponse(f"/campaigns/{campaign_id}{anchor}", status_code=303)
+
+
+def _editable_field_views(
+    spec: Any, character: Character, fields: Sequence[Any]
+) -> list[dict[str, Any]]:
+    """The editable fields as the dialog shows them, with their current value and, for a table,
+    the options it offers. A value the player wrote in is kept as an option of its own."""
+    views = []
+    for field in fields:
+        value = character.fields.get(field.id, "")
+        options = []
+        if field.table is not None:
+            for option in spec.tables[field.table]:
+                title = option.name or option.description
+                options.append(
+                    {
+                        "value": option.value,
+                        "title": title,
+                        "detail": option.description if option.name is not None else "",
+                    }
+                )
+            if value and value not in {option["value"] for option in options}:
+                options.append({"value": value, "title": value, "detail": "Written by you"})
+        views.append(
+            {
+                "id": field.id,
+                "name": field.name,
+                "description": field.description,
+                "value": value,
+                "table": field.table is not None,
+                "flavor": field.flavor,
+                "options": options,
+            }
+        )
+    return views
+
+
 @router.post("/{campaign_id}/model")
 async def change_model(request: Request, campaign_id: int) -> Response:
     user = page_user(request)
@@ -1088,7 +1287,7 @@ async def change_survival_needs(request: Request, campaign_id: int) -> Response:
 
 @router.post("/{campaign_id}/settings")
 async def change_campaign_settings(request: Request, campaign_id: int) -> Response:
-    """Save the owner's model, campaign name, and campaign choices from the Settings page."""
+    """Save the owner's model, campaign name, and campaign options from the Settings page."""
     user = page_user(request)
     await verify_csrf(request)
     form = await request.form()
@@ -1096,6 +1295,9 @@ async def change_campaign_settings(request: Request, campaign_id: int) -> Respon
     library = request.app.state.content
     start_level: int | None = None
     follow_owner_level: bool | None = None
+    allow_respec: bool | None = None
+    options: dict[str, Any] | None = None
+    campaign_options: Any = None
     try:
         campaign = get_campaign(engine, user.id, campaign_id)
         rule_set = library.rule_sets.get(campaign.rule_set)
@@ -1117,6 +1319,15 @@ async def change_campaign_settings(request: Request, campaign_id: int) -> Respon
                 # Following starts at once, so the option shows the owner's current level.
                 state = campaign_world(engine, user.id, campaign_id).state
                 start_level = level_up_service.owner_pc_level(state, rule_set)
+        raw_respec = [value for value in form.getlist("allow_respec") if isinstance(value, str)]
+        if raw_respec:
+            allow_respec = "1" in raw_respec
+        if rule_set is not None:
+            campaign_options = campaign_spec(library, campaign)
+            if campaign_options.fields and any(
+                f"campaign-{field_id}" in form for field_id in campaign_options.fields
+            ):
+                options = campaign_submission_from_form(campaign_options, form)
         update_campaign_settings(
             engine,
             request.app.state.catalog.model_ids(),
@@ -1128,6 +1339,16 @@ async def change_campaign_settings(request: Request, campaign_id: int) -> Respon
             label=form_text(form, "label"),
             start_level=start_level,
             follow_owner_level=follow_owner_level,
+            setting=form_text(form, "setting") if "setting" in form else None,
+            table_genres=(
+                [value for value in form.getlist("table_genres") if isinstance(value, str)]
+                if form_text(form, "table_genres_present") == "1"
+                else None
+            ),
+            allow_respec=allow_respec,
+            options=options,
+            campaign_options=campaign_options,
+            rule_set=rule_set,
         )
     except InvalidInput as exc:
         return _campaign_page(request, user, campaign_id, 400, str(exc))
@@ -1805,8 +2026,10 @@ def _campaign_page(
     table_genres: Sequence[str] | None = None,
     use_inventory_space: bool | None = None,
     use_survival_needs: bool | None = None,
+    allow_respec: bool | None = None,
     start_level: int | None = None,
     follow_owner_level: bool | None = None,
+    respec: str = "",
     fragment: bool = False,
 ) -> Response:
     engine = request.app.state.engine
@@ -1872,6 +2095,20 @@ def _campaign_page(
     members = list_members(engine, campaign.id, world.state)
     invites = list_invites(engine, campaign.id) if is_owner else []
     removed_members = list_removed_members(engine, campaign.id, world.state) if is_owner else []
+    # A respec reopens the creation form for a character already in play. The player chooses the
+    # mechanical build again; the character keeps everything the form does not show.
+    respec_target: Character | None = None
+    if respec:
+        try:
+            respec_target = _respec_target(world.state, user.id, campaign, respec)
+        except InvalidInput as exc:
+            # A refusal is a page notice rather than an error page, so a stale link is not a
+            # dead end.
+            _flash(request, str(exc), "error")
+            return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
+        if fragment:
+            return PlainTextResponse("The respec form has no live refresh.", status_code=409)
+        character_pending = True
     if options_pending or character_pending:
         if fragment:
             # The creation page has no live refresh; a reload shows the form again.
@@ -1883,10 +2120,15 @@ def _campaign_page(
         ]
         character = None
         if character_pending and rule_set is not None:
-            rolled = request.session.get(_roll_key(campaign.id))
             rolled_stats = {s.id for s in spec.stats.values() if s.derived is None}
-            if not isinstance(rolled, dict) or set(rolled) != rolled_stats:
-                rolled = _roll_stats(request, user, campaign.id)
+            if respec_target is not None:
+                rolled = request.session.get(_respec_roll_key(campaign.id, respec_target.name))
+                if not isinstance(rolled, dict) or set(rolled) != rolled_stats:
+                    rolled = _roll_respec_stats(request, user, campaign.id, respec_target.name)
+            else:
+                rolled = request.session.get(_roll_key(campaign.id))
+                if not isinstance(rolled, dict) or set(rolled) != rolled_stats:
+                    rolled = _roll_stats(request, user, campaign.id)
             character = creation_view(spec, rolled)
         return render(
             request,
@@ -1916,8 +2158,8 @@ def _campaign_page(
             rule_set=rule_set,
             compendium=compendium,
             story=story_view(world.state),
-            show_options=options_pending,
-            show_setting=not world.state.pcs(),
+            show_options=options_pending and respec_target is None,
+            show_setting=not world.state.pcs() and respec_target is None,
             campaign_setting=setting or campaign.setting,
             track_inventory=(
                 campaign.use_inventory_space if use_inventory_space is None else use_inventory_space
@@ -1925,6 +2167,7 @@ def _campaign_page(
             track_survival_needs=(
                 campaign.use_survival_needs if use_survival_needs is None else use_survival_needs
             ),
+            allow_respec=(campaign.allow_respec if allow_respec is None else allow_respec),
             table_genres=library.available_table_genres,
             selected_table_genres=(
                 tuple(table_genres)
@@ -1934,6 +2177,7 @@ def _campaign_page(
             options=campaign_view(options) if options_pending else None,
             show_character=character_pending,
             character=character,
+            respec=respec_target,
             start_levels=(
                 level_up_service.start_level_options(rule_set) if rule_set is not None else ()
             ),
@@ -2015,6 +2259,22 @@ def _campaign_page(
         world.state,
         clock_rules=rule_set.clock if rule_set is not None else None,
     )
+    # The characters this account plays, and which of them it may edit or rebuild. A respec
+    # waits for the scene: a turn or an encounter in progress is not the moment to replace a
+    # sheet out from under the GM.
+    controlled = level_up_service.controlled_characters(world.state, user.id)
+    editable_names = tuple(
+        character.name
+        for character in controlled
+        if rule_set is not None
+        and character_field_service.editable_fields(rule_set.character, character)
+    )
+    respec_open = (
+        campaign.allow_respec and world.state.turn is None and world.state.encounter is None
+    )
+    respec_names = tuple(
+        character.name for character in controlled if respec_open and not character.out_of_play
+    )
     values = {
         "campaign": campaign,
         "world": library.world_templates.get(campaign.world_template),
@@ -2057,6 +2317,13 @@ def _campaign_page(
         ),
         "start_level": start_level,
         "follow_owner_level": follow_owner_level,
+        "campaign_options": campaign_view(options, world.state.options),
+        "campaign_setting": campaign.setting,
+        "available_table_genres": library.available_table_genres,
+        "selected_table_genres": _campaign_genres(campaign, rule_set),
+        "allow_respec": campaign.allow_respec,
+        "editable_names": editable_names,
+        "respec_names": respec_names,
         "factions": faction_views(world.state, rule_set.tallies if rule_set else {}),
         "projects": sorted(
             world.state.projects.values(),
@@ -2206,6 +2473,19 @@ def _local_map(state: CampaignState, rule_set: Any, player: Any = None) -> dict[
     )
 
 
+def _campaign_genres(campaign: Any, rule_set: Any) -> tuple[str, ...]:
+    """The genres the campaign's generation tables are filtered by, in the rule set's order when
+    it has a say. A campaign with no stored choice keeps the rule set's own selection."""
+    if campaign.table_genres:
+        try:
+            stored = json.loads(campaign.table_genres)
+        except ValueError:
+            stored = None
+        if isinstance(stored, list) and all(isinstance(item, str) for item in stored):
+            return tuple(stored)
+    return rule_set.table_genres if rule_set is not None else ()
+
+
 def _creation_pending(state: Any, rule_set: Any, user_id: int) -> tuple[bool, bool]:
     """Whether the campaign options and this player's character still need creating. Options can
     only be pending while there is no player character, so a campaign is set up in one pass."""
@@ -2295,6 +2575,40 @@ def _roll_key(campaign_id: int) -> str:
     """The session key for the stats a player is choosing between, until they create the
     character. The roll is kept on the server-signed session so the client cannot pick it."""
     return f"character-roll-{campaign_id}"
+
+
+def _respec_roll_key(campaign_id: int, name: str) -> str:
+    """The session key for the stats a player is choosing between while rebuilding a character.
+    The roll is kept on the signed session, so the client cannot pick its stats."""
+    return f"respec-roll-{campaign_id}-{name_key(name)}"
+
+
+def _respec_target(state: Any, user_id: int, campaign: Any, name: str) -> Character:
+    """The character this account may rebuild, or a refusal that says why. A respec needs the
+    campaign's option, a character the player plays that is still in play, and a quiet scene: a
+    turn or an encounter in progress is not the moment to replace a sheet."""
+    if not campaign.allow_respec:
+        raise InvalidInput("this campaign does not allow respeccing")
+    if not name:
+        raise InvalidInput("choose a character to respec")
+    target = state.characters.get(name_key(name))
+    if target is None or not character_field_service.controls_character(state, user_id, target):
+        raise InvalidInput("only a character you play can be respecced")
+    if target.kind != PC_KIND or target.out_of_play:
+        raise InvalidInput(f"{target.name} is not in play")
+    if state.turn is not None:
+        raise InvalidInput("a respec waits until the GM's reply is finished")
+    if state.encounter is not None:
+        raise InvalidInput("a respec waits until the encounter is over")
+    return target
+
+
+def _roll_respec_stats(request: Request, user: User, campaign_id: int, name: str) -> dict[str, int]:
+    rolled = roll_player_stats(
+        request.app.state.engine, request.app.state.content, user.id, campaign_id
+    )
+    request.session[_respec_roll_key(campaign_id, name)] = rolled
+    return rolled
 
 
 def _roll_stats(request: Request, user: User, campaign_id: int) -> dict[str, int]:

@@ -1,0 +1,36 @@
+{# The details a player may change on a character they play, for `#dialog-character-edit`.
+   Expects `campaign`, `character`, `fields`, and `source`. A player character shows its flavor
+   fields, which the player owns; a hireling shows its mechanical fields, since its flavor is the
+   GM's. #}
+<form method="post" action="/campaigns/{{ campaign.id }}/character/fields" class="character-edit-form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <input type="hidden" name="character" value="{{ character.name }}">
+  <input type="hidden" name="from" value="{{ source }}">
+  {% for field in fields %}
+  <label class="character-edit-field">
+    <span class="character-edit-label">{{ field.name }}</span>
+    {% if field.description %}<span class="muted character-edit-hint">{{ field.description }}</span>{% endif %}
+    {% if field.table %}
+      <select name="field-{{ field.id }}">
+        <option value=""{% if not field.value %} selected{% endif %}>Not set</option>
+        {% for option in field.options %}
+          <option value="{{ option.value }}"{% if option.value == field.value %} selected{% endif %}{% if option.detail %} title="{{ option.detail }}"{% endif %}>{{ option.title }}</option>
+        {% endfor %}
+      </select>
+      {% if field.flavor %}
+      <input type="text" name="field-{{ field.id }}-freeform" maxlength="2000" autocomplete="off" placeholder="Or write your own {{ field.name | lower }}">
+      {% endif %}
+    {% else %}
+      <textarea name="field-{{ field.id }}" rows="3" maxlength="2000">{{ field.value }}</textarea>
+    {% endif %}
+  </label>
+  {% endfor %}
+  {% if fields and fields[0].flavor %}
+  <p class="muted">These details change the story, not the rules. Stats, skills, and features change through a respec if the campaign allows it.</p>
+  {% else %}
+  <p class="muted">These are the hireling's mechanical details. The GM keeps their name and flavor.</p>
+  {% endif %}
+  <div class="dialog-actions">
+    <button type="submit">Save details</button>
+  </div>
+</form>

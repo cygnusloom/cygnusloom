@@ -462,7 +462,9 @@ class Field:
     """A text field when `table` is None, otherwise a choice from that table. A `group_roll` field
     rolls a group first and then an option within it. A `restriction` limits its options. A `knows`
     field names a feature type: a character knows every feature of that type whose tag is an
-    earlier option of the table than the field's value."""
+    earlier option of the table than the field's value. A `flavor` field is identity and colour
+    rather than mechanics: a player may rewrite it whenever they like, and a hireling's flavor
+    belongs to the GM who invented them. A flavor table also accepts the player's own words."""
 
     id: str
     name: str
@@ -471,6 +473,7 @@ class Field:
     group_roll: bool = False
     restriction: Restriction | None = None
     knows: str | None = None
+    flavor: bool = False
 
 
 @dataclass(frozen=True)
@@ -1592,6 +1595,9 @@ def _field(definition: Definition, tables: Mapping[str, object], kind: str, temp
     knows = definition.data.get("knows")
     if knows is not None and (not isinstance(knows, str) or table is None):
         raise ContentError(f"{label}: 'knows' needs a table and the name of a feature type")
+    flavor = definition.data.get("flavor", False)
+    if not isinstance(flavor, bool):
+        raise ContentError(f"{label}: 'flavor' must be true or false")
     return Field(
         id=definition.id,
         name=required_text(definition.data, "name", label),
@@ -1600,6 +1606,7 @@ def _field(definition: Definition, tables: Mapping[str, object], kind: str, temp
         group_roll=group_roll,
         restriction=_restriction(definition.data.get("restricted_by"), label),
         knows=knows,
+        flavor=flavor,
     )
 
 
@@ -2846,6 +2853,14 @@ def _check_field_values(spec: CharacterSpec, fields: Mapping[str, Any]) -> None:
         if key not in tables:
             continue
         field_spec = spec.fields.get(key)
+        if (
+            field_spec is not None
+            and field_spec.flavor
+            and value not in [option.value for option in spec.tables[field_spec.table or ""]]
+        ):
+            # A flavor field also takes the player's own words, which are not one of the
+            # table's options. A table option that was chosen is still checked below.
+            continue
         if field_spec is not None:
             allowed = allowed_options(spec, field_spec, fields)
         else:
@@ -3889,7 +3904,11 @@ def _field_value(
     options = allowed_options(spec, field_spec, fields)
     if field_spec.id in given_fields:
         value = given_fields[field_spec.id]
-        if field_spec.restriction is not None and value not in [o.value for o in options]:
+        if (
+            field_spec.restriction is not None
+            and not field_spec.flavor
+            and value not in [o.value for o in options]
+        ):
             raise CharacterError(f"{value!r} is not allowed for {field_spec.id!r} here")
         return value
     if field_spec.group_roll:

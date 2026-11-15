@@ -3396,6 +3396,7 @@ CHARACTER_DEFINITION_KEYS: Mapping[str, frozenset[str]] = {
             "group_roll",
             "restricted_by",
             "knows",
+            "flavor",
         }
     ),
     "campaign_field": frozenset(
@@ -3408,6 +3409,7 @@ CHARACTER_DEFINITION_KEYS: Mapping[str, frozenset[str]] = {
             "group_roll",
             "restricted_by",
             "knows",
+            "flavor",
         }
     ),
     "template": frozenset(

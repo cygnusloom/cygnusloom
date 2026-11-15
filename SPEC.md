@@ -5,6 +5,13 @@ A campaign is a running game instance. It consists of an event log tracking ever
 
 A campaign belongs to one account, its owner. The owner can share it with other accounts through join links. Each player makes their own player character, and the AI GM sees every player character at the table and brings new ones into the story. Out of combat any player can move the story forward; in an encounter a player acts for their own character on that character's turn or through a feature reaction. Every player's page follows the campaign live, so a turn started by any player updates the whole table. Players are known to each other by a display name they choose; account email addresses stay private.
 
+# Campaign options and character details
+A campaign's ruleset options, such as its experience track or omen, are chosen with the first character and belong to the whole table. The campaign owner can change any of them from Settings; the newest options reach the GM from the next reply. The engine's own campaign switches, such as inventory space, survival needs, and the starting level, sit in the same settings place so the owner has one form for everything the whole campaign shares.
+
+A character field is either mechanical or flavor. Flavor is identity and colour: a look, an accent, a biography. A player owns their player character's flavor and may rewrite it at any time; the flavor of a hireling belongs to the GM who invented them, so a player changes only a hireling's mechanical fields. A flavor field that offers a table of suggestions also takes the player's own words.
+
+A campaign may allow respecs, off by default. A player may then rebuild their player character, or a hireling they play for, from the creation form. The character keeps their name, pronouns, description, flavor, gear, and place in the story, while stats, templates, skills, features, counters, and mechanical fields start again, so levels, experience, and advancement picks are refunded and chosen anew. A respec waits until no turn or encounter is running.
+
 # AI Game Master - Cygnus
 Cygnus is the AI GM. Cygnus will keep the game on track, following all the rules and not allowing any inconsistency. However, Cygnus understands that the story is for the players, so if the players insist, Cygnus will change the story or scene to better fit what story the players want to tell.
 

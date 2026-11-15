@@ -39,6 +39,9 @@ def test_migrations_create_the_full_schema(tmp_path, monkeypatch):
     assert "force_credit_charges" in campaign_columns
     assert "use_inventory_space" in campaign_columns
     assert "use_survival_needs" in campaign_columns
+    assert "start_level" in campaign_columns
+    assert "follow_owner_level" in campaign_columns
+    assert "allow_respec" in campaign_columns
     assert "major_version" in campaign_columns
     user_columns = {column["name"] for column in inspect(make_engine(url)).get_columns("user")}
     assert "credit_balance" in user_columns
@@ -129,6 +132,43 @@ def test_the_survival_needs_column_defaults_to_true(tmp_path, monkeypatch):
         )
         value = connection.execute(sa.select(campaign.c.use_survival_needs)).scalar_one()
     assert value is True
+
+
+def test_respec_is_off_for_existing_campaigns(tmp_path, monkeypatch):
+    url = f"sqlite:///{tmp_path / 'allow-respec.db'}"
+    monkeypatch.setenv("CYGNUSLOOM_DATABASE_URL", url)
+    config = migration_config(url)
+    command.upgrade(config, "head")
+
+    engine = make_engine(url)
+    user = sa.Table("user", sa.MetaData(), autoload_with=engine)
+    campaign = sa.Table("campaign", sa.MetaData(), autoload_with=engine)
+    with engine.begin() as connection:
+        owner_id = connection.execute(
+            user.insert().values(
+                issuer="test",
+                subject="owner",
+                email="owner@example.com",
+                email_verified=False,
+                display_name="Owner",
+                roles="[]",
+                credit_balance=0,
+                disabled=False,
+                created_at=datetime.now(UTC),
+            )
+        ).inserted_primary_key[0]
+        connection.execute(
+            campaign.insert().values(
+                owner_id=owner_id,
+                name="Existing campaign",
+                world_template="testhollow",
+                rule_set="rolltest",
+                model="fake/scripted",
+                created_at=datetime.now(UTC),
+            )
+        )
+        value = connection.execute(sa.select(campaign.c.allow_respec)).scalar_one()
+    assert value is False
 
 
 def test_model_context_tokens_default_to_64k_for_existing_models(tmp_path, monkeypatch):
@@ -236,7 +276,7 @@ def test_a_legacy_long_revision_id_is_rewritten(tmp_path, monkeypatch):
         version = connection.execute(
             sa.text("SELECT version_num FROM alembic_version")
         ).scalar_one()
-    assert version == "0019_campaign_start_level"
+    assert version == "0020_campaign_allow_respec"
     campaign_columns = {
         column["name"] for column in inspect(make_engine(url)).get_columns("campaign")
     }

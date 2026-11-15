@@ -1,6 +1,6 @@
 {% extends "campaign_base.html" %}
 {% from "macros.html" import choice, choice_picker, choice_panel, dice_button, pick_control, text_panel %}
-{% block title %}{% if show_options %}Create your campaign{% else %}Create your character{% endif %} · {{ campaign.name }}{% endblock %}
+{% block title %}{% if respec %}Respec {{ respec.name }}{% elif show_options %}Create your campaign{% else %}Create your character{% endif %} · {{ campaign.name }}{% endblock %}
 {% block play %}
 <section class="view creation" data-view="play" aria-labelledby="creation-title">
   <h1 id="creation-title">{{ campaign.name }}</h1>
@@ -11,7 +11,7 @@
     {% include "_players_panel.html" %}
   </details>
   {% endif %}
-  {% if show_character and fallen %}
+  {% if show_character and fallen and not respec %}
   <section class="death-screen" aria-labelledby="death-title">
     <h2 id="death-title">{{ fallen.name }} is dead</h2>
     <p class="muted">{% if fallen.location %}Their body lies at {{ fallen.location }}, with the gear they carried.{% else %}Their body is lost to the story.{% endif %} Choose who plays next.</p>
@@ -34,16 +34,24 @@
   {% endif %}
   <div class="creation-toolbar">
     {% if show_character %}
-    <form method="post" action="/campaigns/{{ campaign.id }}/character/reroll" class="character-reroll">
+    <form method="post" action="{% if respec %}/campaigns/{{ campaign.id }}/respec/reroll{% else %}/campaigns/{{ campaign.id }}/character/reroll{% endif %}" class="character-reroll">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      {% if respec %}<input type="hidden" name="character" value="{{ respec.name }}">{% endif %}
       <button type="submit" class="secondary">Reroll stats</button>
     </form>
     {% endif %}
     <button type="button" class="secondary" data-randomize="all">Randomize all</button>
     <button type="button" class="secondary" data-randomize="unchosen">Randomize all not chosen</button>
   </div>
-  <form method="post" action="/campaigns/{{ campaign.id }}/creation" class="creation-form"{% if character.skill_progression %} data-skill-first-level="{{ character.skill_progression.first_level }}" data-skill-creation-maximum="{{ character.skill_progression.creation_maximum }}"{% endif %}>
+  <form method="post" action="{% if respec %}/campaigns/{{ campaign.id }}/respec{% else %}/campaigns/{{ campaign.id }}/creation{% endif %}" class="creation-form"{% if character.skill_progression %} data-skill-first-level="{{ character.skill_progression.first_level }}" data-skill-creation-maximum="{{ character.skill_progression.creation_maximum }}"{% endif %}>
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    {% if respec %}
+    <input type="hidden" name="character" value="{{ respec.name }}">
+    <section class="creation-section creation-respec" aria-labelledby="respec-title">
+      <h2 id="respec-title">Rebuild {{ respec.name }}</h2>
+      <p>Choose the mechanical build again. Levels, experience, and advancement picks are refunded, and the normal level-up pages take you through each level again. {{ respec.name }} keeps their name, pronouns, description, flavor details, and gear, so only the panels below change.</p>
+    </section>
+    {% endif %}
     {% if show_options or show_setting %}
     <section class="creation-section" aria-labelledby="options-title">
       <h2 id="options-title">Campaign options</h2>
@@ -99,16 +107,22 @@
           <label><input type="checkbox" name="use_inventory_space" value="1"{% if track_inventory %} checked{% endif %}> Track item slots and their limits</label>
           <label><input type="checkbox" name="use_survival_needs" value="1"{% if track_survival_needs %} checked{% endif %}> Track food, water, and rest needs</label>
         </section>
+        <section class="creation-panel campaign-respec" aria-labelledby="panel-respec">
+          <h3 id="panel-respec">Character rebuilding</h3>
+          <p class="muted">Off by default. Turning it on lets each player rebuild their own character and hirelings from scratch: levels and experience are refunded, and they choose their stats, skills, and features again.</p>
+          <label><input type="checkbox" name="allow_respec" value="1"{% if allow_respec %} checked{% endif %}> Let players respec their characters</label>
+        </section>
       </div>
       {% endif %}
     </section>
     {% endif %}
     {% if show_character %}
     <section class="creation-section" aria-labelledby="character-title">
-      <h2 id="character-title">Your character</h2>
+      <h2 id="character-title">{% if respec %}{{ respec.name }}'s new build{% else %}Your character{% endif %}</h2>
       <p class="muted">Choose each panel below to build your character. A blank skill or feature pick is rolled when you submit; the dice button rolls one now. Chosen options explain what they grant.</p>
       <p class="muted form-hint" data-choice-note role="status" hidden>Some earlier choices were cleared because they no longer fit this selection.</p>
       <div class="creation-grid">
+        {% if not respec %}
         <section class="creation-panel" aria-labelledby="panel-name">
           <h3 id="panel-name">Name</h3>
           <p class="muted panel-hint">What the GM and the story call you. The dice suggests a name from your chosen background or class.</p>
@@ -141,6 +155,7 @@
             <input type="text" name="pronouns-other" maxlength="120" aria-label="Other pronouns, if chosen above">
           </label>
         </fieldset>
+        {% endif %}
         {% if character.stats %}
           <section class="creation-panel stats-panel" aria-labelledby="panel-stats">
             <div class="panel-heading">
@@ -270,10 +285,14 @@
         </section>
         {% endif %}
         {% for field in character.choice_fields %}
-          {{ choice_panel("field-" ~ field.id, field.name, field.options, field.description, field.restriction) }}
+          {% if not respec or not field.flavor %}
+          {{ choice_panel("field-" ~ field.id, field.name, field.options, field.description, field.restriction, field.flavor) }}
+          {% endif %}
         {% endfor %}
         {% for field in character.text_fields %}
+          {% if not respec or not field.flavor %}
           {{ text_panel("field-" ~ field.id, field.name, field.description) }}
+          {% endif %}
         {% endfor %}
         {% if character.skill_replacements %}
           <section class="creation-panel">
@@ -308,7 +327,7 @@
     {% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
     <p class="form-error" role="alert" hidden></p>
     <p class="muted form-hint">Blank skill and feature picks are rolled for you. Every other panel must be chosen.</p>
-    <button type="submit">{% if show_options and show_character %}Create campaign and character{% elif show_options %}Save campaign options{% else %}Create character{% endif %}</button>
+    <button type="submit">{% if respec %}Respec {{ respec.name }}{% elif show_options and show_character %}Create campaign and character{% elif show_options %}Save campaign options{% else %}Create character{% endif %}</button>
   </form>
 </section>
 {% endblock %}

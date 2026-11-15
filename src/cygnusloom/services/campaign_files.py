@@ -123,6 +123,7 @@ def export_campaign(engine: Engine, owner_id: int, campaign_id: int) -> tuple[st
             "use_survival_needs": campaign.use_survival_needs,
             "start_level": campaign.start_level,
             "follow_owner_level": campaign.follow_owner_level,
+            "allow_respec": campaign.allow_respec,
             "created_at": as_utc(campaign.created_at).isoformat(),
         },
         "events": events,
@@ -190,6 +191,7 @@ def import_campaign(
             use_survival_needs=config["use_survival_needs"],
             start_level=config["start_level"],
             follow_owner_level=config["follow_owner_level"],
+            allow_respec=config["allow_respec"],
             created_at=config["created_at"],
         )
         db.add(campaign)
@@ -488,6 +490,10 @@ def _read_campaign(data: dict[str, Any], library: ContentLibrary) -> dict[str, A
     follow_owner_level = data.get("follow_owner_level", True)
     if not isinstance(follow_owner_level, bool):
         raise InvalidInput("follow_owner_level must be true or false")
+    # A file exported before the option existed keeps its characters as they are.
+    allow_respec = data.get("allow_respec", False)
+    if not isinstance(allow_respec, bool):
+        raise InvalidInput("allow_respec must be true or false")
     created_at = _read_time(data.get("created_at"), "campaign")
     return {
         "name": _text(data, "name", MAX_NAME),
@@ -500,6 +506,7 @@ def _read_campaign(data: dict[str, Any], library: ContentLibrary) -> dict[str, A
         "use_survival_needs": use_survival_needs,
         "start_level": start_level,
         "follow_owner_level": follow_owner_level,
+        "allow_respec": allow_respec,
         "created_at": created_at,
     }
 

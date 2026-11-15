@@ -6,5 +6,11 @@
     "derived": {
       "base": 12
     }
+  },
+  {
+    "type": "character_field",
+    "id": "post",
+    "name": "Post",
+    "description": "The post the character holds, such as watch or quartermaster. Mechanical, so a player sets it for their hireling."
   }
 ]

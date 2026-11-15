@@ -1408,3 +1408,28 @@ main > .card + .card, main > .card + .admin-grid, main > .admin-grid + .card { m
   border: 1px solid var(--border); border-radius: 8px;
 }
 .debug-share { margin-top: 1rem; }
+
+/* A flavor field's own words, written under the table's choices. */
+.flavor-write-in { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.9em; color: var(--muted); }
+.flavor-write-in input { color: var(--text); }
+
+/* A respec reopens the creation form for a character already in play, so it opens with the
+   warning that the build, levels, and picks start again. */
+.creation-respec { margin-bottom: 1.5rem; padding: 0.9rem 1rem; border: 1px solid var(--accent); border-radius: 8px; background: var(--panel); }
+.creation-respec h2 { margin: 0 0 0.5rem; font-size: 1.1rem; }
+.creation-respec p { margin: 0; }
+
+/* The settings page folds the campaign options into the creation form's panel grid. */
+.settings-subheading { margin: 1.25rem 0 0; font-size: 0.95rem; }
+.campaign-options-grid { margin-top: 0.5rem; }
+.campaign-options-grid .creation-panel select,
+.campaign-options-grid .creation-panel input[type="text"] { width: 100%; }
+
+/* The edit-details and respec controls under a character sheet or Characters card. */
+.character-detail-links { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-top: 0.75rem; }
+.character-detail-links form { margin: 0; }
+.character-edit-form { display: flex; flex-direction: column; gap: 0.75rem; }
+.character-edit-form > button { align-self: flex-start; }
+.character-edit-field { display: flex; flex-direction: column; gap: 0.3rem; margin: 0; }
+.character-edit-label { font-weight: 600; }
+.character-edit-hint { font-size: 0.9em; }

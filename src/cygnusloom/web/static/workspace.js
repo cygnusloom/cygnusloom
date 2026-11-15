@@ -477,6 +477,48 @@
     });
   };
 
+  // A player can rewrite the details they own on a character they play. The sheet and the
+  // Characters page both open the same dialog, which loads only the fields the server accepts:
+  // a player character's flavor, or a hireling's mechanical fields.
+  const characterEditDialog = document.getElementById("dialog-character-edit");
+  let characterEditOpener = null;
+  const bindCharacterEditLinks = (root) => {
+    if (!characterEditDialog) return;
+    const body = characterEditDialog.querySelector("[data-character-edit-body]");
+    const title = characterEditDialog.querySelector("h2");
+    const unavailable = "<p class=\"muted\">Could not load these details.</p>";
+    root.querySelectorAll("[data-edit-character]").forEach((link) => {
+      link.setAttribute("aria-haspopup", "dialog");
+      on(link, "character-edit", "click", async (event) => {
+        event.preventDefault();
+        characterEditOpener = link;
+        const name = link.dataset.editCharacter || "";
+        title.textContent = `Edit ${name}`;
+        dialogOpeners.set(characterEditDialog, link);
+        body.replaceChildren(loadingNote());
+        characterEditDialog.scrollTop = 0;
+        characterEditDialog.showModal();
+        const params = new URLSearchParams({
+          character: name,
+          from: link.dataset.editFrom || "play",
+        });
+        const html = await loadFragment(
+          `${characterEditDialog.dataset.characterEditUrl}?${params.toString()}`,
+        );
+        // Ignore a reply for a character the player has since replaced with another click.
+        if (characterEditOpener !== link) return;
+        body.innerHTML = html ?? unavailable;
+      });
+    });
+  };
+  if (characterEditDialog) {
+    characterEditDialog
+      .querySelectorAll("[data-character-edit-close]")
+      .forEach((button) =>
+        on(button, "character-edit-close", "click", () => characterEditDialog.close()),
+      );
+  }
+
   // On phones the message box starts at one row and grows with what is typed, up to a point.
   // Desktop keeps its three-row box.
   const autosizeComposer = (input) => {
@@ -538,6 +580,7 @@
     bindMessageEditButtons(root);
     bindTurnContextButtons(root);
     bindStatblockNames(root);
+    bindCharacterEditLinks(root);
     bindStartingLevel(root);
     bindComposer(root);
     measureCompendiumToolbars(root);

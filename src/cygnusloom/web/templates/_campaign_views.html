@@ -1,4 +1,4 @@
-{% from "macros.html" import journal_text, map_board, map_places, time_strip %}
+{% from "macros.html" import character_actions, journal_text, map_board, map_places, time_strip %}
     <section class="view map-page" id="view-map" data-view="map" aria-labelledby="map-title" hidden>
       <h2 id="map-title">Map</h2>
       {{ map_board(world_map, framed=true, prefix="side") }}
@@ -59,6 +59,7 @@
               <span>{% if scene.location %}At {{ scene.location.name }}{% else %}Not yet placed{% endif %}</span>
             </p>
             {% if scene.pc.summary %}<p>{{ scene.pc.summary }}</p>{% endif %}
+            {{ character_actions(campaign, csrf_token, scene.pc.name, "characters", scene.pc.name in editable_names, scene.pc.name in respec_names) }}
           </article>
         </section>
         {% endif %}
@@ -74,6 +75,7 @@
               {% if hireling.location %}<span>At {{ hireling.location }}</span>{% endif %}
             </p>
             {% if hireling.summary %}<p>{{ hireling.summary }}</p>{% endif %}
+            {{ character_actions(campaign, csrf_token, hireling.name, "characters", hireling.name in editable_names, hireling.name in respec_names) }}
           </article>
           {% endfor %}
         </section>

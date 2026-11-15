@@ -16,7 +16,15 @@ from sqlalchemy import Engine, func
 from sqlmodel import select
 
 from cygnusloom import CAMPAIGN_MAJOR_VERSION
-from cygnusloom.content.character import CampaignSpec, CharacterSpec, roll_stats
+from cygnusloom.content.character import (
+    CampaignSpec,
+    CharacterError,
+    CharacterSpec,
+    check_choices,
+    check_swaps,
+    resolve,
+    roll_stats,
+)
 from cygnusloom.content.definitions import ContentError
 from cygnusloom.content.library import (
     ContentLibrary,
@@ -30,6 +38,7 @@ from cygnusloom.llm.base import (
     Provider,
     complete,
 )
+from cygnusloom.services import character_fields as character_field_service
 from cygnusloom.services import combat, encounters
 from cygnusloom.services import credits as credit_service
 from cygnusloom.services import level_up as level_up_service
@@ -37,8 +46,10 @@ from cygnusloom.services.accounts import public_name
 from cygnusloom.services.common import Conflict, InvalidInput, NotFound, session_scope
 from cygnusloom.services.events import (
     CHARS_PER_TOKEN,
+    PC_KIND,
     CampaignState,
     Channel,
+    CharacterRespecced,
     ChatGM,
     ChatGMEdited,
     ChatPlayer,
@@ -80,6 +91,7 @@ from cygnusloom.services.world import (
     seed_campaign,
     set_campaign_options,
 )
+from cygnusloom.services.world_support import _check_sheet_text
 
 MAX_NAME = 120
 MAX_MESSAGE = 8000
@@ -314,12 +326,13 @@ def save_creation(
     use_survival_needs: bool | None = None,
     start_level: int | None = None,
     follow_owner_level: bool | None = None,
+    allow_respec: bool | None = None,
 ) -> None:
     """Save the campaign options, the player character, the setting and story, the table
     genres, and the starting level together, so either all of them are saved or none is. A part
     left as None is not saved. The character needs the options first. The setting, genres,
-    starting level, and follow switch are captured on the campaign-options creation page, not
-    when the campaign is first made."""
+    starting level, follow switch, and respec option are captured on the campaign-options
+    creation page, not when the campaign is first made."""
     campaign = get_campaign(engine, owner_id, campaign_id)
     spec = campaign_spec(library, campaign)
     brief = None
@@ -352,6 +365,8 @@ def save_creation(
                 stored.start_level = start_level
             if follow_owner_level is not None:
                 stored.follow_owner_level = follow_owner_level
+            if allow_respec is not None:
+                stored.allow_respec = allow_respec
         if options is not None:
             set_campaign_options(db, campaign_id, spec, options)
         if character is not None:
@@ -405,6 +420,144 @@ def save_creation(
                     db, campaign_id, rule_set, character.name, starting_level
                 )
         db.commit()
+
+
+def respec_character(
+    engine: Engine,
+    library: ContentLibrary,
+    player_id: int,
+    campaign_id: int,
+    *,
+    name: str,
+    rolled: Mapping[str, int],
+    submitted: Mapping[str, Any],
+) -> int:
+    """Rebuild a player character's or hireling's sheet from scratch, under the campaign's respec
+    option. The character keeps their name, pronouns, description, flavor details, gear, and place
+    in the story. Stats, templates, skills, features, counters, and mechanical fields are replaced,
+    so levels, experience, and advancement picks are refunded and the player chooses them again.
+    The starting kit is not handed over a second time. Returns the level the character begins at,
+    which the normal advancement pages take up from there."""
+    campaign = get_campaign(engine, player_id, campaign_id)
+    if not campaign.allow_respec:
+        raise InvalidInput("this campaign does not allow respeccing")
+    rule_set = library.rule_sets.get(campaign.rule_set)
+    if rule_set is None:
+        raise InvalidInput("that campaign's rule set is no longer available")
+    spec = rule_set.character
+    with _exclusive(campaign_id), session_scope(engine) as db:
+        state = load_state(db, campaign_id)
+        target = state.characters.get(name_key(name))
+        if target is None or not character_field_service.controls_character(
+            state, player_id, target
+        ):
+            raise InvalidInput("only a character you play can be respecced")
+        if target.kind != PC_KIND or target.out_of_play:
+            raise InvalidInput(f"{target.name} is not in play")
+        if state.turn is not None:
+            raise InvalidInput("a respec waits until the GM's reply is finished")
+        if state.encounter is not None:
+            raise InvalidInput("a respec waits until the encounter is over")
+        chosen = submitted.get("stats", {})
+        rolled_stats = {stat.id for stat in spec.stats.values() if stat.derived is None}
+        if set(chosen) != rolled_stats:
+            raise InvalidInput("every stat needs a value")
+        # The form showed only the mechanical fields. The character's own words stay as they
+        # were, and so does a mechanical text field the player left alone, such as a College the
+        # GM recorded during play.
+        given_fields = dict(submitted.get("fields", {}))
+        for field in spec.fields.values():
+            old = target.fields.get(field.id)
+            if old is None:
+                continue
+            if field.flavor or (field.table is None and not given_fields.get(field.id)):
+                given_fields[field.id] = old
+        rebuilt_submission = dict(submitted)
+        rebuilt_submission["fields"] = given_fields
+        try:
+            check_swaps(spec, rolled, chosen)
+            check_choices(spec, rebuilt_submission)
+            sheet = resolve(spec, rebuilt_submission, random.Random(), plus=rule_set.plus)
+        except CharacterError as error:
+            raise InvalidInput(str(error)) from error
+        _check_sheet_text(sheet)
+        # A field the rule set no longer defines is kept too: it may be a story label.
+        fields = dict(sheet.fields)
+        for field_id, value in target.fields.items():
+            if field_id not in spec.fields and value:
+                fields[field_id] = value
+        # The character keeps the gear they carry, and no starting kit is handed out again. Gear
+        # carried as inventory items is untouched; coin and any item a rule set keeps as a
+        # feature count are carried over here.
+        features = {
+            feature_id: count
+            for feature_id, count in sheet.features.items()
+            if not _carried_feature(spec, rule_set.magic, feature_id)
+        }
+        for feature_id, count in target.features.items():
+            if feature_id not in spec.features or _carried_feature(
+                spec, rule_set.magic, feature_id
+            ):
+                features[feature_id] = features.get(feature_id, 0) + count
+        # The level the player rebuilds to is the table's level now, before the refund resets
+        # the owner's own character. A campaign that follows its owner keeps them at the party's
+        # level while they take each level-up again.
+        starting_level = campaign.start_level
+        if campaign.follow_owner_level:
+            owner_level = level_up_service.owner_pc_level(state, rule_set)
+            if owner_level is not None:
+                starting_level = owner_level
+        record(
+            db,
+            campaign_id,
+            CharacterRespecced(
+                name=target.name,
+                stats=dict(sheet.stats),
+                templates=dict(sheet.templates),
+                features=features,
+                fields=fields,
+                counters=dict(sheet.counters),
+                skills=dict(sheet.skills),
+                feature_choices={
+                    key: list(values) for key, values in sheet.feature_choices.items()
+                },
+                stat_modifiers=dict(sheet.stat_modifiers),
+            ),
+        )
+        rebuilt = load_state(db, campaign_id).characters[name_key(target.name)]
+        if rule_set.combat is not None and rule_set.combat.defense_base:
+            # The new sheet's own armor effects replace the old ones; the gear stays equipped.
+            combat.set_defense_equipment(
+                db,
+                campaign_id,
+                rebuilt,
+                spec,
+                rule_set.combat,
+                adjustment=sheet.armor,
+            )
+        if level_up_service.start_level_rules(rule_set) is None:
+            starting_level = 1
+        else:
+            level_up_service.check_start_level(rule_set, starting_level)
+            if starting_level > 1:
+                level_up_service.grant_start_level(
+                    db, campaign_id, rule_set, target.name, starting_level
+                )
+        db.commit()
+        return starting_level
+
+
+def _carried_feature(spec: CharacterSpec, magic: Any, feature_id: str) -> bool:
+    """Whether the rule set carries this feature as gear rather than keeping it on the sheet: an
+    inventory item, or a spell the rule set gives as an item. Those belong to the character, not
+    to the build being refunded."""
+    feature = spec.features.get(feature_id)
+    if feature is None:
+        return False
+    kind = spec.feature_types.get(feature.feature_type)
+    if kind is not None and kind.inventory:
+        return True
+    return feature.feature_type == "spell" and magic is not None and magic.item is not None
 
 
 def promote_hireling_to_character(
@@ -767,27 +920,60 @@ def update_campaign_settings(
     label: str,
     start_level: int | None = None,
     follow_owner_level: bool | None = None,
+    setting: str | None = None,
+    table_genres: Sequence[str] | None = None,
+    allow_respec: bool | None = None,
+    options: Mapping[str, Any] | None = None,
+    campaign_options: CampaignSpec | None = None,
+    rule_set: RuleSet | None = None,
 ) -> Campaign:
-    """Save the owner's manual campaign settings in one write: the model, the inventory and
-    survival-needs switches, the starting level for new characters and its follow switch, and
-    the label. They are configuration, not part of the log, so they may change mid-game."""
+    """Save the owner's campaign settings in one write: the model, the campaign's options and
+    brief, the inventory, survival-needs, and respec switches, the starting level for new
+    characters and its follow switch, and the label. The model and switches are configuration,
+    not part of the log, so they may change mid-game. The rule set's own options are recorded
+    as an event, so the GM reads the newest values from the next reply on."""
     if model not in allowed_models:
         raise InvalidInput("that model is not available")
     label = (label or "").strip()
     if not label or len(label) > MAX_NAME:
         raise InvalidInput(f"label must be 1 to {MAX_NAME} characters")
+    brief = None
+    if setting is not None:
+        brief = (setting or "").strip()
+        if len(brief) > MAX_SETTING:
+            raise InvalidInput(f"setting and story must be at most {MAX_SETTING} characters")
+    genres: tuple[str, ...] | None = None
+    if table_genres is not None:
+        if rule_set is None:
+            raise InvalidInput("that campaign's rule set is no longer available")
+        genres = _campaign_table_genres(table_genres, rule_set)
     get_owned_campaign(engine, owner_id, campaign_id)
     with _exclusive(campaign_id), session_scope(engine) as db:
         campaign = db.get(Campaign, campaign_id)
         assert campaign is not None
+        if genres is not None:
+            # An empty choice means the rule set's own genres, and storing nothing keeps the
+            # settings page showing those as checked.
+            same_as_rule_set = rule_set is not None and genres == rule_set.table_genres
+            campaign.table_genres = (
+                "" if not genres or same_as_rule_set else json.dumps(list(genres))
+            )
         campaign.model = model
         campaign.use_inventory_space = inventory_space
         campaign.use_survival_needs = survival_needs
+        if allow_respec is not None:
+            campaign.allow_respec = allow_respec
         if start_level is not None:
             campaign.start_level = start_level
         if follow_owner_level is not None:
             campaign.follow_owner_level = follow_owner_level
+        if brief is not None:
+            campaign.setting = brief
         campaign.name = label
+        if options is not None:
+            if campaign_options is None:
+                raise InvalidInput("that campaign's rule set is no longer available")
+            set_campaign_options(db, campaign_id, campaign_options, options, replace=True)
         db.add(campaign)
         db.commit()
         db.refresh(campaign)

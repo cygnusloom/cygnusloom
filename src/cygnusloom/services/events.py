@@ -720,8 +720,9 @@ class PcAdded(GameEvent):
 
 @dataclass(frozen=True)
 class CampaignOptionsChosen(GameEvent):
-    """The options every character in the campaign shares. Chosen once, before the player
-    character, and given to the GM through the state text rather than the chat."""
+    """The options every character in the campaign shares. They are chosen before the player
+    character and may be changed later from the campaign's settings; the newest event holds
+    the options in force. They are given to the GM through the state text rather than the chat."""
 
     kind: ClassVar[str] = "campaign.options"
     hidden: ClassVar[bool] = True
@@ -1377,6 +1378,46 @@ class CharacterFieldSet(GameEvent):
         if not self.value:
             return f"{self.name}'s {self.label} is cleared."
         return f"{self.name}'s {self.label} is now {self.value}."
+
+
+@dataclass(frozen=True)
+class CharacterRespecced(GameEvent):
+    """A player rebuilt a character's sheet from scratch under the campaign's respec option. The
+    character keeps their name, pronouns, description, flavor details, gear, and place in the
+    story; the stats, templates, skills, features, counters, and mechanical fields are replaced.
+    Levels, experience, and advancement picks are refunded."""
+
+    kind: ClassVar[str] = "character.respecced"
+    hidden: ClassVar[bool] = True
+
+    name: str
+    stats: dict[str, int] = field(default_factory=dict)
+    templates: dict[str, str] = field(default_factory=dict)
+    features: dict[str, int] = field(default_factory=dict)
+    fields: dict[str, str] = field(default_factory=dict)
+    counters: dict[str, int] = field(default_factory=dict)
+    skills: dict[str, int] = field(default_factory=dict)
+    feature_choices: dict[str, list[str]] = field(default_factory=dict)
+    stat_modifiers: dict[str, int] = field(default_factory=dict)
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        character = state.characters[name_key(self.name)]
+        character.stats = dict(self.stats)
+        character.templates = dict(self.templates)
+        character.features = dict(self.features)
+        character.fields = dict(self.fields)
+        character.counters = dict(self.counters)
+        character.skills = dict(self.skills)
+        character.feature_choices = {
+            key: list(values) for key, values in self.feature_choices.items()
+        }
+        character.stat_modifiers = dict(self.stat_modifiers)
+        # The refund takes back everything bought with experience or granted by it.
+        character.advancements_taken = {}
+        character.reaction_uses = {}
+
+    def render(self) -> str:
+        return f"{self.name} begins their training again."
 
 
 @dataclass(frozen=True)

@@ -1,3 +1,4 @@
+{% from "macros.html" import character_actions %}
     <div class="workspace" data-view="play" data-live-url="/campaigns/{{ campaign.id }}/live" data-status-url="/campaigns/{{ campaign.id }}/turn-status" data-events-url="/campaigns/{{ campaign.id }}/events" data-map-url="/campaigns/{{ campaign.id }}/map" data-music-mood="{{ music.mood }}" data-music-source="{{ music.source }}" data-music-manifest="/static/music/manifest.json" data-music-default-enabled="{{ '1' if music_default_enabled else '0' }}">
       <section class="chat" aria-label="Chat">
           <div class="chat-heading">
@@ -277,6 +278,7 @@
                 {% if scene.pc_sheet %}
                 <p><strong>{{ scene.pc_sheet.name }}</strong></p>
                 {% with sheet_view=scene.pc_sheet %}{% include "_character_sheet.html" %}{% endwith %}
+                {{ character_actions(campaign, csrf_token, scene.pc_sheet.name, "play", scene.pc_sheet.name in editable_names, scene.pc_sheet.name in respec_names) }}
                 {% else %}
                 <p class="muted">No character sheet yet.</p>
                 {% endif %}
@@ -285,6 +287,7 @@
               <div class="tab-panel character-sheet-panel" role="tabpanel" id="panel-sheet-{{ loop.index }}" aria-labelledby="tab-sheet-{{ loop.index }}" hidden>
                 <p class="muted">{% if hireling.employer %}Hired by {{ hireling.employer }}{% endif %}{% if hireling.wage %} · {{ hireling.wage }}{% endif %}{% if hireling.location %} · {{ hireling.location }}{% endif %}{% if hireling.dead %} · dead{% endif %}</p>
                 {% with sheet_view=hireling %}{% include "_character_sheet.html" %}{% endwith %}
+                {{ character_actions(campaign, csrf_token, hireling.name, "play", hireling.name in editable_names, hireling.name in respec_names) }}
               </div>
               {% endfor %}
               {% if advancement_available %}

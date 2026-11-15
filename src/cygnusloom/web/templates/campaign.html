@@ -43,6 +43,13 @@
     </div>
   </form>
 </dialog>
+<dialog id="dialog-character-edit" class="app-dialog character-edit-dialog" aria-labelledby="dialog-character-edit-title" data-character-edit-url="/campaigns/{{ campaign.id }}/character/edit">
+  <h2 id="dialog-character-edit-title">Character details</h2>
+  <div class="character-edit-body" data-character-edit-body></div>
+  <div class="dialog-actions">
+    <button type="button" class="secondary" data-character-edit-close>Close</button>
+  </div>
+</dialog>
 {% endblock %}
 {% block scripts %}
   {{ super() }}
