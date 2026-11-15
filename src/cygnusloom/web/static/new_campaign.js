@@ -38,7 +38,9 @@
 
   // The rule set is chosen first. It offers the worlds built for it, plus the worlds that are
   // not tied to a rule set, with the recommended worlds in their own group above the rest.
-  const refreshWorlds = () => {
+  // Changing the rule set picks a recommended world again; the page's first load keeps the
+  // world the server chose, including the one a rejected form kept.
+  const refreshWorlds = (reset = false) => {
     const name = chosenRuleSet()?.dataset.title || chosenRuleSet()?.textContent || "";
     if (recommendedGroup) recommendedGroup.label = `Recommended for ${name}`;
     if (otherGroup) otherGroup.label = "Other worlds";
@@ -49,7 +51,7 @@
       option.disabled = !offered;
       (offered && recommended(option) ? recommendedGroup : otherGroup)?.append(option);
     }
-    if (worldSelect.selectedOptions[0]?.disabled) {
+    if (reset || worldSelect.selectedOptions[0]?.disabled) {
       const offered = worldOptions.filter((option) => !option.disabled);
       const first = offered.find((option) => recommended(option)) ?? offered[0];
       if (first) worldSelect.value = first.value;
@@ -60,7 +62,7 @@
   };
 
   ruleSetSelect.addEventListener("change", () => {
-    refreshWorlds();
+    refreshWorlds(true);
     showCredits(ruleSetSelect, "rule_set");
   });
   worldSelect.addEventListener("change", () => {

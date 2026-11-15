@@ -163,6 +163,17 @@ def test_the_new_campaign_form_groups_recommended_worlds_first(
     assert "data-recommended-for='[\"worldswithoutnumber\"]'" in group
 
 
+def test_the_campaign_pickers_open_from_the_summary(
+    client_factory: Callable[[], TestClient],
+):
+    client = signed_in_client(client_factory)
+
+    page = client.get("/campaigns/new").text
+
+    for name in ("rule_set", "world_template"):
+        assert page.count(f'data-open-pick="pick-dialog-{name}"') == 2
+
+
 def test_the_compendium_groups_recommended_worlds_first(
     client_factory: Callable[[], TestClient],
 ):

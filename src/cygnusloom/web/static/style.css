@@ -863,7 +863,9 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 .campaign-picker-credits { margin: 0.4rem 0 0; font-size: 0.85rem; }
 .pick-heading { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
 .pick-label { flex: 1; min-width: 0; font-weight: 600; }
-.pick-summary { display: flex; flex-direction: column; gap: 0.15rem; padding: 0.45rem 0.6rem; border: 1px solid var(--border); border-radius: 6px; background: var(--field); }
+.pick-summary { display: flex; flex-direction: column; gap: 0.15rem; padding: 0.45rem 0.6rem; border: 1px solid var(--border); border-radius: 6px; background: var(--field); cursor: pointer; }
+.pick-summary:hover { border-color: var(--accent); }
+.pick-summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .pick-summary-value { color: var(--muted); overflow-wrap: anywhere; }
 .pick-summary-value.is-chosen { color: var(--text); font-weight: 600; }
 .pick-summary-detail { font-size: 0.9em; overflow-wrap: anywhere; }

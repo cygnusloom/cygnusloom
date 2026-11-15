@@ -275,7 +275,7 @@
       {% if roll %}{{ dice_button(name, label|lower, attribute="data-roll-pick") }}{% endif %}
       <button type="button" class="secondary" data-open-pick="pick-dialog-{{ name }}" aria-haspopup="dialog">Choose</button>
     </div>
-    <div class="pick-summary">
+    <div class="pick-summary" data-open-pick="pick-dialog-{{ name }}" role="button" tabindex="0" aria-haspopup="dialog" aria-label="Change {{ label|lower }}">
       <output class="pick-summary-value" data-pick-summary-for="{{ name }}">{{ empty }}</output>
       <span class="muted pick-summary-detail" data-pick-detail-for="{{ name }}"></span>
     </div>

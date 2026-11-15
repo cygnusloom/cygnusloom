@@ -1018,6 +1018,24 @@
     if (!rollName() && input && !input.value.trim()) input.focus();
   };
 
+  // Enter in a picker's search box must not submit the surrounding form, since the pickers sit
+  // inside the campaign and character forms.
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    if (event.target.closest?.("[data-pick-search], [data-choice-search]")) {
+      event.preventDefault();
+    }
+  });
+
+  // The chosen value opens the same dialog as the Choose button, including from the keyboard.
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    const summary = event.target.closest?.(".pick-summary[data-open-pick]");
+    if (!summary) return;
+    event.preventDefault();
+    summary.click();
+  });
+
   document.addEventListener("click", (event) => {
     const target = event.target;
 
