@@ -43,6 +43,15 @@
     );
     output.textContent = chosen ? chosen.dataset.title : "Not chosen";
     output.classList.toggle("is-chosen", Boolean(chosen));
+    const icon = [...document.querySelectorAll("[data-choice-icon-for]")].find(
+      (item) => item.dataset.choiceIconFor === name,
+    );
+    if (icon) {
+      const source = chosen?.dataset.icon || "";
+      if (source) icon.src = source;
+      else icon.removeAttribute("src");
+      icon.hidden = !source;
+    }
     const detail = [...document.querySelectorAll("[data-summary-detail-for]")].find(
       (item) => item.dataset.summaryDetailFor === name,
     );
@@ -102,23 +111,34 @@
       button.dataset.value = option.value;
       button.dataset.title = option.dataset.title || option.textContent;
       button.dataset.detail = pickDetail(option);
+      const iconPath = option.dataset.icon;
+      if (iconPath) {
+        const icon = document.createElement("img");
+        icon.className = "pick-icon";
+        icon.src = iconPath;
+        icon.alt = "";
+        button.append(icon);
+      }
+      const body = document.createElement("span");
+      body.className = "pick-body";
       const title = document.createElement("span");
       title.className = "pick-title";
       title.textContent = button.dataset.title;
-      button.append(title);
+      body.append(title);
       if (button.dataset.detail) {
         const detail = document.createElement("span");
         detail.className = "muted choice-detail";
         detail.textContent = button.dataset.detail;
-        button.append(detail);
+        body.append(detail);
       }
       const rank = option.dataset.rank;
       if (rank && rank !== "0") {
         const badge = document.createElement("span");
         badge.className = "tag";
         badge.textContent = `Rank ${rank}`;
-        button.append(badge);
+        body.append(badge);
       }
+      button.append(body);
       group.append(button);
     };
     for (const child of select.children) {
@@ -168,6 +188,13 @@
     }
     const detail = control.querySelector("[data-pick-detail-for]");
     if (detail) detail.textContent = option?.value ? pickDetail(option) : "";
+    const icon = control.querySelector("[data-pick-icon-for]");
+    if (icon) {
+      const source = option?.value ? option.dataset.icon || "" : "";
+      if (source) icon.src = source;
+      else icon.removeAttribute("src");
+      icon.hidden = !source;
+    }
     const dialog = document.getElementById(`pick-dialog-${control.dataset.pickControl}`);
     if (!dialog) return;
     for (const button of dialog.querySelectorAll(".pick-option")) {
@@ -198,6 +225,13 @@
       const select = row.querySelector("select");
       const detail = row.querySelector("[data-replacement-detail]");
       if (select && detail) detail.textContent = pickDetail(select.selectedOptions[0]);
+      const icon = row.querySelector("[data-replacement-icon]");
+      if (icon) {
+        const source = select?.selectedOptions[0]?.dataset.icon || "";
+        if (source) icon.src = source;
+        else icon.removeAttribute("src");
+        icon.hidden = !source;
+      }
     }
   };
 

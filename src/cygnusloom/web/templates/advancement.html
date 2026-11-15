@@ -6,7 +6,7 @@
   <p><a href="/campaigns/{{ campaign.id }}">Back to {{ campaign.name }}</a></p>
   <h1 id="advancement-title">{{ view.label }}: {{ view.character }}</h1>
   <p class="muted">
-    {{ rule_set.name if rule_set else campaign.rule_set }}{% if world %} · {{ world.name }}{% endif %}{% if view.level %} · Level {{ view.level }}{% endif %}{% if view.hireling %} · Hireling{% endif %}
+    {% if rule_set %}<img class="inline-icon" src="{{ icon_path(rule_set.icon) }}" alt="">{{ rule_set.name }}{% else %}{{ campaign.rule_set }}{% endif %}{% if world %} · <img class="inline-icon" src="{{ icon_path(world.icon) }}" alt="">{{ world.name }}{% endif %}{% if view.level %} · Level {{ view.level }}{% endif %}{% if view.hireling %} · Hireling{% endif %}
   </p>
 
   {% if pending and pending|length > 1 %}
@@ -100,7 +100,7 @@
           <tbody>
           {% for skill in pick.skills %}
             <tr>
-              <th scope="row">{{ skill.name }}</th>
+              <th scope="row">{% if skill.icon %}<img class="item-icon" src="{{ icon_path(skill.icon) }}" alt="">{% endif %}{{ skill.name }}</th>
               <td data-label="Now">{{ skill.current }}</td>
               <td data-label="Raise to">
                 <select name="skill-{{ pick.id }}-{{ skill.id }}" aria-label="Raise {{ skill.name }} to">

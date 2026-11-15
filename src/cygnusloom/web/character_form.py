@@ -86,6 +86,7 @@ def creation_view(spec: CharacterSpec, rolled: dict[str, int]) -> dict[str, Any]
             "kind": template.kind,
             "name": template.name,
             "description": template.description,
+            "icon": template.icon,
             "tables": [_table_view(spec, table) for table in template.tables],
             "names": list(template.names),
             "picks": _picks_view(spec, template),
@@ -408,6 +409,7 @@ def _picks_view(spec: CharacterSpec, template: Template) -> dict[str, Any] | Non
                     "name": feature.name,
                     "detail": feature.description,
                     "rank": feature.rank,
+                    "icon": feature.icon or "",
                 }
             )
     return {
@@ -442,6 +444,7 @@ def _skill_picks_view(spec: CharacterSpec, template: Template) -> list[dict[str,
                 {
                     "value": skill_id,
                     "title": label,
+                    "icon": (spec.skills[skill_id].icon if skill_id in spec.skills else ""),
                     "detail": (
                         spec.skills[skill_id].description if skill_id in spec.skills else None
                     ),
@@ -463,7 +466,12 @@ def _skill_replacements_view(spec: CharacterSpec) -> list[dict[str, Any]]:
             "kind": kind,
             "label": label,
             "options": [
-                {"value": skill.id, "title": skill.name, "detail": skill.description}
+                {
+                    "value": skill.id,
+                    "title": skill.name,
+                    "icon": skill.icon,
+                    "detail": skill.description,
+                }
                 for skill in spec.skills.values()
                 if skill.id not in excluded
             ],
@@ -520,6 +528,7 @@ def _feat_picks_view(spec: CharacterSpec, template: Template) -> list[dict[str, 
                         "value": feature.id,
                         "title": feature.name,
                         "detail": _feature_detail(feature),
+                        "icon": feature.icon or "",
                         "tag": feature.tag,
                         "rank": feature.rank,
                         "repeatable": feature.repeatable,

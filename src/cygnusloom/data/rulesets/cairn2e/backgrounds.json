@@ -2,6 +2,7 @@
   {
     "type": "template",
     "id": "aurifex",
+    "icon": "gem",
     "kind": "background",
     "name": "Aurifex",
     "description": "You are an artisan of the arcane, a smith of subtle forces. In the crucible of your workshop, the laws that govern this world are warped to suit your needs.",
@@ -15,6 +16,7 @@
   {
     "type": "template",
     "id": "barber-surgeon",
+    "icon": "tool",
     "kind": "background",
     "name": "Barber-Surgeon",
     "description": "You walk the line between healer and harrower, knowing the frailty of the flesh but also the secrets that lie within. With the right tools, life and death are merely words.",
@@ -28,6 +30,7 @@
   {
     "type": "template",
     "id": "beast-handler",
+    "icon": "rope",
     "kind": "background",
     "name": "Beast Handler",
     "description": "You alone can walk among the creatures of the wild, fearless and in control. You share a connection with animals that others can only dream of… so long as you don’t become their snack.",
@@ -41,6 +44,7 @@
   {
     "type": "template",
     "id": "bonekeeper",
+    "icon": "bones",
     "kind": "background",
     "name": "Bonekeeper",
     "description": "You are a shepherd to the departed. You listen to the final whispers of the dead as they descend into the cold, unyielding earth. You know that to fully celebrate the gift of life, we must honor its finale as well.",
@@ -51,6 +55,7 @@
   {
     "type": "template",
     "id": "cutpurse",
+    "icon": "key",
     "kind": "background",
     "name": "Cutpurse",
     "description": "You live in the grey space between those who have power and those who don’t. You find opportunity where others see only chaos. With nimble fingers, you unburden both the richest merchant and the lowliest guard.",
@@ -61,6 +66,7 @@
   {
     "type": "template",
     "id": "fieldwarden",
+    "icon": "fence",
     "kind": "background",
     "name": "Fieldwarden",
     "description": "Protectors of the harvest, defense against pests, thieves, and beasts. A position of great honor, while it lasts: many guardians do not live out their natural lives. Roll a second time on the Bonds table.",
@@ -71,6 +77,7 @@
   {
     "type": "template",
     "id": "fletchwind",
+    "icon": "bow",
     "kind": "background",
     "name": "Fletchwind",
     "description": "You strike from afar, but that does not make you a coward. You are a musician, the song of your bowstring naught but a warning, singing the silent promise of a quick death.",
@@ -81,6 +88,7 @@
   {
     "type": "template",
     "id": "foundling",
+    "icon": "backpack",
     "kind": "background",
     "name": "Foundling",
     "description": "An odd birthmark, a strange smell: somehow, the touch of elsewhere still lingers. Wherever you are, you have trouble fitting in. Roll on the Omens table (even if you’re not the youngest player), but keep the results private for now.",
@@ -91,6 +99,7 @@
   {
     "type": "template",
     "id": "fungal-forager",
+    "icon": "mushroom",
     "kind": "background",
     "name": "Fungal Forager",
     "description": "You follow the whisperings of the deep earth, the rhythmic pulse of the mycelium forest that grows beneath the surface. The dark holds no terror for you. Also, you really love mushrooms.",
@@ -104,6 +113,7 @@
   {
     "type": "template",
     "id": "greenwise",
+    "icon": "plant",
     "kind": "background",
     "name": "Greenwise",
     "description": "You delve deep into the Wood , prying its secrets from between rough boughs and whispering leaves. To this verdant kingdom, you are no mere scholar but its confidant as well.",
@@ -114,6 +124,7 @@
   {
     "type": "template",
     "id": "half-witch",
+    "icon": "cauldron",
     "kind": "background",
     "name": "Half Witch",
     "description": "Born of both the mortal world and the unseen, you are an enigma to some and feared by many. Yours is the tale of what happens when two worlds collide.",
@@ -127,6 +138,7 @@
   {
     "type": "template",
     "id": "hexenbane",
+    "icon": "sword",
     "kind": "background",
     "name": "Hexenbane",
     "description": "You are a mere digit on the unerring hand of justice. You go where others fear to tread, unyielding and unbroken.",
@@ -137,6 +149,7 @@
   {
     "type": "template",
     "id": "jongleur",
+    "icon": "lute",
     "kind": "background",
     "name": "Jongleur",
     "description": "What inspires the soul more than song, words, and spectacle? Why practice for years to master the arcane when you’ve already got real magic inside?",
@@ -150,6 +163,7 @@
   {
     "type": "template",
     "id": "kettlewright",
+    "icon": "anvil",
     "kind": "background",
     "name": "Kettlewright",
     "description": "You are known by the smell of molten metal and the jingle of tin. You are no mere merchant but an artisan of fire and metal.",
@@ -160,6 +174,7 @@
   {
     "type": "template",
     "id": "marchguard",
+    "icon": "spear",
     "kind": "background",
     "name": "Marchguard",
     "description": "Bound by blood Oath to patrol the border and protect the realm. Once sworn, the Oath cannot be broken. The Guard always finds their own.",
@@ -170,6 +185,7 @@
   {
     "type": "template",
     "id": "mountebank",
+    "icon": "ring",
     "kind": "background",
     "name": "Mountebank",
     "description": "Wits are your sharpest weapon, a facade your strongest shield. But when you do lose, you lose badly.",
@@ -180,6 +196,7 @@
   {
     "type": "template",
     "id": "outrider",
+    "icon": "horse",
     "kind": "background",
     "name": "Outrider",
     "description": "Your coin comes from escorting caravans, tracking fugitives, or lending your blade to a cause. You’ve been a savior, an executioner, a hero, and even a villain. Yours is not a solitary path, however: you’ll always have your horse.",
@@ -190,6 +207,7 @@
   {
     "type": "template",
     "id": "prowler",
+    "icon": "boots",
     "kind": "background",
     "name": "Prowler",
     "description": "You are a specter in the night, a fleeting shadow that slips by its prey, unseen. Each kill is a test of cunning and animal determination, a contest between life and death. You know that one day you will lose. You look forward to it.",
@@ -200,6 +218,7 @@
   {
     "type": "template",
     "id": "rill-runner",
+    "icon": "boat",
     "kind": "background",
     "name": "Rill Runner",
     "description": "You sing the stories of rivers and lakes, your talents soothing friends and the elements alike. You’ve seen more than most, but somehow it never seems to be enough.",
@@ -210,6 +229,7 @@
   {
     "type": "template",
     "id": "scrivener",
+    "icon": "scroll",
     "kind": "background",
     "name": "Scrivener",
     "description": "You copy ancient texts and illuminate manuscripts, recording the voices of the clever, the great, and the powerful. You will prove that the pen truly is mightier than the sword.",

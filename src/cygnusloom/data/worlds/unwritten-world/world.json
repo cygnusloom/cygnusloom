@@ -2,6 +2,7 @@
   {
     "type": "world",
     "id": "unwritten-world",
+    "icon": "globe",
     "name": "Unwritten World",
     "recommended_rulesets": ["worldswithoutnumber"],
     "blurb": "A land of small kingdoms, older ruins, and roads that end where the map ends. The GM invents it before play begins.",

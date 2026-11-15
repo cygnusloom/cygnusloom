@@ -4,7 +4,7 @@
           <div class="chat-heading">
             <div class="chat-heading-text">
               <h1 class="chat-title">{{ campaign.name }}</h1>
-              <p class="muted">{{ world.name if world else campaign.world_template }} · {{ rule_set.name if rule_set else campaign.rule_set }} · {{ campaign.model }}</p>
+              <p class="muted">{% if world %}<img class="inline-icon" src="{{ icon_path(world.icon) }}" alt="">{{ world.name }}{% else %}{{ campaign.world_template }}{% endif %} · {% if rule_set %}<img class="inline-icon" src="{{ icon_path(rule_set.icon) }}" alt="">{{ rule_set.name }}{% else %}{{ campaign.rule_set }}{% endif %} · {{ campaign.model }}</p>
             </div>
             <div class="music-widget" data-music-widget>
               <button type="button" class="music-menu-toggle" data-music-menu-toggle aria-expanded="false" aria-label="Music" title="Music">

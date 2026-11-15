@@ -1008,5 +1008,40 @@
     "category": "terrain",
     "path": "terrain/vineyard.svg",
     "label": "Vineyard"
+  },
+  "eye": {
+    "category": "emblems",
+    "path": "emblems/eye.svg",
+    "label": "Eye"
+  },
+  "fist": {
+    "category": "emblems",
+    "path": "emblems/fist.svg",
+    "label": "Fist"
+  },
+  "handshake": {
+    "category": "emblems",
+    "path": "emblems/handshake.svg",
+    "label": "Handshake"
+  },
+  "lute": {
+    "category": "emblems",
+    "path": "emblems/lute.svg",
+    "label": "Lute"
+  },
+  "skill": {
+    "category": "emblems",
+    "path": "emblems/skill.svg",
+    "label": "Skill"
+  },
+  "speech": {
+    "category": "emblems",
+    "path": "emblems/speech.svg",
+    "label": "Speech"
+  },
+  "horse": {
+    "category": "creatures",
+    "path": "creatures/horse.svg",
+    "label": "Horse"
   }
 }

@@ -21,8 +21,34 @@ from cygnusloom.content.definitions import (
     range_bands,
     required_text,
 )
-from cygnusloom.content.icons import FALLBACK_ITEM, FALLBACK_WEAPON, resolve_icon
+from cygnusloom.content.icons import (
+    FALLBACK_ITEM,
+    FALLBACK_SKILL,
+    FALLBACK_TEMPLATE,
+    FALLBACK_WEAPON,
+    resolve_icon,
+    template_fallback,
+)
 from cygnusloom.rules.dice import FORMULA, is_formula, roll_total
+
+
+def _icon_fields(
+    data: Mapping[str, Any],
+    entries: Mapping[str, tuple[str | None, str | None]],
+    fallback: str | None,
+    label: str,
+) -> tuple[str | None, str | None]:
+    """The resolved icon and the raw `looks_like` a definition carries."""
+    icon = data.get("icon")
+    if icon is not None and (not isinstance(icon, str) or not icon.strip()):
+        raise ContentError(f"{label}: 'icon' must be the name of an icon")
+    looks_like = data.get("looks_like")
+    if looks_like is not None and (not isinstance(looks_like, str) or not looks_like.strip()):
+        raise ContentError(f"{label}: 'looks_like' must name an icon or another definition")
+    return (
+        resolve_icon(icon, looks_like, label=label, entries=entries, fallback=fallback),
+        looks_like,
+    )
 
 
 @dataclass(frozen=True)
@@ -100,6 +126,8 @@ class Skill:
     id: str
     name: str
     description: str
+    # The icon the skill shows in pickers and the compendium.
+    icon: str = FALLBACK_SKILL
 
 
 @dataclass(frozen=True)
@@ -430,6 +458,10 @@ class Template:
     tables: tuple[str, ...]
     # Suggested character names for this template. They feed the name dice, not the schema.
     names: tuple[str, ...]
+    # The icon the template shows when choosing it and in the compendium.
+    icon: str = FALLBACK_TEMPLATE
+    # The definition or icon whose looks this one borrows. Kept for authors and lookups.
+    looks_like: str | None = None
     # Bonuses added to stats, by stat id, when the template is chosen.
     stats: Mapping[str, int] = field(default_factory=dict)
     # Amounts added to counters' starting values, by counter id, when the template is chosen.
@@ -560,17 +592,23 @@ def build_character(
     skill_progression: object = None,
     ordered_feature_tags: object = (),
     icon_entries: Mapping[str, tuple[str | None, str | None]] | None = None,
+    template_icon_entries: Mapping[str, tuple[str | None, str | None]] | None = None,
+    skill_icon_entries: Mapping[str, tuple[str | None, str | None]] | None = None,
     starting_silver: StartingSilver | None = None,
     feature_types: Mapping[str, FeatureTypeRules] | None = None,
     template_features: object = None,
 ) -> CharacterSpec:
     """Build the character spec from a rule set's definitions. `tables` are already loaded.
     `icon_entries` maps a feature id to its raw (icon, looks_like) so one feature may borrow
-    another's looks."""
+    another's looks. The template and skill maps do the same for their kinds."""
     feature_types = dict(feature_types or DEFAULT_FEATURE_TYPES)
     stats = _each(definitions, "stat", lambda d: _stat(d, template))
     _check_groups(stats, template)
-    skills = _each(definitions, "skill", lambda d: _skill(d, template))
+    skills = _each(
+        definitions,
+        "skill",
+        lambda d: _skill(d, template, skill_icon_entries or {}),
+    )
     levels = _skill_progression(skill_progression, skills, template)
     if skills and levels is None:
         raise ContentError(f"{template}: skills need a 'skill_progression' definition")
@@ -617,6 +655,7 @@ def build_character(
             template,
             defaults=default_features,
             feature_types=feature_types,
+            icon_entries=template_icon_entries or {},
         ),
     )
     _check_stat_links(stats, skills, counter_ids, template)
@@ -938,15 +977,21 @@ def _check_stat_links(
                 raise ContentError(f"{label}: 'derived' names no counter ({name!r})")
 
 
-def _skill(definition: Definition, template: str) -> Skill:
+def _skill(
+    definition: Definition,
+    template: str,
+    icon_entries: Mapping[str, tuple[str | None, str | None]],
+) -> Skill:
     label = f"{template}: skill {definition.id}"
     description = definition.data.get("description", "")
     if not isinstance(description, str):
         raise ContentError(f"{label}: 'description' must be text")
+    icon, _ = _icon_fields(definition.data, icon_entries, FALLBACK_SKILL, label)
     return Skill(
         id=definition.id,
         name=required_text(definition.data, "name", label),
         description=description,
+        icon=icon or FALLBACK_SKILL,
     )
 
 
@@ -1663,6 +1708,7 @@ def _template(
     template: str,
     defaults: Mapping[str, tuple[Granted, ...]] | None = None,
     feature_types: Mapping[str, FeatureTypeRules] | None = None,
+    icon_entries: Mapping[str, tuple[str | None, str | None]] | None = None,
 ) -> Template:
     label = f"{template}: template {definition.id}"
     data = definition.data
@@ -1672,6 +1718,7 @@ def _template(
     if not isinstance(granted, list):
         raise ContentError(f"{label}: 'features' must be a list")
     kind = required_text(data, "kind", label)
+    icon, looks_like = _icon_fields(data, icon_entries or {}, template_fallback(kind), label)
     grants = _with_default_grants(
         tuple(_granted(item, features, label) for item in granted),
         (defaults or {}).get(kind, ()),
@@ -1694,6 +1741,8 @@ def _template(
         features=grants,
         tables=tuple(table_ids),
         names=names,
+        icon=icon or template_fallback(kind),
+        looks_like=looks_like,
         stats=_amounts(data.get("stats", {}), "stats", label),
         counters=_amounts(data.get("counters", {}), "counters", label, minimum=0),
         choose=_choose(data.get("choose"), label, feature_types),

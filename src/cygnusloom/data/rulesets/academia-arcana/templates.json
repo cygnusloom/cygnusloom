@@ -2,6 +2,7 @@
   {
     "type": "template",
     "id": "prodigy",
+    "icon": "rune-circle",
     "kind": "playbook",
     "names": "student-names",
     "name": "Prodigy",
@@ -12,6 +13,7 @@
   {
     "type": "template",
     "id": "scholar",
+    "icon": "book",
     "kind": "playbook",
     "names": "student-names",
     "name": "Scholar",
@@ -22,6 +24,7 @@
   {
     "type": "template",
     "id": "alchemist",
+    "icon": "alchemy-table",
     "kind": "playbook",
     "names": "student-names",
     "name": "Alchemist",
@@ -32,6 +35,7 @@
   {
     "type": "template",
     "id": "rebel",
+    "icon": "dagger",
     "kind": "playbook",
     "names": "student-names",
     "name": "Rebel",
@@ -42,6 +46,7 @@
   {
     "type": "template",
     "id": "socialite",
+    "icon": "ring",
     "kind": "playbook",
     "names": "student-names",
     "name": "Socialite",

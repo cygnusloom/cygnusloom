@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Lute</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M36 8 L46 8 L44 26 Q54 32 52 44 Q50 56 34 56 Q18 56 16 44 Q14 32 24 26 Z" fill="#d9b97a"/>
+    <circle cx="34" cy="42" r="6" fill="#2e2620"/>
+    <path d="M38 8 L36 26 M42 8 L40 26 M28 32 L28 56 M24 34 L24 54 M32 30 L32 56 M23 14 L15 8"/>
+  </g>
+</svg>

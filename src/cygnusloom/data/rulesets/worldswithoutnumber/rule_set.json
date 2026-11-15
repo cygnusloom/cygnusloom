@@ -2,6 +2,7 @@
   {
     "type": "rule_set",
     "id": "worldswithoutnumber",
+    "icon": "sword",
     "name": "Worlds Without Number",
     "blurb": "A d20 fantasy game of ruin-delving, strange magic, and hard-won competence on an unwritten frontier.",
     "third_party": true,

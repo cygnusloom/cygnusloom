@@ -665,7 +665,9 @@ def test_create_stores_the_chosen_settings(client_factory: Callable[[], TestClie
     campaign_id = response.headers["location"].rsplit("/", 1)[1]
     page = client.get(f"/campaigns/{campaign_id}").text
     assert "Mushroom court" in page
-    assert "Test Hollow · Roll Test" in page
+    assert "Test Hollow" in page
+    assert "Roll Test" in page
+    assert 'class="inline-icon"' in page
 
 
 def test_chat_round_trip_saves_both_messages(client_factory: Callable[[], TestClient]):

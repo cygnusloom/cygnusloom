@@ -3,9 +3,9 @@
 <div class="compendium" data-compendium>
   <div class="compendium-heading">
     <p class="compendium-source">
-      {% if compendium.world %}<span>{{ compendium.world.name }}</span>{% endif %}
+      {% if compendium.world %}<span><img class="inline-icon" src="{{ icon_path(compendium.world.icon) }}" alt="">{{ compendium.world.name }}</span>{% endif %}
       {% if compendium.world and compendium.rule_set %} · {% endif %}
-      {% if compendium.rule_set %}<span>{{ compendium.rule_set.name }}</span>{% endif %}
+      {% if compendium.rule_set %}<span><img class="inline-icon" src="{{ icon_path(compendium.rule_set.icon) }}" alt="">{{ compendium.rule_set.name }}</span>{% endif %}
     </p>
     {% if third_party %}
     <p class="muted source-credits">Includes third-party material. See <a href="/license">content credits</a>.</p>

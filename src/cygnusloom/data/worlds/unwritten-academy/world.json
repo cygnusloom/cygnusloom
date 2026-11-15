@@ -2,6 +2,7 @@
   {
     "type": "world",
     "id": "unwritten-academy",
+    "icon": "library",
     "name": "Unwritten Academy",
     "rule_set": "academia-arcana",
     "blurb": "A school of magic that does not exist until the GM invents it: its colleges, faculty, grounds, rules, and current trouble.",

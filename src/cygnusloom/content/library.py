@@ -46,7 +46,9 @@ from cygnusloom.content.icons import (
     FALLBACK_ITEM,
     FALLBACK_MONSTER,
     FALLBACK_PLACE,
+    FALLBACK_RULE_SET,
     FALLBACK_WEAPON,
+    FALLBACK_WORLD,
     check_icon,
     resolve_icon,
 )
@@ -159,6 +161,12 @@ def _icon_fields(
         fallback=fallback,
     )
     return resolved, looks_like
+
+
+def _definition_icon(data: Mapping[str, Any], label: str, fallback: str) -> str:
+    """A definition's own icon, or the fallback its kind shows. The icon must be registered."""
+    icon = _optional_text(data, "icon", label)
+    return check_icon(icon, label) if icon is not None else fallback
 
 
 def read_table_genres(value: Any, label: str) -> tuple[str, ...]:
@@ -293,6 +301,8 @@ class WorldTemplate:
     description: str
     locations: tuple[LocationTemplate, ...]
     npcs: tuple[NpcTemplate, ...]
+    # The icon the world shows when choosing a campaign and in the compendium.
+    icon: str = FALLBACK_WORLD
     # The rule set the world is built for, or None when it may be played with any.
     rule_set: str | None = None
     # Rule sets this world is especially suited to. A world built for one rule set is
@@ -2087,6 +2097,8 @@ class RuleSet:
     condition_ends: tuple[str, ...] = ()
     # A short line shown when choosing the rule set on the create campaign page.
     blurb: str | None = None
+    # The icon the rule set shows when choosing a campaign and in the compendium.
+    icon: str = FALLBACK_RULE_SET
     # True when the rule set is imported from a third-party source; the UI links to the credits.
     third_party: bool = False
     # The genres of dice and creative tables this rule set offers, such as ("generic", "fantasy").
@@ -2760,6 +2772,7 @@ def _load_world(directory: Path) -> WorldTemplate:
             "blurb",
             "third_party",
             "start",
+            "icon",
         },
         label,
     )
@@ -2794,6 +2807,7 @@ def _load_world(directory: Path) -> WorldTemplate:
         id=world.id,
         name=required_text(world.data, "name", label),
         description=required_text(world.data, "description", label),
+        icon=_definition_icon(world.data, label, FALLBACK_WORLD),
         rule_set=_optional_text(world.data, "rule_set", label),
         recommended_rule_sets=_optional_text_list(world.data, "recommended_rulesets", label),
         blurb=_optional_text(world.data, "blurb", label),
@@ -3433,7 +3447,7 @@ CHARACTER_DEFINITION_KEYS: Mapping[str, frozenset[str]] = {
             "standard",
         }
     ),
-    "skill": frozenset({"type", "id", "name", "description"}),
+    "skill": frozenset({"type", "id", "name", "description", "icon", "looks_like"}),
     "feature": frozenset(
         {
             "type",
@@ -3517,6 +3531,8 @@ CHARACTER_DEFINITION_KEYS: Mapping[str, frozenset[str]] = {
             "choice_key",
             "grant",
             "learning",
+            "icon",
+            "looks_like",
         }
     ),
 }
@@ -4120,6 +4136,7 @@ def _build_rule_set(
             "capabilities",
             "default_campaign",
             "recommended_worlds",
+            "icon",
         },
         label,
     )
@@ -4166,6 +4183,8 @@ def _build_rule_set(
             raise ContentError(f"{template}: missing table {name!r}")
     table_names = {d.id: _table_label(d, template) for d in definitions if d.type == "table"}
     feature_icons = _icon_entries(definitions, "feature", template)
+    template_icons = _icon_entries(definitions, "template", template)
+    skill_icons = _icon_entries(definitions, "skill", template)
     feature_types = _load_feature_types(definitions, template)
     character = build_character(
         definitions,
@@ -4175,6 +4194,8 @@ def _build_rule_set(
         skill_progression=head.data.get("skill_progression"),
         ordered_feature_tags=head.data.get("ordered_feature_tags", []),
         icon_entries=feature_icons,
+        template_icon_entries=template_icons,
+        skill_icon_entries=skill_icons,
         starting_silver=load_starting_silver(head.data.get("starting_silver"), label),
         feature_types=feature_types,
         template_features=head.data.get("template_features"),
@@ -4340,6 +4361,7 @@ def _build_rule_set(
         name=required_text(head.data, "name", label),
         description=required_text(head.data, "description", label),
         blurb=_optional_text(head.data, "blurb", label),
+        icon=_definition_icon(head.data, label, FALLBACK_RULE_SET),
         third_party=_flag(head.data, "third_party", label),
         table_genres=table_genres,
         content=RuleContent(

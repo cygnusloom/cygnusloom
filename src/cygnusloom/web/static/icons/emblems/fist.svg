@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Fist</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M18 30 V22 Q18 18 22 18 Q26 18 26 22 V28 M26 28 V18 Q26 14 30 14 Q34 14 34 18 V28 M34 28 V20 Q34 16 38 16 Q42 16 42 20 V30 M42 30 V24 Q42 20 46 20 Q50 20 50 24 V36 Q50 46 42 50 H32 Q22 50 18 42 L12 32 Q10 28 14 26 Q17 25 19 28 Z" fill="#c9b08a"/>
+    <path d="M26 34 H40 M26 40 H38"/>
+  </g>
+</svg>
