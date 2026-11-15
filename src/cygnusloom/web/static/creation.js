@@ -95,7 +95,7 @@
       return section;
     };
     const addOption = (option) => {
-      if (!option.value || !group) return;
+      if (!option.value || option.hidden || !group) return;
       const button = document.createElement("button");
       button.type = "button";
       button.className = "choice pick-option";
@@ -180,6 +180,17 @@
 
   const syncPickControls = () => {
     for (const control of pickControls) syncPickControl(control);
+  };
+
+  // The campaign and compendium pages regroup or filter their options when the chosen rule set
+  // changes. Rebuilding keeps each dialog in step with its select.
+  window.cygnusPicks = {
+    rebuild() {
+      for (const control of pickControls) {
+        buildPickDialog(control);
+        syncPickControl(control);
+      }
+    },
   };
 
   const syncReplacementDetails = () => {
@@ -1044,24 +1055,28 @@
 
     const pickOption = target.closest(".pick-option");
     if (pickOption) {
+      // Choosing can rebuild this dialog (the campaign pickers regroup after a rule set change),
+      // which replaces the button, so hold the dialog itself first.
+      const dialog = pickOption.closest("dialog");
       const control = pickControlsByName.get(
-        pickOption.closest(".pick-dialog")?.id.replace(/^pick-dialog-/, "") ?? "",
+        dialog?.id.replace(/^pick-dialog-/, "") ?? "",
       );
       if (control) {
         choosePickValue(control, pickOption.dataset.value);
-        pickOption.closest("dialog")?.close();
+        dialog?.close();
       }
       return;
     }
 
     const clearPick = target.closest("[data-clear-pick]");
     if (clearPick) {
+      const dialog = clearPick.closest("dialog");
       const control = pickControlsByName.get(
-        clearPick.closest(".pick-dialog")?.id.replace(/^pick-dialog-/, "") ?? "",
+        dialog?.id.replace(/^pick-dialog-/, "") ?? "",
       );
       if (control) {
         choosePickValue(control, "");
-        clearPick.closest("dialog")?.close();
+        dialog?.close();
       }
       return;
     }

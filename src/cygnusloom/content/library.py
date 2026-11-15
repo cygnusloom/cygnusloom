@@ -295,6 +295,9 @@ class WorldTemplate:
     npcs: tuple[NpcTemplate, ...]
     # The rule set the world is built for, or None when it may be played with any.
     rule_set: str | None = None
+    # Rule sets this world is especially suited to. A world built for one rule set is
+    # recommended for it without listing it here.
+    recommended_rule_sets: tuple[str, ...] = ()
     # A short line shown when choosing the world on the create campaign page.
     blurb: str | None = None
     # True when the world is imported from a third-party source; the UI links to the credits.
@@ -2059,6 +2062,9 @@ class RuleSet:
     campaign: CampaignSpec
     # The rule set and world the New Campaign form starts on, when core declares them.
     default_campaign: DefaultCampaign | None = None
+    # Worlds this rule set is especially suited to, shown first when choosing a world. A world
+    # built for this rule set is recommended without being listed here.
+    recommended_worlds: tuple[str, ...] = ()
     # The scale of encounter maps, or None when the rule set has no grid: its encounters have no
     # movement limit.
     grid: EncounterGrid | None = None
@@ -2262,6 +2268,39 @@ class ContentLibrary:
             )
         return self._world_content[key]
 
+    def recommended_world_ids(self, rule_set: str) -> frozenset[str]:
+        """The worlds held up first when choosing a world for this rule set. A world is
+        recommended when it is built for the rule set, names the rule set in
+        `recommended_rulesets`, or the rule set names it in `recommended_worlds`."""
+        template = self.rule_sets.get(rule_set)
+        named = set(template.recommended_worlds) if template is not None else set()
+        return frozenset(
+            world.id
+            for world in self.world_templates.values()
+            if world.rule_set == rule_set
+            or rule_set in world.recommended_rule_sets
+            or world.id in named
+        )
+
+    def recommending_rule_sets(self, world: str) -> tuple[str, ...]:
+        """The rule sets that recommend this world, in rule set order."""
+        return tuple(
+            rule_set_id
+            for rule_set_id in self.rule_sets
+            if world in self.recommended_world_ids(rule_set_id)
+        )
+
+    def offered_worlds(self, rule_set: str) -> tuple[WorldTemplate, ...]:
+        """The worlds a rule set offers, recommended first, each group in content order. A
+        world built for another rule set is left out; a world with no rule set fits any."""
+        offered = [
+            world
+            for world in self.world_templates.values()
+            if world.rule_set is None or world.rule_set == rule_set
+        ]
+        recommended = self.recommended_world_ids(rule_set)
+        return tuple(sorted(offered, key=lambda world: world.id not in recommended))
+
     @property
     def available_table_genres(self) -> tuple[str, ...]:
         """The genres used by at least one table in the loaded rule sets, in canonical order."""
@@ -2324,6 +2363,28 @@ class ContentLibrary:
         for world in worlds.values():
             if world.rule_set is not None and world.rule_set not in rule_sets:
                 raise ContentError(f"{world.id}: world names unknown rule set {world.rule_set!r}")
+            for recommended in world.recommended_rule_sets:
+                if recommended not in rule_sets:
+                    raise ContentError(
+                        f"{world.id}: world recommends unknown rule set {recommended!r}"
+                    )
+                if world.rule_set is not None and recommended != world.rule_set:
+                    raise ContentError(
+                        f"{world.id}: world is built for {world.rule_set!r}, so it cannot "
+                        f"recommend {recommended!r}"
+                    )
+        for rule_set in rule_sets.values():
+            for world_id in rule_set.recommended_worlds:
+                world = worlds.get(world_id)
+                if world is None:
+                    raise ContentError(
+                        f"{rule_set.id}: rule set recommends unknown world {world_id!r}"
+                    )
+                if world.rule_set is not None and world.rule_set != rule_set.id:
+                    raise ContentError(
+                        f"{rule_set.id}: rule set recommends {world_id!r}, which is built for "
+                        f"{world.rule_set!r}"
+                    )
         library = cls(world_templates=worlds, rule_sets=rule_sets, core=core)
         if validate_worlds:
             for world in worlds.values():
@@ -2689,7 +2750,17 @@ def _load_world(directory: Path) -> WorldTemplate:
     label = f"{template}: world"
     check_keys(
         world.data,
-        {"type", "id", "name", "description", "rule_set", "blurb", "third_party", "start"},
+        {
+            "type",
+            "id",
+            "name",
+            "description",
+            "rule_set",
+            "recommended_rulesets",
+            "blurb",
+            "third_party",
+            "start",
+        },
         label,
     )
     location_icons = _icon_entries(definitions, "location", template)
@@ -2724,6 +2795,7 @@ def _load_world(directory: Path) -> WorldTemplate:
         name=required_text(world.data, "name", label),
         description=required_text(world.data, "description", label),
         rule_set=_optional_text(world.data, "rule_set", label),
+        recommended_rule_sets=_optional_text_list(world.data, "recommended_rulesets", label),
         blurb=_optional_text(world.data, "blurb", label),
         third_party=_flag(world.data, "third_party", label),
         locations=locations,
@@ -2992,6 +3064,17 @@ def _text_list(value: Any, label: str) -> list[str]:
     if not isinstance(value, list) or not all(isinstance(v, str) and v.strip() for v in value):
         raise ContentError(f"{label} must be a list of non-empty text")
     return value
+
+
+def _optional_text_list(data: Mapping[str, Any], key: str, label: str) -> tuple[str, ...]:
+    """An optional list of names under `key`, each unique, such as a world's recommended rule
+    sets. A missing key is an empty list, so every older content tree loads unchanged."""
+    if key not in data:
+        return ()
+    values = _text_list(data[key], f"{label}: {key!r}")
+    if len(set(values)) != len(values):
+        raise ContentError(f"{label}: {key!r} repeats an entry")
+    return tuple(values)
 
 
 def _patch_creative_table(
@@ -4033,6 +4116,7 @@ def _build_rule_set(
             "table_genres",
             "capabilities",
             "default_campaign",
+            "recommended_worlds",
         },
         label,
     )
@@ -4279,6 +4363,7 @@ def _build_rule_set(
         plus=_plus_mode(head.data, label),
         campaign=campaign,
         default_campaign=_load_default_campaign(head.data, label),
+        recommended_worlds=_optional_text_list(head.data, "recommended_worlds", label),
         grid=grid,
         combat=combat,
         conditions=conditions,

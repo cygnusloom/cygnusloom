@@ -268,7 +268,7 @@
 
 {# A skill or feature pick: a readable summary, a dice button, and a searchable dialog of rich
    options. The native select stays in the form for submission and for the constraint script. #}
-{% macro pick_control(name, label, hint=None, select_attributes="", empty="Roll one", roll=true, clear_label="Leave to roll") -%}
+{% macro pick_control(name, label, hint=None, select_attributes="", empty="Roll one", roll=true, clear_label="Leave to roll", clear=true) -%}
   <div class="pick-control" data-pick-control="{{ name }}" data-pick-empty="{{ empty }}">
     <div class="pick-heading">
       <span class="pick-label">{{ label }}</span>
@@ -289,10 +289,16 @@
     <input type="search" class="choice-search" data-pick-search placeholder="Search {{ label|lower }}" aria-label="Search {{ label|lower }}">
     <div class="pick-options" data-pick-options></div>
     <div class="dialog-actions">
-      <button type="button" class="secondary" data-clear-pick>{{ clear_label }}</button>
+      {% if clear %}<button type="button" class="secondary" data-clear-pick>{{ clear_label }}</button>{% endif %}
       <button type="button" class="secondary" data-close-choice>Done</button>
     </div>
   </dialog>
+{%- endmacro %}
+
+{# One world in the New Campaign and compendium pickers. The name and description are read by
+   the picker dialog, and `recommended-for` lets the page regroup a world under another rule set. #}
+{% macro world_option(world, labels, recommendations, selected) -%}
+  <option value="{{ world.id }}"{% if world.rule_set %} data-rule-set="{{ world.rule_set }}"{% endif %}{% if labels.get(world.id) %} data-label="{{ labels[world.id] }}"{% endif %} data-title="{{ world.name }}" data-detail="{{ world.blurb or world.description }}" data-third-party="{{ '1' if world.third_party else '0' }}" data-recommended-for='{{ recommendations.get(world.id, [])|tojson }}'{% if world.id == selected %} selected{% endif %}>{{ world.name }}</option>
 {%- endmacro %}
 
 {% macro dice_button(name, label, attribute="data-dice-for") -%}

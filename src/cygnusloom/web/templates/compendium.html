@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "macros.html" import pick_control, world_option %}
 {% block title %}Compendium{% endblock %}
 {% block content %}
   <section class="card compendium-picker">
@@ -7,26 +8,29 @@
       <p class="muted">Sourcebook material for a rule set and world: creatures, abilities, equipment, character options, tables, and rules.</p>
     </div>
     <form method="get" action="/compendium" class="compendium-picker-form">
-      <label>
-        Rule set
-        <select name="rule_set">
+      <div class="compendium-picker-field">
+        {% call pick_control("rule_set", "Rule set", "Choose the game system.", "", empty="Choose a rule set", roll=false, clear=false) %}
           {% for rule_set in rule_sets %}
-            <option value="{{ rule_set.id }}" data-blurb="{{ rule_set.blurb or rule_set.description }}"{% if rule_set.id == selected_rule_set %} selected{% endif %}>{{ rule_set.name }}</option>
+            <option value="{{ rule_set.id }}" data-title="{{ rule_set.name }}" data-detail="{{ rule_set.blurb or rule_set.description }}" data-third-party="{{ '1' if rule_set.third_party else '0' }}"{% if rule_set.id == selected_rule_set %} selected{% endif %}>{{ rule_set.name }}</option>
           {% endfor %}
-        </select>
-      </label>
-      <label>
-        World
-        <select name="world_template">
-          {% for world in worlds %}
-            <option value="{{ world.id }}"{% if world.rule_set %} data-rule-set="{{ world.rule_set }}"{% endif %} data-blurb="{{ world.blurb or world.description }}"{% if world.id == selected_world %} selected{% endif %}>{{ world.name }}</option>
-          {% endfor %}
-        </select>
-      </label>
+        {% endcall %}
+      </div>
+      <div class="compendium-picker-field">
+        {% call pick_control("world_template", "World", "Worlds recommended for the chosen rule set come first; the rest also work with it.", "", empty="Choose a world", roll=false, clear=false) %}
+          <optgroup label="Recommended for {{ selected_rule_set_name }}" data-world-group="recommended">
+            {% for world in recommended_worlds %}
+              {{ world_option(world, {}, world_recommendations, selected_world) }}
+            {% endfor %}
+          </optgroup>
+          <optgroup label="Other worlds" data-world-group="other">
+            {% for world in other_worlds %}
+              {{ world_option(world, {}, world_recommendations, selected_world) }}
+            {% endfor %}
+          </optgroup>
+        {% endcall %}
+      </div>
       <button type="submit">Show</button>
     </form>
-    <p class="muted compendium-picker-blurb" data-blurb-for="rule_set">{{ selected_rule_set_blurb }}</p>
-    <p class="muted compendium-picker-blurb" data-blurb-for="world_template">{{ selected_world_blurb }}</p>
   </section>
   {% if compendium and not compendium.empty %}
   <section class="compendium standalone">
@@ -38,6 +42,7 @@
 {% endblock %}
 {% block scripts %}
   {{ super() }}
+  <script src="/static/creation.js"></script>
   <script src="/static/new_campaign.js"></script>
   <script src="/static/workspace.js"></script>
 {% endblock %}

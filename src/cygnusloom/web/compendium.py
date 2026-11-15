@@ -20,31 +20,29 @@ def compendium_page(request: Request, rule_set: str = "", world_template: str = 
     library = request.app.state.content
     if rule_set not in library.rule_sets:
         rule_set = next(iter(library.rule_sets), "")
-    worlds = [
-        world
-        for world in library.world_templates.values()
-        if world.rule_set is None or world.rule_set == rule_set
-    ]
+    worlds = library.offered_worlds(rule_set)
     if world_template not in {world.id for world in worlds}:
         world_template = worlds[0].id if worlds else ""
+    recommended_ids = library.recommended_world_ids(rule_set)
     compendium = None
     if rule_set and world_template:
         compendium = compendium_view(library, rule_set, world_template)
     chosen_rule_set = library.rule_sets.get(rule_set)
-    chosen_world = library.world_templates.get(world_template)
+    # The world picker shows the worlds recommended for the chosen rule set first, then the rest.
+    # Its script regroups the options when the rule set changes, so every world is rendered.
+    world_templates = list(library.world_templates.values())
     return render(
         request,
         "compendium.html",
         rule_sets=library.rule_sets.values(),
-        worlds=library.world_templates.values(),
+        recommended_worlds=[world for world in world_templates if world.id in recommended_ids],
+        other_worlds=[world for world in world_templates if world.id not in recommended_ids],
+        world_recommendations={
+            world.id: library.recommending_rule_sets(world.id) for world in world_templates
+        },
         selected_rule_set=rule_set,
+        selected_rule_set_name=(chosen_rule_set.name if chosen_rule_set else ""),
         selected_world=world_template,
-        selected_rule_set_blurb=(
-            (chosen_rule_set.blurb or chosen_rule_set.description) if chosen_rule_set else ""
-        ),
-        selected_world_blurb=(
-            (chosen_world.blurb or chosen_world.description) if chosen_world else ""
-        ),
         compendium=compendium,
         standalone=True,
         error="",
