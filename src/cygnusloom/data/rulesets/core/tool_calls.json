@@ -394,7 +394,7 @@
     "type": "tool_call",
     "id": "search_notes",
     "lookup": true,
-    "description": "Search your GM notes on events, updates, and situations, to stay consistent. Every word in the query must appear in the note's text or in its subject's name. Each result includes the note's id. Use it before continuing a thread or answering questions about what has happened before.",
+    "description": "Search your GM notes on events, updates, and situations, to stay consistent. Every word in the query must appear in the note's text or in its subject's name. Each result includes the note's id. Use it only when the notes and turn log already shown do not answer the question, and do not search the same word again later in the turn.",
     "parameters": {
       "properties": {
         "query": {
@@ -575,7 +575,7 @@
     "type": "tool_call",
     "id": "search_storylines",
     "lookup": true,
-    "description": "Find storylines by words in their name, summary, plot, characters, locations, objects, notes, or resolution. Deactivated and resolved storylines are included even though the turn context leaves them out. Use it to recall a dormant or finished thread, or to check whether a storyline already exists before creating one. Each result includes the id, the active, resolved, and focused flags, and every field.",
+    "description": "Find storylines by words in their name, summary, plot, characters, locations, objects, notes, or resolution. Deactivated and resolved storylines are included even though the turn context leaves them out. Use it to recall a dormant or finished thread, or to check whether a storyline already exists before creating one when the world state does not already list it. Each result includes the id, the active, resolved, and focused flags, and every field.",
     "parameters": {
       "properties": {
         "query": {
@@ -592,7 +592,7 @@
     "type": "tool_call",
     "id": "append_journal",
     "journal_step": true,
-    "description": "Add text to the end of the journal the player reads, a text file of what has happened in the campaign in the story's own voice. Start a new campaign day's passage with it; to add to a day that already has one, merge the text into that passage with replace_in_journal instead. Do not reveal what the player character has not learned.",
+    "description": "Add text to the end of the journal the player reads, a text file of what has happened in the campaign in the story's own voice. Start a new campaign day's passage with it; to add to a day that already has one, merge the text into that passage with replace_in_journal instead. A day's passage must stay within 200 words; the prompt shows the current count for each day. Do not reveal what the player character has not learned.",
     "parameters": {
       "properties": {
         "text": {
@@ -609,7 +609,7 @@
     "type": "tool_call",
     "id": "replace_in_journal",
     "journal_step": true,
-    "description": "Edit the journal by replacing one passage with another, like an exact find and replace. old_text must be copied exactly from the journal and match in one place only. An empty new_text deletes the passage. Use it to correct facts and to condense the journal when it runs long.",
+    "description": "Edit the journal by replacing one passage with another, like an exact find and replace. old_text must be copied exactly from the journal and match in one place only. An empty new_text deletes the passage. Use it to correct facts and to condense the journal when it runs long. A day's passage must stay within 200 words; the prompt shows the current count for each day.",
     "parameters": {
       "properties": {
         "old_text": {
@@ -690,7 +690,7 @@
     "type": "tool_call",
     "id": "all_at_location",
     "lookup": true,
-    "description": "Look up a location: its description, the NPCs there (with personality, accent, and quirks), whether the player character is there, and the notes about the place or those NPCs. Leave out the location to look at the player character's current location. Use it whenever you need to know what is in a place before you narrate it or act in it.",
+    "description": "Look up a location: its description, the NPCs there (with personality, accent, and quirks), whether the player character is there, and the notes about the place or those NPCs. Leave out the location to look at the player character's current location. Use it only when the world state does not already give the place and its people; do not call it again for the same place in one turn.",
     "parameters": {
       "properties": {
         "location": {
@@ -704,7 +704,7 @@
     "type": "tool_call",
     "id": "search_location",
     "lookup": true,
-    "description": "Find locations by words in their name or description. Every word in the query must appear. Use it to find a place you have described before or to check whether a place already exists before you create one.",
+    "description": "Find locations by words in their name or description. Every word in the query must appear. Use it to find a place you have described before, or to check whether a place already exists before you create one when it is not already in the world state.",
     "parameters": {
       "properties": {
         "query": {
@@ -721,7 +721,7 @@
     "type": "tool_call",
     "id": "search_npc",
     "lookup": true,
-    "description": "Find NPCs anywhere in the world by words in their name, location, description, personality, accent, or quirks. Every word in the query must appear. Each result gives the NPC's location. Use it to check whether an NPC already exists before you create one, or to find someone the story mentions.",
+    "description": "Find NPCs anywhere in the world by words in their name, location, description, personality, accent, or quirks. Every word in the query must appear. Each result gives the NPC's location. Use it to check whether an NPC already exists before you create one when they are not already in the world state, or to find someone the story mentions.",
     "parameters": {
       "properties": {
         "query": {
@@ -738,7 +738,7 @@
     "type": "tool_call",
     "id": "get_statblock",
     "lookup": true,
-    "description": "Get a character's statblock: stats, template, features, and fields. Works for the player character and for NPCs. Statblocks are not in your context until you fetch them, so fetch one before a roll, before a change to a character's abilities or gear, or whenever their capabilities matter to the outcome.",
+    "description": "Get a character's statblock: stats, template, features, and fields. Works for the player character and for NPCs. Fetch one before a roll, before a change to a character's abilities or gear, or whenever their capabilities matter to the outcome, unless the world state already gives the facts you need.",
     "parameters": {
       "properties": {
         "name": {
@@ -790,7 +790,7 @@
     "python_module": "core",
     "function": "list_lookups",
     "lookup": true,
-    "description": "List everything you can look up, each with a short brief: the lookup tools, the rules, and the locations and NPCs in the world. Use it when you are unsure what exists. Then look up the full entry with the matching tool."
+    "description": "List everything you can look up, each with a short brief: the lookup tools, the rules, and the locations and NPCs in the world. Use it at most once when you are genuinely unsure which entity a lookup needs; do not browse it for facts the world state already gives. Then look up the full entry with the matching tool."
   },
   {
     "type": "tool_call",
@@ -1949,7 +1949,7 @@
     "type": "tool_call",
     "id": "map_options",
     "lookup": true,
-    "description": "List the ids a map can use: local terrains with their colours, patterns, and categories; objects with their icons, categories, and blocking flags; layout templates with their sizes and looks; palettes, ambients, and patterns. The world section lists the world terrain kinds with their colours and textures, the world map palettes, ambient looks, and place icons. Use it before create_local_map, set_map_cells, update_local_map, create_region, update_region, or update_world_map so every id is real."
+    "description": "List the ids a map can use: local terrains with their colours, patterns, and categories; objects with their icons, categories, and blocking flags; layout templates with their sizes and looks; palettes, ambients, and patterns. The world section lists the world terrain kinds with their colours and textures, the world map palettes, ambient looks, and place icons. Use it only when you need an id that the world state does not already give, and do not call it just to get the ids already listed there."
   },
   {
     "type": "tool_call",

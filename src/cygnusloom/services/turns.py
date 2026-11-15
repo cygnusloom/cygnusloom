@@ -113,6 +113,10 @@ from cygnusloom.services.tools import (
     wire_tool_specs,
 )
 from cygnusloom.services.views import present_rules_text, world_state_text
+from cygnusloom.services.world_support import (
+    MAX_JOURNAL_DAY_WORDS,
+    journal_day_word_counts,
+)
 
 if TYPE_CHECKING:
     from cygnusloom.services.campaigns import ChatMessage
@@ -160,6 +164,10 @@ SPEECH_CONTEXT_MESSAGES = 6
 # history.
 STATE_FULL_ROUNDS = 2
 STATE_TOOL_RESULT_CHARS = 400
+# Lookups are facts the state step may need again. Compacting them to a few hundred characters
+# makes the model look the same thing up again in a later round, which costs far more than the
+# extra tokens here. Action results keep the smaller budget above.
+LOOKUP_RESULT_CHARS = 2000
 STATE_HISTORY_MESSAGES = 4
 STATE_LOG_LINES = 30
 # Only the newest tool round's thinking is useful. Earlier reasoning is a draft of work
@@ -882,7 +890,12 @@ def _narration_messages(
     if tool_exchange == "none":
         conversation = _without_tool_results(conversation)
     elif tool_exchange == "compact":
-        conversation, _ = _compact_old_tool_results(conversation, REVIEW_FULL_ROUNDS)
+        conversation, _ = _compact_old_tool_results(
+            conversation,
+            REVIEW_FULL_ROUNDS,
+            preserve_names=_lookup_tool_names(run),
+            preserve_chars=LOOKUP_RESULT_CHARS,
+        )
     elif tool_exchange != "full":
         raise ValueError(f"unknown tool exchange mode {tool_exchange!r}")
     conversation = _without_old_reasoning(conversation, NARRATION_REASONING_ROUNDS)
@@ -939,6 +952,11 @@ def _tool_name_map(messages: Sequence[dict[str, Any]]) -> dict[str, str]:
             if isinstance(call, dict):
                 names[call.get("id", "")] = call.get("function", {}).get("name", "tool")
     return names
+
+
+def _lookup_tool_names(run: _Run) -> frozenset[str]:
+    """The tools whose results are facts worth keeping for the whole turn."""
+    return frozenset(name for name, tool in run.tool_calls.items() if tool.lookup)
 
 
 def _short_tool_text(name: str, text: str) -> str:
@@ -998,10 +1016,25 @@ def _compact_tool_content(name: str, content: str) -> str:
     return _short_tool_text(name, text)
 
 
+def _preserve_tool_content(name: str, content: str, limit: int) -> str:
+    """A lookup result kept for the turn, with a hard limit for an unusually large answer."""
+    text = content or ""
+    if len(text) <= limit:
+        return text
+    return f"{name}: {text[:limit]}... [truncated]"
+
+
 def _compact_old_tool_results(
-    messages: Sequence[dict[str, Any]], keep_rounds: int
+    messages: Sequence[dict[str, Any]],
+    keep_rounds: int,
+    *,
+    preserve_names: frozenset[str] = frozenset(),
+    preserve_chars: int = 0,
 ) -> tuple[list[dict[str, Any]], bool]:
-    """Keep the latest `keep_rounds` tool-result rounds full and summarize older results."""
+    """Keep the latest `keep_rounds` tool-result rounds full and summarize older results.
+
+    A result from a lookup tool is a fact the state step may need again, so it stays readable
+    for the whole turn (up to `preserve_chars`) instead of becoming a short action summary."""
     names = _tool_name_map(messages)
     starts = [
         index
@@ -1017,7 +1050,10 @@ def _compact_old_tool_results(
         if index < first_full and message.get("role") == "tool":
             name = names.get(message.get("tool_call_id", ""), "tool")
             content = str(message.get("content") or "")
-            compact = _compact_tool_content(name, content)
+            if name in preserve_names and preserve_chars > 0:
+                compact = _preserve_tool_content(name, content, preserve_chars)
+            else:
+                compact = _compact_tool_content(name, content)
             if compact != content:
                 result.append({**message, "content": compact})
                 changed = True
@@ -1090,7 +1126,12 @@ def _state_messages(run: _Run, turn: Turn, state_message: dict[str, Any]) -> lis
     """The state step's messages, with only the last few history messages, old tool results
     compacted, and a short record log when a result was compacted."""
     messages = _trim_conversation([*turn.messages], STATE_HISTORY_MESSAGES)
-    messages, compacted = _compact_old_tool_results(messages, STATE_FULL_ROUNDS)
+    messages, compacted = _compact_old_tool_results(
+        messages,
+        STATE_FULL_ROUNDS,
+        preserve_names=_lookup_tool_names(run),
+        preserve_chars=LOOKUP_RESULT_CHARS,
+    )
     messages = _without_old_reasoning(messages, STATE_REASONING_ROUNDS)
     if compacted:
         log = _turn_log(run.engine, run.campaign_id, turn.opener)
@@ -1201,13 +1242,23 @@ def _speech_messages(
             parts.append(
                 f"The line already queued for {speaker}, which this intent replaces: {amended}"
             )
-    parts.append(f"Intent: {intent}")
+    intent_part = f"Intent: {intent}"
+    parts.append(intent_part)
     system = "\n\n".join(parts)
+    brief_parts = [profile]
+    if replace and (queued or previous):
+        brief_parts.append(
+            "This intent amends an earlier draft for this speaker. Only the queued dialogue "
+            "is the speaker's words; the earlier draft is not."
+        )
+    brief_parts.append(intent_part)
+    brief = "\n\n".join(brief_parts)
     conversation = [
         m for m in turn.messages[1:] if m["role"] in ("user", "assistant") and "tool_calls" not in m
     ][-SPEECH_CONTEXT_MESSAGES:]
     label = f"Speech step (round {turn.rounds})"
-    return system, label, [{"role": "system", "content": system}, *conversation]
+    brief_label = f"Speech brief (round {turn.rounds}) for {speaker}"
+    return system, brief, brief_label, label, [{"role": "system", "content": system}, *conversation]
 
 
 async def _speak(
@@ -1236,7 +1287,7 @@ async def _speak(
             f"{speaker} already has dialogue for this reply; put everything they say in one intent, "
             "or pass replace: true to rewrite that line"
         )
-    system, label, speech = _speech_messages(
+    system, brief, brief_label, label, speech = _speech_messages(
         state, turn, speaker, profile, intent, replace, sentence_cap
     )
     reply = ""
@@ -1256,6 +1307,7 @@ async def _speak(
             context=_dicts(
                 [
                     ContextPart("system", label, system),
+                    ContextPart("system", brief_label, brief),
                     ContextPart("assistant", f"{label} reply", reply),
                 ]
             ),
@@ -1281,6 +1333,8 @@ class _SpeechJob:
     speaker: str
     replace: bool
     system: str
+    brief: str
+    brief_label: str
     label: str
     request: list[dict[str, Any]]
     fallback: tuple[str, bool] | None = None
@@ -1390,7 +1444,7 @@ class _SpeechJobs:
     ) -> None:
         speaker = str(entry.get("speaker", ""))
         replace = bool(entry.get("replace", False))
-        system, label, request = _speech_messages(
+        system, brief, brief_label, label, request = _speech_messages(
             state,
             turn,
             speaker,
@@ -1404,6 +1458,8 @@ class _SpeechJobs:
             speaker=speaker,
             replace=replace,
             system=system,
+            brief=brief,
+            brief_label=brief_label,
             label=label,
             request=request,
             fallback=fallback,
@@ -1471,6 +1527,7 @@ class _SpeechJobs:
             context=_dicts(
                 [
                     ContextPart("system", job.label, job.system),
+                    ContextPart("system", job.brief_label, job.brief),
                     ContextPart("assistant", f"{job.label} reply", reply),
                 ]
             ),
@@ -1679,11 +1736,12 @@ def _tool_failed(result: ToolRun) -> bool:
     return isinstance(payload, Mapping) and "error" in payload
 
 
-# Context the narration never sees: the speech step's profile and intent. The review is shown it
-# so it can judge whether the narration invented dialogue. The state step's prose is a draft
-# written before its tools ran, not part of the record, so neither the narration nor the review
-# reads it.
-_REVIEW_ONLY_SOURCES = ("Speech step (round",)
+# Context the narration never sees: the speech step's brief (profile and intent). The review is
+# shown it so it can judge whether the narration invented dialogue. The full speech prompt stays
+# in the turn for debugging, but it can contain a superseded draft that is not the record. The
+# state step's prose is a draft written before its tools ran, not part of the record, so neither
+# the narration nor the review reads it.
+_REVIEW_ONLY_SOURCES = ("Speech brief (round",)
 
 
 def _review_fault_notes(turn: Turn) -> list[ContextPart]:
@@ -1714,14 +1772,17 @@ def _reviewed_undo_request(request: ToolRequest, review_text: str) -> ToolReques
 
 
 def _review_only_context(turn: Turn) -> list[ContextPart]:
-    """The parts of the turn's context that the narration is not given. The speech step's profile
-    and intent are included. Its reply repeats dialogue the review already has from the queued
-    lines, so only the system part is added."""
-    return [
-        part
-        for part in turn.context
-        if part.source.startswith(_REVIEW_ONLY_SOURCES) and part.role == "system"
-    ]
+    """The parts of the turn's context that the narration is not given. The speech step's brief is
+    included. Its reply repeats dialogue the review already has from the queued lines, so only
+    the system part is added. When a speaker's line was replaced, only the newest brief is kept;
+    an older brief describes a draft that is no longer queued."""
+    newest: dict[str, ContextPart] = {}
+    for part in turn.context:
+        if not part.source.startswith(_REVIEW_ONLY_SOURCES) or part.role != "system":
+            continue
+        key = part.source.split(" for ", 1)[1].casefold() if " for " in part.source else part.source
+        newest[key] = part
+    return list(newest.values())
 
 
 def _review_view(
@@ -1964,18 +2025,38 @@ async def _journal_step(run: _Run, turn: Turn) -> None:
         history_limit=0,
         tool_exchange="none",
     )
-    view.append({"role": "system", "content": journal_instruction(state.clock.day, state.journal)})
+    counts = journal_day_word_counts(state.journal)
+    budget = "; ".join(
+        f"Day {day}: {words}/{MAX_JOURNAL_DAY_WORDS}" for day, words in sorted(counts.items())
+    )
+    view.append(
+        {
+            "role": "system",
+            "content": journal_instruction(state.clock.day, state.journal)
+            + (f"\n\nWords already used by day: {budget}." if budget else ""),
+        }
+    )
     # One round: the step is written beside the narration, so every edit belongs in the same
     # request. A model that asks for another round would only delay the player's reply.
     step = await run.provider_low.chat(run.model_name, view, tools)
-    failed = False
-    for request in step.tool_requests:
-        result = await run_tool(run.tool_calls, request, ctx=run.ctx)
-        if isinstance(result, Ask):
-            raise LLMError("the journal step asked the player a question")
-        if _tool_failed(result):
-            failed = True
-            logger.warning("journal tool %s failed: %s", request.name, result.output)
+    failed, succeeded, exchange = await _run_journal_calls(run, step)
+    if failed and not succeeded:
+        # The journal is unchanged, so a correction cannot duplicate an edit that worked. Give
+        # the model one chance to see the exact tool error and fix it in the same reply.
+        view.extend(exchange)
+        errors = "\n".join(failed)
+        view.append(
+            {
+                "role": "system",
+                "content": "The journal was not changed because these calls failed:\n"
+                + errors
+                + "\nFix them once now. Use only the offered journal tools, quote the journal "
+                "exactly, and keep one day's passage under the word limit.",
+            }
+        )
+        step = await run.provider_low.chat(run.model_name, view, tools)
+        retry_failed, _, _ = await _run_journal_calls(run, step)
+        failed = retry_failed
     if failed:
         # Leave the log for the next turn so the journal can try the day again.
         return
@@ -1983,6 +2064,26 @@ async def _journal_step(run: _Run, turn: Turn) -> None:
     # must leave `journal_through` where it was, so the next turn writes the same days again
     # instead of losing them.
     _record(run.engine, run.campaign_id, JournalStarted())
+
+
+async def _run_journal_calls(
+    run: _Run, step: ChatReply
+) -> tuple[list[str], bool, list[dict[str, Any]]]:
+    """Run a journal step's requests and build the exchange for a correction round."""
+    failed: list[str] = []
+    succeeded = False
+    exchange: list[dict[str, Any]] = [_tool_call_message(step)] if step.tool_requests else []
+    for request in step.tool_requests:
+        result = await run_tool(run.tool_calls, request, ctx=run.ctx)
+        if isinstance(result, Ask):
+            raise LLMError("the journal step asked the player a question")
+        if _tool_failed(result):
+            failed.append(f"{request.name}: {result.output}")
+            logger.warning("journal tool %s failed: %s", request.name, result.output)
+        else:
+            succeeded = True
+        exchange.append({"role": "tool", "tool_call_id": request.id, "content": result.output})
+    return failed, succeeded, exchange
 
 
 _REVIEW_REPAIR_EXCLUDED = frozenset({"speak", "ooc", "set_music"})
@@ -2023,8 +2124,9 @@ async def _review_narration(
         view.append(
             {
                 "role": "system",
-                "content": "The speech step's profiles and intents for the queued dialogue:\n\n"
-                + lines,
+                "content": "The speech step's briefs: what each queued line was asked to "
+                "convey, not the wording. The queued dialogue above is the only wording the "
+                "narration may give an NPC.\n\n" + lines,
             }
         )
     view.append({"role": "system", "content": TURN_REVIEW_INSTRUCTION})

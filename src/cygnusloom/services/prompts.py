@@ -312,7 +312,11 @@ TURN_REVIEW_INSTRUCTION = (
     "takes or gives beyond the player's message; dialogue you invent for an NPC that the "
     "queued lines do not give; or a recorded event the player can perceive that the narration "
     "leaves out, such as an arrival, departure, roll or save outcome, attack or harm, condition, "
-    "item change, time change, encounter event, or queued line. Brevity is not a fault, but "
+    "item change, time change, encounter event, or queued line. Each speak call's intent, and "
+    "the speech brief after the narration, say what a line was asked to convey; they are not the "
+    "line. A quote that copies a queued line exactly is not invented even when it is longer or "
+    "more specific than the brief. Words from a brief, or from a line a brief says it replaces, "
+    "are not queued. Brevity is not a fault, but "
     "coverage is: when the narration omits such an event, call undo_narration with the missing "
     "event as the fault. An attack the player asked for beyond the turn's attack budget and the "
     "narration does not say it did not happen is a fault: the player must not think the refused "
@@ -352,7 +356,8 @@ NARRATION_REVISION = (
     "else. Cover every event the player can perceive in the turn log, in order, in short paragraphs "
     "separated by blank lines, with each line of dialogue in its own paragraph. Do not call tools: "
     "this step writes prose only. Use the queued dialogue exactly as given, and add no words for "
-    "an NPC that the queued lines do not contain."
+    "an NPC that the queued lines do not contain. A speech intent, or a line a brief says it "
+    "replaces, is not the wording."
 )
 OPENING_PROMPT = (
     "Opening instruction. This is setup, not play: do not narrate a scene, speak as a character, "
@@ -398,8 +403,8 @@ JOURNAL_RULES = (
     "places, discoveries, decisions, promises, debts, deaths, major gains and losses, and open "
     "threads. Leave out routine movement, scenery, rest, and repeated actions. If the log changes "
     "or contradicts an earlier passage, correct that passage the "
-    "same way. Delete passages that no longer belong. Use view_journal for line numbers and "
-    "search_journal to find text. If this turn is the campaign's opening, record the introduction's "
+    "same way. Delete passages that no longer belong. The journal text above is complete: quote "
+    "the passage you replace directly from it. If this turn is the campaign's opening, record the introduction's "
     "hooks, starting situation and player characters as the first passage. If the log holds nothing "
     "worth keeping, call no tools and write no text."
 )

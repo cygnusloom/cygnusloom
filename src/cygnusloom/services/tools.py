@@ -1000,7 +1000,10 @@ async def _call(tool: ToolCall, arguments: dict[str, Any], ctx: ToolContext | No
     except Exception:
         logger.exception("tool %s failed", tool.name)
         return ToolRun(_error("the tool failed"), None)
-    return ToolRun(json.dumps(result), _activity(tool, arguments, result))
+    return ToolRun(
+        json.dumps(result, separators=(",", ":"), ensure_ascii=False),
+        _activity(tool, arguments, result),
+    )
 
 
 def _activity(tool: ToolCall, arguments: Mapping[str, Any], result: Any) -> str | None:

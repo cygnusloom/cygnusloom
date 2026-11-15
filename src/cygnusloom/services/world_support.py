@@ -2415,6 +2415,14 @@ def _journal_words(text: str) -> int:
     return len(text.split())
 
 
+def journal_day_word_counts(journal: str) -> dict[int, int]:
+    """How many words each day's journal passage holds, for showing the writer its budget."""
+    return {
+        day: sum(_journal_words(entry) for entry in entries)
+        for day, entries in _journal_passages(journal).items()
+    }
+
+
 def _journal_passages(journal: str) -> dict[int, list[str]]:
     """The journal's passages by campaign day. Each runs from its 'Day N:' heading to the next
     heading; text before the first heading belongs to no day."""

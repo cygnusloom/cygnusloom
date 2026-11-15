@@ -359,10 +359,13 @@ def test_the_review_sees_the_record_and_speech_but_not_the_state_step_draft(
     assert "dialogue queued for the narration" in blob
     # The state step's prose is a draft, not the record, so the review does not read it.
     assert "I weigh the warning before narrating." not in blob
-    # The review must see the speech step's profile and intent to judge the dialogue.
-    assert "Speech step (round 1)" in blob
+    # The review must see the speech step's profile and intent to judge the dialogue, but not
+    # the speech step's own prompt or a superseded line that the prompt may carry.
+    assert "Speech brief (round 1)" in blob
     assert "Who they are: The village elder" in blob
     assert "Intent: Warn them about the bridge." in blob
+    assert "Write only the words the speaker says aloud" not in blob
+    assert "which this intent replaces" not in blob
     # The narration instruction tells the narrator not to call tools; the review must not see it.
     assert "Do not call tools." not in blob
 

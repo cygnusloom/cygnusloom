@@ -1145,7 +1145,7 @@ def test_the_speech_prompt_keeps_only_the_recent_exchange():
             ],
         ],
     )
-    _, _, messages = _speech_messages(
+    _, _, _, _, messages = _speech_messages(
         CampaignState(), turn, "Mara", "Speaker: Mara", "Warn Ada.", False, 40
     )
     assert len(messages) == 1 + SPEECH_CONTEXT_MESSAGES
