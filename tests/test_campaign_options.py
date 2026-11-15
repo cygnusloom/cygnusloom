@@ -97,7 +97,9 @@ def _post_settings(client: TestClient, campaign_id: int, **data: str):
     )
 
 
-def _settings_form(client: TestClient, campaign_id: int, **extra: str) -> dict[str, str]:
+def _settings_form(
+    client: TestClient, campaign_id: int, **extra: str
+) -> dict[str, str]:
     row = _row(client.app, campaign_id)
     return {
         "model": row.model,
@@ -111,7 +113,9 @@ def _settings_form(client: TestClient, campaign_id: int, **extra: str) -> dict[s
 def _options_events(app: FastAPI, campaign_id: int) -> list[object]:
     with Session(app.state.engine) as db:
         return [
-            decode(row) for row in events_since(db, campaign_id) if row.kind == "campaign.options"
+            decode(row)
+            for row in events_since(db, campaign_id)
+            if row.kind == "campaign.options"
         ]
 
 
@@ -123,7 +127,9 @@ def _respec_fields(page: str) -> dict[str, str]:
     return fields
 
 
-def _post_respec(client: TestClient, campaign_id: int, name: str, page: str, **fields: str):
+def _post_respec(
+    client: TestClient, campaign_id: int, name: str, page: str, **fields: str
+):
     token = remember_csrf_token(client, page)
     return client.post(
         f"/campaigns/{campaign_id}/respec",
@@ -157,7 +163,9 @@ def test_the_owner_changes_the_campaign_options_brief_and_genres(
     client, campaign_id = _cairn_ready(client_factory)
     current_omen = open_campaign(client.app, campaign_id).options["omen"]
     other_omen = next(
-        option.value for option in CAIRN.campaign.tables["omen"] if option.value != current_omen
+        option.value
+        for option in CAIRN.campaign.tables["omen"]
+        if option.value != current_omen
     )
     genre = client.app.state.content.available_table_genres[0]
 
@@ -205,7 +213,9 @@ def test_a_settings_save_without_the_options_leaves_them_alone(
     client, campaign_id = _cairn_ready(client_factory)
     before = open_campaign(client.app, campaign_id).options
 
-    response = _post_settings(client, campaign_id, **_settings_form(client, campaign_id))
+    response = _post_settings(
+        client, campaign_id, **_settings_form(client, campaign_id)
+    )
 
     assert response.status_code == 303
     assert open_campaign(client.app, campaign_id).options == before
@@ -215,7 +225,9 @@ def test_a_settings_save_without_the_options_leaves_them_alone(
 # The respec option in creation and settings.
 
 
-def test_the_creation_page_offers_the_respec_option(client_factory: Callable[[], TestClient]):
+def test_the_creation_page_offers_the_respec_option(
+    client_factory: Callable[[], TestClient],
+):
     client, campaign_id = _cairn_campaign(client_factory)
 
     page = client.get(f"/campaigns/{campaign_id}").text
@@ -327,7 +339,9 @@ def test_every_worlds_without_number_flavor_field_offers_a_write_in(
 # The details a player may change on a character.
 
 
-def test_a_player_rewrites_their_own_characters_flavor(client_factory: Callable[[], TestClient]):
+def test_a_player_rewrites_their_own_characters_flavor(
+    client_factory: Callable[[], TestClient],
+):
     client, campaign_id = _cairn_ready(client_factory)
 
     page = client.get(f"/campaigns/{campaign_id}/character/edit?character={PC}").text
@@ -374,7 +388,9 @@ def test_a_hirelings_mechanical_fields_are_the_players_but_its_flavor_is_the_gms
     before = character_named(client.app, campaign_id, HIRELING)
     flavor = {key: value for key, value in before.fields.items() if key != "post"}
 
-    page = client.get(f"/campaigns/{campaign_id}/character/edit?character={HIRELING}").text
+    page = client.get(
+        f"/campaigns/{campaign_id}/character/edit?character={HIRELING}"
+    ).text
 
     assert 'name="field-post"' in page
     assert 'name="field-appearance"' not in page
@@ -388,7 +404,9 @@ def test_a_hirelings_mechanical_fields_are_the_players_but_its_flavor_is_the_gms
     assert response.status_code == 303
     after = character_named(client.app, campaign_id, HIRELING)
     assert after.fields["post"] == "Watch"
-    assert {key: value for key, value in after.fields.items() if key != "post"} == flavor
+    assert {
+        key: value for key, value in after.fields.items() if key != "post"
+    } == flavor
 
 
 def test_a_player_cannot_change_their_characters_mechanical_fields(
@@ -412,7 +430,10 @@ def test_another_players_character_details_stay_private(
 ):
     _, guest, campaign_id, _ = _joined_campaign(client_factory)
 
-    assert guest.get(f"/campaigns/{campaign_id}/character/edit?character={PC}").status_code == 404
+    assert (
+        guest.get(f"/campaigns/{campaign_id}/character/edit?character={PC}").status_code
+        == 404
+    )
 
 
 # Respecs.
@@ -440,7 +461,9 @@ def test_a_respec_waits_for_the_gms_reply(client_factory: Callable[[], TestClien
     assert "reply is finished" in response.text
 
 
-def test_only_the_characters_player_can_respec_it(client_factory: Callable[[], TestClient]):
+def test_only_the_characters_player_can_respec_it(
+    client_factory: Callable[[], TestClient],
+):
     _, guest, campaign_id, _ = _joined_campaign(client_factory)
     _enable_respec(guest.app, campaign_id)
 
