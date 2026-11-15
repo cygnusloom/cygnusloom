@@ -1030,7 +1030,9 @@
   // The chosen value opens the same dialog as the Choose button, including from the keyboard.
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Enter" && event.key !== " ") return;
-    const summary = event.target.closest?.(".pick-summary[data-open-pick]");
+    const summary = event.target.closest?.(
+      ".pick-summary[data-open-pick], .choice-state[data-open-choice]",
+    );
     if (!summary) return;
     event.preventDefault();
     summary.click();

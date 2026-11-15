@@ -244,10 +244,12 @@ def test_every_choice_opens_a_dialog_and_radios_are_not_required(
     page = client.get(f"/campaigns/{campaign_id}").text
     groups = set(re.findall(r'<input type="radio" name="([\w-]+)"', page))
     dialog_ids = re.findall(r'<dialog id="(choice-dialog-[\w-]+)"', page)
-    opened = re.findall(r'data-open-choice="(choice-dialog-[\w-]+)"', page)
-    assert {f"choice-dialog-{name}" for name in groups} == set(dialog_ids)
-    assert sorted(dialog_ids) == sorted(opened)
+    opened = set(re.findall(r'data-open-choice="(choice-dialog-[\w-]+)"', page))
+    assert {f"choice-dialog-{name}" for name in groups} == set(dialog_ids) == opened
     assert len(dialog_ids) == len(set(dialog_ids))
+    for dialog_id in dialog_ids:
+        # The chosen value and the Choose button both open the dialog.
+        assert page.count(f'data-open-choice="{dialog_id}"') == 2
     for tag in re.findall(r'<input type="radio"[^>]*>', page):
         attributes = re.sub(r'"[^"]*"', '""', tag)
         assert " required" not in attributes

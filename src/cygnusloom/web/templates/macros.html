@@ -224,7 +224,7 @@
 {# The chosen value stays on one line; the full list of options opens in a dialog. #}
 {% macro choice_picker(name, label, description=None) -%}
   <div class="choice-picker">
-    <div class="choice-state">
+    <div class="choice-state" data-open-choice="choice-dialog-{{ name }}" role="button" tabindex="0" aria-haspopup="dialog" aria-label="Change {{ label|lower }}">
       <output class="choice-summary" data-summary-for="{{ name }}">Not chosen</output>
       <span class="muted choice-summary-detail" data-summary-detail-for="{{ name }}"></span>
     </div>
