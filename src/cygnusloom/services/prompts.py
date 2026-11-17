@@ -526,8 +526,7 @@ def opening_prompt(
     template: WorldTemplate | None, module: ModuleTemplate | None = None
 ) -> str:
     """The opening instruction, with the world's or campaign module's start when it has one:
-    where the player character begins, and the hooks that bring the party there. A module also
-    contributes only its opening card; its later cards stay for play."""
+    where the player character begins, and the hooks that bring the party there."""
     start = module.start if module is not None and module.start is not None else None
     if start is None and template is not None:
         start = template.start
@@ -544,17 +543,11 @@ def opening_prompt(
         )
     if module is None:
         return text
-    from cygnusloom.services.modules import module_section
-
     text += (
-        "\n\nThis campaign begins with a campaign module. Treat its material as preparation, not "
-        "a script: bring it in when it fits what the player does, and let their choices change "
-        "the outcome. Create storylines from the hooks as usual. Do not reveal the module's later "
-        "cards in the introduction."
+        "\n\nThis campaign begins with a campaign module. Its places, people, and rules are "
+        "ordinary world entries: treat them as preparation, not a script, and let the player's "
+        "choices change the outcome. Create storylines from the hooks as usual."
     )
-    first_scene = next(iter(module.scenes.values()), None)
-    if first_scene is not None:
-        text += "\n\nOpening card:\n" + module_section(module, f"scene:{first_scene.id}")
     return text
 
 

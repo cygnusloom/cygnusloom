@@ -1419,16 +1419,12 @@
     "type": "tool_call",
     "id": "lookup_module",
     "lookup": true,
-    "description": "Read one section of an active campaign module or a mini module already in play. Use brief for the module overview, or name a card such as scene:the-bargain, cast:mara-ash, place:ash-hollow-hut, clue:the-millers-purse, front:gate-opened, ending:vuk-stopped, or storyline:aldra. Read only what the scene needs; the text is GM material and must not be quoted to the player.",
+    "description": "Read an active campaign module or a mini module already in play. A campaign module often just restates the brief, because its material is the world's own locations, people, and rules. The text is GM material and must not be quoted to the player.",
     "parameters": {
       "properties": {
         "module": {
           "type": "string",
-          "description": "The module id from the Module block or a module card."
-        },
-        "section": {
-          "type": "string",
-          "description": "The section to read: brief, all, or a card kind and id such as scene:<id>, cast:<id>, place:<id>, clue:<id>, front:<id>, ending:<id>, storyline:<id>, or hook:<id>. Defaults to brief."
+          "description": "The module id from the Module block or list_modules."
         }
       },
       "required": [
@@ -1444,7 +1440,7 @@
       "properties": {
         "module": {
           "type": "string",
-          "description": "The module id from a module card or the Module block."
+          "description": "The module id from list_modules or the Module block."
         },
         "reason": {
           "type": "string",

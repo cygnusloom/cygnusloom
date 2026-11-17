@@ -1,7 +1,7 @@
 """Record the campaign module a campaign started from.
 
 The column defaults to an empty string, so existing campaigns keep their world and gain no
-module card. Attached modules are event-sourced; this column is the creation-time choice.
+module. Attached modules are event-sourced; this column is the creation-time choice.
 
 Revision ID: 0021_campaign_module
 Revises: 0020_campaign_allow_respec

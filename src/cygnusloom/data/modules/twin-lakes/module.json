@@ -4,7 +4,7 @@
     "id": "twin-lakes",
     "kind": "campaign",
     "name": "Twin Lakes",
-    "description": "A mystery around the Twin Lakes: a butcher has vanished, and a tithingman is overdue with the tithe.",
+    "description": "Two offers bring the party into Isthmus Town: find the missing Tideborn butcher Aldra, or find Jandy the tithingman and the tithe he carried. Both trails lead into the poisoned lake country, the drowned workings under Deadmill, and a cult trying to open the Gate beneath the Stone Forest.",
     "blurb": "A fading lake town, two disappearances, and something older under the Stone Forest.",
     "icon": "water",
     "tags": {
@@ -17,34 +17,6 @@
     "world": "twin-lakes",
     "third_party": true,
     "source": "Twin Lakes; see CREDITS.md for the source and license.",
-    "premise": "Two offers bring the party into Isthmus Town: find the missing Tideborn butcher Aldra, or find Jandy the tithingman and the tithe he carried. Both trails lead into the poisoned lake country, the drowned workings under Deadmill, and a cult trying to open the Gate beneath the Stone Forest.",
-    "truth": "Reeve Trellis is hiding the true tithing record and skimming the town's tithe. Aldra was investigating the poisoned water when he vanished. Annafranax and Vuk's cult are trying to reopen the Gate under Deadmill; Vuk intends to return in a new body.",
-    "gm_notes": "This is a sandbox mystery. Let the players choose either offer or both. The region is dangerous at night. Keep the Tideborn and the Order of Nine distinct, and let the players' preparations matter. The module's fronts are consequences, not a required order of scenes.",
-    "tone": "Cold water, old debts, and a town that has learned not to ask.",
-    "themes": ["obligation", "drowning", "old power"],
-    "cast": [
-      {"npc": "flavia", "role": "patron", "wants": "Find out what happened to Aldra and recover his body.", "secret": "She suspects the poisoning and the disappearance are connected, but will not say so in town.", "knows": ["aldra-lantern", "poisoned-river"], "appears_in": ["the-two-offers", "the-butcher"]},
-      {"npc": "reeve-trellis", "role": "obstacle", "wants": "Keep the tithe record hidden and the town calm.", "secret": "The hidden ledger in the inn cellar shows the shortfall.", "knows": ["tithe-record"], "appears_in": ["the-two-offers", "the-stuffed-inn"]},
-      {"npc": "drum", "role": "informant", "wants": "A coin and a little excitement.", "secret": "He saw Jandy's wagon leave and come back empty.", "knows": ["tithe-record"], "appears_in": ["the-stuffed-inn"]},
-      {"npc": "giva", "role": "lorekeeper", "wants": "To be left alone with her memories of the old lake.", "secret": "The old rites and the Gate are older than the Tideborn.", "knows": ["gate-mark", "vuk-rebirth"], "appears_in": ["the-river-road"]},
-      {"npc": "annafranax", "role": "antagonist", "wants": "Open the Gate under Deadmill.", "secret": "The ritual is tied to Deadmill's wheel and the thing in the water.", "knows": ["gate-mark", "vuk-rebirth"], "appears_in": ["the-white-tower", "the-temple"]},
-      {"npc": "vuk", "role": "antagonist", "wants": "Return in a new body and rule the lakes.", "secret": "Fasha is her chosen vessel.", "knows": ["vuk-rebirth"], "appears_in": ["the-temple"]},
-      {"npc": "jandy", "role": "missing", "wants": "To survive the people who took the tithe.", "secret": "He is held under Deadmill.", "knows": ["tithe-record", "gate-mark"], "appears_in": ["deadmill"]}
-    ],
-    "places": [
-      {"location": "isthmus-town", "role": "hub", "appears_in": ["arrival", "the-two-offers"]},
-      {"location": "the-stuffed-inn", "role": "social hub", "appears_in": ["the-two-offers", "the-stuffed-inn"]},
-      {"location": "butcher-shop", "role": "investigation", "appears_in": ["the-butcher"]},
-      {"location": "east-lake-pass", "role": "wilderness", "appears_in": ["the-river-road"]},
-      {"location": "deadmill", "role": "dungeon", "appears_in": ["deadmill"]},
-      {"location": "the-white-tower", "role": "set piece", "appears_in": ["the-white-tower"]},
-      {"location": "temple-of-the-fungal-lizards", "role": "climax", "appears_in": ["the-temple"]}
-    ],
-    "scenes": ["arrival", "the-two-offers", "the-butcher", "the-stuffed-inn", "the-river-road", "deadmill", "the-white-tower", "the-temple"],
-    "clues": ["poisoned-river", "aldra-lantern", "tithe-record", "gate-mark", "vuk-rebirth"],
-    "fronts": ["vuk-reborn", "gate-opened"],
-    "endings": ["vuk-stopped", "vuk-reborn", "gate-opened", "both"],
-    "storylines": ["aldra", "the-tithe"],
-    "replaces": []
+    "gm_notes": "This is a sandbox mystery. Let the players choose either offer or both. The region is dangerous at night. Keep the Tideborn and the Order of Nine distinct, and let the players' preparations matter. Behind the offers: Reeve Trellis is hiding the true tithing record and skimming the town's tithe; Aldra was investigating the poisoned water when he vanished; Annafranax and Vuk's cult are trying to reopen the Gate under Deadmill, and Vuk intends to return in a new body. The outcome rules in the world's rules are the endings."
   }
 ]

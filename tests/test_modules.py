@@ -58,17 +58,10 @@ def test_twin_lakes_is_a_campaign_module_with_its_own_setting():
     assert module.kind == "campaign"
     assert module.world_template.id == TWIN_LAKES
     assert library.world_templates[TWIN_LAKES].module == TWIN_LAKES
-    assert list(module.scenes) == [
-        "arrival",
-        "the-two-offers",
-        "the-butcher",
-        "the-stuffed-inn",
-        "the-river-road",
-        "deadmill",
-        "the-white-tower",
-        "the-temple",
-    ]
-    assert "poisoned-river" in module.clues
+    # The source material is the world itself, not a second set of story cards.
+    assert module.body == ""
+    assert "sandbox mystery" in module.gm_notes
+    assert any(place.id == "deadmill" for place in module.world_template.locations)
     # A module's setting is not offered as a standalone world.
     assert all(world.id != TWIN_LAKES for world in library.offered_worlds("cairn2e"))
 
@@ -79,13 +72,13 @@ def test_a_mini_module_loads_a_synthetic_setting():
     assert module.world_template.id == HERMIT
     assert [npc.id for npc in module.world_template.npcs] == ["mara-ash"]
     assert [place.id for place in module.world_template.locations] == ["ash-hollow-hut"]
-    assert list(module.scenes) == ["the-bargain"]
+    assert "Mara Ash saw the miller's son" in module.body
 
 
-def test_the_opening_prompt_uses_a_module_start_without_revealing_later_cards():
+def test_the_opening_prompt_uses_a_module_start_and_hooks():
     library = content_library()
     text = opening_prompt(library.world_templates[TWIN_LAKES], library.modules[TWIN_LAKES])
-    assert "Arrival in Isthmus Town" in text
+    assert "Tideborn" in text
     assert "campaign module" in text
     assert "Deadmill" not in text
 
@@ -115,7 +108,7 @@ def test_a_campaign_module_can_supply_the_setting_and_is_recorded(
     assert campaign.world_template == TWIN_LAKES
 
 
-def test_the_gm_can_list_and_read_a_campaign_modules_cards(client_factory):
+def test_the_gm_can_list_and_read_a_campaign_module(client_factory):
     client = signed_in_client(client_factory)
     campaign_id = create_campaign_direct(
         client, world_template=TWIN_LAKES, rule_set="cairn2e"
@@ -123,14 +116,12 @@ def test_the_gm_can_list_and_read_a_campaign_modules_cards(client_factory):
     tools = _tools(client, campaign_id)
     cards = tools.list_modules(kind="campaign")["modules"]
     assert [card["id"] for card in cards] == [TWIN_LAKES]
-    scene = tools.lookup_module(TWIN_LAKES, "scene:the-two-offers")["text"]
-    assert "The Two Offers" in scene
-    assert "Aldra" in scene
-    # The brief prepares the GM; it does not hand over every later card.
+    text = tools.lookup_module(TWIN_LAKES)["text"]
+    assert "Module: Twin Lakes (campaign)" in text
+    assert "Opening hooks" in text
+    assert "ordinary world entries" in text
     used = tools.use_module(TWIN_LAKES, "the opening rumour")
     assert "Twin Lakes" in used["text"]
-    assert "The Two Offers" in used["text"]
-    assert "Deadmill" in used["text"]
 
 
 def test_a_mini_module_is_used_once_and_then_no_longer_offered(client_factory):
@@ -141,15 +132,15 @@ def test_a_mini_module_is_used_once_and_then_no_longer_offered(client_factory):
     tools = _tools(client, campaign_id)
     assert [card["id"] for card in tools.list_modules(kind="mini")["modules"]] == [HERMIT]
     with pytest.raises(InvalidInput, match="use_module"):
-        tools.lookup_module(HERMIT, "scene:the-bargain")
+        tools.lookup_module(HERMIT)
     text = tools.use_module(HERMIT, "a rumour on the river road")["text"]
     assert "Mara Ash" in text
-    assert "The Bargain" in text
+    assert "hush-money" in text
     with Session(client.app.state.engine) as session:
         state = load_state(session, campaign_id)
     assert HERMIT in state.used_modules
     assert tools.list_modules(kind="mini")["modules"] == []
-    assert "Mara Ash" in tools.lookup_module(HERMIT, "cast:mara-ash")["text"]
+    assert "Mara Ash" in tools.lookup_module(HERMIT)["text"]
     with pytest.raises(InvalidInput, match="already used"):
         tools.use_module(HERMIT)
 
@@ -200,7 +191,7 @@ def test_the_campaign_page_shows_the_module_without_its_cards(client_factory):
     page = client.get(f"/campaigns/{campaign_id}").text
     assert "Story modules" in page
     assert "Twin Lakes" in page
-    assert "The Two Offers" not in page
+    assert "sandbox mystery" not in page
 
 
 def test_a_turn_with_a_campaign_module_puts_its_brief_in_the_state_prompt(
@@ -227,8 +218,7 @@ def test_a_turn_with_a_campaign_module_puts_its_brief_in_the_state_prompt(
         if message.get("role") == "system"
     )
     assert "Module: Twin Lakes (campaign)" in system
-    assert "Storyline seeds:" in system
-    assert "Use lookup_module" in system
+    assert "ordinary world entries" in system
 
 
 def test_an_export_keeps_the_starting_module_and_import_restores_it(

@@ -364,7 +364,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
         setting: str = "",
         random: bool = False,
     ) -> dict[str, Any]:
-        """List the module cards this campaign can use: active campaign modules and mini modules
+        """List the modules this campaign can use: active campaign modules and mini modules
         that fit its tags and have not been used up."""
         if kind not in (None, "mini", "campaign"):
             raise InvalidInput("module kind must be 'mini' or 'campaign'")
@@ -398,8 +398,8 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
             cards = cards[:6]
         return {"modules": cards}
 
-    def lookup_module(self, module: str, section: str = "") -> dict[str, Any]:
-        """Read one section of an active campaign module or a mini module already in play."""
+    def lookup_module(self, module: str) -> dict[str, Any]:
+        """Read an active campaign module or a mini module already in play."""
         with session_scope(self.engine) as db:
             campaign = db.get(Campaign, self.campaign_id)
             if campaign is None:
@@ -415,7 +415,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
             )
         if found.kind == "mini" and module not in state.used_modules:
             raise InvalidInput("call use_module before reading a mini module's material")
-        return {"module": module, "text": modules_service.module_section(found, section)}
+        return {"module": module, "text": modules_service.module_text(found)}
 
     def use_module(self, module: str, reason: str = "") -> dict[str, Any]:
         """Bring a mini module into play, or begin using an attached campaign module. A one-shot
@@ -435,7 +435,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                         "that campaign module is not attached; the campaign owner attaches it "
                         "in Settings"
                     )
-                text = modules_service.module_section(found, "brief")
+                text = modules_service.module_text(found)
             else:
                 available = {
                     candidate.id
@@ -450,7 +450,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                     raise InvalidInput(
                         "that mini module is not available in this campaign, or it was already used"
                     )
-                text = modules_service.module_section(found, "all")
+                text = modules_service.module_text(found)
             record(db, self.campaign_id, ModuleUsed(module=module, reason=reason))
             db.commit()
         return {"module": module, "text": text}
