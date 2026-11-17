@@ -824,14 +824,16 @@ Add core prompt fragments:
 > storylines from the hooks as usual. The module's other cards are material for later; do not
 > reveal them in the introduction.
 
-Update `setting_forge` to name the setting tables explicitly and to keep the oracle tables for
-play:
+Update `setting_forge` to roll the setting role and to keep the oracle tables for play:
 
-> Roll the setting tables with `roll_creative`: `setting_premise`, `region_identity`, `faction`,
-> `conflict`, `mystery`, and `adventure_hook`. Use `list_dice_tables` to see the structured tables
-> the selected genres offer, then roll the ones you need with `roll_tables`. Do not roll the scene
-> oracle tables (`action`, `theme`, `plot_twist`, `location`, `location_descriptor`) to invent the
-> setting; they are for play.
+> Roll the setting tables with `roll_creative`, passing role `"setting"`, to get a premise, a
+> region, a faction, a conflict, a mystery, and a hook. Use `list_dice_tables` to see the
+> structured tables the selected genres offer, then roll the ones you need with `roll_tables`.
+> Do not roll the scene oracle tables (`action`, `theme`, `plot_twist`, `location`,
+> `location_descriptor`) to invent the setting; they are for play.
+
+Naming a role rather than the six table ids keeps the prompt valid for a rule set whose genre
+selection hides those tables; the GM rolls whichever setting tables the campaign actually offers.
 
 ### Creative table roles
 
@@ -853,9 +855,11 @@ Ship roles:
 
 Update `roll_creative`:
 
-- With no `tables`, roll only the `oracle` tables.
-- With `tables`, allow any creative table the campaign offers; setting and module tables must be
-  named.
+- Add a `role` argument with `oracle`, `setting`, and `module` values. With no `role`, it is
+  `oracle`.
+- With no `tables`, roll only the tables of that role. This is how the setting forge asks for
+  setting tables without naming ids a genre choice might hide.
+- With `tables`, allow any creative table the campaign offers; explicit ids win over the role.
 - The tool description's first sentence carries the trigger, because `brief` mode keeps only the
   first sentence:
   - "Roll on the oracle tables when the scene stalls or the player is unsure what to do next."
@@ -955,11 +959,11 @@ to follow a prepackaged script.
 
 - Add `role` to `DiceTable` and `creative_table` loaders; ship roles for core, worldgen, Academia,
   and world tables.
-- Change `roll_creative` with no `tables` to roll only `oracle` tables; keep named rolls for
-  `setting` and `module` tables.
+- Add the `role` argument (`oracle`, `setting`, `module`); a no-table roll uses `oracle` by
+  default, and named rolls still work.
 - Put the trigger in the first sentence of the `roll_creative` description.
 - Add the `creative_oracle` core state prompt.
-- Update `setting_forge` to name the six setting tables and leave the oracle tables for play.
+- Update `setting_forge` to pass role `setting` and leave the oracle tables for play.
 - Include `role` and `genres` in `list_dice_tables`.
 - Tests: table loading, roles, no-arg behavior, named rolls, prompt assembly, tool description
   first sentence, `setting_forge` text.

@@ -320,6 +320,8 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                     "name": table.name,
                     "dice": table.dice,
                     "creative": table.creative,
+                    "role": table.role,
+                    "genres": list(table.genres),
                 }
                 for table in self.dice_tables.values()
             ]
@@ -332,11 +334,20 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
             raise InvalidInput(f"there is no character table named {table!r}")
         return self.rng.choice(options).value
 
-    def roll_creative(self, tables: list[str] | None = None) -> dict[str, Any]:
-        """Roll the creative tables. Without `tables`, every creative table is rolled."""
+    def roll_creative(
+        self, tables: list[str] | None = None, role: str | None = None
+    ) -> dict[str, Any]:
+        """Roll the creative tables. Without `tables`, every table of `role` is rolled; the role
+        defaults to `oracle`. `setting` is for world generation and `module` for a story module."""
         with session_scope(self.engine) as db:
             return roll_creative_tables(
-                db, self.campaign_id, tables, self.dice_tables, self.rng, plus=self.plus
+                db,
+                self.campaign_id,
+                tables,
+                self.dice_tables,
+                self.rng,
+                plus=self.plus,
+                role=role,
             )
 
     def advance_time(self, days: int = 0, parts: int = 0, hours: int = 0) -> dict[str, Any]:

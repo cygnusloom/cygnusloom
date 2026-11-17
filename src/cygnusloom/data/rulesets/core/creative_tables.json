@@ -1,6 +1,7 @@
 [
   {
     "type": "creative_table",
+    "role": "oracle",
     "id": "action",
     "name": "Action",
     "genres": ["generic"],
@@ -110,6 +111,7 @@
   },
   {
     "type": "creative_table",
+    "role": "oracle",
     "id": "theme",
     "name": "Theme",
     "genres": ["generic"],
@@ -219,6 +221,7 @@
   },
   {
     "type": "creative_table",
+    "role": "oracle",
     "id": "plot_twist",
     "name": "Major Plot Twist",
     "genres": ["generic"],
@@ -248,6 +251,7 @@
   },
   {
     "type": "creative_table",
+    "role": "oracle",
     "id": "location",
     "name": "Location",
     "genres": ["generic"],
@@ -308,6 +312,7 @@
   },
   {
     "type": "creative_table",
+    "role": "oracle",
     "id": "location_descriptor",
     "name": "Location Descriptor",
     "genres": ["generic"],

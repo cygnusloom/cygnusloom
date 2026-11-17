@@ -68,6 +68,7 @@ def test_a_table_reads_its_genre_tags(tmp_path: Path):
     assert library.core.dice_tables["realm"].genres == ("fantasy",)
     assert library.core.dice_tables["spark"].genres == ("generic", "fantasy")
     assert library.core.dice_tables["spark"].creative
+    assert library.core.dice_tables["spark"].role == "oracle"
     assert library.core.dice_tables["plain"].genres == ()
 
 
@@ -141,7 +142,9 @@ def test_the_bundled_rule_sets_offer_generic_and_fantasy_tables():
         rules = library.rule_sets[rule_set_id]
         assert {"generic", "fantasy"} <= set(rules.table_genres)
         assert rules.dice_tables["setting_premise"].genres == ("fantasy",)
+        assert rules.dice_tables["setting_premise"].role == "setting"
         assert rules.dice_tables["action"].genres == ("generic",)
+        assert rules.dice_tables["action"].role == "oracle"
     assert library.core.dice_tables["setting_premise"].genres == ("fantasy",)
 
 
@@ -177,9 +180,12 @@ def test_the_campaign_genres_filter_the_tables_the_tools_see(client_factory):
     assert "die_of_fate" in generic.dice_tables
     assert "dungeon_events" not in generic.dice_tables
     assert "setting_premise" not in generic.dice_tables
-    listed = {table["id"] for table in generic.list_dice_tables()["tables"]}
+    listed = {table["id"]: table for table in generic.list_dice_tables()["tables"]}
     assert "die_of_fate" in listed
     assert "setting_premise" not in listed
+    assert listed["action"]["role"] == "oracle"
+    assert listed["action"]["genres"] == ["generic"]
+    assert listed["die_of_fate"]["role"] == ""
     # A world's own tables are authored for it, so a genre choice never removes them.
     assert set(world.dice_tables) <= set(generic.dice_tables)
 

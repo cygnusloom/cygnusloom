@@ -8,7 +8,7 @@ from typing import Any
 
 from sqlmodel import Session
 
-from cygnusloom.content.library import DiceTable
+from cygnusloom.content.library import CREATIVE_TABLE_ROLES, DiceTable
 from cygnusloom.rules.dice import roll_total
 from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.events import TablesRolled, record
@@ -54,8 +54,17 @@ def roll_creative(
     rng: random.Random,
     *,
     plus: str,
+    role: str | None = None,
 ) -> dict[str, Any]:
-    """Roll on the named creative tables, or on every creative table when none are named."""
+    """Roll on the named creative tables, or on every creative table of one role. The role
+    defaults to `oracle`, the tables meant for a stalled scene. `setting` is for world
+    generation and `module` for a story module's own tables. Named tables win over the role."""
+    role = role or "oracle"
+    if role not in CREATIVE_TABLE_ROLES:
+        raise InvalidInput(
+            f"there is no creative table role {role!r}; choose from "
+            f"{', '.join(CREATIVE_TABLE_ROLES)}"
+        )
     creative = [table.id for table in tables.values() if table.creative]
     if table_ids:
         for table_id in table_ids:
@@ -63,7 +72,7 @@ def roll_creative(
                 raise InvalidInput(f"there is no creative table named {table_id!r}")
         chosen = list(table_ids)
     else:
-        chosen = creative
+        chosen = [table.id for table in tables.values() if table.creative and table.role == role]
     if not chosen:
-        raise InvalidInput("no creative tables are defined")
+        raise InvalidInput(f"no {role} tables are defined")
     return roll_tables(db, campaign_id, chosen, tables, rng, plus=plus)

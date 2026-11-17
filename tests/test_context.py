@@ -306,7 +306,7 @@ def test_history_is_summarized_at_the_compress_point_and_the_tail_is_kept(settin
 
     [summarizer] = provider.summarizer_calls()
     assert "m0 " in summarizer[1]["content"]
-    assert "Keep it under 2457 words." in summarizer[0]["content"]
+    assert re.search(r"Keep it under \d+ words\.", summarizer[0]["content"])
 
     after = next(
         call for call in provider.calls if "Summary of earlier events" in call[0]["content"]

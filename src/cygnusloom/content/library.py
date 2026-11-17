@@ -103,6 +103,11 @@ TABLE_GENRES = (
     "historical",
 )
 GENERIC_GENRE = "generic"
+# What a creative table is for: `oracle` tables give a fresh idea during play, `setting` tables
+# invent the world at the opening, and `module` tables belong to an active story module. The
+# role keeps a worldgen table from being mixed into a scene and the other way around.
+CREATIVE_TABLE_ROLES = ("oracle", "setting", "module")
+DEFAULT_CREATIVE_ROLE = "oracle"
 
 
 def check_keys(data: Mapping[str, Any], allowed: Iterable[str], label: str) -> None:
@@ -167,6 +172,16 @@ def _definition_icon(data: Mapping[str, Any], label: str, fallback: str) -> str:
     """A definition's own icon, or the fallback its kind shows. The icon must be registered."""
     icon = _optional_text(data, "icon", label)
     return check_icon(icon, label) if icon is not None else fallback
+
+
+def read_creative_role(value: Any, label: str) -> str:
+    """A creative table's `role`, checked against CREATIVE_TABLE_ROLES. An absent role is an
+    oracle table, which is the historical use of a creative table during play."""
+    if value is None:
+        return DEFAULT_CREATIVE_ROLE
+    if not isinstance(value, str) or value not in CREATIVE_TABLE_ROLES:
+        raise ContentError(f"{label}: 'role' must be one of {', '.join(CREATIVE_TABLE_ROLES)}")
+    return value
 
 
 def read_table_genres(value: Any, label: str) -> tuple[str, ...]:
@@ -802,6 +817,9 @@ class DiceTable:
     dice: str
     rows: tuple[DiceRow, ...]
     creative: bool = False
+    # What the table is for when it is creative: `oracle`, `setting`, or `module`. A normal
+    # dice table has no role.
+    role: str = ""
     # The kinds of setting the table fits. Empty means every setting, as does `generic`.
     genres: tuple[str, ...] = ()
 
@@ -3047,7 +3065,15 @@ def _load_creative_table(definition: Definition, template: str) -> DiceTable:
     `_patch_creative_table` applies before this runs. `source` credits where the entries came
     from and is checked here but not shown to the GM."""
     label = f"{template}: creative table {definition.id}"
-    extra = set(definition.data) - {"type", "id", "name", "entries", "source", "genres"}
+    extra = set(definition.data) - {
+        "type",
+        "id",
+        "name",
+        "entries",
+        "source",
+        "genres",
+        "role",
+    }
     if extra:
         raise ContentError(f"{label}: unknown keys {sorted(extra)}")
     if "source" in definition.data:
@@ -3055,12 +3081,14 @@ def _load_creative_table(definition: Definition, template: str) -> DiceTable:
     name = _table_label(definition, template)
     entries = _creative_entries(definition.data.get("entries"), label)
     genres = read_table_genres(definition.data.get("genres"), f"{label}: 'genres'")
+    role = read_creative_role(definition.data.get("role"), label)
     return DiceTable(
         id=definition.id,
         name=name,
         dice=f"1d{len(entries)}",
         rows=tuple(DiceRow(index, index, text) for index, text in enumerate(entries, 1)),
         creative=True,
+        role=role,
         genres=genres,
     )
 
@@ -3102,7 +3130,16 @@ def _patch_creative_table(
     label = f"{template}: creative table {definition.id}"
     if not {"add", "remove"} & set(definition.data):
         return definition
-    extra = set(definition.data) - {"type", "id", "name", "add", "remove", "source", "genres"}
+    extra = set(definition.data) - {
+        "type",
+        "id",
+        "name",
+        "add",
+        "remove",
+        "source",
+        "genres",
+        "role",
+    }
     if extra:
         raise ContentError(f"{label}: unknown keys {sorted(extra)} with 'add' or 'remove'")
     base = core.get(definition.id)
@@ -3129,6 +3166,8 @@ def _patch_creative_table(
         data["source"] = definition.data.get("source", base.data.get("source"))
     if "genres" in definition.data or "genres" in base.data:
         data["genres"] = definition.data.get("genres", base.data.get("genres"))
+    if "role" in definition.data or "role" in base.data:
+        data["role"] = definition.data.get("role", base.data.get("role"))
     return Definition(type="creative_table", id=definition.id, data=data)
 
 

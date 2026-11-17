@@ -1,6 +1,7 @@
 [
   {
     "type": "creative_table",
+    "role": "setting",
     "id": "magicschool_premise",
     "name": "Academy Premise",
     "genres": ["magicschool"],
@@ -29,6 +30,7 @@
   },
   {
     "type": "creative_table",
+    "role": "setting",
     "id": "magicschool_quirk",
     "name": "School Quirk",
     "genres": ["magicschool"],
@@ -57,6 +59,7 @@
   },
   {
     "type": "creative_table",
+    "role": "setting",
     "id": "magicschool_college",
     "name": "College Concept",
     "genres": ["magicschool"],
@@ -80,6 +83,7 @@
   },
   {
     "type": "creative_table",
+    "role": "setting",
     "id": "magicschool_faculty",
     "name": "Faculty Member",
     "genres": ["magicschool"],
@@ -103,6 +107,7 @@
   },
   {
     "type": "creative_table",
+    "role": "setting",
     "id": "magicschool_clique",
     "name": "Student Clique",
     "genres": ["magicschool"],
@@ -126,6 +131,7 @@
   },
   {
     "type": "creative_table",
+    "role": "setting",
     "id": "magicschool_lesson",
     "name": "Class Challenge",
     "genres": ["magicschool"],
@@ -149,6 +155,7 @@
   },
   {
     "type": "creative_table",
+    "role": "setting",
     "id": "magicschool_exam",
     "name": "Exam Twist",
     "genres": ["magicschool"],
@@ -172,6 +179,7 @@
   },
   {
     "type": "creative_table",
+    "role": "setting",
     "id": "magicschool_mishap",
     "name": "Magical Mishap",
     "genres": ["magicschool"],
@@ -195,6 +203,7 @@
   },
   {
     "type": "creative_table",
+    "role": "setting",
     "id": "magicschool_secret",
     "name": "Campus Secret",
     "genres": ["magicschool"],
@@ -218,6 +227,7 @@
   },
   {
     "type": "creative_table",
+    "role": "setting",
     "id": "magicschool_festival",
     "name": "Festival or Tradition",
     "genres": ["magicschool"],
@@ -238,6 +248,7 @@
   },
   {
     "type": "creative_table",
+    "role": "setting",
     "id": "magicschool_rival_school",
     "name": "Rival School",
     "genres": ["magicschool"],
@@ -258,6 +269,7 @@
   },
   {
     "type": "creative_table",
+    "role": "setting",
     "id": "magicschool_creature",
     "name": "Magical Creature",
     "genres": ["magicschool"],
@@ -278,6 +290,7 @@
   },
   {
     "type": "creative_table",
+    "role": "setting",
     "id": "magicschool_artifact",
     "name": "Academy Artifact",
     "genres": ["magicschool"],
@@ -298,6 +311,7 @@
   },
   {
     "type": "creative_table",
+    "role": "setting",
     "id": "magicschool_research",
     "name": "Research Prompt",
     "genres": ["magicschool"],
@@ -318,6 +332,7 @@
   },
   {
     "type": "creative_table",
+    "role": "setting",
     "id": "magicschool_hook_1",
     "name": "Adventure Hook: The School",
     "genres": ["magicschool"],
@@ -346,6 +361,7 @@
   },
   {
     "type": "creative_table",
+    "role": "setting",
     "id": "magicschool_hook_2",
     "name": "Adventure Hook: The Grounds",
     "genres": ["magicschool"],
@@ -374,6 +390,7 @@
   },
   {
     "type": "creative_table",
+    "role": "setting",
     "id": "magicschool_hook_3",
     "name": "Adventure Hook: The People",
     "genres": ["magicschool"],
@@ -402,6 +419,7 @@
   },
   {
     "type": "creative_table",
+    "role": "setting",
     "id": "magicschool_rumor",
     "name": "Rumor",
     "genres": ["magicschool"],
@@ -425,6 +443,7 @@
   },
   {
     "type": "creative_table",
+    "role": "setting",
     "id": "magicschool_detention",
     "name": "Detention",
     "genres": ["magicschool"],
@@ -445,6 +464,7 @@
   },
   {
     "type": "creative_table",
+    "role": "setting",
     "id": "magicschool_complication",
     "name": "Complication",
     "genres": ["magicschool"],
@@ -465,6 +485,7 @@
   },
   {
     "type": "creative_table",
+    "role": "setting",
     "id": "magicschool_enchanted_object",
     "name": "Found Enchanted Object",
     "genres": ["magicschool"],

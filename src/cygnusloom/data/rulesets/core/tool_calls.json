@@ -1360,7 +1360,7 @@
     "type": "tool_call",
     "id": "roll_creative",
     "lookup": true,
-    "description": "Roll on the creative tables for a fresh idea. Use it when the player is directionless, or when the story is waiting for something to happen next and you have no clear direction. Each result is a suggestion, not a fact: work it into the scene in a way that fits what has already happened, and drop any result that clashes with the established story. Leave 'tables' out to roll every creative table (the core rule set has 'action', 'theme', 'plot_twist', 'location', and 'location_descriptor'), or name ids to roll only those.",
+    "description": "Roll on the oracle tables when a scene stalls or the player is unsure what to do next. Leave 'tables' out and leave 'role' out, or pass role 'oracle', to roll every oracle table the campaign offers; pass role 'setting' to roll the world-setting tables, or name table ids to roll only those. Each result is a suggestion, not a fact: work it into the scene in a way that fits what has already happened, and drop any result that clashes with the established story. Do not roll on consecutive turns, do not roll when the player has a clear goal, and never roll in the middle of an encounter.",
     "parameters": {
       "properties": {
         "tables": {
@@ -1368,7 +1368,16 @@
           "items": {
             "type": "string"
           },
-          "description": "The ids of the creative tables to roll on, in order. Each is rolled once. Leave out to roll all of them."
+          "description": "The ids of the creative tables to roll on, in order. Each is rolled once. Leave out to roll every table of the chosen role."
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "oracle",
+            "setting",
+            "module"
+          ],
+          "description": "The kind of creative table to roll when 'tables' is left out: oracle for a stalled scene, setting for world generation, or module for a story module's own tables. Defaults to oracle."
         }
       }
     }
@@ -1733,7 +1742,7 @@
     "type": "tool_call",
     "id": "list_dice_tables",
     "lookup": true,
-    "description": "List the dice and creative tables this campaign offers after its genre selection. Use it before roll_tables when you need the table ids, or to see what kind of idea tables the setting supports."
+    "description": "List the dice and creative tables this campaign offers after its genre selection. Use it before roll_tables when you need the table ids, or to see what kind of idea tables the setting supports. A creative table shows its role (oracle, setting, or module) and genres."
   },
   {
     "type": "tool_call",
