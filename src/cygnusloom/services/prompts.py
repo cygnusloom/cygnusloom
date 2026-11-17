@@ -14,6 +14,7 @@ from typing import Any
 from cygnusloom.content.library import (
     ChecklistItem,
     ChecklistRules,
+    ModuleTemplate,
     PromptFragment,
     RuleSet,
     WorldTemplate,
@@ -521,20 +522,40 @@ def system_parts(
     return parts
 
 
-def opening_prompt(template: WorldTemplate | None) -> str:
-    """The opening instruction, with the world's start when it has one: where the player character
-    begins, and the hooks that bring the party there."""
-    if template is None or template.start is None:
-        return OPENING_PROMPT
-    start = template.start
-    place = next(loc for loc in template.locations if loc.id == start.location)
-    return (
-        f"{OPENING_PROMPT}\n\nThe campaign starts at {place.name} (location id {place.id}). Place the "
-        f"player character there with move_actor, and do not place them anywhere else. The adventure's "
-        f"hooks, which bring the party to this start, are below. Work them into the introduction as "
-        f"what the player character has heard or been asked to do; do not state them as a list.\n\n"
-        f"{start.hooks}"
+def opening_prompt(
+    template: WorldTemplate | None, module: ModuleTemplate | None = None
+) -> str:
+    """The opening instruction, with the world's or campaign module's start when it has one:
+    where the player character begins, and the hooks that bring the party there. A module also
+    contributes only its opening card; its later cards stay for play."""
+    start = module.start if module is not None and module.start is not None else None
+    if start is None and template is not None:
+        start = template.start
+    text = OPENING_PROMPT
+    if start is not None:
+        places = template.locations if template is not None else module.world_template.locations
+        place = next(loc for loc in places if loc.id == start.location)
+        text += (
+            f"\n\nThe campaign starts at {place.name} (location id {place.id}). Place the "
+            f"player character there with move_actor, and do not place them anywhere else. The "
+            f"adventure's hooks, which bring the party to this start, are below. Work them into "
+            f"the introduction as what the player character has heard or been asked to do; do "
+            f"not state them as a list.\n\n{start.hooks}"
+        )
+    if module is None:
+        return text
+    from cygnusloom.services.modules import module_section
+
+    text += (
+        "\n\nThis campaign begins with a campaign module. Treat its material as preparation, not "
+        "a script: bring it in when it fits what the player does, and let their choices change "
+        "the outcome. Create storylines from the hooks as usual. Do not reveal the module's later "
+        "cards in the introduction."
     )
+    first_scene = next(iter(module.scenes.values()), None)
+    if first_scene is not None:
+        text += "\n\nOpening card:\n" + module_section(module, f"scene:{first_scene.id}")
+    return text
 
 
 def _prompt_fragments(rule_set: RuleSet, world: WorldTemplate | None) -> list[PromptFragment]:

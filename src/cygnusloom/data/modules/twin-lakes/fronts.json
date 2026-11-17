@@ -1,0 +1,44 @@
+[
+  {
+    "type": "module_front",
+    "id": "vuk-reborn",
+    "name": "Vuk Is Reborn",
+    "summary": "If no one stops the ritual, Vuk returns in Fasha's body and begins to take the lakes.",
+    "segments": [
+      "The cult completes the vessel and Fasha begins to change.",
+      "Vuk's followers gather at the temple and the old rites resume.",
+      "Vuk takes the lakes and Isthmus Town empties or bends the knee."
+    ],
+    "advance_on": [
+      "the party ignores the cult",
+      "the White Tower ritual is completed",
+      "the temple rite reaches its final stage"
+    ],
+    "effects": [
+      "Vuk's cult becomes the power in the region.",
+      "Isthmus Town is deserted or conquered.",
+      "The Tideborn and the Order of Nine respond to the new threat."
+    ]
+  },
+  {
+    "type": "module_front",
+    "id": "gate-opened",
+    "name": "The Gate Opens",
+    "summary": "If Annafranax's ritual is not stopped, the Gate under Deadmill opens and the Roots spill into the region.",
+    "segments": [
+      "The water in East Lake turns black and the mill race slows.",
+      "The Deadmill grove begins to sink.",
+      "A sinkhole opens, and creatures from the Roots come through."
+    ],
+    "advance_on": [
+      "two days pass without interference",
+      "the party ignores Deadmill",
+      "the cult completes the ritual"
+    ],
+    "effects": [
+      "The region becomes a frontier.",
+      "Isthmus Town becomes a military outpost and refuge.",
+      "The Cities send soldiers and scholars to the new frontier."
+    ]
+  }
+]

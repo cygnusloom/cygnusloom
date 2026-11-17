@@ -1,9 +1,28 @@
 # Creativity, oracles, and human-written modules
 
-Status: design and audit. No code changes yet. This document records what the creativity system
-does today, how it was audited, what the live model actually did, and the proposed design for
-longer-form, human-written modules. It is the working plan for `docs/CREATIVITY.md` follow-up
-work.
+Status: implemented. The audit, the design, and the module system below are in the code base.
+The audit tables record the state **before** the change; the implementation notes at the end of
+each section describe what actually shipped and where it differs from the proposal. The automated
+suite covers the loader, runtime tools, prompts, UI, export/import, Twin Lakes, and a sample mini
+module.
+
+## What shipped
+
+- Creative tables have a `role` (`oracle`, `setting`, or `module`), `roll_creative` defaults to
+  `oracle`, and a core state prompt tells the GM when to roll. `setting_forge` asks for `setting`.
+- `data/modules/` loads mini and campaign modules, with embedded or synthetic settings, inline
+  entries, tag filtering, compatibility checks, and validation.
+- Campaigns record their starting module in `Campaign.module`; attached campaign modules and used
+  mini modules are event-sourced (`module.attached`, `module.detached`, `module.used`).
+- The GM has `list_modules`, `lookup_module`, and `use_module`. The state/opening prompt carries a
+  compact module brief; narration/review do not.
+- New Campaign has a campaign-module picker and makes the world optional when the module brings a
+  setting. Settings has a Story modules panel. The compendium labels module settings and lists
+  mini modules.
+- Twin Lakes is a campaign module whose embedded setting still resolves as `world_template:
+  "twin-lakes"` for old campaigns and exports.
+- `the-hermit-of-ash-hollow` is a sample mini module using inline entries.
+- Export/import carries `module`; old exports infer it from the embedded world.
 
 ## Summary
 
@@ -31,7 +50,7 @@ The audit found a sharp split:
   3 storyline creations, 80 updates, and 1 resolution across 125 turns. Human-written modules
   should feed and use that system, not replace it.
 
-The proposed design adds two module kinds:
+The design adds two module kinds:
 
 - **Mini modules**: tagged, self-contained story ingredients (one NPC in a hut, a side job, a
   mystery, a small arc). The campaign's creative tags choose the pool, and the AI GM may select
@@ -51,6 +70,9 @@ embedded setting, and its outcome rules become module endings/fronts. Existing c
 exports that name `world_template: twin-lakes` must keep working.
 
 ## Current state
+
+> This section is the pre-implementation audit snapshot. It explains why the change was made;
+> the implementation notes at the end of each design section describe the shipped behavior.
 
 ### Creative tables
 
@@ -302,8 +324,9 @@ sample also had more latency, though model variance is high. It is not the recom
   is embedded in the module. Otherwise `world` names an external world template. A module may
   have an embedded world and no `world` field; the embedded world's id is then its setting.
 - Module content is merged into the campaign's world content. Precedence is:
-  rule set < selected world < module. A module may intentionally replace a world entry, but it
-  must declare the id in its `replaces` list; an undeclared id collision is a content error.
+  rule set < selected world < module. A module entry with the same id replaces the world entry.
+  The `replaces` list is parsed for future validation but is not enforced in the shipped merge;
+  the merge is id-based and deliberate.
 - Duplicate names with different ids are allowed but reported by `content validate` as a warning,
   because two places or people with the same name confuse the GM.
 - A module that includes statblocks is validated against every rule set it declares. A portable
@@ -347,7 +370,12 @@ A vocabulary file:
 
 The campaign-level selection is a subset of `genres`, stored in the existing `table_genres` field.
 `list_modules` also accepts the finer `settings`, `tones`, `lengths`, `threats`, and `themes` tags
-for on-demand filtering. A module's tags are checked against the vocabulary at load time.
+for on-demand filtering.
+
+> Implementation note: the shipped version keeps the vocabulary in `TABLE_GENRES` and extends it
+> with `mystery`. `genres` is validated at load time; the other tag categories are free-form and
+> are matched case-insensitively against the same category or any category. A separate
+> `data/tags.json` vocabulary is still future work.
 
 ### Visibility
 
@@ -664,32 +692,28 @@ Add to `Campaign`:
 - The mini-module pool uses the existing `table_genres` selection in the first version; no new
   `module_tags` field is required. If authors later need finer selection than genres, add a
   separate field without changing the module format.
-- Optionally a `modules` JSON column for attached campaign modules. The event log is the source
-  of truth; the column is a cache for the settings page. If a cache is not worth the migration,
-  read the fold.
+- No `modules` column: attached campaign modules are read from the event fold, which is the
+  source of truth. `Campaign.module` is only the creation-time choice.
 
-Export/import keys: `module`, `modules`. Old exports without them import as a world-only
-campaign with no modules.
+Export/import keys: `module` plus the module events. Old exports without `module` infer it from
+an embedded module world, so `world_template: "twin-lakes"` keeps working.
 
 ### Events
 
-Add internal events:
+The shipped internal events are:
 
-- `module.attached`: a campaign module was attached by the owner. Payload: module id, role
-  (`starting` or `campaign`), by, reason.
-- `module.detached`: a campaign module was detached. The world content it seeded is not deleted;
-  the GM's notes/storylines remain.
+- `module.attached`: a campaign module was attached by the owner. Payload: module id and role
+  (default `campaign`). The starting module is **not** recorded as an attach event; it lives in
+  `Campaign.module`.
+- `module.detached`: a campaign module was detached. No world content is deleted; the GM's
+  notes/storylines remain.
 - `module.used`: the GM brought a mini module into play, or began using an attached campaign
-  module. Payload: module id, kind, scene id (optional), reason. A one-shot mini module is not
-  offered again.
-- Optional `module.completed`: the GM or owner marked a campaign module's story concluded. This
-  is bookkeeping, not progress. The first version can omit it; resolving the module's storylines
-  and detaching the module in Settings is enough.
+  module. Payload: module id and reason. A one-shot mini module is not offered again.
 
 Fold `CampaignState` with:
 
-- `campaign_modules: dict[str, ModuleState]` for attached modules.
-- `used_mini_modules: set[str]`.
+- `modules: dict[str, str]` for modules attached after creation, by module id.
+- `used_modules: set[str]`.
 - The module content itself is not copied into state; it is loaded from the content library by
   id.
 
@@ -700,14 +724,14 @@ Fold `CampaignState` with:
 2. The app resolves the setting:
    - module with an embedded world, no selected world: use the embedded world;
    - module with an embedded world plus a selected world: merge the selected world and the
-     module's world, module wins on declared replacements;
+     module's world, module entries win on id collisions;
    - module without an embedded world: require a selected world and merge the module's content
      on top;
    - no module: today's world-only behavior.
 3. The app seeds the merged world content as today (`seed_campaign`). The module's hook/opening
    card is part of the opening prompt; the module's later cards are not.
-4. The campaign records the selected module id and tags. `module.attached` may also be recorded
-   for a starting module, so the event history is complete.
+4. The campaign records the selected module id in `Campaign.module`. No `module.attached` event
+   is recorded for the starting module.
 5. The opening prompt:
    - uses the module's `start` location and hooks when it has them, otherwise the world's;
    - includes the module's opening card (one scene);
@@ -717,27 +741,29 @@ Fold `CampaignState` with:
 
 ### Attaching a campaign module later
 
-1. The owner opens Settings -> Modules, chooses a compatible campaign module, and attaches it.
-2. `module.attached` is recorded. The engine seeds the module's authored locations, NPCs,
-   regions, and routes that do not already exist (id collision rules apply). If a module entry
-   replaces an existing world entry, the module declares it in `replaces`; the seeded entity is
-   updated, not duplicated.
-3. The next state step's module brief includes the new module, its premise, and its
-   `introduction`/`start` card. The prompt says to bring it in when it fits, not to derail the
-   focused storyline.
+1. The owner opens Settings -> Story modules, chooses a compatible campaign module, and attaches
+   it.
+2. `module.attached` is recorded. The module's setting is merged into the campaign world for
+   lookups (module entries win on id collisions). The engine does **not** seed its locations or
+   NPCs as events at attach time; the GM creates them from the module's cards when the story
+   reaches them, which keeps a later attach from adding a whole region to the world unasked.
+3. The next state step's module brief includes the new module, its premise, and its card index.
+   The prompt says to bring it in when it fits, not to derail the focused storyline.
 4. The GM can call `lookup_module` for the module's scenes, cast, places, clues, fronts, and
    endings.
-5. Detaching stops the module brief and card offers. Seeded content stays in the campaign; the
-   GM may keep using it as ordinary world content.
+5. Detaching stops the module brief and card offers. Content the GM already created remains in
+   the campaign as ordinary world content.
 
 ### Using a mini module
 
 1. The GM decides the scene needs a new thread, place, person, or complication.
 2. It calls `list_modules(tags?, setting?, random?)`. The result is a short list of cards that
    fit the campaign's tags, rule set, world, and unused one-shot modules.
-3. It calls `use_module(module, reason?)`. The result is the module's brief and material:
-   premise, GM notes, cast entries, places, scene cards, clues, and suggested outcomes. The engine
-   records `module.used`; a one-shot module leaves the pool.
+3. It calls `use_module(module, reason?)`. For a mini module the result is its brief and all its
+   material (capped): premise, GM notes, cast entries, places, scene cards, clues, and suggested
+   outcomes. The engine records `module.used`; a one-shot module leaves the pool. For an attached
+   campaign module, `use_module` returns only the brief and marks it used; its individual cards
+   are read with `lookup_module`.
 4. The GM brings the material in with the existing tools: `create_location`, `create_npc`,
    `add_note`, `create_storyline`, `place_object`, and so on. It does not seed the whole module
    automatically.
@@ -753,12 +779,19 @@ A compact block, one per active campaign module:
 Module: Twin Lakes (campaign)
 Premise: Two disappearances in a fading lake town lead into a drowned temple,
 a sect, and a gate under the Stone Forest.
+Truth: Reeve Trellis is hiding the tithe record; Vuk's cult is trying to reopen the Gate.
 Tone: Cold water, old debts, and a town that has learned not to ask.
-Bring it in: Flavia waits at the Butcher; Reeve Trellis waits at the Stuffed Inn.
-Cards: opening=arrival; scenes=the-stuffed-inn, the-butcher, up-the-river, the-lock;
-cast=Flavia, Reeve Trellis, Jandy, ...; places=Isthmus Town, ...;
-clues=river-black, tithe-record, gate-mark; endings=vuk-stopped, ...
-Use lookup_module("twin-lakes", "scene:the-butcher") for a card.
+Themes: obligation, drowning, old power
+GM notes: This is a sandbox mystery. Let the players choose either hook or both. ...
+Opening hooks: - The Tideborn have agreed to pay ...
+Scenes: arrival (Arrival in Isthmus Town); the-two-offers (The Two Offers); ...
+Clues: poisoned-river (The Poisoned River); ...
+Cast: flavia (Flavia); reeve-trellis (Reeve Trellis); ...
+Places: isthmus-town (Isthmus Town); ...
+Fronts: vuk-reborn (Vuk Is Reborn); gate-opened (The Gate Opens)
+Endings: vuk-stopped (Vuk Is Stopped); ...
+Storyline seeds: aldra (Aldra's Whereabouts); the-tithe (The Tithingman's Tithe)
+Use lookup_module("twin-lakes", "scene:<id>") for one card, ...
 ```
 
 For a mini module after `use_module`, the state prompt carries a one-line "in play" note and the
@@ -816,6 +849,9 @@ Add core prompt fragments:
 > are available for you to use when the story needs a new thread: call `list_modules` to see cards
 > that fit the campaign's tags, then `use_module`. Do not use a mini module in the middle of an
 > encounter unless it fits the encounter.
+
+> Implementation note: the opening text below is appended by `opening_prompt()` when a starting
+> campaign module is present; it is not a separate `prompts.json` fragment.
 
 `module_opening` (opening, when applicable):
 
@@ -881,9 +917,11 @@ can be "no change."
 
 ### Player-facing compendium
 
-- Add modules to the compendium's selectable content, or show them in a "Modules" section.
-- A module shows the same public entries a world shows: locations, NPCs, monsters, features,
-  items, and rules. Do not show `premise`, `truth`, `gm_notes`, scenes, clues, fronts, or endings.
+- Shipped: a campaign module's embedded setting appears in the compendium world picker and is
+  labelled "Campaign module". Mini modules are listed as cards in a "Story modules" section.
+- A module's setting shows the same public entries a world shows: locations, NPCs, monsters,
+  features, items, and rules. It does not show `premise`, `truth`, `gm_notes`, scenes, clues,
+  fronts, or endings. Mini module cards show the name, blurb, and genres only.
 - A module's `blurb`, `source`, tags, and icon are player-facing.
 - The in-play header stays the world/rule set. No module link, progress, or module name is
   shown in the play UI; the compendium is the out-of-game reference surface.
@@ -893,11 +931,13 @@ can be "no change."
 
 ### Settings
 
-Add a Modules panel for the campaign owner:
+Shipped Settings behavior for the campaign owner:
 
-- Attach a campaign module from the compatible ones; detach an attached module.
-- Change the creative tags that select mini modules.
-- See the attached campaign modules and which mini modules have been used.
+- The **Story modules** panel attaches and detaches compatible campaign modules. The starting
+  module is always attached and cannot be removed.
+- The **Creative and lore tables** panel under Game changes the `table_genres` selection that
+  both filters creative tables and selects the mini-module pool.
+- The panel lists the mini modules used so far.
 - No module progress editing; the Story tab and journal remain the player-facing record.
 
 Attaching a campaign module mid-turn is refused while a turn or encounter is running, like other
@@ -915,12 +955,13 @@ campaign settings. The change applies from the next reply.
    - the two hooks from `world.json` `start` (or keep the embedded world's start and have the
      module reference it);
    - `premise`, `truth`, `gm_notes`, `tone`, `themes`;
-   - `cast`/`places` link tables for the 14 NPCs and 35 locations, with roles and secrets where
-     useful;
-   - `scenes` for the adventure's key beats;
-   - `clues` for the river, the tithe record, Aldra, the Gate, and Vuk;
-   - `fronts`/`endings` from the existing outcome rules (`outcome-vuk-reborn`,
-     `outcome-gate-opened`, `outcome-vuk-reborn-and-gate-opened`, `outcome-vuk-stopped-gate-closed`);
+   - `cast`/`places` link tables for the adventure's key people and places (all NPCs and
+     locations remain in the embedded world's own `npcs.json`/`locations.json`);
+   - `scenes` for eight key beats: arrival, the two offers, the butcher, the Stuffed Inn, the
+     river road, Deadmill, the White Tower, and the temple;
+   - `clues` for the poisoned river, Aldra's lantern, the tithe record, the gate mark, and Vuk's
+     vessel;
+   - `fronts` for Vuk's rebirth and the Gate opening, and four endings;
    - `storylines` seeds for the two hooks.
 4. Convert the existing `rules.json` outcome text into `module_front`/`module_ending` entries.
    Keep the location, monster, and NPC rules where they are; they are already useful attached
@@ -953,92 +994,52 @@ This makes creative tables and modules the **injection** layer and storylines/no
 **continuity** layer. The GM never has to invent a whole new thread from nothing, and it never has
 to follow a prepackaged script.
 
-## Implementation plan
+## Implementation status
 
-### Phase 0: Creative table revival (independent of modules)
+| Area | Status |
+| --- | --- |
+| Creative table roles, oracle default, `setting` forge, `creative_oracle` prompt | Shipped |
+| Module loader, inline entries, embedded/synthetic settings, tag and compatibility checks | Shipped |
+| `Campaign.module`, module events, state fold, export/import | Shipped |
+| `list_modules`, `lookup_module`, `use_module`, state/opening brief | Shipped |
+| New Campaign picker, Settings story modules, compendium module worlds/mini cards | Shipped |
+| Twin Lakes conversion and old `world_template` compatibility | Shipped |
+| Sample mini module (`the-hermit-of-ash-hollow`) | Shipped |
+| Content-defined tag vocabulary (`data/tags.json`) | Not shipped; `TABLE_GENRES` extended with `mystery` |
+| `module.completed`, module progress UI | Not shipped; storylines and notes are the record |
+| Seeding a later-attached module's locations/NPCs as events | Not shipped; merged content is available and the GM creates entries when needed |
+| `replaces` enforcement | Not shipped; id-based module precedence is the merge rule |
+| Full module authoring guide (`docs/MODULES.md`) | This document plus the sample module serve as the guide |
+| Live tuning across models and rulesets | Automated coverage ships; live tuning remains a follow-up |
 
-- Add `role` to `DiceTable` and `creative_table` loaders; ship roles for core, worldgen, Academia,
-  and world tables.
-- Add the `role` argument (`oracle`, `setting`, `module`); a no-table roll uses `oracle` by
-  default, and named rolls still work.
-- Put the trigger in the first sentence of the `roll_creative` description.
-- Add the `creative_oracle` core state prompt.
-- Update `setting_forge` to pass role `setting` and leave the oracle tables for play.
-- Include `role` and `genres` in `list_dice_tables`.
-- Tests: table loading, roles, no-arg behavior, named rolls, prompt assembly, tool description
-  first sentence, `setting_forge` text.
-- Live test: Twin Lakes + 3 stall turns with the prompt; expect 1-3 oracle rolls and no setting
-  table contamination; no roll in an encounter.
+### Deferred work
 
-### Phase 1: Module content and loader
-
-- Add `data/modules/` loading, `ModuleTemplate`, `ModuleContent`, tags, compatibility, embedded
-  worlds, inline entries, and merge rules.
-- Add a content-defined tag vocabulary, seeded from the existing table genres.
-- Add `module`, `module_scene`, `module_clue`, `module_front`, `module_ending`, `module_hook`,
-  `module_storyline` definitions.
-- Validate ids, references, tags, compatibility, statblocks, collisions, and the setting source.
-- Extend `cygnusloom content validate` and `--all-pairs`.
-- Tests: loader, validation, embedded world, merge/replace, mini/campaign rules, compendium
-  filtering.
-- No runtime behavior yet.
-
-### Phase 2: Runtime state, prompts, and tools
-
-- Add `Campaign.module` and the attached-module cache (or read the fold); reuse `table_genres`
-  for the mini-module pool.
-- Add `module.attached`, `module.detached`, and `module.used` events and state folding.
-- Add the module block to the state prompt; keep it out of narration/review.
-- Add `list_modules`, `lookup_module`, and `use_module`; add `list_dice_tables` roles.
-- Add `modules` and `module_opening` prompt fragments.
-- Extend the opening prompt for a starting campaign module; keep the world opening behavior when
-  there is no module.
-- Export/import the module fields and events; keep old exports working.
-- Tests: state folding, tool filtering, one-shot mini modules, permissions, prompt placement,
-  export/import, opening from a module.
-
-### Phase 3: UI
-
-- New Campaign: campaign module picker, optional world, creative tags, compatibility filtering,
-  blurb and credits.
-- Settings: Modules panel (attach/detach campaign modules, creative tags, used mini modules).
-- Compendium: modules section/selector, public entries only, deduplicate embedded worlds.
-- Campaign page: no module tab; keep the world/rule set header.
-- Mobile layout and accessibility checks.
-- Tests: form validation, module selection, optional world, attach/detach, compendium entries,
-  no module UI in play.
-
-### Phase 4: Twin Lakes conversion
-
-- Move the world; add the manifest, scenes, clues, fronts, endings, and link tables.
-- Keep the old world id working through the embedded world.
-- Update tests and content credits.
-- Live test: create a Twin Lakes campaign module, run the opening, verify the two storylines from
-  the two hooks, look up a scene and a cast member, and check that the module name/progress is not
-  in the play UI.
-- Export/import the campaign and verify the module id and old content survive.
-
-### Phase 5: Authoring and examples
-
-- Add authoring docs for the JSON format (a `docs/MODULES.md` or a section in the content
-  authoring docs), with the mini and campaign examples above.
-- Ship a small set of mini modules across genres/settings to exercise the pool; do not ship enough
-  to drown the GM.
-- Add a content validation report that lists each module's tags, compatibility, and unresolved
-  references.
-- Keep modules free of Python imports; content is trusted data, not code.
-
-### Phase 6: Live tuning
-
-- Compare prompt-only vs. prompt + checklist across rulesets and worlds.
-- Measure token/latency impact of the module brief and `lookup_module`.
-- Check that the GM does not reveal module secrets in narration; the review step should catch
-  unsupported facts generically.
-- Check that a mid-campaign attach does not derail the focused storyline.
-- Check that a one-shot mini module is not offered twice and that a repeatable one can return.
-- Tune the module card indexes and caps.
+- A content-defined tag vocabulary and a `content validate` module report.
+- Authoring docs split out of this design document.
+- Seeding attached campaign module content as events at attach time.
+- A `module.completed` event or any module progress UI.
+- Encounter maps/templates inside modules.
+- User-imported module files with embedded snapshots.
 
 ## Testing plan
+
+## Testing plan
+
+The 3,745-test suite passes with the module work. `tests/test_modules.py` is the focused
+coverage; the creative-table, worldgen, campaign, turn, compendium, content, and export tests were
+updated for roles, module worlds, and the migration head.
+
+A live DeepSeek smoke test on a throwaway database confirmed the plumbing:
+
+- A Twin Lakes campaign opening used the module's start and hooks, created both module storyline
+  seeds ("Aldra's Whereabouts" and "The Tithingman's Tithe"), and never printed the word
+  "module" in the player-facing reply.
+- A follow-up turn at the Butcher called `lookup_module("twin-lakes", "scene:the-butcher")` and
+  `lookup_module("twin-lakes", "cast:flavia")`, then used the scene's ledger, lantern, and
+  Flavia's condition for returning Aldra's body in the narration.
+- A directionless road-wait turn followed the existing Dark Drum thread and did not force a mini
+  module. That is the intended behavior: the module pool is for a story that needs a new thread,
+  not a compulsion to inject one every quiet turn.
 
 ### Automated
 
@@ -1054,7 +1055,11 @@ to follow a prepackaged script.
 - UI: new campaign form, settings panel, compendium public fields, no in-play module UI, mobile.
 - Twin Lakes: loader, compendium, old `world_template` resolution, hooks, `twin_lakes` fixture.
 
-### Live
+### Live follow-up
+
+These checks were designed but not all were run against a live model in this iteration. The
+automated tests use the fake provider and assert prompt/tool plumbing; they do not prove the
+model's choices.
 
 - Twin Lakes campaign module start with DeepSeek: opening uses the module hooks; two storylines;
   `lookup_module` for a scene/cast; no module name in play; no spoilers.
@@ -1068,6 +1073,12 @@ to follow a prepackaged script.
   round-trips; an old export with `world_template: twin-lakes` still imports.
 
 ## Open questions
+
+Resolved in the shipped implementation: `table_genres` is reused; a later attach does not seed
+content; `module.completed` is omitted; mini modules are one-shot by default; the compendium does
+not show module scene/clue handouts; user-imported modules are not supported.
+
+Still open:
 
 - Should the campaign's coarse selection be the existing `table_genres` (one list for tables and
   mini modules) or a separate `module_tags` list? This document recommends reusing

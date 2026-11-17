@@ -1,0 +1,61 @@
+[
+  {
+    "type": "module_clue",
+    "id": "poisoned-river",
+    "name": "The Black Water",
+    "summary": "The lake water has turned black, and the fish and birds are dying.",
+    "detail": "The poisoning starts upriver of Isthmus Town and follows the old mill race toward Deadmill.",
+    "found_at": "East Lake and the river road",
+    "reveals": "Something under Deadmill is poisoning the water.",
+    "leads_to": "the-river-road",
+    "location": "east-lake-pass"
+  },
+  {
+    "type": "module_clue",
+    "id": "aldra-lantern",
+    "name": "Aldra's Lantern",
+    "summary": "A Tideborn lantern that still smells of lake water, found in the closed butcher shop.",
+    "detail": "Aldra carried it upriver the night he vanished, and the wick was trimmed for a long walk.",
+    "found_at": "The Butcher Shop",
+    "reveals": "Aldra was investigating the poisoned water when he disappeared.",
+    "leads_to": "the-river-road",
+    "npc": "flavia",
+    "location": "butcher-shop"
+  },
+  {
+    "type": "module_clue",
+    "id": "tithe-record",
+    "name": "The Hidden Tithe Record",
+    "summary": "A second ledger in the Stuffed Inn's cellar, showing a shortfall in the town's tithe.",
+    "detail": "The record in the inn does not match the one Reeve sent to the Cities. Jandy's route and the missing silver can be traced from it.",
+    "found_at": "The Stuffed Inn cellar",
+    "reveals": "Reeve Trellis has been hiding the true tithe record.",
+    "leads_to": "deadmill",
+    "npc": "reeve-trellis",
+    "location": "the-stuffed-inn"
+  },
+  {
+    "type": "module_clue",
+    "id": "gate-mark",
+    "name": "The Gate Mark",
+    "summary": "A black spiral cut into the mill wheel and the stone under Deadmill.",
+    "detail": "The mark matches the old Tideborn warnings about the Roots and the sealed Gates.",
+    "found_at": "Deadmill",
+    "reveals": "The cult is trying to open a Gate under the mill.",
+    "leads_to": "the-white-tower",
+    "location": "deadmill"
+  },
+  {
+    "type": "module_clue",
+    "id": "vuk-rebirth",
+    "name": "The Vessel for Vuk",
+    "summary": "Annafranax has prepared a living vessel for Vuk's return.",
+    "detail": "The Eye of Vuk and the old rites can move Vuk's will into a new body. Fasha is the chosen vessel.",
+    "found_at": "The White Tower and the temple",
+    "reveals": "Vuk intends to return in Fasha's body and take the lakes.",
+    "leads_to": "the-temple",
+    "npc": "annafranax",
+    "location": "the-white-tower",
+    "object": "Eye of Vuk"
+  }
+]

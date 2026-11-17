@@ -2434,7 +2434,7 @@ def _twin_lakes_copy(tmp_path: Path) -> Path:
 
 
 def _edit_twin_lakes_location(root: Path, location_id: str, **changes: object) -> None:
-    path = root / "worlds" / "twin-lakes" / "locations.json"
+    path = root / "modules" / "twin-lakes" / "locations.json"
     locations = json.loads(path.read_text(encoding="utf-8"))
     (entry,) = [loc for loc in locations if loc.get("id") == location_id]
     entry.update(changes)
@@ -2442,11 +2442,11 @@ def _edit_twin_lakes_location(root: Path, location_id: str, **changes: object) -
     if "routes" in changes:
         # The bundled world authors its routes at the top level, so a per-location route in this
         # copy would conflict with the same bundled pair.
-        (root / "worlds" / "twin-lakes" / "routes.json").unlink(missing_ok=True)
+        (root / "modules" / "twin-lakes" / "routes.json").unlink(missing_ok=True)
 
 
 def _write_twin_lakes_routes(root: Path, routes: list[dict[str, object]]) -> None:
-    path = root / "worlds" / "twin-lakes" / "routes.json"
+    path = root / "modules" / "twin-lakes" / "routes.json"
     path.write_text(json.dumps(routes, indent=2), encoding="utf-8")
 
 

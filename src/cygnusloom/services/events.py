@@ -735,6 +735,52 @@ class CampaignOptionsChosen(GameEvent):
 
 
 @dataclass(frozen=True)
+class ModuleAttached(GameEvent):
+    """A campaign module the owner attached after creation. The module's authored content is
+    reference material; the GM instantiates its people and places when the story reaches them."""
+
+    kind: ClassVar[str] = "module.attached"
+    hidden: ClassVar[bool] = True
+    channel: ClassVar[Channel] = Channel.INTERNAL
+
+    module: str
+    role: str = "campaign"
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.modules[self.module] = self.role
+
+
+@dataclass(frozen=True)
+class ModuleDetached(GameEvent):
+    """A campaign module the owner detached. Its storylines and seeded content remain."""
+
+    kind: ClassVar[str] = "module.detached"
+    hidden: ClassVar[bool] = True
+    channel: ClassVar[Channel] = Channel.INTERNAL
+
+    module: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.modules.pop(self.module, None)
+
+
+@dataclass(frozen=True)
+class ModuleUsed(GameEvent):
+    """The GM brought a mini module into play or began using an attached campaign module. A
+    one-shot mini module is not offered again. This is bookkeeping, not plot progress."""
+
+    kind: ClassVar[str] = "module.used"
+    hidden: ClassVar[bool] = True
+    channel: ClassVar[Channel] = Channel.INTERNAL
+
+    module: str
+    reason: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.used_modules.add(self.module)
+
+
+@dataclass(frozen=True)
 class MusicCued(GameEvent):
     """The GM chose a background-music mood for the current scene. The cue is presentation, not
     a fact of the world, so it is hidden from the transcript and the Log. `scene` ties it to the

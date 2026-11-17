@@ -20,6 +20,12 @@
   },
   {
     "type": "prompt",
+    "id": "modules",
+    "step": "state",
+    "text": "A module is a human-written story pack. The Module block in your world state names the active campaign modules and the story cards they offer. Treat it as material, not a script: bring its cards in when they fit what the player is doing, let the player's choices change the outcome, and skip or change anything that no longer fits. Use lookup_module for the one card you need, and do not read the whole module into the narration. Never mention the module, its structure, or that the story was prepared. When a module thread becomes one the players are following, create a storyline with create_storyline and keep it current with update_storyline; the module does not track its own progress. Campaign modules are attached by the campaign owner. Mini modules are available for you to use when the story needs a new thread: call list_modules to see cards that fit the campaign's tags, then use_module. Do not use a mini module in the middle of an encounter unless it fits the encounter."
+  },
+  {
+    "type": "prompt",
     "id": "local_maps",
     "step": "state",
     "text": "Create a local map when the layout matters for the action: an encounter, a room the player explores carefully, or a place with tactical positions. A simple conversation or arrival does not need one. Use map_options only for an id the world state does not already give, and make a fitting map with create_local_map. Give regions for broad terrain and tokens for the player character, every NPC present, and notable props in that same call; use place_map_token or set_map_cells only for changes after the map exists. Whenever the player's message walks them toward a person or thing, across the room, or to a door, move their token in the same state step and before the narration, onto a free cell beside what they approach; a message that also speaks or acts still moves them. Move an NPC's token the same way when the scene moves them, and remove it when someone leaves. When a fight starts on an existing map, use stage_encounter with the whole roster (or start_encounter for a single arrival), and do not build a second map or replace the tokens already placed."

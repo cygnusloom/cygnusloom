@@ -1,0 +1,28 @@
+[
+  {
+    "type": "module_storyline",
+    "id": "aldra",
+    "name": "Aldra's Whereabouts",
+    "summary": "The Tideborn will pay 750gp to learn what became of Aldra, and 250gp more if his body is brought back for burial. Flavia at the Butcher has the details.",
+    "plot": "Aldra was investigating the poisoned river when he vanished. Flavia suspects the Tideborn's own rites are being disturbed. The trail runs from the butcher shop to East Lake and down under Deadmill.",
+    "characters": ["Flavia", "Aldra"],
+    "locations": ["The Butcher", "East Lake Pass", "Deadmill"],
+    "objects": ["Aldra's lantern"],
+    "notes": "Flavia pays only for real news, not guesses.",
+    "focus": true,
+    "scenes": ["the-two-offers", "the-butcher", "the-river-road", "deadmill"]
+  },
+  {
+    "type": "module_storyline",
+    "id": "the-tithe",
+    "name": "The Tithingman's Tithe",
+    "summary": "The Cities offer 200gp apiece to find Jandy, a tithingman days overdue with the latest tithe, but only if the tithe comes back intact and accounted for. Reeve Trellis at the Stuffed Inn is the contact.",
+    "plot": "Jandy was carrying the town's tithe when he disappeared. Reeve Trellis is hiding the true tithing record in the inn's cellar, and the shortfall and Jandy's disappearance are connected. The trail runs through Deadmill.",
+    "characters": ["Reeve Trellis", "Jandy", "Drum"],
+    "locations": ["The Stuffed Inn", "Deadmill"],
+    "objects": ["the tithe", "the tithing record"],
+    "notes": "Reeve knows more than he will say in the taproom.",
+    "focus": false,
+    "scenes": ["the-two-offers", "the-stuffed-inn", "deadmill"]
+  }
+]

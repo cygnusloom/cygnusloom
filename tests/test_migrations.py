@@ -276,7 +276,7 @@ def test_a_legacy_long_revision_id_is_rewritten(tmp_path, monkeypatch):
         version = connection.execute(
             sa.text("SELECT version_num FROM alembic_version")
         ).scalar_one()
-    assert version == "0020_campaign_allow_respec"
+    assert version == "0021_campaign_module"
     campaign_columns = {
         column["name"] for column in inspect(make_engine(url)).get_columns("campaign")
     }

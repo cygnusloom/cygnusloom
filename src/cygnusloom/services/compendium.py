@@ -244,14 +244,17 @@ def compendium_view(
     rule_set_id: str,
     world_id: str,
     state: CampaignState | None = None,
+    *,
+    world_template: WorldTemplate | None = None,
 ) -> Compendium:
     """Build the compendium for a rule set and world, plus the discovered parts of a campaign.
 
     An unknown rule set or world gives an empty compendium rather than an error, so a stale link
-    or a handbook page with no world still renders.
+    or a handbook page with no world still renders. A campaign passes its merged world template
+    so an attached module's people and places appear alongside the base world.
     """
     rule_set = library.rule_sets.get(rule_set_id)
-    world = library.world_templates.get(world_id)
+    world = world_template or library.world_templates.get(world_id)
     if rule_set is None or world is None:
         return Compendium(world=None, rule_set=None, sections=())
     return _build(library, rule_set, world, state)

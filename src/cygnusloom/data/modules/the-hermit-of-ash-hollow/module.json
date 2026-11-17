@@ -1,0 +1,82 @@
+[
+  {
+    "type": "module",
+    "id": "the-hermit-of-ash-hollow",
+    "kind": "mini",
+    "name": "The Hermit of Ash Hollow",
+    "blurb": "A reclusive herbwife in a burnt-out hut knows what happened at the mill.",
+    "description": "A small wilderness encounter: a guarded herbwife, a burnt hut, and a purse of hush-money.",
+    "icon": "campfire",
+    "tags": {
+      "genres": ["fantasy", "mystery"],
+      "settings": ["wilderness"],
+      "tones": ["grim"],
+      "lengths": ["scene"],
+      "themes": ["truth", "protection"]
+    },
+    "repeatable": false,
+    "source": "Original content written for Cygnus Loom.",
+    "premise": "Mara Ash saw the miller's son set the fire that killed two workers, and the miller has paid her to keep quiet.",
+    "truth": "Mara's grandchild works in the miller's kitchen. She took the money to keep the child fed, not to protect the miller.",
+    "gm_notes": "Mara is not a villain. She is frightened and protective. She will trade the truth for a promise that the child will be safe. The miller's men may arrive while the bargain is being struck.",
+    "tone": "Woodsmoke, wet ash, and a door that is never quite open.",
+    "cast": [{"npc": "mara-ash", "role": "witness", "wants": "Keep her grandchild out of the miller's reach.", "secret": "She saw the arson and took hush-money.", "knows": ["the-millers-purse"], "appears_in": ["the-bargain"]}],
+    "places": [{"location": "ash-hollow-hut", "role": "scene", "secret": "The child's wooden boat on the sill is the only sign anyone else lives here.", "appears_in": ["the-bargain"]}],
+    "scenes": ["the-bargain"],
+    "clues": ["the-millers-purse"],
+    "entries": [
+      {
+        "type": "npc",
+        "id": "mara-ash",
+        "name": "Mara Ash",
+        "location": "ash-hollow-hut",
+        "description": "A herbwife in her sixties, burned across one hand. She saw the fire and took the miller's money.",
+        "personality": "patient and guarded",
+        "accent": "soft and rural",
+        "quirks": ["taps a finger against her lips when thinking"],
+        "story_only": true
+      },
+      {
+        "type": "location",
+        "id": "ash-hollow-hut",
+        "name": "Ash Hollow Hut",
+        "summary": "A low turf hut with a crooked chimney, set in a black ring of burnt stumps.",
+        "description": "The hut smells of peat smoke and dried yarrow. A child's wooden boat sits on the sill."
+      },
+      {
+        "type": "module_clue",
+        "id": "the-millers-purse",
+        "name": "The Miller's Purse",
+        "summary": "A purse of hush-money with the miller's mark on the clasp.",
+        "detail": "The coins are new and the purse is good leather. Mara did not spend it.",
+        "found_at": "Ash Hollow Hut",
+        "reveals": "The miller paid Mara to keep quiet.",
+        "leads_to": "the miller's house",
+        "npc": "mara-ash",
+        "location": "ash-hollow-hut"
+      },
+      {
+        "type": "module_scene",
+        "id": "the-bargain",
+        "name": "The Bargain",
+        "summary": "Mara will name the arsonist if the party can get her grandchild out of the miller's service.",
+        "location": "ash-hollow-hut",
+        "cast": ["mara-ash"],
+        "goal": "Trade safety for the truth.",
+        "setup": "Mara has already denied seeing anything. The child is in the miller's kitchen.",
+        "clues": ["the-millers-purse"],
+        "complications": [
+          "The miller's men arrive while the bargain is being struck.",
+          "Mara's grandchild does not want to leave."
+        ],
+        "if_ignored": "The miller moves the child out of the region, and Mara stops speaking to strangers.",
+        "outcomes": [
+          "Mara names the son; the party gains a witness.",
+          "Mara keeps silent; the purse is the only proof."
+        ],
+        "next": [],
+        "tags": ["social", "investigation"]
+      }
+    ]
+  }
+]

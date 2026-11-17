@@ -105,6 +105,29 @@
       <button type="submit">Save</button>
     </form>
   </section>
+  <section class="settings-section" aria-labelledby="settings-modules-title">
+    <h3 id="settings-modules-title">Story modules</h3>
+    {% if campaign_module %}
+      <p class="muted">This campaign started from <strong>{{ campaign_module.name }}</strong>. The starting module always stays attached.</p>
+    {% endif %}
+    <form method="post" action="/campaigns/{{ campaign.id }}/modules">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      {% if campaign_modules %}
+        <p class="muted">Attach a full campaign module when its adventure fits this campaign. The GM treats its scenes and people as material, never as a script. Mini modules are chosen by the GM from the creative tags in Game.</p>
+        <div class="genre-options">
+          {% for module in campaign_modules %}
+            <label><input type="checkbox" name="modules" value="{{ module.id }}"{% if module.id in attached_modules or (campaign_module and module.id == campaign_module.id) %} checked{% endif %}{% if campaign_module and module.id == campaign_module.id %} disabled{% endif %}> {{ module.name }} <span class="muted">· {{ module.kind }}</span></label>
+          {% endfor %}
+        </div>
+        <button type="submit">Save modules</button>
+      {% else %}
+        <p class="muted">No campaign modules are available for this campaign's rule set and world.</p>
+      {% endif %}
+    </form>
+    {% if used_module_names %}
+      <p class="muted">Mini modules used: {{ used_module_names | join(", ") }}.</p>
+    {% endif %}
+  </section>
   <section class="settings-section" aria-labelledby="settings-export-title">
     <h3 id="settings-export-title">Export</h3>
     <p class="muted"><a href="/campaigns/{{ campaign.id }}/export">Export this campaign as JSON</a></p>

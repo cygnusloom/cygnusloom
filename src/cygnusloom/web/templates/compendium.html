@@ -39,6 +39,17 @@
   {% else %}
   <p class="muted compendium-empty-page">No compendium content is available for this world and rule set.</p>
   {% endif %}
+  {% if story_modules %}
+  <section class="card">
+    <h2>Story modules</h2>
+    <p class="muted">Human-written mini modules the GM may draw on for this rule set. Their full material stays with the GM.</p>
+    <ul class="plain-list">
+      {% for module in story_modules %}
+        <li><strong>{{ module.name }}</strong> — {{ module.blurb or module.description }}{% if module.tags.get("genres") %} <span class="muted">({{ module.tags["genres"] | join(", ") }})</span>{% endif %}</li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
 {% endblock %}
 {% block scripts %}
   {{ super() }}

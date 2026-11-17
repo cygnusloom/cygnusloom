@@ -39,6 +39,7 @@ from cygnusloom.content.library import (
     LevelUpRules,
     MagicRules,
     Marketplace,
+    ModuleTemplate,
     MonsterTemplate,
     MoveRules,
     PeriodRules,
@@ -52,6 +53,7 @@ from cygnusloom.content.library import (
     WorldTerrain,
 )
 from cygnusloom.content.lookup import AmbiguousId, resolve_id
+from cygnusloom.db.models import Campaign
 from cygnusloom.rules.dice import is_formula, max_total, roll_total
 from cygnusloom.services import advancements as advancements_service
 from cygnusloom.services import aid, combat, custom_features, encounters, morale, reactions
@@ -63,6 +65,7 @@ from cygnusloom.services import factions as factions_service
 from cygnusloom.services import inventory as inventory_service
 from cygnusloom.services import magic as magic_service
 from cygnusloom.services import market as market_service
+from cygnusloom.services import modules as modules_service
 from cygnusloom.services import moves as moves_service
 from cygnusloom.services import objects as objects_service
 from cygnusloom.services import periods as periods_service
@@ -100,6 +103,7 @@ from cygnusloom.services.events import (
     Harmed,
     Item,
     MaxChanged,
+    ModuleUsed,
     MusicCued,
     NarrationUndone,
     ProjectAbandoned,
@@ -269,6 +273,9 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
     # The rule set's faction assets by id, such as Infantry or Smugglers.
     faction_assets: Mapping[str, FactionAssetDefinition] = field(default_factory=dict)
     dice_tables: Mapping[str, DiceTable] = field(default_factory=dict)
+    # The campaign's modules and the rule set's default genre selection, for module browsing.
+    modules: Mapping[str, ModuleTemplate] = field(default_factory=dict)
+    table_genres: tuple[str, ...] = ()
     # The rule set's moves by id.
     moves: Mapping[str, MoveRules] = field(default_factory=dict)
     # The rule set's counters by id, such as Experience or Luck.
@@ -349,6 +356,104 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 plus=self.plus,
                 role=role,
             )
+
+    def list_modules(
+        self,
+        kind: str | None = None,
+        tags: list[str] | None = None,
+        setting: str = "",
+        random: bool = False,
+    ) -> dict[str, Any]:
+        """List the module cards this campaign can use: active campaign modules and mini modules
+        that fit its tags and have not been used up."""
+        if kind not in (None, "mini", "campaign"):
+            raise InvalidInput("module kind must be 'mini' or 'campaign'")
+        with session_scope(self.engine) as db:
+            campaign = db.get(Campaign, self.campaign_id)
+            if campaign is None:
+                raise InvalidInput("campaign not found")
+            state = load_state(db, self.campaign_id)
+        cards: list[dict[str, Any]] = []
+        if kind in (None, "campaign"):
+            cards.extend(
+                modules_service.module_card(module)
+                for module in modules_service.active_campaign_modules(
+                    self.modules, campaign, state
+                )
+            )
+        if kind in (None, "mini"):
+            cards.extend(
+                modules_service.module_card(module)
+                for module in modules_service.available_mini_modules(
+                    self.modules,
+                    campaign,
+                    state,
+                    default_genres=self.table_genres,
+                    tags=tags or [],
+                    setting=setting,
+                )
+            )
+        if random:
+            self.rng.shuffle(cards)
+            cards = cards[:6]
+        return {"modules": cards}
+
+    def lookup_module(self, module: str, section: str = "") -> dict[str, Any]:
+        """Read one section of an active campaign module or a mini module already in play."""
+        with session_scope(self.engine) as db:
+            campaign = db.get(Campaign, self.campaign_id)
+            if campaign is None:
+                raise InvalidInput("campaign not found")
+            state = load_state(db, self.campaign_id)
+        found = self.modules.get(module)
+        if found is None:
+            raise InvalidInput(f"there is no module named {module!r}")
+        active = set(modules_service.active_campaign_module_ids(campaign, state))
+        if found.kind == "campaign" and module not in active:
+            raise InvalidInput(
+                "that campaign module is not attached; the campaign owner attaches it in Settings"
+            )
+        if found.kind == "mini" and module not in state.used_modules:
+            raise InvalidInput("call use_module before reading a mini module's material")
+        return {"module": module, "text": modules_service.module_section(found, section)}
+
+    def use_module(self, module: str, reason: str = "") -> dict[str, Any]:
+        """Bring a mini module into play, or begin using an attached campaign module. A one-shot
+        mini module is not offered again; the return value is the material to work into the scene."""
+        with session_scope(self.engine) as db:
+            campaign = db.get(Campaign, self.campaign_id)
+            if campaign is None:
+                raise InvalidInput("campaign not found")
+            state = load_state(db, self.campaign_id)
+            found = self.modules.get(module)
+            if found is None:
+                raise InvalidInput(f"there is no module named {module!r}")
+            if found.kind == "campaign":
+                active = set(modules_service.active_campaign_module_ids(campaign, state))
+                if module not in active:
+                    raise InvalidInput(
+                        "that campaign module is not attached; the campaign owner attaches it "
+                        "in Settings"
+                    )
+                text = modules_service.module_section(found, "brief")
+            else:
+                available = {
+                    candidate.id
+                    for candidate in modules_service.available_mini_modules(
+                        self.modules,
+                        campaign,
+                        state,
+                        default_genres=self.table_genres,
+                    )
+                }
+                if module not in available:
+                    raise InvalidInput(
+                        "that mini module is not available in this campaign, or it was already used"
+                    )
+                text = modules_service.module_section(found, "all")
+            record(db, self.campaign_id, ModuleUsed(module=module, reason=reason))
+            db.commit()
+        return {"module": module, "text": text}
 
     def advance_time(self, days: int = 0, parts: int = 0, hours: int = 0) -> dict[str, Any]:
         with session_scope(self.engine) as db:

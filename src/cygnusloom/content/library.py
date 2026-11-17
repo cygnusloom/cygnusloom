@@ -101,6 +101,7 @@ TABLE_GENRES = (
     "horror",
     "modern",
     "historical",
+    "mystery",
 )
 GENERIC_GENRE = "generic"
 # What a creative table is for: `oracle` tables give a fresh idea during play, `setting` tables
@@ -334,6 +335,9 @@ class WorldTemplate:
     # Areas of ground on the world map. They do not overlap, and are checked against the rule set's
     # world terrain in WorldContent.
     regions: tuple[RegionTemplate, ...] = ()
+    # The campaign module this world is embedded in, or None for a top-level world. It lets the
+    # compendium label and deduplicate a module's setting.
+    module: str | None = None
 
     @property
     def has_setting(self) -> bool:
@@ -354,6 +358,164 @@ class WorldContent:
     unattached_rules: Mapping[str, str] = field(default_factory=dict)
     # Dice tables the world defines itself, plus each world table as a dice table.
     dice_tables: Mapping[str, DiceTable] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class ModuleCast:
+    """A module's link to an NPC and what the module knows about that NPC."""
+
+    npc: str
+    role: str = ""
+    wants: str = ""
+    secret: str = ""
+    knows: tuple[str, ...] = ()
+    appears_in: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class ModulePlace:
+    """A module's link to a place and what the module knows about that place."""
+
+    location: str
+    role: str = ""
+    secret: str = ""
+    appears_in: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class ModuleScene:
+    """One story card. Every field except the id, name, and summary is optional guidance."""
+
+    id: str
+    name: str
+    summary: str
+    location: str | None = None
+    cast: tuple[str, ...] = ()
+    goal: str = ""
+    setup: str = ""
+    gm_notes: str = ""
+    clues: tuple[str, ...] = ()
+    complications: tuple[str, ...] = ()
+    if_ignored: str = ""
+    outcomes: tuple[str, ...] = ()
+    next: tuple[str, ...] = ()
+    tags: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class ModuleClue:
+    """A fact, object, or testimony, and where it can lead."""
+
+    id: str
+    name: str
+    summary: str
+    detail: str = ""
+    found_at: str = ""
+    reveals: str = ""
+    leads_to: str = ""
+    npc: str = ""
+    location: str = ""
+    object: str = ""
+
+
+@dataclass(frozen=True)
+class ModuleFront:
+    """A threat or plan with suggested stages. The GM tracks it with notes, not engine state."""
+
+    id: str
+    name: str
+    summary: str
+    segments: tuple[str, ...] = ()
+    advance_on: tuple[str, ...] = ()
+    effects: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class ModuleEnding:
+    """A suggested conclusion for a module."""
+
+    id: str
+    name: str
+    summary: str
+    when: str = ""
+    outcome: str = ""
+    rewards: tuple[str, ...] = ()
+    consequences: tuple[str, ...] = ()
+    next_module: str | None = None
+
+
+@dataclass(frozen=True)
+class ModuleHook:
+    """A way to bring a module, scene, or thread into play."""
+
+    id: str
+    name: str
+    text: str
+    location: str | None = None
+    patron: str = ""
+    reward: str = ""
+    tags: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class ModuleStoryline:
+    """A seed for a runtime storyline, with player-facing and private fields."""
+
+    id: str
+    name: str
+    summary: str
+    plot: str = ""
+    characters: tuple[str, ...] = ()
+    locations: tuple[str, ...] = ()
+    objects: tuple[str, ...] = ()
+    notes: str = ""
+    focus: bool = False
+    scenes: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class ModuleTemplate:
+    """Human-written story material: a mini module or a full campaign module."""
+
+    id: str
+    kind: str
+    name: str
+    description: str
+    blurb: str | None
+    icon: str
+    tags: Mapping[str, tuple[str, ...]]
+    premise: str
+    truth: str
+    gm_notes: str
+    tone: str
+    themes: tuple[str, ...]
+    rule_set: str | None
+    recommended_rule_sets: tuple[str, ...]
+    world: str | None
+    recommended_worlds: tuple[str, ...]
+    third_party: bool
+    source: str | None
+    start: WorldStart | None
+    # The module's own world-like content, either an embedded world or a synthetic world built
+    # from its locations, NPCs, regions, and definitions.
+    world_template: WorldTemplate
+    cast: tuple[ModuleCast, ...]
+    places: tuple[ModulePlace, ...]
+    scenes: Mapping[str, ModuleScene]
+    clues: Mapping[str, ModuleClue]
+    fronts: Mapping[str, ModuleFront]
+    endings: Mapping[str, ModuleEnding]
+    hooks: Mapping[str, ModuleHook]
+    storylines: Mapping[str, ModuleStoryline]
+    repeatable: bool = False
+    replaces: tuple[str, ...] = ()
+
+    def tag_values(self, category: str) -> tuple[str, ...]:
+        return self.tags.get(category, ())
+
+    @property
+    def has_setting(self) -> bool:
+        return self.world_template.has_setting
 
 
 @dataclass(frozen=True)
@@ -2282,6 +2444,9 @@ class ContentLibrary:
     # Selectable rule sets. The core rule set is not listed here: it is merged into each of these.
     rule_sets: Mapping[str, RuleSet]
     core: RuleSet
+    # Human-written mini and campaign modules. A campaign module with a setting is also
+    # registered in `world_templates` under its world id, so ordinary world lookups keep working.
+    modules: Mapping[str, ModuleTemplate] = field(default_factory=dict)
     # Built on first use for each (world, rule set) pair, since a world's statblocks are checked
     # against the rule set a campaign plays with.
     _world_content: dict[tuple[str, str], WorldContent] = field(
@@ -2297,6 +2462,77 @@ class ContentLibrary:
                 self.world_templates[world], self.rule_sets[rule_set]
             )
         return self._world_content[key]
+
+    def world_content_for(self, template: WorldTemplate, rule_set: str) -> WorldContent:
+        """The content of a world or a merged campaign world, checked against one rule set."""
+        return _build_world_content(template, self.rule_sets[rule_set])
+
+    def module_for_world(self, world: str) -> ModuleTemplate | None:
+        """The campaign module whose setting is this world, or None for a top-level world."""
+        for module in self.modules.values():
+            if module.kind == "campaign" and module.world_template.id == world:
+                return module
+        return None
+
+    def offered_modules(
+        self, rule_set: str, *, kind: str | None = None, world: str | None = None
+    ) -> tuple[ModuleTemplate, ...]:
+        """The modules a rule set (and optionally a world) can use, in content order."""
+        offered: list[ModuleTemplate] = []
+        for module in self.modules.values():
+            if kind is not None and module.kind != kind:
+                continue
+            if module.rule_set is not None:
+                if module.rule_set != rule_set:
+                    continue
+            elif module.recommended_rule_sets and rule_set not in module.recommended_rule_sets:
+                continue
+            if world is not None:
+                if module.world is not None and module.world != world:
+                    continue
+                if module.recommended_worlds and world not in module.recommended_worlds:
+                    continue
+            offered.append(module)
+        return tuple(offered)
+
+    def campaign_world(
+        self, world: str, module_ids: Sequence[str] = ()
+    ) -> WorldTemplate:
+        """The base world with the attached campaign modules' world content layered on top.
+        Module definitions win on id collisions, so a module can deliberately replace a place."""
+        base = self.world_templates[world]
+        layers: list[WorldTemplate] = []
+        for module_id in module_ids:
+            module = self.modules.get(module_id)
+            if module is None or module.kind != "campaign":
+                continue
+            if module.world is not None and module.world != base.id:
+                continue
+            if module.world_template.id == base.id:
+                # An embedded world is already the base, so it needs no second layer.
+                continue
+            layers.append(module.world_template)
+        if not layers:
+            return base
+        locations = {location.id: location for location in base.locations}
+        npcs = {npc.id: npc for npc in base.npcs}
+        regions = {region.id: region for region in base.regions}
+        definitions = {(d.type, d.id): d for d in base.definitions}
+        start = base.start
+        for layer in layers:
+            locations.update({location.id: location for location in layer.locations})
+            npcs.update({npc.id: npc for npc in layer.npcs})
+            regions.update({region.id: region for region in layer.regions})
+            definitions.update({(d.type, d.id): d for d in layer.definitions})
+            start = layer.start or start
+        return replace(
+            base,
+            locations=tuple(locations.values()),
+            npcs=tuple(npcs.values()),
+            regions=tuple(regions.values()),
+            definitions=tuple(definitions.values()),
+            start=start,
+        )
 
     def recommended_world_ids(self, rule_set: str) -> frozenset[str]:
         """The worlds held up first when choosing a world for this rule set. A world is
@@ -2326,7 +2562,7 @@ class ContentLibrary:
         offered = [
             world
             for world in self.world_templates.values()
-            if world.rule_set is None or world.rule_set == rule_set
+            if world.module is None and (world.rule_set is None or world.rule_set == rule_set)
         ]
         recommended = self.recommended_world_ids(rule_set)
         return tuple(sorted(offered, key=lambda world: world.id not in recommended))
@@ -2350,6 +2586,9 @@ class ContentLibrary:
         set. A definition in a rule set replaces the core definition with the same type and id.
         A world that names a rule set is checked against that rule set before it is returned."""
         worlds = {d.name: _load_world(d) for d in _subdirectories(data_dir / "worlds")}
+        modules_dir = data_dir / "modules"
+        module_dirs = _subdirectories(modules_dir) if modules_dir.is_dir() else []
+        modules = {d.name: _load_module(d) for d in module_dirs if _has_definitions(d)}
         rule_set_dirs = _subdirectories(data_dir / "rulesets")
         core_dir = next((d for d in rule_set_dirs if d.name == CORE_RULE_SET), None)
         if core_dir is None:
@@ -2371,6 +2610,18 @@ class ContentLibrary:
             for d in rule_set_dirs
             if d.name != CORE_RULE_SET and _has_definitions(d)
         }
+        # A campaign module with an authored setting acts like a world, so register its
+        # setting under its world id for old campaigns, exports, and world lookups. Mini
+        # modules and pure-adventure modules do not become worlds.
+        for module in modules.values():
+            if module.kind != "campaign" or not module.world_template.has_setting:
+                continue
+            world_id = module.world_template.id
+            if world_id in worlds:
+                raise ContentError(
+                    f"{module.id}: module setting {world_id!r} collides with a world of that id"
+                )
+            worlds[world_id] = module.world_template
         configured = core.default_campaign
         if configured is not None:
             if configured.rule_set not in rule_sets:
@@ -2415,11 +2666,50 @@ class ContentLibrary:
                         f"{rule_set.id}: rule set recommends {world_id!r}, which is built for "
                         f"{world.rule_set!r}"
                     )
-        library = cls(world_templates=worlds, rule_sets=rule_sets, core=core)
+        for module in modules.values():
+            if module.rule_set is not None and module.rule_set not in rule_sets:
+                raise ContentError(
+                    f"{module.id}: module names unknown rule set {module.rule_set!r}"
+                )
+            for recommended in module.recommended_rule_sets:
+                if recommended not in rule_sets:
+                    raise ContentError(
+                        f"{module.id}: module recommends unknown rule set {recommended!r}"
+                    )
+            if module.world is not None:
+                world = worlds.get(module.world)
+                if world is None:
+                    raise ContentError(
+                        f"{module.id}: module names unknown world {module.world!r}"
+                    )
+                if (
+                    module.rule_set is not None
+                    and world.rule_set is not None
+                    and world.rule_set != module.rule_set
+                ):
+                    raise ContentError(
+                        f"{module.id}: module is built for {module.rule_set!r}, but world "
+                        f"{module.world!r} is built for {world.rule_set!r}"
+                    )
+            for recommended in module.recommended_worlds:
+                if recommended not in worlds:
+                    raise ContentError(
+                        f"{module.id}: module recommends unknown world {recommended!r}"
+                    )
+            for ending in module.endings.values():
+                if ending.next_module is not None and ending.next_module not in modules:
+                    raise ContentError(
+                        f"{module.id}: ending {ending.id!r} names unknown next module "
+                        f"{ending.next_module!r}"
+                    )
+        library = cls(world_templates=worlds, rule_sets=rule_sets, core=core, modules=modules)
         if validate_worlds:
             for world in worlds.values():
                 if world.rule_set is not None:
                     library.world_content(world.id, world.rule_set)
+            for module in modules.values():
+                if module.rule_set is not None:
+                    library.world_content_for(module.world_template, module.rule_set)
         return library
 
     def validate(self, *, all_pairs: bool = False) -> list[tuple[str, str]]:
@@ -2488,6 +2778,20 @@ WORLD_TYPES = ("monster", "table", "dice_table", "creative_table", "feature", "r
 # Every definition type a world loader consumes. A rule-set-only definition in a world directory
 # is a content error instead of being silently dropped.
 WORLD_DEFINITION_TYPES = frozenset({"world", "location", "npc", "region", "route", *WORLD_TYPES})
+# A module carries the world-like definitions plus its own story cards. Modules are data only;
+# no module may import Python.
+MODULE_DEFINITION_TYPES = frozenset(
+    {
+        "module",
+        "module_scene",
+        "module_clue",
+        "module_front",
+        "module_ending",
+        "module_hook",
+        "module_storyline",
+    }
+)
+MODULE_KINDS = ("mini", "campaign")
 # Every definition type a rule set loader consumes. A definition with another type is a content
 # error instead of being silently dropped.
 RULE_SET_DEFINITION_TYPES = frozenset(
@@ -2775,8 +3079,15 @@ def _load_world(directory: Path) -> WorldTemplate:
     template = directory.name
     definitions = read_definitions(directory)
     _assert_consumed(definitions, WORLD_DEFINITION_TYPES, template)
+    return _build_world_template(template, definitions)
+
+
+def _build_world_template(
+    template: str, definitions: list[Definition], *, check_directory_id: bool = True
+) -> WorldTemplate:
     world = _single(definitions, "world", template)
-    _check_directory_id(template, world.id)
+    if check_directory_id:
+        _check_directory_id(template, world.id)
     label = f"{template}: world"
     check_keys(
         world.data,
@@ -2909,6 +3220,527 @@ def _load_world_start(
         season = required_text(start, "season", start_label)
     return WorldStart(
         location=location, hooks=required_text(start, "hooks", start_label), season=season
+    )
+
+
+def _load_module(directory: Path) -> ModuleTemplate:
+    """A module directory: a `module` manifest plus optional world-like definitions and story
+    cards. A module with a `world` definition embeds that setting; a module without one gets a
+    synthetic world from its own locations and NPCs, so its cards still point at something."""
+    template = directory.name
+    definitions = read_definitions(directory)
+    _assert_consumed(
+        definitions, WORLD_DEFINITION_TYPES | MODULE_DEFINITION_TYPES, template
+    )
+    module_def = _single(definitions, "module", template)
+    _check_directory_id(template, module_def.id)
+    label = f"{template}: module"
+    check_keys(
+        module_def.data,
+        {
+            "type",
+            "id",
+            "kind",
+            "name",
+            "description",
+            "blurb",
+            "icon",
+            "tags",
+            "rule_set",
+            "recommended_rulesets",
+            "world",
+            "recommended_worlds",
+            "third_party",
+            "source",
+            "premise",
+            "truth",
+            "gm_notes",
+            "tone",
+            "themes",
+            "start",
+            "cast",
+            "places",
+            "scenes",
+            "clues",
+            "fronts",
+            "endings",
+            "hooks",
+            "storylines",
+            "repeatable",
+            "replaces",
+            "entries",
+        },
+        label,
+    )
+    kind = required_text(module_def.data, "kind", label)
+    if kind not in MODULE_KINDS:
+        raise ContentError(f"{label}: 'kind' must be one of {', '.join(MODULE_KINDS)}")
+    name = required_text(module_def.data, "name", label)
+    blurb = _optional_text(module_def.data, "blurb", label)
+    description = _optional_text(module_def.data, "description", label) or blurb or name
+    rule_set = _optional_text(module_def.data, "rule_set", label)
+    declared_world = _optional_text(module_def.data, "world", label)
+    inline = _module_inline_definitions(module_def.data.get("entries"), label)
+    all_definitions = [*definitions, *inline]
+    _check_definition_duplicates(all_definitions, template)
+    world_definitions = [d for d in all_definitions if d.type in WORLD_DEFINITION_TYPES]
+    story_definitions = [d for d in all_definitions if d.type in MODULE_DEFINITION_TYPES]
+    embedded = next((d for d in world_definitions if d.type == "world"), None)
+    if embedded is not None:
+        world_template = _build_world_template(template, world_definitions, check_directory_id=False)
+        if declared_world is not None and declared_world != world_template.id:
+            raise ContentError(
+                f"{label}: 'world' names {declared_world!r}, but the embedded world is "
+                f"{world_template.id!r}"
+            )
+    else:
+        head: dict[str, Any] = {
+            "type": "world",
+            "id": module_def.id,
+            "name": name,
+            "description": description,
+        }
+        if rule_set is not None:
+            head["rule_set"] = rule_set
+        if "start" in module_def.data:
+            head["start"] = module_def.data["start"]
+        synthetic = Definition(type="world", id=module_def.id, data=head)
+        world_template = _build_world_template(
+            template, [synthetic, *world_definitions], check_directory_id=False
+        )
+    if "start" in module_def.data:
+        start = _load_world_start(
+            module_def.data,
+            label,
+            {location.id for location in world_template.locations},
+        )
+        world_template = replace(world_template, start=start)
+    world_template = replace(world_template, module=module_def.id)
+    scenes = {
+        d.id: _load_module_scene(d, template)
+        for d in story_definitions
+        if d.type == "module_scene"
+    }
+    clues = {
+        d.id: _load_module_clue(d, template)
+        for d in story_definitions
+        if d.type == "module_clue"
+    }
+    fronts = {
+        d.id: _load_module_front(d, template)
+        for d in story_definitions
+        if d.type == "module_front"
+    }
+    endings = {
+        d.id: _load_module_ending(d, template)
+        for d in story_definitions
+        if d.type == "module_ending"
+    }
+    hooks = {
+        d.id: _load_module_hook(d, template)
+        for d in story_definitions
+        if d.type == "module_hook"
+    }
+    storylines = {
+        d.id: _load_module_storyline(d, template)
+        for d in story_definitions
+        if d.type == "module_storyline"
+    }
+    scene_ids = _module_link_ids(
+        module_def.data.get("scenes"), f"{label}: 'scenes'", set(scenes), tuple(scenes)
+    )
+    clue_ids = _module_link_ids(
+        module_def.data.get("clues"), f"{label}: 'clues'", set(clues), tuple(clues)
+    )
+    front_ids = _module_link_ids(
+        module_def.data.get("fronts"), f"{label}: 'fronts'", set(fronts), tuple(fronts)
+    )
+    ending_ids = _module_link_ids(
+        module_def.data.get("endings"), f"{label}: 'endings'", set(endings), tuple(endings)
+    )
+    hook_ids = _module_link_ids(
+        module_def.data.get("hooks"), f"{label}: 'hooks'", set(hooks), tuple(hooks)
+    )
+    storyline_ids = _module_link_ids(
+        module_def.data.get("storylines"),
+        f"{label}: 'storylines'",
+        set(storylines),
+        tuple(storylines),
+    )
+    # The link lists are the author's intended order, so keep it for each card type.
+    scenes = {key: scenes[key] for key in scene_ids}
+    clues = {key: clues[key] for key in clue_ids}
+    fronts = {key: fronts[key] for key in front_ids}
+    endings = {key: endings[key] for key in ending_ids}
+    hooks = {key: hooks[key] for key in hook_ids}
+    storylines = {key: storylines[key] for key in storyline_ids}
+    cast = _load_module_cast(module_def.data.get("cast"), label)
+    places = _load_module_places(module_def.data.get("places"), label)
+    location_ids = {location.id for location in world_template.locations}
+    npc_ids = {npc.id for npc in world_template.npcs}
+    for member in cast:
+        if npc_ids and member.npc not in npc_ids:
+            raise ContentError(f"{label}: cast names unknown NPC {member.npc!r}")
+        for scene_id in member.appears_in:
+            if scene_id not in scenes:
+                raise ContentError(
+                    f"{label}: cast member {member.npc!r} appears in unknown scene {scene_id!r}"
+                )
+    for spot in places:
+        if location_ids and spot.location not in location_ids:
+            raise ContentError(f"{label}: places names unknown location {spot.location!r}")
+        for scene_id in spot.appears_in:
+            if scene_id not in scenes:
+                raise ContentError(
+                    f"{label}: place {spot.location!r} appears in unknown scene {scene_id!r}"
+                )
+    cast_ids = {member.npc for member in cast}
+    for scene in scenes.values():
+        if scene.location is not None and location_ids and scene.location not in location_ids:
+            raise ContentError(
+                f"{label}: scene {scene.id!r} is at unknown location {scene.location!r}"
+            )
+        for npc_id in scene.cast:
+            if (cast_ids or npc_ids) and npc_id not in cast_ids | npc_ids:
+                raise ContentError(
+                    f"{label}: scene {scene.id!r} names unknown NPC {npc_id!r}"
+                )
+        for clue_id in scene.clues:
+            if clue_id not in clues:
+                raise ContentError(
+                    f"{label}: scene {scene.id!r} names unknown clue {clue_id!r}"
+                )
+        for next_id in scene.next:
+            if next_id not in scenes:
+                raise ContentError(
+                    f"{label}: scene {scene.id!r} names unknown next scene {next_id!r}"
+                )
+    for storyline in storylines.values():
+        for scene_id in storyline.scenes:
+            if scene_id not in scenes:
+                raise ContentError(
+                    f"{label}: storyline {storyline.id!r} names unknown scene {scene_id!r}"
+                )
+    return ModuleTemplate(
+        id=module_def.id,
+        kind=kind,
+        name=name,
+        description=description,
+        blurb=blurb,
+        icon=_definition_icon(module_def.data, label, FALLBACK_WORLD),
+        tags=_load_module_tags(module_def.data.get("tags"), label),
+        premise=_optional_text(module_def.data, "premise", label) or "",
+        truth=_optional_text(module_def.data, "truth", label) or "",
+        gm_notes=_optional_text(module_def.data, "gm_notes", label) or "",
+        tone=_optional_text(module_def.data, "tone", label) or "",
+        themes=_optional_text_list(module_def.data, "themes", label),
+        rule_set=rule_set,
+        recommended_rule_sets=_optional_text_list(
+            module_def.data, "recommended_rulesets", label
+        ),
+        world=declared_world or (world_template.id if embedded is not None else None),
+        recommended_worlds=_optional_text_list(module_def.data, "recommended_worlds", label),
+        third_party=_flag(module_def.data, "third_party", label),
+        source=_optional_text(module_def.data, "source", label),
+        start=world_template.start,
+        world_template=world_template,
+        cast=cast,
+        places=places,
+        scenes=scenes,
+        clues=clues,
+        fronts=fronts,
+        endings=endings,
+        hooks=hooks,
+        storylines=storylines,
+        repeatable=_flag(module_def.data, "repeatable", label),
+        replaces=_optional_text_list(module_def.data, "replaces", label),
+    )
+
+
+def _module_inline_definitions(value: object, label: str) -> list[Definition]:
+    if value is None:
+        return []
+    if not isinstance(value, list):
+        raise ContentError(f"{label}: 'entries' must be a list of definitions")
+    definitions: list[Definition] = []
+    for index, item in enumerate(value):
+        item_label = f"{label}: entries[{index}]"
+        if not isinstance(item, Mapping):
+            raise ContentError(f"{item_label} must be an object")
+        kind = required_text(item, "type", item_label)
+        if kind in ("defaults", "module"):
+            raise ContentError(
+                f"{item_label}: {kind!r} is not allowed inside a module's entries"
+            )
+        ident = required_text(item, "id", item_label)
+        definitions.append(Definition(type=kind, id=ident, data=item))
+    return definitions
+
+
+def _check_definition_duplicates(definitions: Sequence[Definition], template: str) -> None:
+    seen: set[tuple[str, str]] = set()
+    for definition in definitions:
+        key = (definition.type, definition.id)
+        if key in seen:
+            raise ContentError(
+                f"{template}: duplicate {definition.type} id {definition.id!r}"
+            )
+        seen.add(key)
+
+
+def _load_module_tags(value: object, label: str) -> Mapping[str, tuple[str, ...]]:
+    if value is None:
+        return {}
+    if not isinstance(value, Mapping):
+        raise ContentError(f"{label}: 'tags' must be an object of tag lists")
+    tags: dict[str, tuple[str, ...]] = {}
+    for category, entries in value.items():
+        if not isinstance(category, str) or not category.strip():
+            raise ContentError(f"{label}: each tag category needs a name")
+        tag_label = f"{label}: tags.{category}"
+        values = _text_list(entries, tag_label)
+        if len(set(values)) != len(values):
+            raise ContentError(f"{tag_label}: a tag may be named only once")
+        if category == "genres":
+            read_table_genres(values, tag_label)
+        tags[category] = tuple(values)
+    return tags
+
+
+def _module_link_ids(
+    value: object, label: str, known: set[str], default: tuple[str, ...]
+) -> tuple[str, ...]:
+    if value is None:
+        return default
+    ids = _text_list(value, label)
+    if len(set(ids)) != len(ids):
+        raise ContentError(f"{label}: an id may be named only once")
+    unknown = [ident for ident in ids if ident not in known]
+    if unknown:
+        raise ContentError(f"{label}: unknown id(s) {', '.join(repr(i) for i in unknown)}")
+    return tuple(ids)
+
+
+def _module_list(data: Mapping[str, Any], key: str, label: str) -> tuple[str, ...]:
+    if key not in data:
+        return ()
+    return tuple(_text_list(data[key], f"{label}: '{key}'"))
+
+
+def _load_module_cast(value: object, label: str) -> tuple[ModuleCast, ...]:
+    if value is None:
+        return ()
+    if not isinstance(value, list):
+        raise ContentError(f"{label}: 'cast' must be a list of cast links")
+    cast: list[ModuleCast] = []
+    for index, item in enumerate(value):
+        item_label = f"{label}: cast[{index}]"
+        if not isinstance(item, Mapping):
+            raise ContentError(f"{item_label} must be an object")
+        check_keys(item, {"npc", "role", "wants", "secret", "knows", "appears_in"}, item_label)
+        cast.append(
+            ModuleCast(
+                npc=required_text(item, "npc", item_label),
+                role=_optional_text(item, "role", item_label) or "",
+                wants=_optional_text(item, "wants", item_label) or "",
+                secret=_optional_text(item, "secret", item_label) or "",
+                knows=_optional_text_list(item, "knows", item_label),
+                appears_in=_optional_text_list(item, "appears_in", item_label),
+            )
+        )
+    return tuple(cast)
+
+
+def _load_module_places(value: object, label: str) -> tuple[ModulePlace, ...]:
+    if value is None:
+        return ()
+    if not isinstance(value, list):
+        raise ContentError(f"{label}: 'places' must be a list of place links")
+    places: list[ModulePlace] = []
+    for index, item in enumerate(value):
+        item_label = f"{label}: places[{index}]"
+        if not isinstance(item, Mapping):
+            raise ContentError(f"{item_label} must be an object")
+        check_keys(item, {"location", "role", "secret", "appears_in"}, item_label)
+        places.append(
+            ModulePlace(
+                location=required_text(item, "location", item_label),
+                role=_optional_text(item, "role", item_label) or "",
+                secret=_optional_text(item, "secret", item_label) or "",
+                appears_in=_optional_text_list(item, "appears_in", item_label),
+            )
+        )
+    return tuple(places)
+
+
+def _load_module_scene(definition: Definition, template: str) -> ModuleScene:
+    label = f"{template}: module scene {definition.id}"
+    check_keys(
+        definition.data,
+        {
+            "type",
+            "id",
+            "name",
+            "summary",
+            "location",
+            "cast",
+            "goal",
+            "setup",
+            "gm_notes",
+            "clues",
+            "complications",
+            "if_ignored",
+            "outcomes",
+            "next",
+            "tags",
+        },
+        label,
+    )
+    return ModuleScene(
+        id=definition.id,
+        name=required_text(definition.data, "name", label),
+        summary=required_text(definition.data, "summary", label),
+        location=_optional_text(definition.data, "location", label),
+        cast=_module_list(definition.data, "cast", label),
+        goal=_optional_text(definition.data, "goal", label) or "",
+        setup=_optional_text(definition.data, "setup", label) or "",
+        gm_notes=_optional_text(definition.data, "gm_notes", label) or "",
+        clues=_module_list(definition.data, "clues", label),
+        complications=_module_list(definition.data, "complications", label),
+        if_ignored=_optional_text(definition.data, "if_ignored", label) or "",
+        outcomes=_module_list(definition.data, "outcomes", label),
+        next=_module_list(definition.data, "next", label),
+        tags=_module_list(definition.data, "tags", label),
+    )
+
+
+def _load_module_clue(definition: Definition, template: str) -> ModuleClue:
+    label = f"{template}: module clue {definition.id}"
+    check_keys(
+        definition.data,
+        {
+            "type",
+            "id",
+            "name",
+            "summary",
+            "detail",
+            "found_at",
+            "reveals",
+            "leads_to",
+            "npc",
+            "location",
+            "object",
+        },
+        label,
+    )
+    return ModuleClue(
+        id=definition.id,
+        name=required_text(definition.data, "name", label),
+        summary=required_text(definition.data, "summary", label),
+        detail=_optional_text(definition.data, "detail", label) or "",
+        found_at=_optional_text(definition.data, "found_at", label) or "",
+        reveals=_optional_text(definition.data, "reveals", label) or "",
+        leads_to=_optional_text(definition.data, "leads_to", label) or "",
+        npc=_optional_text(definition.data, "npc", label) or "",
+        location=_optional_text(definition.data, "location", label) or "",
+        object=_optional_text(definition.data, "object", label) or "",
+    )
+
+
+def _load_module_front(definition: Definition, template: str) -> ModuleFront:
+    label = f"{template}: module front {definition.id}"
+    check_keys(
+        definition.data,
+        {"type", "id", "name", "summary", "segments", "advance_on", "effects"},
+        label,
+    )
+    return ModuleFront(
+        id=definition.id,
+        name=required_text(definition.data, "name", label),
+        summary=required_text(definition.data, "summary", label),
+        segments=_module_list(definition.data, "segments", label),
+        advance_on=_module_list(definition.data, "advance_on", label),
+        effects=_module_list(definition.data, "effects", label),
+    )
+
+
+def _load_module_ending(definition: Definition, template: str) -> ModuleEnding:
+    label = f"{template}: module ending {definition.id}"
+    check_keys(
+        definition.data,
+        {
+            "type",
+            "id",
+            "name",
+            "summary",
+            "when",
+            "outcome",
+            "rewards",
+            "consequences",
+            "next_module",
+        },
+        label,
+    )
+    return ModuleEnding(
+        id=definition.id,
+        name=required_text(definition.data, "name", label),
+        summary=required_text(definition.data, "summary", label),
+        when=_optional_text(definition.data, "when", label) or "",
+        outcome=_optional_text(definition.data, "outcome", label) or "",
+        rewards=_module_list(definition.data, "rewards", label),
+        consequences=_module_list(definition.data, "consequences", label),
+        next_module=_optional_text(definition.data, "next_module", label),
+    )
+
+
+def _load_module_hook(definition: Definition, template: str) -> ModuleHook:
+    label = f"{template}: module hook {definition.id}"
+    check_keys(
+        definition.data,
+        {"type", "id", "name", "text", "location", "patron", "reward", "tags"},
+        label,
+    )
+    return ModuleHook(
+        id=definition.id,
+        name=required_text(definition.data, "name", label),
+        text=required_text(definition.data, "text", label),
+        location=_optional_text(definition.data, "location", label),
+        patron=_optional_text(definition.data, "patron", label) or "",
+        reward=_optional_text(definition.data, "reward", label) or "",
+        tags=_module_list(definition.data, "tags", label),
+    )
+
+
+def _load_module_storyline(definition: Definition, template: str) -> ModuleStoryline:
+    label = f"{template}: module storyline {definition.id}"
+    check_keys(
+        definition.data,
+        {
+            "type",
+            "id",
+            "name",
+            "summary",
+            "plot",
+            "characters",
+            "locations",
+            "objects",
+            "notes",
+            "focus",
+            "scenes",
+        },
+        label,
+    )
+    return ModuleStoryline(
+        id=definition.id,
+        name=required_text(definition.data, "name", label),
+        summary=required_text(definition.data, "summary", label),
+        plot=_optional_text(definition.data, "plot", label) or "",
+        characters=_module_list(definition.data, "characters", label),
+        locations=_module_list(definition.data, "locations", label),
+        objects=_module_list(definition.data, "objects", label),
+        notes=_optional_text(definition.data, "notes", label) or "",
+        focus=_flag(definition.data, "focus", label),
+        scenes=_module_list(definition.data, "scenes", label),
     )
 
 

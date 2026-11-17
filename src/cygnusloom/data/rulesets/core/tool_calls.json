@@ -1384,6 +1384,80 @@
   },
   {
     "type": "tool_call",
+    "id": "list_modules",
+    "lookup": true,
+    "description": "List the story modules this campaign can use. The result has cards for active campaign modules and for mini modules that fit the campaign's tags and have not been used. Use it when the story needs a new thread or a new place to go, then call use_module to bring a mini module into play.",
+    "parameters": {
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "mini",
+            "campaign"
+          ],
+          "description": "Optional. List only mini modules or only active campaign modules."
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Optional tags to narrow the mini modules, such as mystery, wilderness, or social."
+        },
+        "setting": {
+          "type": "string",
+          "description": "Optional setting tag to narrow the mini modules, such as urban, wilderness, or dungeon."
+        },
+        "random": {
+          "type": "boolean",
+          "description": "Shuffle the cards and return at most six, for an unexpected choice."
+        }
+      }
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "lookup_module",
+    "lookup": true,
+    "description": "Read one section of an active campaign module or a mini module already in play. Use brief for the module overview, or name a card such as scene:the-bargain, cast:mara-ash, place:ash-hollow-hut, clue:the-millers-purse, front:gate-opened, ending:vuk-stopped, or storyline:aldra. Read only what the scene needs; the text is GM material and must not be quoted to the player.",
+    "parameters": {
+      "properties": {
+        "module": {
+          "type": "string",
+          "description": "The module id from the Module block or a module card."
+        },
+        "section": {
+          "type": "string",
+          "description": "The section to read: brief, all, or a card kind and id such as scene:<id>, cast:<id>, place:<id>, clue:<id>, front:<id>, ending:<id>, storyline:<id>, or hook:<id>. Defaults to brief."
+        }
+      },
+      "required": [
+        "module"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "use_module",
+    "description": "Bring a mini module into play, or begin using an attached campaign module. A mini module returns its material and is marked used, so a one-shot module is not offered again. Work its people, places, and trouble into the scene with the existing tools, and create a storyline only when the players engage with it.",
+    "parameters": {
+      "properties": {
+        "module": {
+          "type": "string",
+          "description": "The module id from a module card or the Module block."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Optional. Why this module fits the moment, such as a new rumour or a place the player entered."
+        }
+      },
+      "required": [
+        "module"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
     "id": "lookup_feature",
     "lookup": true,
     "description": "Read a feature's full text by id or name: a spell, art, Focus, origin, class ability, or item feature. The statblock names features and lists their short notes; read the full text before you resolve a spell, art, or exception.",

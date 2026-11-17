@@ -1,9 +1,11 @@
 (() => {
   const ruleSetSelect = document.querySelector('select[name="rule_set"]');
   const worldSelect = document.querySelector('select[name="world_template"]');
+  const moduleSelect = document.querySelector('select[name="module"]');
   if (!ruleSetSelect || !worldSelect) return;
 
   const worldOptions = [...worldSelect.options];
+  const moduleOptions = moduleSelect ? [...moduleSelect.options] : [];
   const recommendedGroup = worldSelect.querySelector('[data-world-group="recommended"]');
   const otherGroup = worldSelect.querySelector('[data-world-group="other"]');
   const labelInput = document.querySelector('input[name="label"]');
@@ -61,14 +63,32 @@
     refreshLabel();
   };
 
+  // Campaign modules follow the same rule-set filter as worlds. A module that brings its own
+  // setting leaves the world blank; the blank world choice stays available either way.
+  const refreshModules = () => {
+    if (!moduleSelect) return;
+    for (const option of moduleOptions) {
+      if (!option.value) continue;
+      const required = option.dataset.ruleSet ?? "";
+      const offered = required === "" || required === ruleSetSelect.value;
+      option.hidden = !offered;
+      option.disabled = !offered;
+    }
+    if (moduleSelect.selectedOptions[0]?.disabled) moduleSelect.value = "";
+    showCredits(moduleSelect, "module");
+  };
+
   ruleSetSelect.addEventListener("change", () => {
     refreshWorlds(true);
+    refreshModules();
     showCredits(ruleSetSelect, "rule_set");
   });
   worldSelect.addEventListener("change", () => {
     showCredits(worldSelect, "world_template");
     refreshLabel();
   });
+  moduleSelect?.addEventListener("change", () => showCredits(moduleSelect, "module"));
   refreshWorlds();
+  refreshModules();
   showCredits(ruleSetSelect, "rule_set");
 })();

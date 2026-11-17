@@ -23,13 +23,15 @@ from starlette.responses import Response
 from cygnusloom import CAMPAIGN_MAJOR_VERSION
 from cygnusloom.auth.deps import page_user, verify_csrf
 from cygnusloom.content.character import NO_CAMPAIGN, NO_CHARACTER, character_schema
-from cygnusloom.db.models import User
+from cygnusloom.content.library import WorldTemplate
+from cygnusloom.db.models import Campaign, User
 from cygnusloom.llm.base import LLMError
 from cygnusloom.llm.presets import PRESETS
 from cygnusloom.services import campaign_files
 from cygnusloom.services import character_fields as character_field_service
 from cygnusloom.services import credits as credit_service
 from cygnusloom.services import level_up as level_up_service
+from cygnusloom.services import modules as modules_service
 from cygnusloom.services.accounts import public_name, set_show_internal_thinking
 from cygnusloom.services.campaigns import (
     Delta,
@@ -218,6 +220,7 @@ async def create(request: Request) -> Response:
     label = form_text(form, "label")
     world_template = form_text(form, "world_template")
     rule_set = form_text(form, "rule_set")
+    module = form_text(form, "module")
     # The model is optional: a blank choice keeps the server's default.
     model = form_text(form, "model").strip()
     catalog = request.app.state.catalog
@@ -239,6 +242,7 @@ async def create(request: Request) -> Response:
             world_template,
             rule_set,
             model or catalog.default_model_id(),
+            module=module,
         )
     except InvalidInput as exc:
         return _new_form(
@@ -250,6 +254,7 @@ async def create(request: Request) -> Response:
             world_template=world_template,
             rule_set=rule_set,
             model=model,
+            module=module,
         )
     return RedirectResponse(f"/campaigns/{campaign.id}", status_code=303)
 
@@ -700,8 +705,10 @@ async def submit_advancement(request: Request, campaign_id: int) -> Response:
         return _campaign_page(
             request, user, campaign_id, 400, "that rule set is no longer available"
         )
-    world = library.world_content(campaign.world_template, campaign.rule_set)
     state = campaign_world(engine, user.id, campaign.id).state
+    world = library.world_content_for(
+        _campaign_world_template(library, campaign, state), campaign.rule_set
+    )
     viewer_pc = state.player_character(user.id)
     requested = str(form.get("character", "")).strip()
     target = None
@@ -1079,7 +1086,8 @@ def statblock_fragment(request: Request, campaign_id: int, name: str = "") -> Re
     character = world.state.named(name)
     if not isinstance(character, Character):
         raise NotFound(f"there is no character named {name!r}")
-    content = library.world_content(campaign.world_template, campaign.rule_set)
+    world_template = _campaign_world_template(library, campaign, world.state)
+    content = library.world_content_for(world_template, campaign.rule_set)
     # A player character's and a hireling's options are the player's own reading of the sheet.
     # An NPC's fields, like its description, are GM records and stay out of the player's view.
     own_sheet = character.hireling or character.kind == PC_KIND
@@ -1113,7 +1121,13 @@ def statblock_fragment(request: Request, campaign_id: int, name: str = "") -> Re
         kind = "NPC"
         known = world.state.known.get(name_key(character.name))
         description = known.description if known is not None else ""
-    compendium = compendium_view(library, campaign.rule_set, campaign.world_template, world.state)
+    compendium = compendium_view(
+        library,
+        campaign.rule_set,
+        campaign.world_template,
+        world.state,
+        world_template=world_template,
+    )
     entry = (
         compendium.creature_links.get(character.name)
         or compendium.creature_links.get(name_key(character.name))
@@ -1304,6 +1318,29 @@ async def change_survival_needs(request: Request, campaign_id: int) -> Response:
     return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
 
 
+@router.post("/{campaign_id}/modules")
+async def change_campaign_modules(request: Request, campaign_id: int) -> Response:
+    """Attach or detach campaign modules. The starting module always stays."""
+    user = page_user(request)
+    await verify_csrf(request)
+    form = await request.form()
+    module_ids = [value for value in form.getlist("modules") if isinstance(value, str)]
+    try:
+        modules_service.set_attached_modules(
+            request.app.state.engine,
+            request.app.state.content,
+            user.id,
+            campaign_id,
+            module_ids,
+        )
+    except InvalidInput as exc:
+        return _campaign_page(request, user, campaign_id, 400, str(exc))
+    except Conflict as exc:
+        return _campaign_page(request, user, campaign_id, 409, str(exc))
+    _flash(request, "Story modules saved.")
+    return RedirectResponse(f"/campaigns/{campaign_id}#view-settings", status_code=303)
+
+
 @router.post("/{campaign_id}/settings")
 async def change_campaign_settings(request: Request, campaign_id: int) -> Response:
     """Save the owner's model, campaign name, and campaign options from the Settings page."""
@@ -1457,7 +1494,12 @@ async def grant_debug_advancement(request: Request, campaign_id: int) -> Respons
             engine,
             campaign.id,
             rule_set,
-            library.world_content(campaign.world_template, campaign.rule_set),
+            library.world_content_for(
+                _campaign_world_template(
+                    library, campaign, campaign_world(engine, user.id, campaign.id).state
+                ),
+                campaign.rule_set,
+            ),
             form_text(form, "kind"),
             form_text(form, "name"),
             amount,
@@ -1928,6 +1970,7 @@ def _new_form(
     world_template: str = "",
     rule_set: str = "",
     model: str = "",
+    module: str = "",
 ) -> Response:
     library = request.app.state.content
     # The rule set comes first and decides which worlds are offered, so start from a rule set
@@ -1942,10 +1985,14 @@ def _new_form(
     worlds = [
         world
         for world in library.world_templates.values()
-        if world.rule_set is None or world.rule_set == rule_set
+        if world.module is None
+        and (world.rule_set is None or world.rule_set == rule_set)
     ]
     recommended_ids = library.recommended_world_ids(rule_set)
-    if world_template not in {world.id for world in worlds}:
+    if not world_template and module:
+        # A campaign module with its own setting needs no world; keep the blank choice.
+        pass
+    elif world_template not in {world.id for world in worlds}:
         # Prefer the configured world, then a world recommended for this rule set, when the
         # form first opens.
         preferred = []
@@ -1956,10 +2003,20 @@ def _new_form(
         world_template = (preferred or worlds)[0].id if worlds else ""
     chosen_rule_set = library.rule_sets.get(rule_set)
     chosen_world = library.world_templates.get(world_template)
+    # Every campaign module is rendered; the form's script hides those for other rule sets, the
+    # same way it filters the world picker.
+    campaign_modules = tuple(
+        candidate for candidate in library.modules.values() if candidate.kind == "campaign"
+    )
+    if module and module not in {candidate.id for candidate in campaign_modules}:
+        module = ""
+    chosen_module = library.modules.get(module)
     default_labels = default_campaign_labels(request.app.state.engine, library, user.id)
     # The world picker shows the worlds recommended for the chosen rule set first, then the rest.
     # Its script regroups the options when the rule set changes, so every world is rendered.
-    world_templates = list(library.world_templates.values())
+    world_templates = [
+        world for world in library.world_templates.values() if world.module is None
+    ]
     # The model is an advanced choice: leaving it blank uses the server's default. A model that
     # is no longer offered is forgotten, so the form always submits one the catalog knows.
     models = request.app.state.catalog.specs()
@@ -1983,10 +2040,13 @@ def _new_form(
         default_model=default_model,
         selected_model=model,
         selected_world=world_template,
+        selected_module=module,
+        campaign_modules=campaign_modules,
         selected_rule_set=rule_set,
         selected_rule_set_name=(chosen_rule_set.name if chosen_rule_set else ""),
         selected_rule_set_third_party=bool(chosen_rule_set and chosen_rule_set.third_party),
         selected_world_third_party=bool(chosen_world and chosen_world.third_party),
+        selected_module_third_party=bool(chosen_module and chosen_module.third_party),
     )
 
 
@@ -2006,7 +2066,10 @@ def _advancement_page(
         return _campaign_page(
             request, user, campaign_id, 400, "that rule set is no longer available"
         )
-    world = library.world_content(campaign.world_template, campaign.rule_set)
+    state = campaign_world(engine, user.id, campaign.id).state
+    world = library.world_content_for(
+        _campaign_world_template(library, campaign, state), campaign.rule_set
+    )
     try:
         pages = level_up_service.pages_for_player(engine, campaign.id, rule_set, world, user.id)
     except InvalidInput as exc:
@@ -2034,6 +2097,13 @@ def _advancement_page(
         world=library.world_templates.get(campaign.world_template),
         view=view,
         pending=tuple(pages),
+    )
+
+
+def _campaign_world_template(library, campaign: Campaign, state) -> WorldTemplate:
+    """The base world with every campaign module currently attached layered on top."""
+    return library.campaign_world(
+        campaign.world_template, modules_service.active_campaign_module_ids(campaign, state)
     )
 
 
@@ -2097,7 +2167,15 @@ def _campaign_page(
     with session_scope(engine) as db:
         newest = last_event_id(db, campaign.id)
     world = campaign_world(engine, user.id, campaign.id)
-    compendium = compendium_view(library, campaign.rule_set, campaign.world_template, world.state)
+    module_ids = modules_service.active_campaign_module_ids(campaign, world.state)
+    world_template = library.campaign_world(campaign.world_template, module_ids)
+    compendium = compendium_view(
+        library,
+        campaign.rule_set,
+        campaign.world_template,
+        world.state,
+        world_template=world_template,
+    )
     viewer_pc = world.state.player_character(user.id)
     world_map = map_view(world.state, rule_set.world_terrain if rule_set else None, pc=viewer_pc)
     options_pending, character_pending = _creation_pending(world.state, rule_set, user.id)
@@ -2217,7 +2295,7 @@ def _campaign_page(
         )
     messages = list_messages(engine, campaign.id)
     transcript = campaign_transcript(engine, user.id, campaign.id)
-    world_content = library.world_content(campaign.world_template, campaign.rule_set)
+    world_content = library.world_content_for(world_template, campaign.rule_set)
     pending = pending_turn(engine, user.id, campaign.id)
     advancement_due = (
         level_up_service.advancement_due_for_player(world.state, rule_set, user.id)
@@ -2243,7 +2321,7 @@ def _campaign_page(
         request.app.state.catalog.context_tokens(campaign.model),
         world_content.rules,
         unattached_world_rules=world_content.unattached_rules,
-        world=library.world_templates.get(campaign.world_template),
+        world=world_template,
         tool_schema_mode=settings.tool_schema_mode,
         rule_info_mode=settings.rule_info_mode,
     )
@@ -2299,7 +2377,15 @@ def _campaign_page(
     )
     values = {
         "campaign": campaign,
-        "world": library.world_templates.get(campaign.world_template),
+        "campaign_module": library.modules.get(campaign.module),
+        "campaign_modules": modules_service.campaign_module_options(library, campaign),
+        "attached_modules": set(world.state.modules),
+        "used_module_names": tuple(
+            library.modules[module_id].name
+            for module_id in sorted(world.state.used_modules)
+            if module_id in library.modules
+        ),
+        "world": world_template,
         "scene": scene_view(
             world.state,
             spec,

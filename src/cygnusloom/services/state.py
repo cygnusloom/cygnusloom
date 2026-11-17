@@ -732,6 +732,10 @@ class CampaignState:
     storylines: dict[int, Storyline] = field(default_factory=dict)
     # The storyline the GM is focused on. The first active one is focused when this is unset.
     focus_storyline_id: int | None = None
+    # Campaign modules attached after creation, by module id, and the role that attached them.
+    modules: dict[str, str] = field(default_factory=dict)
+    # Modules the GM has used. A one-shot mini module is no longer offered.
+    used_modules: set[str] = field(default_factory=set)
     # A one-shot fault the debug panel forces into the next GM turn, or None.
     debug_injection: DebugInjection | None = None
     # Options shared by the whole campaign, keyed by field id. Empty until they are chosen.
