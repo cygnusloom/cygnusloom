@@ -19,7 +19,7 @@ from tests.test_content import _core, _rule_set, _world, _write
 from tests.test_world import _db, _state
 
 LIBRARY = content_library()
-TWIN_LAKES = LIBRARY.world_templates["twin-lakes"]
+TWIN_LAKES = LIBRARY.setting_template("twin-lakes")
 VUK = "Vuk"
 CHOKING = "vuk-choking-hold"
 TEXT = {CHOKING: "The Ash Phantom chokes with its hand."}
@@ -277,7 +277,10 @@ def test_a_world_place_attaching_an_unknown_rule_is_a_content_error(tmp_path: Pa
 
 UNATTACHED_TWIN_LAKES_RULES = (
     "twin-lakes-overview",
+    "cas-1-procedures",
     "the-roots",
+    "victim-schedule",
+    "bandit-ambush",
     "outcome-vuk-reborn",
     "outcome-gate-opened",
     "outcome-vuk-stopped-gate-closed",
@@ -291,6 +294,9 @@ ATTACHED_TWIN_LAKES_RULES = (
     "suraru-imperator-critical-damage",
     "night-cat-attack",
     "the-downs-travel",
+    "bone-sump-discovery",
+    "faction-tideborn",
+    "faction-order-of-nine",
 )
 
 

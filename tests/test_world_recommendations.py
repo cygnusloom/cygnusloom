@@ -52,7 +52,7 @@ def _tree(
 def test_bundled_rule_sets_recommend_their_preferred_worlds():
     library = bundled_library()
 
-    assert library.recommended_world_ids("cairn2e") == {"twin-lakes"}
+    assert library.recommended_world_ids("cairn2e") == set()
     assert library.recommended_world_ids("academia-arcana") == {"unwritten-academy"}
     assert library.recommended_world_ids("worldswithoutnumber") == {"unwritten-world"}
     assert library.recommending_rule_sets("unwritten-world") == ("worldswithoutnumber",)
@@ -61,10 +61,7 @@ def test_bundled_rule_sets_recommend_their_preferred_worlds():
 def test_offered_worlds_leave_out_other_rule_sets_and_put_recommended_first():
     library = bundled_library()
 
-    assert [world.id for world in library.offered_worlds("cairn2e")] == [
-        "twin-lakes",
-        "unwritten-world",
-    ]
+    assert [world.id for world in library.offered_worlds("cairn2e")] == ["unwritten-world"]
     assert [world.id for world in library.offered_worlds("academia-arcana")] == [
         "unwritten-academy",
         "unwritten-world",
@@ -186,5 +183,6 @@ def test_the_compendium_groups_recommended_worlds_first(
     assert recommended < other
     assert "Recommended for Cairn 2e" in page
     group = page[recommended:other]
-    assert '<option value="twin-lakes"' in group
+    assert '<option value="twin-lakes"' not in group
     assert '<option value="unwritten-world"' not in group
+    assert '<option value="twin-lakes"' in page[other:]

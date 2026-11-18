@@ -2388,7 +2388,7 @@
   {
     "type": "tool_call",
     "id": "roll_tables",
-    "description": "Roll on one or more of the Warden's dice tables and log every result. Use 'dungeon_reaction' (2d6) for how an NPC or monster reacts to the party. Use 'die_of_fate' (1d6) when the outcome of an event is uncertain: 4 or more favors the PCs, 3 or less is bad luck. To create a monster, roll all eight monster_ tables (one 1d20 each) in a single call, then combine the results into a statblock and place it with create_monster. World tables such as 'encounters', 'rumors', or 'victim-schedule' can also be rolled when the world defines them. The engine does not save or place a creature from these rolls; you receive the results and decide what they mean.",
+    "description": "Roll on one or more of the Warden's dice tables and log every result. Use 'dungeon_reaction' (2d6) for how an NPC or monster reacts to the party. Use 'die_of_fate' (1d6) when the outcome of an event is uncertain: 4 or more favors the PCs, 3 or less is bad luck. To create a monster, roll all eight monster_ tables (one 1d20 each) in a single call, then combine the results into a statblock and place it with create_monster. World tables such as 'encounters', 'rumors', or 'victims' can also be rolled when the world defines them. The engine does not save or place a creature from these rolls; you receive the results and decide what they mean.",
     "parameters": {
       "properties": {
         "tables": {

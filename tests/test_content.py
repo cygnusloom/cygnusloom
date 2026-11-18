@@ -37,7 +37,7 @@ def test_bundled_content_marks_third_party_sources():
     assert library.rule_sets["cairn2e"].third_party is True
     assert library.rule_sets["worldswithoutnumber"].third_party is True
     assert library.rule_sets["academia-arcana"].third_party is False
-    assert library.world_templates["twin-lakes"].third_party is True
+    assert library.setting_template("twin-lakes").third_party is True
     assert library.world_templates["unwritten-academy"].third_party is False
     assert library.world_templates["unwritten-world"].third_party is False
 
@@ -161,9 +161,10 @@ def test_content_validate_cli_accepts_the_bundled_data(capsys: pytest.CaptureFix
 
 def test_bundled_content_loads():
     library = bundled_library()
-    assert set(library.world_templates) == {"twin-lakes", "unwritten-world", "unwritten-academy"}
-    assert library.world_templates["twin-lakes"].name == "Twin Lakes"
-    twin_lakes = library.world_templates["twin-lakes"]
+    assert set(library.world_templates) == {"unwritten-world", "unwritten-academy"}
+    assert "twin-lakes" in library.modules
+    assert library.setting_template("twin-lakes").name == "Trouble in Twin Lakes"
+    twin_lakes = library.setting_template("twin-lakes")
     assert twin_lakes.locations
     assert set(library.rule_sets) == {"academia-arcana", "cairn2e", "worldswithoutnumber"}
     assert library.world_content("twin-lakes", "cairn2e").monsters
@@ -408,10 +409,10 @@ def test_cairn_hook_configurator_validates_consumable_features(feature, message)
 
 def test_bundled_worlds_say_which_rule_set_they_use():
     library = bundled_library()
-    assert library.world_templates["twin-lakes"].rule_set == "cairn2e"
+    assert library.setting_template("twin-lakes").rule_set == "cairn2e"
     assert library.world_templates["unwritten-world"].rule_set is None
     assert library.world_templates["unwritten-academy"].rule_set == "academia-arcana"
-    assert library.world_templates["twin-lakes"].blurb
+    assert library.setting_template("twin-lakes").blurb
     assert library.world_templates["unwritten-world"].blurb
     assert library.world_templates["unwritten-academy"].blurb
     assert library.rule_sets["cairn2e"].blurb
@@ -445,7 +446,7 @@ def test_twin_lakes_map_matches_the_module_map():
     """The module's map has no scale bar. It gives travel times instead: Dunston is one hour
     from Isthmus Town, and the White Tower Fens are two hours from either. At four kilometres
     an hour on foot, the placed positions must agree with those times."""
-    places = {loc.id: loc for loc in bundled_library().world_templates["twin-lakes"].locations}
+    places = {loc.id: loc for loc in bundled_library().setting_template("twin-lakes").locations}
 
     def km(a: str, b: str) -> float:
         pa, pb = places[a], places[b]
@@ -1657,7 +1658,7 @@ def test_bundled_terrain_and_regions_are_read():
     lake = terrain["lake"]
     assert (lake.name, lake.color) == ("Lake", "#2d6a8f")
     assert {"lake", "open", "forest", "hills", "fen"} <= set(terrain)
-    regions = {r.name: r for r in library.world_templates["twin-lakes"].regions}
+    regions = {r.name: r for r in library.setting_template("twin-lakes").regions}
     assert len(regions) == 12
     assert all(r.terrain in terrain for r in regions.values())
     assert regions["West Lake"].terrain == "lake"
@@ -2434,7 +2435,7 @@ def _twin_lakes_copy(tmp_path: Path) -> Path:
 
 
 def _edit_twin_lakes_location(root: Path, location_id: str, **changes: object) -> None:
-    path = root / "worlds" / "twin-lakes" / "locations.json"
+    path = root / "modules" / "twin-lakes" / "locations.json"
     locations = json.loads(path.read_text(encoding="utf-8"))
     (entry,) = [loc for loc in locations if loc.get("id") == location_id]
     entry.update(changes)
@@ -2442,11 +2443,11 @@ def _edit_twin_lakes_location(root: Path, location_id: str, **changes: object) -
     if "routes" in changes:
         # The bundled world authors its routes at the top level, so a per-location route in this
         # copy would conflict with the same bundled pair.
-        (root / "worlds" / "twin-lakes" / "routes.json").unlink(missing_ok=True)
+        (root / "modules" / "twin-lakes" / "routes.json").unlink(missing_ok=True)
 
 
 def _write_twin_lakes_routes(root: Path, routes: list[dict[str, object]]) -> None:
-    path = root / "worlds" / "twin-lakes" / "routes.json"
+    path = root / "modules" / "twin-lakes" / "routes.json"
     path.write_text(json.dumps(routes, indent=2), encoding="utf-8")
 
 
@@ -2469,7 +2470,7 @@ def _world_route(origin: str, destination: str, **overrides: object) -> dict[str
 
 
 def test_bundled_twin_lakes_routes_match_their_previous_maps():
-    place = content_library().world_templates["twin-lakes"]
+    place = content_library().setting_template("twin-lakes")
     routes = {location.id: dict(location.routes) for location in place.locations}
     assert {key: value for key, value in routes.items() if value} == {
         "bone-sump": {
@@ -2544,7 +2545,7 @@ def test_bundled_twin_lakes_routes_match_their_previous_maps():
 def test_a_world_route_reaches_both_locations(tmp_path: Path):
     root = _twin_lakes_copy(tmp_path)
     _write_twin_lakes_routes(root, [_world_route("isthmus-town", "dunston")])
-    place = ContentLibrary.load(root).world_templates["twin-lakes"]
+    place = ContentLibrary.load(root).setting_template("twin-lakes")
     routes = {location.id: location.routes for location in place.locations}
     assert routes["isthmus-town"] == {"dunston": _valid_route()}
     assert routes["dunston"] == {"isthmus-town": _valid_route()}
@@ -2554,7 +2555,7 @@ def test_a_world_route_reaches_both_locations(tmp_path: Path):
 def test_a_one_way_world_route_reaches_only_the_destination(tmp_path: Path):
     root = _twin_lakes_copy(tmp_path)
     _write_twin_lakes_routes(root, [_world_route("isthmus-town", "dunston", one_way=True)])
-    place = ContentLibrary.load(root).world_templates["twin-lakes"]
+    place = ContentLibrary.load(root).setting_template("twin-lakes")
     routes = {location.id: location.routes for location in place.locations}
     assert routes["isthmus-town"] == {"dunston": _valid_route()}
     assert routes["dunston"] == {}
@@ -2563,7 +2564,7 @@ def test_a_one_way_world_route_reaches_only_the_destination(tmp_path: Path):
 def test_a_world_route_may_carry_vast(tmp_path: Path):
     root = _twin_lakes_copy(tmp_path)
     _write_twin_lakes_routes(root, [_world_route("isthmus-town", "dunston", vast=1)])
-    place = ContentLibrary.load(root).world_templates["twin-lakes"]
+    place = ContentLibrary.load(root).setting_template("twin-lakes")
     isthmus = next(loc for loc in place.locations if loc.id == "isthmus-town")
     assert isthmus.routes == {"dunston": _valid_route(vast=1)}
 
@@ -2573,7 +2574,7 @@ def test_a_per_location_route_may_carry_vast(tmp_path: Path):
     _edit_twin_lakes_location(
         root, "isthmus-town", routes={"dunston": _valid_route(path="wilderness", vast=1)}
     )
-    place = ContentLibrary.load(root).world_templates["twin-lakes"]
+    place = ContentLibrary.load(root).setting_template("twin-lakes")
     isthmus = next(loc for loc in place.locations if loc.id == "isthmus-town")
     assert isthmus.routes == {
         "dunston": {"path": "wilderness", "distance": "short", "terrain": "easy", "vast": 1}

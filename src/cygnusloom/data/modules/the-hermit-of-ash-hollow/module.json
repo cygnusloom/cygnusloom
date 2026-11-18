@@ -2,6 +2,7 @@
   {
     "type": "module",
     "id": "the-hermit-of-ash-hollow",
+    "kind": "mini",
     "name": "The Hermit of Ash Hollow",
     "blurb": "A reclusive herbwife in a burnt-out hut knows what happened at the mill.",
     "description": "A small wilderness encounter: a guarded herbwife, a burnt hut, and a purse of hush-money.",

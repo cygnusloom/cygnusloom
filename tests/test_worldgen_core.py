@@ -148,6 +148,6 @@ def test_the_academy_forge_replaces_the_core_setting_forge():
 )
 def test_a_world_with_a_setting_gets_no_setting_forge(world: str, rule_set: str):
     library = content_library()
-    template = library.world_templates[world]
+    template = library.setting_template(world)
     assert template.has_setting
     assert SETTING_FORGE not in state_instruction(library.rule_sets[rule_set], template)

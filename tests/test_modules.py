@@ -41,29 +41,29 @@ def _tools(client: TestClient, campaign_id: int) -> WorldTools:
     )
 
 
-def test_a_world_is_the_long_form_adventure():
+def test_a_campaign_module_owns_its_setting():
     library = content_library()
-    assert TWIN_LAKES in library.world_templates
-    assert TWIN_LAKES not in library.modules
-    world = library.world_templates[TWIN_LAKES]
+    module = library.modules[TWIN_LAKES]
+    assert module.kind == "campaign"
+    assert module.world_template is not None
+    world = module.world_template
     assert any(place.id == "deadmill" for place in world.locations)
     assert any(npc.id == "flavia" for npc in world.npcs)
-    offered = {world.id for world in library.offered_worlds("cairn2e")}
-    assert {TWIN_LAKES, "unwritten-world"} <= offered
+    assert TWIN_LAKES not in library.world_templates
+    assert library.setting_template(TWIN_LAKES) is world
 
 
 def test_a_mini_module_is_only_prose_and_tags():
     module = content_library().modules[HERMIT]
+    assert module.kind == "mini"
+    assert module.world_template is None
     assert "Mara Ash saw the miller's son" in module.body
     assert module.tags["genres"] == ("fantasy", "mystery")
-    assert not hasattr(module, "world_template")
 
 
 def test_list_modules_offers_a_fitting_seed_once(client_factory):
     client = signed_in_client(client_factory)
-    campaign_id = create_campaign_direct(
-        client, world_template=TWIN_LAKES, rule_set="cairn2e"
-    )
+    campaign_id = create_campaign_direct(client, world_template=TWIN_LAKES, rule_set="cairn2e")
     tools = _tools(client, campaign_id)
     assert [card["id"] for card in tools.list_modules()["modules"]] == [HERMIT]
     with pytest.raises(InvalidInput, match="use_module"):
@@ -95,15 +95,19 @@ def test_the_state_prompt_mentions_available_mini_modules():
     )
     assert "Mini modules available: 1" in text
     state.used_modules.add(HERMIT)
-    assert modules_service.module_state_text(
-        {HERMIT: module}, campaign, state, default_genres=("fantasy",)
-    ) == ""
+    assert (
+        modules_service.module_state_text(
+            {HERMIT: module}, campaign, state, default_genres=("fantasy",)
+        )
+        == ""
+    )
 
 
-def test_twin_lakes_is_a_normal_world_in_the_new_campaign_picker(client_factory):
+def test_twin_lakes_is_a_campaign_module_in_the_new_campaign_picker(client_factory):
     client = signed_in_client(client_factory)
     page = client.get("/campaigns/new").text
     assert '<option value="twin-lakes"' in page
+    assert 'data-campaign-module="1"' in page
     assert 'name="module"' not in page
 
 
@@ -131,9 +135,7 @@ def test_twin_lakes_can_start_a_campaign_as_a_world(client_factory):
 
 def test_an_available_mini_module_is_in_the_turn_prompt(client_factory, fake):
     client = signed_in_client(client_factory)
-    campaign_id = create_campaign_direct(
-        client, world_template=TWIN_LAKES, rule_set="cairn2e"
-    )
+    campaign_id = create_campaign_direct(client, world_template=TWIN_LAKES, rule_set="cairn2e")
     choose_campaign_options(client, campaign_id, "cairn2e")
     fields = creation_fields(client, campaign_id)
     create_character_direct(client, campaign_id, fields=fields)

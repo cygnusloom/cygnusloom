@@ -529,12 +529,15 @@ def test_an_unknown_requested_start_season_is_rejected():
         start_season_for(_wilderness(), "monsoon")
 
 
-def test_a_new_campaign_starts_in_the_rule_sets_season(
+def test_a_new_campaign_starts_in_the_modules_season(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     _, campaign_id = _cairn_campaign(client_factory)
+    module = app.state.content.modules["twin-lakes"]
+    assert module.start is not None
+    assert module.start.season == "fall"
     with _db(app) as db:
-        assert load_state(db, campaign_id).start_season == CAIRN.wilderness.start_season
+        assert load_state(db, campaign_id).start_season == "fall"
 
 
 def _live_wilderness_tools(app: FastAPI, campaign_id: int, seed: int = 0):

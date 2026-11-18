@@ -49,6 +49,8 @@
       const offered = required === "" || required === ruleSetSelect.value;
       option.hidden = !offered;
       option.disabled = !offered;
+      // Campaign modules stay in their own group; only worlds are split into recommended/other.
+      if (option.dataset.campaignModule) continue;
       (offered && recommended(option) ? recommendedGroup : otherGroup)?.append(option);
     }
     if (reset || worldSelect.selectedOptions[0]?.disabled) {

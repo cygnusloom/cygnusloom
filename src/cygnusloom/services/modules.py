@@ -1,8 +1,9 @@
-"""Mini module cards and text.
+"""Module cards, private notes, and text.
 
-A mini module is a small story seed with no world of its own. Full adventures are worlds. The
-engine never tracks plot progress: storylines and notes remain the record. These helpers only
-decide which seeds fit a campaign and what the GM reads when one is used.
+A campaign module owns its setting and is chosen at creation; its world content is used through
+`ContentLibrary.setting_template`. A mini module is a small injectable story seed with no
+setting. The engine never tracks plot progress: storylines and notes remain the record. These
+helpers decide which seeds fit a campaign and what the GM reads when one is used.
 """
 
 from __future__ import annotations
@@ -54,6 +55,8 @@ def available_modules(
     setting_key = setting.strip().casefold()
     available: list[ModuleTemplate] = []
     for module in modules.values():
+        if module.kind != "mini":
+            continue
         if module.rule_set is not None and module.rule_set != campaign.rule_set:
             continue
         if (
@@ -66,9 +69,7 @@ def available_modules(
             continue
         if not table_genre_offered(genres, module.tag_values("genres")):
             continue
-        module_tags = {
-            value.casefold() for values in module.tags.values() for value in values
-        }
+        module_tags = {value.casefold() for values in module.tags.values() for value in values}
         if wanted and not wanted.intersection(module_tags):
             continue
         if setting_key and setting_key not in module_tags:
@@ -110,16 +111,24 @@ def module_state_text(
     *,
     default_genres: Sequence[str] = (),
 ) -> str:
-    """The small state-prompt note that says how many mini modules are available."""
+    """The campaign module's private notes plus the mini-module availability note."""
+    blocks: list[str] = []
+    campaign_module = modules.get(campaign.world_template)
+    if campaign_module is not None and campaign_module.kind == "campaign":
+        notes = campaign_module.gm_notes
+        if campaign_module.body:
+            notes = f"{notes}\n\n{campaign_module.body}".strip()
+        if notes:
+            blocks.append(_cap(f"Campaign module notes: {notes}", 3000))
     available = available_modules(
         modules,
         campaign,
         state,
         default_genres=default_genres,
     )
-    if not available:
-        return ""
-    return (
-        f"Mini modules available: {len(available)}. Call list_modules when the story needs a new "
-        "thread, then use_module to bring one in."
-    )
+    if available:
+        blocks.append(
+            f"Mini modules available: {len(available)}. Call list_modules when the story needs a "
+            "new thread, then use_module to bring one in."
+        )
+    return "\n\n".join(blocks)

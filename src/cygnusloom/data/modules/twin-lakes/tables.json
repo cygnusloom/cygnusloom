@@ -1,7 +1,7 @@
 [
   {
     "type": "table",
-    "id": "victim-schedule",
+    "id": "victims",
     "options": ["Corsetta (a weaver)", "Giva", "Franz (a chandler)", "Drum", "Beju (a widower)", "Reeve Trellis", "Nicolas (a traveler)", "Flavia"]
   },
   {
@@ -12,6 +12,6 @@
   {
     "type": "table",
     "id": "encounters",
-    "options": ["Bloodsuckers swarm, drawn to body heat. They are nearly impossible to fight off, but willingly fly into open flame. Unless avoided, everyone adds a Fatigue.", "A Kettlewright rides alongside, burdened by gleaming tin. He sells mostly kitchenware, but if pressed, will agree to sell the Fletcher’s Ire in his pack for 100gp.", "The party is drenched by a sudden torrent of wind and floating vegetation. Each character loses a resource (a torch goes out, a Ration is dropped, a shoe is lost, etc).", "An unarmed woman pulling a cart full of fish crates asks for help getting its wheels unstuck from the mud. Her clothes appear relatively clean, despite her efforts. If the party stops to help, 3 bandits* leap from the foliage in ambush. Unprepared PCs fail their DEX save automatically. The cart (+4 slots) is in fine condition once unstuck. The crates are empty.", "Mossy loam gives way to thick mud, popping noisily with each step. Nearby animals scatter at the party’s approach, and anyone traveling by foot adds a Fatigue.", "A man and woman sit together over a roaring flame, cooking. They explain that they are frog trappers, and happy to sell their day’s catch: 2gp for spiced legs, or 25gp for a vial of toad excretions (2 uses). The latter acts as a psychedelic and a sort of truth-serum."]
+    "options": ["Bloodsuckers swarm, drawn to body heat. They are nearly impossible to fight off, but willingly fly into open flame. Unless avoided, everyone adds a Fatigue.", "A Kettlewright rides alongside, burdened by gleaming tin. He sells mostly kitchenware, but if pressed, will agree to sell the Fletcher’s Ire in his pack for 100gp.", "The party is drenched by a sudden torrent of wind and floating vegetation. Each character loses a resource (a torch goes out, a Ration is dropped, a shoe is lost, etc).", "An unarmed woman pulling a cart full of fish crates asks for help getting its wheels unstuck from the mud. Her clothes appear relatively clean, despite her efforts. If the party stops to help, three bandits (one Bandit Leader and two Bandits) leap from the foliage in ambush. Unprepared PCs fail their DEX save automatically. The cart (+4 slots) is in fine condition once unstuck. The crates are empty.", "Mossy loam gives way to thick mud, popping noisily with each step. Nearby animals scatter at the party’s approach, and anyone traveling by foot adds a Fatigue.", "A man and woman sit together over a roaring flame, cooking. They explain that they are frog trappers, and happy to sell their day’s catch: 2gp for spiced legs, or 25gp for a vial of toad excretions (2 uses). The latter acts as a psychedelic and a sort of truth-serum."]
   }
 ]

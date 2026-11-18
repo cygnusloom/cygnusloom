@@ -162,9 +162,22 @@ def create_campaign(
         raise InvalidInput("that rule set is not available")
     if model not in allowed_models:
         raise InvalidInput("that model is not available")
-    if world_template not in library.world_templates:
-        raise InvalidInput("that world template is not available")
-    template = library.world_templates[world_template]
+    module = library.modules.get(world_template)
+    if module is not None:
+        if module.kind != "campaign" or module.world_template is None:
+            raise InvalidInput("that is a mini module, not a campaign module")
+        if module.rule_set is not None and module.rule_set != rule_set:
+            raise InvalidInput(
+                f"that module only works with the "
+                f"{library.rule_sets[module.rule_set].name} rule set"
+            )
+        if module.recommended_rule_sets and rule_set not in module.recommended_rule_sets:
+            raise InvalidInput("that module is not built for that rule set")
+        template = module.world_template
+    else:
+        if world_template not in library.world_templates:
+            raise InvalidInput("that world template is not available")
+        template = library.world_templates[world_template]
     if template.rule_set is not None and rule_set != template.rule_set:
         raise InvalidInput(
             f"that world only works with the {library.rule_sets[template.rule_set].name} rule set"

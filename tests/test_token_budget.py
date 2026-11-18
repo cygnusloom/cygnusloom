@@ -173,7 +173,7 @@ def test_context_usage_counts_tools_and_the_state_instruction():
         rule_set.campaign,
         32768,
         {},
-        world=library.world_templates["twin-lakes"],
+        world=library.setting_template("twin-lakes"),
     )
 
     assert usage.tools > 0
@@ -201,7 +201,7 @@ def test_index_rules_save_prompt_tokens_over_brief_rules():
             rule_set.campaign,
             32768,
             {},
-            world=library.world_templates["twin-lakes"],
+            world=library.setting_template("twin-lakes"),
             rule_info_mode=mode,
         ).fixed
 

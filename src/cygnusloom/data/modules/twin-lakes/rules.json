@@ -78,5 +78,35 @@
     "type": "rule",
     "id": "twin-lakes-overview",
     "text": "This isolated region lies North of the Cities, just a few days' journey by horse through the Humpbacks. Isthmus Town, the region's only major settlement, is situated on a narrow strip of land between two freshwater lakes. To the South of the town is mostly farmland, save for Dunston, a defunct fishing village.\n\nTo the North lies the Stone Forest, a vast wooded area dotted with old mills and lumber paths. West Lake remains the primary source of both fish and water to the surrounding towns, despite its lack of walking paths or natural cultivation. A winding lakeside pass is all that remains of the once vibrant East Lake, now deprived of both fish and healthy drinking water.\n\nDespite the region's reputation for relative safety, it is still dangerous to travel at night, as both bandits and night cats are known to pursue vulnerable parties. The adventure begins during the Harvest season, just after the final crops have been gathered."
+  },
+  {
+    "type": "rule",
+    "id": "cas-1-procedures",
+    "text": "This adventure relies on the Cairn 2e Player's Guide, especially the core Backgrounds (p. 19) and Dungeon Exploration procedures (p. 71). Its locations are too far apart for the Wilderness Procedures (p. 75) to be much use; use the random encounter tables instead."
+  },
+  {
+    "type": "rule",
+    "id": "faction-tideborn",
+    "text": "A hierarchical religious sect that worships Rivulus, a petty god of rivers and lakes. Even the unaffiliated know of its initiation: a ritual drowning that occasionally kills participants. Survivors are dubbed Tideborn and adopt a new, water-related moniker (Carp, Reed, Oxbow, and so on). Only clergy need participate, but in recent years its following among rural folk has grown, especially in villages near water."
+  },
+  {
+    "type": "rule",
+    "id": "faction-order-of-nine",
+    "text": "A consortium of merchants, scholars, and the very powerful, relying on vast wealth and a network of spies. Its primary focus is the discovery, identification, and regulation of Relics. Recently it has turned to the Roots, which it believes to be the origin of most Relics, and it pays handsomely for information about Gates."
+  },
+  {
+    "type": "rule",
+    "id": "bone-sump-discovery",
+    "text": "Bone Sump does not appear on any map. The party learns of it only from Fasha or Giva; when one of them names it, record the discovery before sending the party there."
+  },
+  {
+    "type": "rule",
+    "id": "bandit-ambush",
+    "text": "If the party stops to help the woman with the fish cart, three bandits leap from the foliage. Unprepared PCs fail their DEX save automatically. The cart (+4 slots) is in fine condition once unstuck, and the crates are empty."
+  },
+  {
+    "type": "rule",
+    "id": "victim-schedule",
+    "text": "Each day, roll 1d8 to determine which victim is chosen. Day 1: no one. Day 2: roll on the Victims table. Day 3: no one. Day 4: roll on the Victims table. Day 5: Vuk awakens at sunset."
   }
 ]

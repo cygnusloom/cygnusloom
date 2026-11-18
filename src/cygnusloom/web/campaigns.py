@@ -1113,9 +1113,7 @@ def statblock_fragment(request: Request, campaign_id: int, name: str = "") -> Re
         kind = "NPC"
         known = world.state.known.get(name_key(character.name))
         description = known.description if known is not None else ""
-    compendium = compendium_view(
-        library, campaign.rule_set, campaign.world_template, world.state
-    )
+    compendium = compendium_view(library, campaign.rule_set, campaign.world_template, world.state)
     entry = (
         compendium.creature_links.get(character.name)
         or compendium.creature_links.get(name_key(character.name))
@@ -1947,7 +1945,11 @@ def _new_form(
         if world.rule_set is None or world.rule_set == rule_set
     ]
     recommended_ids = library.recommended_world_ids(rule_set)
-    if world_template not in {world.id for world in worlds}:
+    campaign_modules = tuple(
+        module for module in library.modules.values() if module.kind == "campaign"
+    )
+    valid_ids = {world.id for world in worlds} | {module.id for module in campaign_modules}
+    if world_template not in valid_ids:
         # Prefer the configured world, then a world recommended for this rule set, when the
         # form first opens.
         preferred = []
@@ -1955,8 +1957,10 @@ def _new_form(
             preferred = [world for world in worlds if world.id == configured.world_template]
         if not preferred:
             preferred = [world for world in worlds if world.id in recommended_ids]
-        world_template = (preferred or worlds)[0].id if worlds else ""
+        choices = preferred or worlds or campaign_modules
+        world_template = choices[0].id if choices else ""
     chosen_rule_set = library.rule_sets.get(rule_set)
+    chosen_module = library.modules.get(world_template)
     chosen_world = library.world_templates.get(world_template)
     default_labels = default_campaign_labels(request.app.state.engine, library, user.id)
     # The world picker shows the worlds recommended for the chosen rule set first, then the rest.
@@ -1973,8 +1977,13 @@ def _new_form(
         "new_campaign.html",
         status_code=status_code,
         error=error,
-        campaign_label=label or default_labels.get(world_template, ""),
+        campaign_label=(
+            label
+            or default_labels.get(world_template, "")
+            or (chosen_module.name if chosen_module is not None else "")
+        ),
         world_labels=default_labels,
+        campaign_modules=campaign_modules,
         recommended_worlds=[world for world in world_templates if world.id in recommended_ids],
         other_worlds=[world for world in world_templates if world.id not in recommended_ids],
         world_recommendations={
@@ -1988,7 +1997,10 @@ def _new_form(
         selected_rule_set=rule_set,
         selected_rule_set_name=(chosen_rule_set.name if chosen_rule_set else ""),
         selected_rule_set_third_party=bool(chosen_rule_set and chosen_rule_set.third_party),
-        selected_world_third_party=bool(chosen_world and chosen_world.third_party),
+        selected_world_third_party=bool(
+            (chosen_module.third_party if chosen_module is not None else False)
+            or (chosen_world.third_party if chosen_world is not None else False)
+        ),
     )
 
 
@@ -2033,7 +2045,7 @@ def _advancement_page(
         error=error,
         campaign=campaign,
         rule_set=rule_set,
-        world=library.world_templates.get(campaign.world_template),
+        world=library.setting_template(campaign.world_template),
         view=view,
         pending=tuple(pages),
     )
@@ -2099,10 +2111,8 @@ def _campaign_page(
     with session_scope(engine) as db:
         newest = last_event_id(db, campaign.id)
     world = campaign_world(engine, user.id, campaign.id)
-    world_template = library.world_templates.get(campaign.world_template)
-    compendium = compendium_view(
-        library, campaign.rule_set, campaign.world_template, world.state
-    )
+    world_template = library.setting_template(campaign.world_template)
+    compendium = compendium_view(library, campaign.rule_set, campaign.world_template, world.state)
     viewer_pc = world.state.player_character(user.id)
     world_map = map_view(world.state, rule_set.world_terrain if rule_set else None, pc=viewer_pc)
     options_pending, character_pending = _creation_pending(world.state, rule_set, user.id)
@@ -2162,7 +2172,7 @@ def _campaign_page(
             "creation.html",
             status_code=status_code,
             campaign=campaign,
-            world=library.world_templates.get(campaign.world_template),
+            world=library.setting_template(campaign.world_template),
             scene=scene_view(
                 world.state,
                 spec,

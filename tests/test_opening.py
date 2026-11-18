@@ -25,7 +25,7 @@ from tests.test_campaigns import (
 
 
 def test_opening_starts_the_world_at_its_start_location_with_its_hooks():
-    template = bundled_library().world_templates["twin-lakes"]
+    template = bundled_library().setting_template("twin-lakes")
     prompt = opening_prompt(template)
     assert prompt.startswith(OPENING_PROMPT)
     assert "The campaign starts at Isthmus Town (location id isthmus-town)" in prompt

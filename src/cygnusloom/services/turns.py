@@ -752,7 +752,7 @@ def _start_run(
     credits = CreditPolicy.for_campaign(engine, settings, campaign)
     meter = UsageMeter(engine, campaign.id or 0, campaign.owner_id, campaign.model)
     metered = MeteredProvider(provider, meter)
-    schema = library.world_templates[campaign.world_template]
+    schema = library.setting_template(campaign.world_template)
     world = library.world_content_for(schema, campaign.rule_set)
     speech: _SpeechJobs | None = None
 

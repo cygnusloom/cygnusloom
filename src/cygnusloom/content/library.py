@@ -336,7 +336,6 @@ class WorldTemplate:
     # world terrain in WorldContent.
     regions: tuple[RegionTemplate, ...] = ()
 
-
     @property
     def has_setting(self) -> bool:
         """Whether the world carries authored setting material. A world with no places, people,
@@ -360,13 +359,15 @@ class WorldContent:
 
 @dataclass(frozen=True)
 class ModuleTemplate:
-    """A small, self-contained story seed the AI GM may drop into any fitting campaign.
+    """A human-written campaign module or a small mini module.
 
-    A full adventure is a world. A module is only the extra material that has no world of its
-    own: a short prose `body`, tags, and a little guidance.
+    A campaign module owns its setting: `world_template` is built from the module's own
+    locations, NPCs, rules, and tables. It is not registered as a separate world. A mini module
+    has no setting and is only a short prose seed.
     """
 
     id: str
+    kind: str
     name: str
     description: str
     blurb: str | None
@@ -377,11 +378,16 @@ class ModuleTemplate:
     recommended_rule_sets: tuple[str, ...]
     third_party: bool
     source: str | None
+    world_template: WorldTemplate | None = None
     body: str = ""
     repeatable: bool = False
 
     def tag_values(self, category: str) -> tuple[str, ...]:
         return self.tags.get(category, ())
+
+    @property
+    def start(self) -> WorldStart | None:
+        return self.world_template.start if self.world_template is not None else None
 
 
 @dataclass(frozen=True)
@@ -2310,7 +2316,7 @@ class ContentLibrary:
     # Selectable rule sets. The core rule set is not listed here: it is merged into each of these.
     rule_sets: Mapping[str, RuleSet]
     core: RuleSet
-    # Small injectable story seeds. A full adventure is a world, not a module.
+    # Campaign modules carry their own setting; mini modules are injectable story seeds.
     modules: Mapping[str, ModuleTemplate] = field(default_factory=dict)
     # Built on first use for each (world, rule set) pair, since a world's statblocks are checked
     # against the rule set a campaign plays with.
@@ -2324,7 +2330,7 @@ class ContentLibrary:
         key = (world, rule_set)
         if key not in self._world_content:
             self._world_content[key] = _build_world_content(
-                self.world_templates[world], self.rule_sets[rule_set]
+                self.setting_template(world), self.rule_sets[rule_set]
             )
         return self._world_content[key]
 
@@ -2332,10 +2338,21 @@ class ContentLibrary:
         """A world's content checked against one rule set."""
         return _build_world_content(template, self.rule_sets[rule_set])
 
-    def offered_modules(self, rule_set: str) -> tuple[ModuleTemplate, ...]:
-        """The mini modules a rule set can use, in content order."""
+    def setting_template(self, ident: str) -> WorldTemplate:
+        """The setting behind a campaign's content id: a module's own world, or a world."""
+        module = self.modules.get(ident)
+        if module is not None and module.kind == "campaign" and module.world_template:
+            return module.world_template
+        return self.world_templates[ident]
+
+    def offered_modules(
+        self, rule_set: str, *, kind: str | None = None
+    ) -> tuple[ModuleTemplate, ...]:
+        """The modules a rule set can use, optionally of one kind."""
         offered: list[ModuleTemplate] = []
         for module in self.modules.values():
+            if kind is not None and module.kind != kind:
+                continue
             if module.rule_set is not None:
                 if module.rule_set != rule_set:
                     continue
@@ -2474,11 +2491,20 @@ class ContentLibrary:
                     raise ContentError(
                         f"{module.id}: module recommends unknown rule set {recommended!r}"
                     )
+            if module.kind == "campaign" and module.world_template is not None:
+                world_rule_set = module.world_template.rule_set
+                if world_rule_set is not None and world_rule_set not in rule_sets:
+                    raise ContentError(
+                        f"{module.id}: module setting names unknown rule set {world_rule_set!r}"
+                    )
         library = cls(world_templates=worlds, rule_sets=rule_sets, core=core, modules=modules)
         if validate_worlds:
             for world in worlds.values():
                 if world.rule_set is not None:
                     library.world_content(world.id, world.rule_set)
+            for module in modules.values():
+                if module.world_template is not None and module.world_template.rule_set is not None:
+                    library.world_content_for(module.world_template, module.world_template.rule_set)
         return library
 
     def validate(self, *, all_pairs: bool = False) -> list[tuple[str, str]]:
@@ -2547,9 +2573,11 @@ WORLD_TYPES = ("monster", "table", "dice_table", "creative_table", "feature", "r
 # Every definition type a world loader consumes. A rule-set-only definition in a world directory
 # is a content error instead of being silently dropped.
 WORLD_DEFINITION_TYPES = frozenset({"world", "location", "npc", "region", "route", *WORLD_TYPES})
-# A mini module is one manifest with a prose body. Modules are data only; no module may import
-# Python. A full adventure is a world.
+# A module is one manifest plus optional world-like definitions. A campaign module's setting is
+# built from those definitions; a mini module is prose only. Modules are data only; no module may
+# import Python.
 MODULE_DEFINITION_TYPES = frozenset({"module"})
+MODULE_KINDS = ("mini", "campaign")
 
 # Every definition type a rule set loader consumes. A definition with another type is a content
 # error instead of being silently dropped.
@@ -2983,13 +3011,15 @@ def _load_world_start(
 
 
 def _load_module(directory: Path) -> ModuleTemplate:
-    """A mini module: one `module` definition with a short prose body.
+    """A module is one manifest plus its own ordinary world content.
 
-    A full adventure is a world. A module is only material that has no world of its own.
+    A campaign module is the adventure and the setting in one object. Its locations, NPCs,
+    rules, and tables are files beside `module.json`; there is no separate `world.json` or
+    world template to keep in sync. A mini module has no setting and uses `body` only.
     """
     template = directory.name
     definitions = read_definitions(directory)
-    _assert_consumed(definitions, MODULE_DEFINITION_TYPES, template)
+    _assert_consumed(definitions, WORLD_DEFINITION_TYPES | MODULE_DEFINITION_TYPES, template)
     module_def = _single(definitions, "module", template)
     _check_directory_id(template, module_def.id)
     label = f"{template}: module"
@@ -2998,6 +3028,7 @@ def _load_module(directory: Path) -> ModuleTemplate:
         {
             "type",
             "id",
+            "kind",
             "name",
             "description",
             "blurb",
@@ -3008,28 +3039,58 @@ def _load_module(directory: Path) -> ModuleTemplate:
             "third_party",
             "source",
             "gm_notes",
+            "start",
             "body",
             "repeatable",
         },
         label,
     )
+    kind = required_text(module_def.data, "kind", label)
+    if kind not in MODULE_KINDS:
+        raise ContentError(f"{label}: 'kind' must be one of {', '.join(MODULE_KINDS)}")
     name = required_text(module_def.data, "name", label)
     blurb = _optional_text(module_def.data, "blurb", label)
+    description = _optional_text(module_def.data, "description", label) or blurb or name
+    rule_set = _optional_text(module_def.data, "rule_set", label)
+    world_definitions = [d for d in definitions if d.type in WORLD_DEFINITION_TYPES]
+    if kind == "mini":
+        if world_definitions:
+            raise ContentError(f"{label}: a mini module has no setting definitions")
+        world_template = None
+        body = required_text(module_def.data, "body", label)
+    else:
+        head: dict[str, Any] = {
+            "type": "world",
+            "id": module_def.id,
+            "name": name,
+            "description": description,
+            "icon": module_def.data.get("icon", FALLBACK_WORLD),
+        }
+        for key in ("blurb", "rule_set", "recommended_rulesets", "third_party", "start"):
+            if key in module_def.data:
+                head[key] = module_def.data[key]
+        synthetic = Definition(type="world", id=module_def.id, data=head)
+        world_template = _build_world_template(
+            template, [synthetic, *world_definitions], check_directory_id=False
+        )
+        if not world_template.has_setting:
+            raise ContentError(f"{label}: a campaign module needs its own setting")
+        body = _optional_text(module_def.data, "body", label) or ""
     return ModuleTemplate(
         id=module_def.id,
+        kind=kind,
         name=name,
-        description=_optional_text(module_def.data, "description", label) or blurb or name,
+        description=description,
         blurb=blurb,
         icon=_definition_icon(module_def.data, label, FALLBACK_WORLD),
         tags=_load_module_tags(module_def.data.get("tags"), label),
         gm_notes=_optional_text(module_def.data, "gm_notes", label) or "",
-        rule_set=_optional_text(module_def.data, "rule_set", label),
-        recommended_rule_sets=_optional_text_list(
-            module_def.data, "recommended_rulesets", label
-        ),
+        rule_set=rule_set,
+        recommended_rule_sets=_optional_text_list(module_def.data, "recommended_rulesets", label),
         third_party=_flag(module_def.data, "third_party", label),
         source=_optional_text(module_def.data, "source", label),
-        body=required_text(module_def.data, "body", label),
+        world_template=world_template,
+        body=body,
         repeatable=_flag(module_def.data, "repeatable", label),
     )
 

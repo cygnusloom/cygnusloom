@@ -1785,7 +1785,7 @@ def test_twin_lakes_map_places_every_module_location_it_has_a_position_for(
     campaign_id = create_campaign(client, world_template="twin-lakes", rule_set="cairn2e")
     placed = {
         loc.name
-        for loc in app.state.content.world_templates["twin-lakes"].locations
+        for loc in app.state.content.setting_template("twin-lakes").locations
         if loc.x is not None
     }
     assert len(placed) == 12

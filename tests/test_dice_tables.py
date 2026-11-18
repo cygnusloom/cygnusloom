@@ -274,7 +274,7 @@ def test_world_tools_roll_tables_returns_the_rolls_shape(client_factory: Callabl
     assert CAIRN.dice_tables["dungeon_reaction"].row_for(roll["roll"]).result == roll["result"]
 
 
-TWIN_LAKES_TABLES = {"encounters": 6, "rumors": 6, "victim-schedule": 8}
+TWIN_LAKES_TABLES = {"encounters": 6, "rumors": 6, "victims": 8}
 
 
 def test_the_twin_lakes_world_tables_load_as_dice_tables():
@@ -283,7 +283,7 @@ def test_the_twin_lakes_world_tables_load_as_dice_tables():
         assert table_id in world.dice_tables
         assert len(world.dice_tables[table_id].rows) == rows
     assert world.dice_tables["encounters"].dice == "1d6"
-    assert world.dice_tables["victim-schedule"].dice == "1d8"
+    assert world.dice_tables["victims"].dice == "1d8"
 
 
 def test_the_twin_lakes_world_tables_roll_in_a_live_campaign(client_factory):

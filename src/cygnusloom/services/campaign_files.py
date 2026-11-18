@@ -438,11 +438,21 @@ def _text(data: dict[str, Any], key: str, limit: int) -> str:
 def _read_campaign(data: dict[str, Any], library: ContentLibrary) -> dict[str, Any]:
     world_template = _text(data, "world_template", MAX_COLUMN)
     rule_set = _text(data, "rule_set", MAX_COLUMN)
-    if world_template not in library.world_templates:
-        raise InvalidInput("that world template is not available on this server")
     if rule_set not in library.rule_sets:
         raise InvalidInput("that rule set is not available on this server")
-    template = library.world_templates[world_template]
+    module = library.modules.get(world_template)
+    if module is not None:
+        if module.kind != "campaign" or module.world_template is None:
+            raise InvalidInput("that file names a mini module as its campaign")
+        if module.rule_set is not None and module.rule_set != rule_set:
+            raise InvalidInput("that campaign module is built for another rule set")
+        if module.recommended_rule_sets and rule_set not in module.recommended_rule_sets:
+            raise InvalidInput("that campaign module is not built for that rule set")
+        template = module.world_template
+    else:
+        if world_template not in library.world_templates:
+            raise InvalidInput("that world template is not available on this server")
+        template = library.world_templates[world_template]
     if template.rule_set is not None and rule_set != template.rule_set:
         raise InvalidInput(
             f"that world only works with the {library.rule_sets[template.rule_set].name} rule set"

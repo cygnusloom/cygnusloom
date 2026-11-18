@@ -344,7 +344,7 @@ def test_default_labels_number_each_world_separately(
     _new_campaign(client, label="")
     twin_lakes = _new_campaign(client, label="", world_template="twin-lakes", rule_set="cairn2e")
     assert twin_lakes.status_code == 303
-    assert _label_of(client, _created_campaign_id(twin_lakes)) == "Twin Lakes #1"
+    assert _label_of(client, _created_campaign_id(twin_lakes)) == "Trouble in Twin Lakes #1"
 
 
 def test_new_campaign_form_asks_for_the_label_last(
@@ -610,7 +610,7 @@ def test_create_rejects_a_rule_set_the_world_is_not_played_with(
     client = _signed_in(client_factory)
     response = _new_campaign(client, world_template="twin-lakes", rule_set="worldswithoutnumber")
     assert response.status_code == 400
-    assert "only works with the Cairn 2e rule set" in response.text
+    assert "that module only works with the Cairn 2e rule set" in response.text
 
 
 def test_new_campaign_form_marks_a_world_that_names_its_rule_set(
