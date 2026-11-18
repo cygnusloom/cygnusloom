@@ -31,6 +31,7 @@ from cygnusloom.content.library import (
     RuleSet,
     WorldTemplate,
     read_table_genres,
+    read_table_tones,
 )
 from cygnusloom.db.models import Campaign, CampaignInvite, CampaignMember, Event, User
 from cygnusloom.llm.base import (
@@ -133,12 +134,23 @@ WORDS_PER_TOKEN = 0.75
 def _campaign_table_genres(
     table_genres: Sequence[str] | None, rule_set: RuleSet
 ) -> tuple[str, ...]:
-    """The genres a new campaign's generation tables are filtered by. Leaving the choice empty
-    keeps the rule set's own selection; every named genre must be one the engine knows."""
+    """The categories a new campaign's generation tables and modules are filtered by. Leaving
+    the choice empty keeps the rule set's own selection; every named category must be known."""
     if not table_genres:
         return rule_set.table_genres
     try:
-        return read_table_genres(list(table_genres), "table genre")
+        return read_table_genres(list(table_genres), "creative category")
+    except ContentError as error:
+        raise InvalidInput(str(error)) from error
+
+
+def _campaign_table_tones(table_tones: Sequence[str] | None, rule_set: RuleSet) -> tuple[str, ...]:
+    """The tones a new campaign's mini modules are filtered by. Leaving the choice empty keeps
+    the rule set's own selection; every named tone must be one the engine knows."""
+    if not table_tones:
+        return rule_set.table_tones
+    try:
+        return read_table_tones(list(table_tones), "module tone")
     except ContentError as error:
         raise InvalidInput(str(error)) from error
 
@@ -153,25 +165,40 @@ def create_campaign(
     rule_set: str,
     model: str,
     table_genres: Sequence[str] | None = None,
+    table_tones: Sequence[str] | None = None,
     rng: random.Random | None = None,
 ) -> Campaign:
     name = (name or "").strip()
     if len(name) > MAX_NAME:
         raise InvalidInput(f"label must be 1 to {MAX_NAME} characters")
-    if world_template not in library.world_templates:
-        raise InvalidInput("that world template is not available")
     if rule_set not in library.rule_sets:
         raise InvalidInput("that rule set is not available")
     if model not in allowed_models:
         raise InvalidInput("that model is not available")
-    template = library.world_templates[world_template]
+    module = library.modules.get(world_template)
+    if module is not None:
+        if module.kind != "campaign" or module.world_template is None:
+            raise InvalidInput("that is a mini module, not a campaign module")
+        if module.rule_set is not None and module.rule_set != rule_set:
+            raise InvalidInput(
+                f"that module only works with the "
+                f"{library.rule_sets[module.rule_set].name} rule set"
+            )
+        if module.recommended_rule_sets and rule_set not in module.recommended_rule_sets:
+            raise InvalidInput("that module is not built for that rule set")
+        template = module.world_template
+    else:
+        if world_template not in library.world_templates:
+            raise InvalidInput("that world template is not available")
+        template = library.world_templates[world_template]
     if template.rule_set is not None and rule_set != template.rule_set:
         raise InvalidInput(
             f"that world only works with the {library.rule_sets[template.rule_set].name} rule set"
         )
     genres = _campaign_table_genres(table_genres, library.rule_sets[rule_set])
+    tones = _campaign_table_tones(table_tones, library.rule_sets[rule_set])
     try:
-        content = library.world_content(world_template, rule_set)
+        content = library.world_content_for(template, rule_set)
     except ContentError as error:
         raise InvalidInput(f"that world does not work with that rule set: {error}") from error
     with session_scope(engine) as db:
@@ -192,6 +219,7 @@ def create_campaign(
             major_version=CAMPAIGN_MAJOR_VERSION,
             model=model,
             table_genres=json.dumps(list(genres)),
+            table_tones=json.dumps(list(tones)),
         )
         db.add(campaign)
         db.flush()
@@ -322,6 +350,7 @@ def save_creation(
     character: NewCharacter | None = None,
     setting: str | None = None,
     table_genres: Sequence[str] | None = None,
+    table_tones: Sequence[str] | None = None,
     use_inventory_space: bool | None = None,
     use_survival_needs: bool | None = None,
     start_level: int | None = None,
@@ -346,6 +375,12 @@ def save_creation(
         if rule_set is None:
             raise InvalidInput("that campaign's rule set is no longer available")
         genres = _campaign_table_genres(table_genres, rule_set)
+    tones = None
+    if table_tones is not None:
+        rule_set = library.rule_sets.get(campaign.rule_set)
+        if rule_set is None:
+            raise InvalidInput("that campaign's rule set is no longer available")
+        tones = _campaign_table_tones(table_tones, rule_set)
     with _exclusive(campaign_id), session_scope(engine) as db:
         state = load_state(db, campaign_id)
         # Only the campaign's first character sets the shared options, setting, and genres. A
@@ -357,6 +392,8 @@ def save_creation(
                 stored.setting = brief
             if genres is not None:
                 stored.table_genres = json.dumps(list(genres))
+            if tones is not None:
+                stored.table_tones = json.dumps(list(tones))
             if use_inventory_space is not None:
                 stored.use_inventory_space = use_inventory_space
             if use_survival_needs is not None:
@@ -922,6 +959,7 @@ def update_campaign_settings(
     follow_owner_level: bool | None = None,
     setting: str | None = None,
     table_genres: Sequence[str] | None = None,
+    table_tones: Sequence[str] | None = None,
     allow_respec: bool | None = None,
     options: Mapping[str, Any] | None = None,
     campaign_options: CampaignSpec | None = None,
@@ -947,6 +985,11 @@ def update_campaign_settings(
         if rule_set is None:
             raise InvalidInput("that campaign's rule set is no longer available")
         genres = _campaign_table_genres(table_genres, rule_set)
+    tones: tuple[str, ...] | None = None
+    if table_tones is not None:
+        if rule_set is None:
+            raise InvalidInput("that campaign's rule set is no longer available")
+        tones = _campaign_table_tones(table_tones, rule_set)
     get_owned_campaign(engine, owner_id, campaign_id)
     with _exclusive(campaign_id), session_scope(engine) as db:
         campaign = db.get(Campaign, campaign_id)
@@ -958,6 +1001,9 @@ def update_campaign_settings(
             campaign.table_genres = (
                 "" if not genres or same_as_rule_set else json.dumps(list(genres))
             )
+        if tones is not None:
+            same_as_rule_set = rule_set is not None and tones == rule_set.table_tones
+            campaign.table_tones = "" if not tones or same_as_rule_set else json.dumps(list(tones))
         campaign.model = model
         campaign.use_inventory_space = inventory_space
         campaign.use_survival_needs = survival_needs

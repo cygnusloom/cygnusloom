@@ -307,7 +307,7 @@ def test_required_icon_is_in_registry(category: str, icon_id: str):
 
 
 def _seed_map_icons() -> list[str]:
-    locations = content_library().world_templates["twin-lakes"].locations
+    locations = content_library().setting_template("twin-lakes").locations
     return sorted({location.icon for location in locations if location.icon})
 
 
@@ -436,7 +436,7 @@ def test_new_campaign_pickers_offer_rule_set_and_world_icons(
     assert (
         f'data-icon="{icon_path(content_library().rule_sets["worldswithoutnumber"].icon)}"' in page
     )
-    assert f'data-icon="{icon_path(content_library().world_templates["twin-lakes"].icon)}"' in page
+    assert f'data-icon="{icon_path(content_library().setting_template("twin-lakes").icon)}"' in page
 
 
 def test_character_choices_and_picks_carry_their_icons(

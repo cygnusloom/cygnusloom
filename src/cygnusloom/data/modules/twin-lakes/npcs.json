@@ -1,0 +1,120 @@
+[
+  {
+    "type": "defaults",
+    "id": "npcs",
+    "when": {
+      "type": "npc",
+      "monster": null,
+      "story_only": null,
+      "stats": null,
+      "armor": null,
+      "attacks": null
+    },
+    "set": {
+      "hp_tier": "average"
+    }
+  },
+  {
+    "type": "npc",
+    "id": "reeve-trellis",
+    "name": "Reeve Trellis",
+    "location": "isthmus-town",
+    "description": "A charismatic, ruggedly handsome man with an affected drawl who continually forgets names. He owns the Stuffed Inn and was recently elected to handle town affairs. He stays out of the party's way as much as possible, but works against them if they show an interest in Aldra. He knows Jandy never came to retrieve the tithe, and sends questions about the man's belongings to Drum. The official tithing record in his office is fake; the true account is in the Stuffed Inn basement, and comparing either with Jandy's own record exposes the theft. If his life is threatened he will confess to pilfering the tithe, but not to Aldra's murder."
+  },
+  {
+    "type": "npc",
+    "id": "fasha",
+    "name": "Fasha",
+    "location": "dunston",
+    "description": "A farmer from Dunston, formerly meek and ill-mannered, who now revels in the strength and insight the Eye of Vuk gives him. He was Reeve Trellis's right hand in stealing from the tithe. If necessary he flees to White Tower Fens, hoping his pursuers trigger the traps there. Given the opportunity, he drags any defeated opponent to the Temple of the Fungal Lizards to be sacrificed.",
+    "monster": "fasha"
+  },
+  {
+    "type": "npc",
+    "id": "aldra",
+    "name": "Aldra",
+    "location": "bone-sump",
+    "description": "A burly, well-liked Tideborn butcher, devout husband to Flavia, and co-owner of the Butcher Shop. On the night he was murdered he saw the Reeve carrying large bags out of the Stuffed Inn cellar. He slipped out without waking Flavia and followed the Reeve; Fasha later dragged him to Bone Sump and fed his heart to Vuk. His body lies preserved among the reeds."
+  },
+  {
+    "type": "npc",
+    "id": "flavia",
+    "name": "Flavia",
+    "location": "butcher-shop",
+    "description": "Aldra's wife and co-owner of the Butcher Shop, visibly distraught but putting on a brave face. She last saw Aldra two weeks ago, counting coins at his desk as she went to bed. She saved his half-finished ledger in the locked desk drawer, and keeps the key on a small silver chain around her neck. She will mention that Aldra always took off his pendant before sleep, a piece featuring three squiggles at an angle, and that it is missing. Asked about Fasha, she says she has heard he takes late-night walks on East Lake Pass and dislikes him as rude and arrogant. Asked about Giva, she says that despite the old woman's grumpiness and superstition, Aldra found her charming."
+  },
+  {
+    "type": "npc",
+    "id": "jandy",
+    "name": "Jandy",
+    "location": "deadmill",
+    "description": "A middle-aged, frumpy Scrivener and tithingman for the Cities, who regularly collected the tithe from Reeve Trellis. He travels by horse and wagon under the livery of the Cities. He keeps a regular room at the Stuffed Inn; his horse and wagon are still at the village stables. He is friendly with Giva, whom he interviewed for a history of the region. If rescued, he remembers entering the mill from the west, noticing the fine white paddles through the east window, and exiting the south door to investigate; he failed to see the quicksand and died. He keeps a tithing record in his side bag.",
+    "rules": ["deadmill-time-loop"]
+  },
+  {
+    "type": "npc",
+    "id": "giva",
+    "name": "Giva",
+    "location": "giva-s-home",
+    "description": "The oldest person in Isthmus Town, grumpy and superstitious, and great-aunt of Drum. She dislikes most people, especially Fasha. She likes Jandy, who interviews her about the old days; he missed their last visit a few days ago after saying he planned to see the old lumber mills. He was not due to leave until that afternoon, so she assumes urgent business called him back to the Cities."
+  },
+  {
+    "type": "npc",
+    "id": "drum",
+    "name": "Drum",
+    "location": "the-stuffed-inn",
+    "description": "A sarcastic, lanky teenager, Giva's great-nephew, who works afternoons and evenings at the Stuffed Inn and manages its stables. He thinks Reeve Trellis is a phony and wants only enough gold to leave Isthmus Town. Asked about Jandy, he points out the man's horse and wagon still at the stables. He will tell what he saw at Deadmill for 15gp: local teens compete to stand on Old Mill Road with their backs to the mill's west entrance. He was last to remain, heard a popping sound behind him, turned, and saw a man walk out of the south entrance and be swallowed by the ground in front. The man looked vaguely familiar and was not a local."
+  },
+  {
+    "type": "npc",
+    "id": "annafranax",
+    "name": "Annafranax",
+    "location": "the-stone-forest",
+    "description": "An elder Half Witch of the Stone Forest, interested in the Roots for new curatives and lost magic. She changes form with her audience: sometimes a young woman with long auburn hair, sometimes squat and almost amphibious. She relies on illusion and intelligence, cares nothing for petty morality, eats fungi and the occasional rude traveler, and avoids combat because she is very old. She knows the forest and its history almost perfectly, offers cures for nearly any ailment, and always keeps her word. She carries four Spellbooks: Animate Object, Arcane Eye, Auditory Illusion, Beast Form, Befuddle, Haste, Pacify, Push/Pull, Read Mind, Thicket, True Sight, and Visual Illusion. She returns to Deadmill two days after the adventure begins, in the evening. If killed, every bird in the Stone Forest attacks her murderer until they are dead or have fled the Wood.",
+    "monster": "annafranax"
+  },
+  {
+    "type": "npc",
+    "id": "vuk",
+    "name": "Vuk",
+    "location": "t10b-interrogation-room-interior",
+    "story_only": true,
+    "description": "A former Queen, murdered by her own kind millennia ago. Cursed to haunt the chamber of her death, she now means to rule these lands again. She is currently an ash phantom: a swirling cloud of ash in the interrogation room (T10b). She cannot leave T10b until she has consumed three human hearts and the T10a door is opened. At the start of the adventure she has already consumed Aldra's heart, so two remain. If the party arrives within 24 hours of her transformation, she has broken free and is at T9. She is immune to mundane attacks and is destroyed only by submerging her remains in water or destroying the memory prism (1000 gp, in the stoneblock at T10b). If she is reborn, only destroying the memory prism works. In full form she is a 7 ft Lich Queen with bird-like facial features and a yellow crest; she returns to full form only after consuming the hearts and the T10a door is opened.",
+    "rules": ["vuk-choking-hold", "memory-prism-current-memories"]
+  },
+  {
+    "type": "npc",
+    "id": "corsetta",
+    "name": "Corsetta",
+    "location": "isthmus-town",
+    "description": "A weaver living in Isthmus Town, and a possible victim on the nightly table."
+  },
+  {
+    "type": "npc",
+    "id": "franz",
+    "name": "Franz",
+    "location": "isthmus-town",
+    "description": "A chandler living in Isthmus Town, and a possible victim on the nightly table."
+  },
+  {
+    "type": "npc",
+    "id": "beju",
+    "name": "Beju",
+    "location": "isthmus-town",
+    "description": "A widower living in Isthmus Town, and a possible victim on the nightly table."
+  },
+  {
+    "type": "npc",
+    "id": "nicolas",
+    "name": "Nicolas",
+    "location": "isthmus-town",
+    "description": "A traveler passing through Isthmus Town, and a possible victim on the nightly table."
+  },
+  {
+    "type": "npc",
+    "id": "berk",
+    "name": "Berk",
+    "location": "dunston",
+    "description": "A road worker hired with his brother to repair the old Crawko place in Dunston, paid by an unnamed philanthropist."
+  }
+]

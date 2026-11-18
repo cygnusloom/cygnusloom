@@ -117,6 +117,7 @@ def test_creative_tables_roll_a_hundred_entries_each() -> None:
     assert CREATIVE_TABLES.issubset(creative)
     for table_id in CREATIVE_TABLES:
         table = creative[table_id]
+        assert table.role == "setting", f"{table_id} is a setting table"
         assert table.dice == "1d100", f"{table_id} rolls {table.dice}"
         assert len(table.rows) == 100, f"{table_id} has {len(table.rows)} entries"
         assert len({row.result.casefold() for row in table.rows}) == 100, (

@@ -29,7 +29,7 @@ from cygnusloom.services.events import (
     SummaryUpdated,
     record,
 )
-from tests.conftest import csrf_token, make_app
+from tests.conftest import content_library, csrf_token, make_app
 from tests.factories import (
     campaign_ready_fast,
     db,
@@ -323,6 +323,44 @@ def test_export_and_import_round_trip(
         assert owner is not None
         assert owner.email == "ada@example.com"
         assert len(_events(target_app, new_id)) == len(document["events"])
+
+
+def test_an_old_export_keeps_only_current_creative_categories(
+    tmp_path, settings: Settings, client_factory: Callable[[], TestClient]
+):
+    client, campaign_id = campaign_ready_fast(client_factory)
+    document = _export(client, campaign_id).json()
+    document["campaign"]["table_genres"] = ["generic", "horror", "historical"]
+    document["campaign"].pop("table_tones")
+
+    target_app = _target_app(tmp_path, settings)
+    target_client = _target_client(target_app)
+    new_id = _imported_id(_import(target_client, json.dumps(document).encode()))
+
+    with Session(target_app.state.engine) as session:
+        campaign = session.get(Campaign, new_id)
+        assert campaign is not None
+        assert json.loads(campaign.table_genres) == ["generic"]
+        assert json.loads(campaign.table_tones) == list(
+            content_library().rule_sets["rolltest"].table_tones
+        )
+
+
+def test_an_export_with_a_removed_tone_keeps_the_valid_ones(
+    tmp_path, settings: Settings, client_factory: Callable[[], TestClient]
+):
+    client, campaign_id = campaign_ready_fast(client_factory)
+    document = _export(client, campaign_id).json()
+    document["campaign"]["table_tones"] = ["mystery", "cozy"]
+
+    target_app = _target_app(tmp_path, settings)
+    target_client = _target_client(target_app)
+    new_id = _imported_id(_import(target_client, json.dumps(document).encode()))
+
+    with Session(target_app.state.engine) as session:
+        campaign = session.get(Campaign, new_id)
+        assert campaign is not None
+        assert json.loads(campaign.table_tones) == ["mystery"]
 
 
 def test_an_old_major_export_stores_its_events_opaque(

@@ -28,7 +28,7 @@ from tests.test_world import _db, _state
 from tests.turns import take_turn
 
 LIBRARY = content_library()
-TWIN_LAKES = LIBRARY.world_templates["twin-lakes"]
+TWIN_LAKES = LIBRARY.setting_template("twin-lakes")
 STATS = {"hp": 6, "str": 10, "dex": 10, "wil": 10}
 STORY_ONLY = sorted(n.name for n in TWIN_LAKES.npcs if n.story_only)
 STATTED = sorted(n.name for n in TWIN_LAKES.npcs if not n.story_only)

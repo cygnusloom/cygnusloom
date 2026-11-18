@@ -4,7 +4,7 @@
     "id": "create_location",
     "python_module": "core",
     "function": "create_location",
-    "description": "Add a new location to the campaign. Use it when the story reaches a place that does not exist yet. Names must be unique among locations and NPCs, and a name that repeats an existing place in other words (such as 'Market Street' for 'Market Road') is refused. Set discovered to true only when anyone in the world would have heard of the place, so the player already knows it. A place given a map point (x and y) must lie inside a region of the map with at least 0.5 km of ground between the point and the region's edge; if none does, the refusal says so, and you must create that region with create_region first. To put a place inside another, give parent set to the name of that top-level location; such a place has no map point of its own, so leave out x and y.",
+    "description": "Add a new location to the campaign; before adding an invented place, seed it with roll_creative (location and location_descriptor) unless the world, module, storylines, or a table already supplies it. This tool records the place, it does not invent it. Use it when the story reaches a place that does not exist yet. Names must be unique among locations and NPCs, and a name that repeats an existing place in other words (such as 'Market Street' for 'Market Road') is refused. Set discovered to true only when anyone in the world would have heard of the place, so the player already knows it. A place given a map point (x and y) must lie inside a region of the map with at least 0.5 km of ground between the point and the region's edge; if none does, the refusal says so, and you must create that region with create_region first. To put a place inside another, give parent set to the name of that top-level location; such a place has no map point of its own, so leave out x and y.",
     "parameters": {
       "properties": {
         "name": {
@@ -202,7 +202,7 @@
     "id": "create_npc",
     "character_options": true,
     "npc_hp_tier": true,
-    "description": "Add an NPC to the campaign and place them at an existing location. Leave personality, accent, or quirks out to have them generated at random; give them only when the story calls for a specific trait. Give character options, such as appearance or biography, only when the story calls for them; anything left out is rolled or left blank. A name that matches a published statblock, such as a creature in the source material, takes that statblock's stats, armor, and attacks, so leave the stats out of the character options. Give armor and attacks when the NPC is meant to fight; this arms them in the same call, so a whole band can be created before stage_encounter. Give summary when the player has met them and should see a brief entry on the Characters page. Names must be unique among locations and NPCs.",
+    "description": "Add an NPC to the campaign and place them at an existing location; leave personality, accent, and quirks out so create_npc rolls them from its tables, and pass only a trait the player or an earlier record already fixes. Do not infer a trait from the NPC's role or the scene. Give character options, such as appearance or biography, only when the story calls for them; anything left out is rolled or left blank. A name that matches a published statblock, such as a creature in the source material, takes that statblock's stats, armor, and attacks, so leave the stats out of the character options. Give armor and attacks when the NPC is meant to fight; this arms them in the same call, so a whole band can be created before stage_encounter. Give summary when the player has met them and should see a brief entry on the Characters page. Names must be unique among locations and NPCs.",
     "parameters": {
       "properties": {
         "name": {
@@ -283,18 +283,18 @@
         },
         "personality": {
           "type": "string",
-          "description": "Optional. How the NPC carries themselves. The player learns this on meeting them."
+          "description": "Optional. Omit it to roll it from the tables; give it only when the player or an earlier record fixes this exact trait."
         },
         "accent": {
           "type": "string",
-          "description": "Optional. How the NPC sounds when they speak."
+          "description": "Optional. Omit it to roll it from the tables; give it only when the player or an earlier record fixes this exact trait."
         },
         "quirks": {
           "type": "array",
           "items": {
             "type": "string"
           },
-          "description": "Optional. Habits or mannerisms the NPC shows."
+          "description": "Optional. Omit them to roll them from the tables; give only habits the player or an earlier record fixes."
         },
         "force": {
           "type": "boolean",
@@ -797,7 +797,7 @@
     "id": "speak",
     "python_module": "core",
     "function": "speak",
-    "description": "Get the exact words an NPC says. A separate step writes the dialogue from the NPC's personality, accent, and quirks, so give the intent, not the words. Speak sparingly: call it only when the player character is speaking to this NPC or the NPC must say something the player needs to hear; most actions need description, not dialogue. An NPC the player has not addressed speaks unprompted only when their personality makes it likely. The NPC should be at the player character's location; if not, nothing is written and a warning is returned, unless force is true. In combat, speak only for a line that changes what the player must decide. Quote the returned dialogue as it is.",
+    "description": "Get the exact words an NPC says, using only facts already in the record; do not let the line introduce a new place, faction, or clue. A separate step writes the dialogue from the NPC's personality, accent, and quirks, so give the intent, not the words. Speak sparingly: call it only when the player character is speaking to this NPC or the NPC must say something the player needs to hear; most actions need description, not dialogue. An NPC the player has not addressed speaks unprompted only when their personality makes it likely. The NPC should be at the player character's location; if not, nothing is written and a warning is returned, unless force is true. In combat, speak only for a line that changes what the player must decide. Quote the returned dialogue as it is.",
     "parameters": {
       "properties": {
         "npc": {
@@ -1360,7 +1360,7 @@
     "type": "tool_call",
     "id": "roll_creative",
     "lookup": true,
-    "description": "Roll on the creative tables for a fresh idea. Use it when the player is directionless, or when the story is waiting for something to happen next and you have no clear direction. Each result is a suggestion, not a fact: work it into the scene in a way that fits what has already happened, and drop any result that clashes with the established story. Leave 'tables' out to roll every creative table (the core rule set has 'action', 'theme', 'plot_twist', 'location', and 'location_descriptor'), or name ids to roll only those.",
+    "description": "Roll on the creative tables for a new idea: use list_dice_tables to see their roles, then pass role 'setting' for a world, faction, conflict, or mystery, and use the oracle tables before inventing a scene, place, or complication that the world, module, and active storylines do not already supply. A no-argument roll uses the oracle tables. Also roll when a scene stalls or the player is unsure what to do next. Each result is a suggestion, not a fact: work it into the scene in a way that fits what has already happened, and drop any result that clashes with the established story. Do not roll the same full oracle set on consecutive turns just to keep a scene moving; use a specific table when you need a specific kind of detail. Do not roll merely to fill a scene when the player has a clear goal, and never roll in the middle of an encounter.",
     "parameters": {
       "properties": {
         "tables": {
@@ -1368,9 +1368,77 @@
           "items": {
             "type": "string"
           },
-          "description": "The ids of the creative tables to roll on, in order. Each is rolled once. Leave out to roll all of them."
+          "description": "The ids of the creative tables to roll on, in order. Each is rolled once. Leave out to roll every table of the chosen role."
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "oracle",
+            "setting",
+            "module"
+          ],
+          "description": "The kind of creative table to roll when 'tables' is left out: oracle for a stalled scene, setting for world generation, or module for a story module's own tables. Defaults to oracle."
         }
       }
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "list_modules",
+    "lookup": true,
+    "description": "List the mini modules this campaign can use. The result has cards for seeds that fit the campaign's selected categories and tones and have not been used. Each card also gives the location densities it fits: low is one compact site, moderate is a handful of nearby sites, and dense is a connected area with many places. A seed that fits anywhere lists all three. Use one of those densities to choose where the party can meet the seed and how far it can spread, then call use_module to bring it into play.",
+    "parameters": {
+      "properties": {
+        "category": {
+          "type": "string",
+          "description": "Optional creative category to narrow the seeds: generic, fantasy, or magicschool."
+        },
+        "tone": {
+          "type": "string",
+          "description": "Optional tone to narrow the seeds: grim, mystery, whimsical, relaxing, or adventure."
+        },
+        "random": {
+          "type": "boolean",
+          "description": "Shuffle the cards and return at most six, for an unexpected choice."
+        }
+      }
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "lookup_module",
+    "lookup": true,
+    "description": "Read a mini module already in play. The text is GM material and must not be quoted to the player.",
+    "parameters": {
+      "properties": {
+        "module": {
+          "type": "string",
+          "description": "The module id from the Module block or list_modules."
+        }
+      },
+      "required": [
+        "module"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "use_module",
+    "description": "Bring a mini module into play. It returns its material and is marked used, so a one-shot module is not offered again. Work its people, places, and trouble into the scene with the existing tools, and create a storyline only when the players engage with it.",
+    "parameters": {
+      "properties": {
+        "module": {
+          "type": "string",
+          "description": "The module id from list_modules or the Module block."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Optional. Why this module fits the moment, such as a new rumour or a place the player entered."
+        }
+      },
+      "required": [
+        "module"
+      ]
     }
   },
   {
@@ -1733,7 +1801,7 @@
     "type": "tool_call",
     "id": "list_dice_tables",
     "lookup": true,
-    "description": "List the dice and creative tables this campaign offers after its genre selection. Use it before roll_tables when you need the table ids, or to see what kind of idea tables the setting supports."
+    "description": "List the dice and creative tables this campaign offers after its genre selection; use it before inventing a new element, or before roll_tables when you need the table ids, to see what kind of idea tables the setting supports. A creative table shows its role (oracle, setting, or module) and genres."
   },
   {
     "type": "tool_call",
@@ -2317,7 +2385,7 @@
   {
     "type": "tool_call",
     "id": "roll_tables",
-    "description": "Roll on one or more of the Warden's dice tables and log every result. Use 'dungeon_reaction' (2d6) for how an NPC or monster reacts to the party. Use 'die_of_fate' (1d6) when the outcome of an event is uncertain: 4 or more favors the PCs, 3 or less is bad luck. To create a monster, roll all eight monster_ tables (one 1d20 each) in a single call, then combine the results into a statblock and place it with create_monster. World tables such as 'encounters', 'rumors', or 'victim-schedule' can also be rolled when the world defines them. The engine does not save or place a creature from these rolls; you receive the results and decide what they mean.",
+    "description": "Roll on one or more of the Warden's dice tables and log every result. Use 'dungeon_reaction' (2d6) for how an NPC or monster reacts to the party. Use 'die_of_fate' (1d6) when the outcome of an event is uncertain: 4 or more favors the PCs, 3 or less is bad luck. To create a monster, roll all eight monster_ tables (one 1d20 each) in a single call, then combine the results into a statblock and place it with create_monster. World tables such as 'encounters', 'rumors', or 'victims' can also be rolled when the world defines them. The engine does not save or place a creature from these rolls; you receive the results and decide what they mean.",
     "parameters": {
       "properties": {
         "tables": {

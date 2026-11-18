@@ -42,7 +42,7 @@ def _tools(app: FastAPI, campaign_id: int) -> world.WorldTools:
 
 
 def _seeded_names() -> set[str]:
-    return {region.name.lower() for region in LIBRARY.world_templates["twin-lakes"].regions}
+    return {region.name.lower() for region in LIBRARY.setting_template("twin-lakes").regions}
 
 
 def test_bundled_twin_lakes_regions_are_seeded(

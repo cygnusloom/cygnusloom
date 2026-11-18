@@ -251,7 +251,10 @@ def compendium_view(
     or a handbook page with no world still renders.
     """
     rule_set = library.rule_sets.get(rule_set_id)
-    world = library.world_templates.get(world_id)
+    try:
+        world = library.setting_template(world_id)
+    except KeyError:
+        world = None
     if rule_set is None or world is None:
         return Compendium(world=None, rule_set=None, sections=())
     return _build(library, rule_set, world, state)

@@ -19,9 +19,10 @@ from tests.test_content import _core, _rule_set, _world, _write
 from tests.test_world import _db, _state
 
 LIBRARY = content_library()
-TWIN_LAKES = LIBRARY.world_templates["twin-lakes"]
+TWIN_LAKES = LIBRARY.setting_template("twin-lakes")
 VUK = "Vuk"
 CHOKING = "vuk-choking-hold"
+MEMORIES = "memory-prism-current-memories"
 TEXT = {CHOKING: "The Ash Phantom chokes with its hand."}
 
 
@@ -44,14 +45,14 @@ def _story_only_world(**npc: object) -> list[dict[str, object]]:
 
 def test_twin_lakes_attaches_vuks_choking_hold():
     vuk = next(n for n in TWIN_LAKES.npcs if n.name == VUK)
-    assert vuk.rules == (CHOKING,)
+    assert vuk.rules == (CHOKING, MEMORIES)
 
 
 def test_seeding_gives_vuk_her_rules(client_factory: Callable[[], TestClient]):
     client, campaign_id = _cairn_campaign(client_factory)
     vuk = _state(client.app, campaign_id).named(VUK)
     assert vuk is not None
-    assert list(vuk.rules) == [CHOKING]
+    assert list(vuk.rules) == [CHOKING, MEMORIES]
 
 
 def test_twin_lakes_monsters_attach_their_module_rules():
@@ -278,6 +279,7 @@ def test_a_world_place_attaching_an_unknown_rule_is_a_content_error(tmp_path: Pa
 UNATTACHED_TWIN_LAKES_RULES = (
     "twin-lakes-overview",
     "the-roots",
+    "victim-schedule",
     "outcome-vuk-reborn",
     "outcome-gate-opened",
     "outcome-vuk-stopped-gate-closed",
@@ -291,6 +293,9 @@ ATTACHED_TWIN_LAKES_RULES = (
     "suraru-imperator-critical-damage",
     "night-cat-attack",
     "the-downs-travel",
+    "bone-sump-discovery",
+    "faction-tideborn",
+    "faction-order-of-nine",
 )
 
 

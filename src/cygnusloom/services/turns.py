@@ -16,6 +16,7 @@ from cygnusloom.content.library import (
     MAP_PALETTES,
     TERRAIN_PATTERNS,
     ContentLibrary,
+    ModuleTemplate,
     RuleSet,
     ToolCall,
     WorldContent,
@@ -37,6 +38,7 @@ from cygnusloom.llm.registry import ProviderFactory
 from cygnusloom.rules.context import ToolContext, brief
 from cygnusloom.rules.dice import roll_values
 from cygnusloom.services import encounters
+from cygnusloom.services import modules as modules_service
 from cygnusloom.services.common import Conflict, InvalidInput, NotFound, session_scope
 from cygnusloom.services.credits import (
     CreditPolicy,
@@ -581,6 +583,7 @@ class _Run:
 
     engine: Engine
     campaign_id: int
+    campaign: Campaign
     model: str
     rule_set: RuleSet
     context_tokens: int
@@ -637,6 +640,7 @@ def _tool_context(
     rule_set: RuleSet,
     world: WorldContent,
     table_genres: Sequence[str] | None = None,
+    modules: Mapping[str, ModuleTemplate] | None = None,
     speak_handler: Callable[[str, str, str, bool], Awaitable[None]] | None = None,
 ) -> ToolContext:
     async def speak(speaker: str, profile: str, intent: str, replace: bool) -> None:
@@ -681,6 +685,9 @@ def _tool_context(
         conditions=rule_set.conditions,
         projects=rule_set.projects,
         faction_assets=rule_set.faction_assets,
+        modules=modules or {},
+        table_genres=genres,
+        table_tones=rule_set.table_tones,
         moves=rule_set.moves,
         counters=rule_set.counters,
         advancements=rule_set.advancements,
@@ -746,8 +753,8 @@ def _start_run(
     credits = CreditPolicy.for_campaign(engine, settings, campaign)
     meter = UsageMeter(engine, campaign.id or 0, campaign.owner_id, campaign.model)
     metered = MeteredProvider(provider, meter)
-    world = library.world_content(campaign.world_template, campaign.rule_set)
-    template = library.world_templates.get(campaign.world_template)
+    schema = library.setting_template(campaign.world_template)
+    world = library.world_content_for(schema, campaign.rule_set)
     speech: _SpeechJobs | None = None
 
     async def queue_speech(speaker: str, profile: str, intent: str, replace: bool) -> None:
@@ -757,6 +764,7 @@ def _start_run(
     run = _Run(
         engine=engine,
         campaign_id=campaign.id or 0,
+        campaign=campaign,
         model=campaign.model,
         rule_set=rule_set,
         context_tokens=context_tokens,
@@ -773,12 +781,13 @@ def _start_run(
             rule_set,
             world,
             table_genres=effective_table_genres(campaign.table_genres, rule_set),
+            modules=library.modules,
             speak_handler=queue_speech,
         ),
         cursor=_newest(engine, campaign.id),
-        opening=opening_prompt(template),
+        opening=opening_prompt(schema),
         unattached_rules=world.unattached_rules,
-        world=template,
+        world=schema,
         setting=campaign.setting,
         tracks_inventory=campaign.use_inventory_space,
         tracks_survival_needs=campaign.use_survival_needs,
@@ -1560,6 +1569,13 @@ async def _begin(run: _Run, turn: Turn) -> AsyncIterator[TurnEvent]:
     ]
     present_text = present_rules_text(state, run.ctx.rules)
     state_text = state_instruction(run.rule_set, run.world)
+    modules_text = modules_service.module_state_text(
+        getattr(run.ctx.world, "modules", {}),
+        run.campaign,
+        state,
+        default_genres=run.rule_set.table_genres,
+        default_tones=run.rule_set.table_tones,
+    )
     groups = state_tool_groups(state, message) | run.extra_groups
     checklist, _ = _checklist_for(run, turn)
     tool_parts = _campaigns().tool_definition_parts(
@@ -1585,6 +1601,8 @@ async def _begin(run: _Run, turn: Turn) -> AsyncIterator[TurnEvent]:
         )
     )
     prompt_tokens += estimate_tokens(state_text)
+    if modules_text:
+        prompt_tokens += estimate_tokens(modules_text)
     prompt_tokens += sum(part.tokens for part in tool_parts)
     history_tokens = sum(estimate_tokens(m.content) for m in history)
     prompt_tokens += estimate_tokens(message) + history_tokens
@@ -1649,6 +1667,8 @@ async def _begin(run: _Run, turn: Turn) -> AsyncIterator[TurnEvent]:
         rule_info_mode=run.rule_info_mode,
         checklist=checklist,
     )
+    if modules_text:
+        system.append(ContextPart("system", "Modules", modules_text))
     conversation = [
         *(ContextPart(m.role, _campaigns()._message_source(m), m.content) for m in history),
         player,

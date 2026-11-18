@@ -97,12 +97,43 @@ TABLE_GENRES = (
     "generic",
     "fantasy",
     "magicschool",
-    "science-fiction",
-    "horror",
-    "modern",
-    "historical",
 )
 GENERIC_GENRE = "generic"
+# The mood a module is written for. A campaign's selected tones narrow which mini modules the
+# GM may introduce; a module may list more than one.
+TONES = (
+    "grim",
+    "mystery",
+    "whimsical",
+    "relaxing",
+    "adventure",
+)
+# How much ground a module expects. The player never chooses this; the GM uses it to decide
+# whether a seed fits the current place and how far to spread it. A module names each density it
+# can fit; a module that can fit anywhere lists all three.
+LOCATION_DENSITIES = ("low", "moderate", "dense")
+CREATIVE_CATEGORY_HELP = {
+    "generic": "Fits any setting without assuming a particular world.",
+    "fantasy": "Magic, old ruins, and pre-industrial worlds.",
+    "magicschool": "A school of magic, its students, staff, and intrigues.",
+}
+TONE_HELP = {
+    "grim": "Bleak, dangerous, and morally costly.",
+    "mystery": "Clues, secrets, and investigation.",
+    "whimsical": "Light, strange, and playful.",
+    "relaxing": "Low stakes, cozy, and restorative.",
+    "adventure": "Action, exploration, and bold choices.",
+}
+LOCATION_DENSITY_HELP = {
+    "low": "One compact site or scene, with no travel network.",
+    "moderate": "A handful of nearby sites, with a short trip between them.",
+    "dense": "A connected area with many locations to explore.",
+}
+# What a creative table is for: `oracle` tables give a fresh idea during play, `setting` tables
+# invent the world at the opening, and `module` tables belong to an active story module. The
+# role keeps a worldgen table from being mixed into a scene and the other way around.
+CREATIVE_TABLE_ROLES = ("oracle", "setting", "module")
+DEFAULT_CREATIVE_ROLE = "oracle"
 
 
 def check_keys(data: Mapping[str, Any], allowed: Iterable[str], label: str) -> None:
@@ -169,6 +200,16 @@ def _definition_icon(data: Mapping[str, Any], label: str, fallback: str) -> str:
     return check_icon(icon, label) if icon is not None else fallback
 
 
+def read_creative_role(value: Any, label: str) -> str:
+    """A creative table's `role`, checked against CREATIVE_TABLE_ROLES. An absent role is an
+    oracle table, which is the historical use of a creative table during play."""
+    if value is None:
+        return DEFAULT_CREATIVE_ROLE
+    if not isinstance(value, str) or value not in CREATIVE_TABLE_ROLES:
+        raise ContentError(f"{label}: 'role' must be one of {', '.join(CREATIVE_TABLE_ROLES)}")
+    return value
+
+
 def read_table_genres(value: Any, label: str) -> tuple[str, ...]:
     """The genre tags in a table's `genres`, checked against TABLE_GENRES. An absent list means
     the table fits every setting. Repeats are refused, so a tag means what it says once."""
@@ -202,6 +243,53 @@ def table_genre_offered(tags: Sequence[str], genres: Sequence[str]) -> bool:
     return bool(set(tags) & set(genres))
 
 
+def read_table_tones(value: Any, label: str, *, default: tuple[str, ...] = ()) -> tuple[str, ...]:
+    """Read a `tones` list, checked against TONES. An absent list keeps the caller's default."""
+    if value is None:
+        return default
+    entries = _text_list(value, label)
+    unknown = [entry for entry in entries if entry not in TONES]
+    if unknown:
+        names = ", ".join(repr(entry) for entry in unknown)
+        raise ContentError(f"{label}: unknown tone(s) {names}; choose from {', '.join(TONES)}")
+    if len(set(entries)) != len(entries):
+        raise ContentError(f"{label}: a tone may be named only once")
+    return tuple(entries)
+
+
+def tone_offered(tags: Sequence[str], tones: Sequence[str]) -> bool:
+    """Whether a tone selection offers a module. An untagged module fits every tone; otherwise
+    at least one of its tones must be selected."""
+    if not tags:
+        return True
+    return bool(set(tags) & set(tones))
+
+
+def read_location_density(value: Any, label: str) -> tuple[str, ...]:
+    """Read a module's location densities and check them against LOCATION_DENSITIES.
+
+    A module lists every density it can fit, so a seed that works anywhere names all three.
+    The list must name at least one density and may not repeat one. A single string is the
+    pre-list manifest format, so it is read as a one-entry list.
+    """
+    if isinstance(value, str):
+        entries = [value.strip()] if value.strip() else []
+    else:
+        entries = _text_list(value, label)
+    unknown = [entry for entry in entries if entry not in LOCATION_DENSITIES]
+    if unknown:
+        names = ", ".join(repr(entry) for entry in unknown)
+        raise ContentError(
+            f"{label}: unknown location density(s) {names}; choose from "
+            f"{', '.join(LOCATION_DENSITIES)}"
+        )
+    if len(set(entries)) != len(entries):
+        raise ContentError(f"{label}: a location density may be named only once")
+    if not entries:
+        raise ContentError(f"{label}: a module needs at least one 'location_density' entry")
+    return tuple(entries)
+
+
 def tables_for_genres(
     tables: Mapping[str, DiceTable], genres: Sequence[str]
 ) -> dict[str, DiceTable]:
@@ -230,6 +318,24 @@ def effective_table_genres(stored: str, rule_set: RuleSet) -> tuple[str, ...]:
         dict.fromkeys(entry for entry in value if isinstance(entry, str) and entry in TABLE_GENRES)
     )
     return chosen or rule_set.table_genres
+
+
+def effective_table_tones(stored: str, rule_set: RuleSet) -> tuple[str, ...]:
+    """The tones a campaign's mini modules are filtered by, falling back to the rule set's
+    available tones when the stored choice is blank, unreadable, or unknown."""
+    text = (stored or "").strip()
+    if not text:
+        return rule_set.table_tones
+    try:
+        value = json.loads(text)
+    except json.JSONDecodeError:
+        return rule_set.table_tones
+    if not isinstance(value, list):
+        return rule_set.table_tones
+    chosen = tuple(
+        dict.fromkeys(entry for entry in value if isinstance(entry, str) and entry in TONES)
+    )
+    return chosen or rule_set.table_tones
 
 
 @dataclass(frozen=True)
@@ -339,6 +445,40 @@ class WorldContent:
     unattached_rules: Mapping[str, str] = field(default_factory=dict)
     # Dice tables the world defines itself, plus each world table as a dice table.
     dice_tables: Mapping[str, DiceTable] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class ModuleTemplate:
+    """A human-written campaign module or a small mini module.
+
+    A campaign module owns its setting: `world_template` is built from the module's own
+    locations, NPCs, rules, and tables. It is not registered as a separate world. A mini module
+    has no setting and is only a short prose seed.
+    """
+
+    id: str
+    kind: str
+    name: str
+    # The long public description. A mini module uses its blurb here, since it has no setting.
+    description: str
+    blurb: str | None
+    icon: str
+    # Shared creative categories, tones, and each amount of ground the module can fit.
+    categories: tuple[str, ...]
+    tones: tuple[str, ...]
+    location_density: tuple[str, ...]
+    rule_set: str | None
+    recommended_rule_sets: tuple[str, ...]
+    third_party: bool
+    source: str | None
+    world_template: WorldTemplate | None = None
+    # The private GM text. A mini module requires it; a campaign module may add long notes.
+    body: str = ""
+    repeatable: bool = False
+
+    @property
+    def start(self) -> WorldStart | None:
+        return self.world_template.start if self.world_template is not None else None
 
 
 @dataclass(frozen=True)
@@ -802,6 +942,9 @@ class DiceTable:
     dice: str
     rows: tuple[DiceRow, ...]
     creative: bool = False
+    # What the table is for when it is creative: `oracle`, `setting`, or `module`. A normal
+    # dice table has no role.
+    role: str = ""
     # The kinds of setting the table fits. Empty means every setting, as does `generic`.
     genres: tuple[str, ...] = ()
 
@@ -2105,6 +2248,9 @@ class RuleSet:
     # A core table tagged `generic`, or with no tags, is always offered; any other core table must
     # share a tag with this selection to reach the rule set.
     table_genres: tuple[str, ...] = ()
+    # The tones this rule set offers for mini modules. A campaign may narrow the choice further;
+    # omitting the rule set's `table_tones` makes every tone available.
+    table_tones: tuple[str, ...] = TONES
     # Rule-data values validated by the ruleset modules that declared them.
     rule_data: Mapping[str, object] = field(default_factory=dict)
     # The optional engine parts this rule set offers, declared in its head or inferred from its
@@ -2264,6 +2410,8 @@ class ContentLibrary:
     # Selectable rule sets. The core rule set is not listed here: it is merged into each of these.
     rule_sets: Mapping[str, RuleSet]
     core: RuleSet
+    # Campaign modules carry their own setting; mini modules are injectable story seeds.
+    modules: Mapping[str, ModuleTemplate] = field(default_factory=dict)
     # Built on first use for each (world, rule set) pair, since a world's statblocks are checked
     # against the rule set a campaign plays with.
     _world_content: dict[tuple[str, str], WorldContent] = field(
@@ -2276,9 +2424,36 @@ class ContentLibrary:
         key = (world, rule_set)
         if key not in self._world_content:
             self._world_content[key] = _build_world_content(
-                self.world_templates[world], self.rule_sets[rule_set]
+                self.setting_template(world), self.rule_sets[rule_set]
             )
         return self._world_content[key]
+
+    def world_content_for(self, template: WorldTemplate, rule_set: str) -> WorldContent:
+        """A world's content checked against one rule set."""
+        return _build_world_content(template, self.rule_sets[rule_set])
+
+    def setting_template(self, ident: str) -> WorldTemplate:
+        """The setting behind a campaign's content id: a module's own world, or a world."""
+        module = self.modules.get(ident)
+        if module is not None and module.kind == "campaign" and module.world_template:
+            return module.world_template
+        return self.world_templates[ident]
+
+    def offered_modules(
+        self, rule_set: str, *, kind: str | None = None
+    ) -> tuple[ModuleTemplate, ...]:
+        """The modules a rule set can use, optionally of one kind."""
+        offered: list[ModuleTemplate] = []
+        for module in self.modules.values():
+            if kind is not None and module.kind != kind:
+                continue
+            if module.rule_set is not None:
+                if module.rule_set != rule_set:
+                    continue
+            elif module.recommended_rule_sets and rule_set not in module.recommended_rule_sets:
+                continue
+            offered.append(module)
+        return tuple(offered)
 
     def recommended_world_ids(self, rule_set: str) -> frozenset[str]:
         """The worlds held up first when choosing a world for this rule set. A world is
@@ -2332,6 +2507,9 @@ class ContentLibrary:
         set. A definition in a rule set replaces the core definition with the same type and id.
         A world that names a rule set is checked against that rule set before it is returned."""
         worlds = {d.name: _load_world(d) for d in _subdirectories(data_dir / "worlds")}
+        modules_dir = data_dir / "modules"
+        module_dirs = _subdirectories(modules_dir) if modules_dir.is_dir() else []
+        modules = {d.name: _load_module(d) for d in module_dirs if _has_definitions(d)}
         rule_set_dirs = _subdirectories(data_dir / "rulesets")
         core_dir = next((d for d in rule_set_dirs if d.name == CORE_RULE_SET), None)
         if core_dir is None:
@@ -2397,11 +2575,30 @@ class ContentLibrary:
                         f"{rule_set.id}: rule set recommends {world_id!r}, which is built for "
                         f"{world.rule_set!r}"
                     )
-        library = cls(world_templates=worlds, rule_sets=rule_sets, core=core)
+        for module in modules.values():
+            if module.rule_set is not None and module.rule_set not in rule_sets:
+                raise ContentError(
+                    f"{module.id}: module names unknown rule set {module.rule_set!r}"
+                )
+            for recommended in module.recommended_rule_sets:
+                if recommended not in rule_sets:
+                    raise ContentError(
+                        f"{module.id}: module recommends unknown rule set {recommended!r}"
+                    )
+            if module.kind == "campaign" and module.world_template is not None:
+                world_rule_set = module.world_template.rule_set
+                if world_rule_set is not None and world_rule_set not in rule_sets:
+                    raise ContentError(
+                        f"{module.id}: module setting names unknown rule set {world_rule_set!r}"
+                    )
+        library = cls(world_templates=worlds, rule_sets=rule_sets, core=core, modules=modules)
         if validate_worlds:
             for world in worlds.values():
                 if world.rule_set is not None:
                     library.world_content(world.id, world.rule_set)
+            for module in modules.values():
+                if module.world_template is not None and module.world_template.rule_set is not None:
+                    library.world_content_for(module.world_template, module.world_template.rule_set)
         return library
 
     def validate(self, *, all_pairs: bool = False) -> list[tuple[str, str]]:
@@ -2470,6 +2667,12 @@ WORLD_TYPES = ("monster", "table", "dice_table", "creative_table", "feature", "r
 # Every definition type a world loader consumes. A rule-set-only definition in a world directory
 # is a content error instead of being silently dropped.
 WORLD_DEFINITION_TYPES = frozenset({"world", "location", "npc", "region", "route", *WORLD_TYPES})
+# A module is one manifest plus optional world-like definitions. A campaign module's setting is
+# built from those definitions; a mini module is prose only. Modules are data only; no module may
+# import Python.
+MODULE_DEFINITION_TYPES = frozenset({"module"})
+MODULE_KINDS = ("mini", "campaign")
+
 # Every definition type a rule set loader consumes. A definition with another type is a content
 # error instead of being silently dropped.
 RULE_SET_DEFINITION_TYPES = frozenset(
@@ -2757,8 +2960,15 @@ def _load_world(directory: Path) -> WorldTemplate:
     template = directory.name
     definitions = read_definitions(directory)
     _assert_consumed(definitions, WORLD_DEFINITION_TYPES, template)
+    return _build_world_template(template, definitions)
+
+
+def _build_world_template(
+    template: str, definitions: list[Definition], *, check_directory_id: bool = True
+) -> WorldTemplate:
     world = _single(definitions, "world", template)
-    _check_directory_id(template, world.id)
+    if check_directory_id:
+        _check_directory_id(template, world.id)
     label = f"{template}: world"
     check_keys(
         world.data,
@@ -2891,6 +3101,107 @@ def _load_world_start(
         season = required_text(start, "season", start_label)
     return WorldStart(
         location=location, hooks=required_text(start, "hooks", start_label), season=season
+    )
+
+
+def _load_module(directory: Path) -> ModuleTemplate:
+    """A module is one manifest plus its own ordinary world content.
+
+    A campaign module is the adventure and the setting in one object. Its locations, NPCs,
+    rules, and tables are files beside `module.json`; there is no separate `world.json` or
+    world template to keep in sync. A mini module has no setting and uses `body` only.
+    """
+    template = directory.name
+    definitions = read_definitions(directory)
+    _assert_consumed(definitions, WORLD_DEFINITION_TYPES | MODULE_DEFINITION_TYPES, template)
+    module_def = _single(definitions, "module", template)
+    _check_directory_id(template, module_def.id)
+    label = f"{template}: module"
+    check_keys(
+        module_def.data,
+        {
+            "type",
+            "id",
+            "kind",
+            "name",
+            "description",
+            "blurb",
+            "icon",
+            "categories",
+            "tones",
+            "location_density",
+            "rule_set",
+            "recommended_rulesets",
+            "third_party",
+            "source",
+            "start",
+            "body",
+            "repeatable",
+        },
+        label,
+    )
+    kind = required_text(module_def.data, "kind", label)
+    if kind not in MODULE_KINDS:
+        raise ContentError(f"{label}: 'kind' must be one of {', '.join(MODULE_KINDS)}")
+    name = required_text(module_def.data, "name", label)
+    blurb = _optional_text(module_def.data, "blurb", label)
+    categories = read_table_genres(module_def.data.get("categories"), f"{label}: 'categories'")
+    if not categories:
+        raise ContentError(f"{label}: a module needs at least one 'categories' entry")
+    tones = read_table_tones(module_def.data.get("tones"), f"{label}: 'tones'")
+    if not tones:
+        raise ContentError(f"{label}: a module needs at least one 'tones' entry")
+    location_density = read_location_density(
+        module_def.data.get("location_density"), f"{label}: 'location_density'"
+    )
+    rule_set = _optional_text(module_def.data, "rule_set", label)
+    world_definitions = [d for d in definitions if d.type in WORLD_DEFINITION_TYPES]
+    if kind == "mini":
+        if world_definitions:
+            raise ContentError(f"{label}: a mini module has no setting definitions")
+        if "description" in module_def.data:
+            raise ContentError(f"{label}: a mini module uses 'blurb', not 'description'")
+        if blurb is None:
+            raise ContentError(f"{label}: a mini module needs a 'blurb'")
+        description = blurb
+        world_template = None
+        body = required_text(module_def.data, "body", label)
+    else:
+        description = _optional_text(module_def.data, "description", label) or blurb or name
+        head: dict[str, Any] = {
+            "type": "world",
+            "id": module_def.id,
+            "name": name,
+            "description": description,
+            "icon": module_def.data.get("icon", FALLBACK_WORLD),
+        }
+        for key in ("blurb", "rule_set", "recommended_rulesets", "third_party", "start"):
+            if key in module_def.data:
+                head[key] = module_def.data[key]
+        synthetic = Definition(type="world", id=module_def.id, data=head)
+        world_template = _build_world_template(
+            template, [synthetic, *world_definitions], check_directory_id=False
+        )
+        if not world_template.has_setting:
+            raise ContentError(f"{label}: a campaign module needs its own setting")
+        body = _optional_text(module_def.data, "body", label) or ""
+    return ModuleTemplate(
+        id=module_def.id,
+        kind=kind,
+        name=name,
+        description=description,
+        blurb=blurb,
+        icon=_definition_icon(module_def.data, label, FALLBACK_WORLD),
+        categories=categories,
+        tones=tones,
+        location_density=location_density,
+        rule_set=rule_set,
+        recommended_rule_sets=_optional_text_list(module_def.data, "recommended_rulesets", label),
+        third_party=_flag(module_def.data, "third_party", label),
+        source=_optional_text(module_def.data, "source", label),
+        world_template=world_template,
+        body=body,
+        repeatable=_flag(module_def.data, "repeatable", label),
     )
 
 
@@ -3047,7 +3358,15 @@ def _load_creative_table(definition: Definition, template: str) -> DiceTable:
     `_patch_creative_table` applies before this runs. `source` credits where the entries came
     from and is checked here but not shown to the GM."""
     label = f"{template}: creative table {definition.id}"
-    extra = set(definition.data) - {"type", "id", "name", "entries", "source", "genres"}
+    extra = set(definition.data) - {
+        "type",
+        "id",
+        "name",
+        "entries",
+        "source",
+        "genres",
+        "role",
+    }
     if extra:
         raise ContentError(f"{label}: unknown keys {sorted(extra)}")
     if "source" in definition.data:
@@ -3055,12 +3374,14 @@ def _load_creative_table(definition: Definition, template: str) -> DiceTable:
     name = _table_label(definition, template)
     entries = _creative_entries(definition.data.get("entries"), label)
     genres = read_table_genres(definition.data.get("genres"), f"{label}: 'genres'")
+    role = read_creative_role(definition.data.get("role"), label)
     return DiceTable(
         id=definition.id,
         name=name,
         dice=f"1d{len(entries)}",
         rows=tuple(DiceRow(index, index, text) for index, text in enumerate(entries, 1)),
         creative=True,
+        role=role,
         genres=genres,
     )
 
@@ -3102,7 +3423,16 @@ def _patch_creative_table(
     label = f"{template}: creative table {definition.id}"
     if not {"add", "remove"} & set(definition.data):
         return definition
-    extra = set(definition.data) - {"type", "id", "name", "add", "remove", "source", "genres"}
+    extra = set(definition.data) - {
+        "type",
+        "id",
+        "name",
+        "add",
+        "remove",
+        "source",
+        "genres",
+        "role",
+    }
     if extra:
         raise ContentError(f"{label}: unknown keys {sorted(extra)} with 'add' or 'remove'")
     base = core.get(definition.id)
@@ -3129,6 +3459,8 @@ def _patch_creative_table(
         data["source"] = definition.data.get("source", base.data.get("source"))
     if "genres" in definition.data or "genres" in base.data:
         data["genres"] = definition.data.get("genres", base.data.get("genres"))
+    if "role" in definition.data or "role" in base.data:
+        data["role"] = definition.data.get("role", base.data.get("role"))
     return Definition(type="creative_table", id=definition.id, data=data)
 
 
@@ -4133,6 +4465,7 @@ def _build_rule_set(
             "npc_hp",
             "npc_hp_stat",
             "table_genres",
+            "table_tones",
             "capabilities",
             "default_campaign",
             "recommended_worlds",
@@ -4142,6 +4475,9 @@ def _build_rule_set(
     )
     if table_genres is None:
         table_genres = _rule_set_table_genres(definitions, template)
+    table_tones = read_table_tones(
+        head.data.get("table_tones"), f"{label}: 'table_tones'", default=TONES
+    )
     # A compact `starting_years` head block expands into `starting_year` templates before the
     # character spec is built; an explicit template with the same id wins over its entry.
     definitions = [
@@ -4364,6 +4700,7 @@ def _build_rule_set(
         icon=_definition_icon(head.data, label, FALLBACK_RULE_SET),
         third_party=_flag(head.data, "third_party", label),
         table_genres=table_genres,
+        table_tones=table_tones,
         content=RuleContent(
             rules=rules,
             attached_rules=written,

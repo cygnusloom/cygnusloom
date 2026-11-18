@@ -183,8 +183,9 @@ class Campaign(SQLModel, table=True):
     `world_template` and `rule_set` name directories under the bundled content. `setting` is the
     optional free-form setting or story the player asked for at creation; it reaches the GM's
     prompt every turn and is blank when the player left it out. `table_genres` is the optional
-    JSON list of genres the player narrowed the generation tables to at creation; blank means the
-    rule set's own choice. `force_credit_charges` is a debug-panel switch that charges an
+    JSON list of creative categories the player narrowed the generation tables and modules to at
+    creation; `table_tones` is the matching list of module tones. Blank means the rule set's own
+    choice. `force_credit_charges` is a debug-panel switch that charges an
     otherwise exempt account in this campaign. `use_inventory_space` is a per-campaign switch, on
     by default, for the rule set's slot limits; turning it off lets characters carry anything
     reasonable. `use_survival_needs` is a per-campaign switch, on by default, for food, water,
@@ -209,6 +210,7 @@ class Campaign(SQLModel, table=True):
     model: str = Field(max_length=120)
     setting: str = Field(default="", sa_column=Column(Text, nullable=False))
     table_genres: str = Field(default="", sa_column=Column(Text, nullable=False))
+    table_tones: str = Field(default="", sa_column=Column(Text, nullable=False))
     force_credit_charges: bool = Field(default=False)
     use_inventory_space: bool = Field(default=True)
     use_survival_needs: bool = Field(default=True)

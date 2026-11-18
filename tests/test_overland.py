@@ -31,9 +31,9 @@ from tests.test_travel import HPP, PARTS, _place
 from tests.test_wilderness_service import StubRng, _fix_roll, _pc_items, _pc_tools
 from tests.test_world import _db
 
-# Spring weather rolls from wilderness.json: 1-2 Nice, 4 Unpleasant, 6 Extreme.
+# Fall weather rolls from wilderness.json: 1-2 Fair, 3 Unpleasant, 6 Extreme.
 NICE = 1
-UNPLEASANT = 4
+UNPLEASANT = 3
 EXTREME = 6
 
 

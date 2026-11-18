@@ -97,9 +97,7 @@ def _post_settings(client: TestClient, campaign_id: int, **data: str):
     )
 
 
-def _settings_form(
-    client: TestClient, campaign_id: int, **extra: str
-) -> dict[str, str]:
+def _settings_form(client: TestClient, campaign_id: int, **extra: str) -> dict[str, str]:
     row = _row(client.app, campaign_id)
     return {
         "model": row.model,
@@ -113,9 +111,7 @@ def _settings_form(
 def _options_events(app: FastAPI, campaign_id: int) -> list[object]:
     with Session(app.state.engine) as db:
         return [
-            decode(row)
-            for row in events_since(db, campaign_id)
-            if row.kind == "campaign.options"
+            decode(row) for row in events_since(db, campaign_id) if row.kind == "campaign.options"
         ]
 
 
@@ -127,9 +123,7 @@ def _respec_fields(page: str) -> dict[str, str]:
     return fields
 
 
-def _post_respec(
-    client: TestClient, campaign_id: int, name: str, page: str, **fields: str
-):
+def _post_respec(client: TestClient, campaign_id: int, name: str, page: str, **fields: str):
     token = remember_csrf_token(client, page)
     return client.post(
         f"/campaigns/{campaign_id}/respec",
@@ -154,6 +148,7 @@ def test_the_settings_page_shows_the_rule_sets_campaign_options(
     assert f'<option value="{omen}" selected' in page
     assert 'name="setting"' in page
     assert 'name="table_genres_present" value="1"' in page
+    assert 'name="table_tones_present" value="1"' in page
     assert "Let players respec their characters" in page
 
 
@@ -163,11 +158,10 @@ def test_the_owner_changes_the_campaign_options_brief_and_genres(
     client, campaign_id = _cairn_ready(client_factory)
     current_omen = open_campaign(client.app, campaign_id).options["omen"]
     other_omen = next(
-        option.value
-        for option in CAIRN.campaign.tables["omen"]
-        if option.value != current_omen
+        option.value for option in CAIRN.campaign.tables["omen"] if option.value != current_omen
     )
     genre = client.app.state.content.available_table_genres[0]
+    tone = client.app.state.content.rule_sets["cairn2e"].table_tones[0]
 
     response = _post_settings(
         client,
@@ -180,6 +174,8 @@ def test_the_owner_changes_the_campaign_options_brief_and_genres(
                 "setting": "A drowned country of bell towers.",
                 "table_genres_present": "1",
                 "table_genres": genre,
+                "table_tones_present": "1",
+                "table_tones": tone,
             },
         ),
     )
@@ -190,6 +186,7 @@ def test_the_owner_changes_the_campaign_options_brief_and_genres(
     row = _row(client.app, campaign_id)
     assert row.setting == "A drowned country of bell towers."
     assert json.loads(row.table_genres) == [genre]
+    assert json.loads(row.table_tones) == [tone]
     page = client.get(f"/campaigns/{campaign_id}").text
     assert "A drowned country of bell towers." in page
 
@@ -213,9 +210,7 @@ def test_a_settings_save_without_the_options_leaves_them_alone(
     client, campaign_id = _cairn_ready(client_factory)
     before = open_campaign(client.app, campaign_id).options
 
-    response = _post_settings(
-        client, campaign_id, **_settings_form(client, campaign_id)
-    )
+    response = _post_settings(client, campaign_id, **_settings_form(client, campaign_id))
 
     assert response.status_code == 303
     assert open_campaign(client.app, campaign_id).options == before
@@ -388,9 +383,7 @@ def test_a_hirelings_mechanical_fields_are_the_players_but_its_flavor_is_the_gms
     before = character_named(client.app, campaign_id, HIRELING)
     flavor = {key: value for key, value in before.fields.items() if key != "post"}
 
-    page = client.get(
-        f"/campaigns/{campaign_id}/character/edit?character={HIRELING}"
-    ).text
+    page = client.get(f"/campaigns/{campaign_id}/character/edit?character={HIRELING}").text
 
     assert 'name="field-post"' in page
     assert 'name="field-appearance"' not in page
@@ -404,9 +397,7 @@ def test_a_hirelings_mechanical_fields_are_the_players_but_its_flavor_is_the_gms
     assert response.status_code == 303
     after = character_named(client.app, campaign_id, HIRELING)
     assert after.fields["post"] == "Watch"
-    assert {
-        key: value for key, value in after.fields.items() if key != "post"
-    } == flavor
+    assert {key: value for key, value in after.fields.items() if key != "post"} == flavor
 
 
 def test_a_player_cannot_change_their_characters_mechanical_fields(
@@ -430,10 +421,7 @@ def test_another_players_character_details_stay_private(
 ):
     _, guest, campaign_id, _ = _joined_campaign(client_factory)
 
-    assert (
-        guest.get(f"/campaigns/{campaign_id}/character/edit?character={PC}").status_code
-        == 404
-    )
+    assert guest.get(f"/campaigns/{campaign_id}/character/edit?character={PC}").status_code == 404
 
 
 # Respecs.

@@ -23,6 +23,7 @@ from starlette.responses import Response
 from cygnusloom import CAMPAIGN_MAJOR_VERSION
 from cygnusloom.auth.deps import page_user, verify_csrf
 from cygnusloom.content.character import NO_CAMPAIGN, NO_CHARACTER, character_schema
+from cygnusloom.content.library import CREATIVE_CATEGORY_HELP, TONE_HELP
 from cygnusloom.db.models import User
 from cygnusloom.llm.base import LLMError
 from cygnusloom.llm.presets import PRESETS
@@ -454,6 +455,7 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
     key = _roll_key(campaign_id)
     setting = ""
     table_genres: list[str] | None = None
+    table_tones: list[str] | None = None
     use_inventory_space: bool | None = None
     use_survival_needs: bool | None = None
     allow_respec: bool | None = None
@@ -476,6 +478,7 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
             table_genres = [
                 value for value in form.getlist("table_genres") if isinstance(value, str)
             ]
+            table_tones = [value for value in form.getlist("table_tones") if isinstance(value, str)]
             use_inventory_space = form_text(form, "use_inventory_space") == "1"
             use_survival_needs = form_text(form, "use_survival_needs") == "1"
             allow_respec = form_text(form, "allow_respec") == "1"
@@ -507,6 +510,7 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
                     "Your stats were rolled again. Review them and create your character.",
                     setting=setting,
                     table_genres=table_genres,
+                    table_tones=table_tones,
                     use_inventory_space=use_inventory_space,
                     use_survival_needs=use_survival_needs,
                     allow_respec=allow_respec,
@@ -533,6 +537,7 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
             character=character,
             setting=setting if initial_setup else None,
             table_genres=table_genres,
+            table_tones=table_tones,
             use_inventory_space=use_inventory_space,
             use_survival_needs=use_survival_needs,
             allow_respec=allow_respec,
@@ -548,6 +553,7 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
             str(exc),
             setting=setting,
             table_genres=table_genres,
+            table_tones=table_tones,
             use_inventory_space=use_inventory_space,
             use_survival_needs=use_survival_needs,
             allow_respec=allow_respec,
@@ -563,6 +569,7 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
             str(exc),
             setting=setting,
             table_genres=table_genres,
+            table_tones=table_tones,
             use_inventory_space=use_inventory_space,
             use_survival_needs=use_survival_needs,
             allow_respec=allow_respec,
@@ -700,8 +707,8 @@ async def submit_advancement(request: Request, campaign_id: int) -> Response:
         return _campaign_page(
             request, user, campaign_id, 400, "that rule set is no longer available"
         )
-    world = library.world_content(campaign.world_template, campaign.rule_set)
     state = campaign_world(engine, user.id, campaign.id).state
+    world = library.world_content(campaign.world_template, campaign.rule_set)
     viewer_pc = state.player_character(user.id)
     requested = str(form.get("character", "")).strip()
     target = None
@@ -1364,6 +1371,11 @@ async def change_campaign_settings(request: Request, campaign_id: int) -> Respon
                 if form_text(form, "table_genres_present") == "1"
                 else None
             ),
+            table_tones=(
+                [value for value in form.getlist("table_tones") if isinstance(value, str)]
+                if form_text(form, "table_tones_present") == "1"
+                else None
+            ),
             allow_respec=allow_respec,
             options=options,
             campaign_options=campaign_options,
@@ -1945,7 +1957,11 @@ def _new_form(
         if world.rule_set is None or world.rule_set == rule_set
     ]
     recommended_ids = library.recommended_world_ids(rule_set)
-    if world_template not in {world.id for world in worlds}:
+    campaign_modules = tuple(
+        module for module in library.modules.values() if module.kind == "campaign"
+    )
+    valid_ids = {world.id for world in worlds} | {module.id for module in campaign_modules}
+    if world_template not in valid_ids:
         # Prefer the configured world, then a world recommended for this rule set, when the
         # form first opens.
         preferred = []
@@ -1953,8 +1969,10 @@ def _new_form(
             preferred = [world for world in worlds if world.id == configured.world_template]
         if not preferred:
             preferred = [world for world in worlds if world.id in recommended_ids]
-        world_template = (preferred or worlds)[0].id if worlds else ""
+        choices = preferred or worlds or campaign_modules
+        world_template = choices[0].id if choices else ""
     chosen_rule_set = library.rule_sets.get(rule_set)
+    chosen_module = library.modules.get(world_template)
     chosen_world = library.world_templates.get(world_template)
     default_labels = default_campaign_labels(request.app.state.engine, library, user.id)
     # The world picker shows the worlds recommended for the chosen rule set first, then the rest.
@@ -1971,8 +1989,13 @@ def _new_form(
         "new_campaign.html",
         status_code=status_code,
         error=error,
-        campaign_label=label or default_labels.get(world_template, ""),
+        campaign_label=(
+            label
+            or default_labels.get(world_template, "")
+            or (chosen_module.name if chosen_module is not None else "")
+        ),
         world_labels=default_labels,
+        campaign_modules=campaign_modules,
         recommended_worlds=[world for world in world_templates if world.id in recommended_ids],
         other_worlds=[world for world in world_templates if world.id not in recommended_ids],
         world_recommendations={
@@ -1986,7 +2009,10 @@ def _new_form(
         selected_rule_set=rule_set,
         selected_rule_set_name=(chosen_rule_set.name if chosen_rule_set else ""),
         selected_rule_set_third_party=bool(chosen_rule_set and chosen_rule_set.third_party),
-        selected_world_third_party=bool(chosen_world and chosen_world.third_party),
+        selected_world_third_party=bool(
+            (chosen_module.third_party if chosen_module is not None else False)
+            or (chosen_world.third_party if chosen_world is not None else False)
+        ),
     )
 
 
@@ -2031,7 +2057,7 @@ def _advancement_page(
         error=error,
         campaign=campaign,
         rule_set=rule_set,
-        world=library.world_templates.get(campaign.world_template),
+        world=library.setting_template(campaign.world_template),
         view=view,
         pending=tuple(pages),
     )
@@ -2046,6 +2072,7 @@ def _campaign_page(
     draft: str = "",
     setting: str = "",
     table_genres: Sequence[str] | None = None,
+    table_tones: Sequence[str] | None = None,
     use_inventory_space: bool | None = None,
     use_survival_needs: bool | None = None,
     allow_respec: bool | None = None,
@@ -2097,6 +2124,7 @@ def _campaign_page(
     with session_scope(engine) as db:
         newest = last_event_id(db, campaign.id)
     world = campaign_world(engine, user.id, campaign.id)
+    world_template = library.setting_template(campaign.world_template)
     compendium = compendium_view(library, campaign.rule_set, campaign.world_template, world.state)
     viewer_pc = world.state.player_character(user.id)
     world_map = map_view(world.state, rule_set.world_terrain if rule_set else None, pc=viewer_pc)
@@ -2157,7 +2185,7 @@ def _campaign_page(
             "creation.html",
             status_code=status_code,
             campaign=campaign,
-            world=library.world_templates.get(campaign.world_template),
+            world=library.setting_template(campaign.world_template),
             scene=scene_view(
                 world.state,
                 spec,
@@ -2196,6 +2224,14 @@ def _campaign_page(
                 if table_genres
                 else (rule_set.table_genres if rule_set is not None else ())
             ),
+            table_tones=rule_set.table_tones if rule_set is not None else (),
+            selected_table_tones=(
+                tuple(table_tones)
+                if table_tones
+                else (rule_set.table_tones if rule_set is not None else ())
+            ),
+            category_help=CREATIVE_CATEGORY_HELP,
+            tone_help=TONE_HELP,
             options=campaign_view(options) if options_pending else None,
             show_character=character_pending,
             character=character,
@@ -2217,7 +2253,7 @@ def _campaign_page(
         )
     messages = list_messages(engine, campaign.id)
     transcript = campaign_transcript(engine, user.id, campaign.id)
-    world_content = library.world_content(campaign.world_template, campaign.rule_set)
+    world_content = library.world_content_for(world_template, campaign.rule_set)
     pending = pending_turn(engine, user.id, campaign.id)
     advancement_due = (
         level_up_service.advancement_due_for_player(world.state, rule_set, user.id)
@@ -2243,7 +2279,7 @@ def _campaign_page(
         request.app.state.catalog.context_tokens(campaign.model),
         world_content.rules,
         unattached_world_rules=world_content.unattached_rules,
-        world=library.world_templates.get(campaign.world_template),
+        world=world_template,
         tool_schema_mode=settings.tool_schema_mode,
         rule_info_mode=settings.rule_info_mode,
     )
@@ -2299,7 +2335,7 @@ def _campaign_page(
     )
     values = {
         "campaign": campaign,
-        "world": library.world_templates.get(campaign.world_template),
+        "world": world_template,
         "scene": scene_view(
             world.state,
             spec,
@@ -2343,6 +2379,10 @@ def _campaign_page(
         "campaign_setting": campaign.setting,
         "available_table_genres": library.available_table_genres,
         "selected_table_genres": _campaign_genres(campaign, rule_set),
+        "available_table_tones": rule_set.table_tones if rule_set is not None else (),
+        "selected_table_tones": _campaign_tones(campaign, rule_set),
+        "category_help": CREATIVE_CATEGORY_HELP,
+        "tone_help": TONE_HELP,
         "allow_respec": campaign.allow_respec,
         "editable_names": editable_names,
         "respec_names": respec_names,
@@ -2496,8 +2536,8 @@ def _local_map(state: CampaignState, rule_set: Any, player: Any = None) -> dict[
 
 
 def _campaign_genres(campaign: Any, rule_set: Any) -> tuple[str, ...]:
-    """The genres the campaign's generation tables are filtered by, in the rule set's order when
-    it has a say. A campaign with no stored choice keeps the rule set's own selection."""
+    """The categories the campaign's tables and modules are filtered by, in the rule set's order
+    when it has a say. A campaign with no stored choice keeps the rule set's own selection."""
     if campaign.table_genres:
         try:
             stored = json.loads(campaign.table_genres)
@@ -2506,6 +2546,19 @@ def _campaign_genres(campaign: Any, rule_set: Any) -> tuple[str, ...]:
         if isinstance(stored, list) and all(isinstance(item, str) for item in stored):
             return tuple(stored)
     return rule_set.table_genres if rule_set is not None else ()
+
+
+def _campaign_tones(campaign: Any, rule_set: Any) -> tuple[str, ...]:
+    """The tones the campaign's mini modules are filtered by. A campaign with no stored choice
+    keeps the rule set's available tones."""
+    if campaign.table_tones:
+        try:
+            stored = json.loads(campaign.table_tones)
+        except ValueError:
+            stored = None
+        if isinstance(stored, list) and all(isinstance(item, str) for item in stored):
+            return tuple(stored)
+    return rule_set.table_tones if rule_set is not None else ()
 
 
 def _creation_pending(state: Any, rule_set: Any, user_id: int) -> tuple[bool, bool]:

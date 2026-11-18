@@ -182,7 +182,7 @@ def test_field_and_period_descriptions_reach_the_compendium():
 
 def test_world_secrets_stay_out_of_the_compendium():
     library = content_library()
-    world = library.world_templates["twin-lakes"]
+    world = library.setting_template("twin-lakes")
     compendium = compendium_view(library, "cairn2e", "twin-lakes")
     texts = "\n".join(entry.text for section in compendium.sections for entry in section.entries)
     names = {entry.name for section in compendium.sections for entry in section.entries}

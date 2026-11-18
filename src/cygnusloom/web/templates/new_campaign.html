@@ -17,7 +17,14 @@
         </p>
       </div>
       <div class="campaign-picker">
-        {% call pick_control("world_template", "World", "Worlds recommended for the chosen rule set come first; the rest also work with it.", "required", empty="Choose a world", roll=false, clear=false) %}
+        {% call pick_control("world_template", "World or module", "Campaign modules come first. Worlds recommended for the chosen rule set come next; the rest also work with it.", "required", empty="Choose a world or module", roll=false, clear=false) %}
+          {% if campaign_modules %}
+          <optgroup label="Campaign modules" data-world-group="modules">
+            {% for module in campaign_modules %}
+              <option value="{{ module.id }}" data-rule-set="{{ module.rule_set or '' }}" data-label="{{ module.name }}" data-title="{{ module.name }}" data-detail="{{ module.blurb or module.description }}" data-icon="{{ icon_path(module.icon) }}" data-third-party="{{ '1' if module.third_party else '0' }}" data-campaign-module="1"{% if module.id == selected_world %} selected{% endif %}>{{ module.name }}</option>
+            {% endfor %}
+          </optgroup>
+          {% endif %}
           <optgroup label="Recommended for {{ selected_rule_set_name }}" data-world-group="recommended">
             {% for world in recommended_worlds %}
               {{ world_option(world, world_labels, world_recommendations, selected_world) }}

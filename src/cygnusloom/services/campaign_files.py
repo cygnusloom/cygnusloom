@@ -19,7 +19,11 @@ from sqlalchemy import Engine, select
 
 from cygnusloom import CAMPAIGN_MAJOR_VERSION, __version__
 from cygnusloom.content.definitions import ContentError
-from cygnusloom.content.library import ContentLibrary, read_table_genres
+from cygnusloom.content.library import (
+    ContentLibrary,
+    effective_table_genres,
+    effective_table_tones,
+)
 from cygnusloom.db.models import Campaign, Event, utcnow
 from cygnusloom.services import level_up as level_up_service
 from cygnusloom.services.campaigns import (
@@ -101,6 +105,12 @@ def export_campaign(engine: Engine, owner_id: int, campaign_id: int) -> tuple[st
         genres = []
     if not isinstance(genres, list):
         genres = []
+    try:
+        tones = json.loads(campaign.table_tones) if campaign.table_tones else []
+    except ValueError:
+        tones = []
+    if not isinstance(tones, list):
+        tones = []
     document = {
         "format": EXPORT_FORMAT,
         "version": EXPORT_VERSION,
@@ -119,6 +129,7 @@ def export_campaign(engine: Engine, owner_id: int, campaign_id: int) -> tuple[st
             "model": campaign.model,
             "setting": campaign.setting,
             "table_genres": genres,
+            "table_tones": tones,
             "use_inventory_space": campaign.use_inventory_space,
             "use_survival_needs": campaign.use_survival_needs,
             "start_level": campaign.start_level,
@@ -187,6 +198,7 @@ def import_campaign(
             model=model,
             setting=config["setting"],
             table_genres=json.dumps(list(config["table_genres"])),
+            table_tones=json.dumps(list(config["table_tones"])),
             use_inventory_space=config["use_inventory_space"],
             use_survival_needs=config["use_survival_needs"],
             start_level=config["start_level"],
@@ -438,17 +450,27 @@ def _text(data: dict[str, Any], key: str, limit: int) -> str:
 def _read_campaign(data: dict[str, Any], library: ContentLibrary) -> dict[str, Any]:
     world_template = _text(data, "world_template", MAX_COLUMN)
     rule_set = _text(data, "rule_set", MAX_COLUMN)
-    if world_template not in library.world_templates:
-        raise InvalidInput("that world template is not available on this server")
     if rule_set not in library.rule_sets:
         raise InvalidInput("that rule set is not available on this server")
-    template = library.world_templates[world_template]
+    module = library.modules.get(world_template)
+    if module is not None:
+        if module.kind != "campaign" or module.world_template is None:
+            raise InvalidInput("that file names a mini module as its campaign")
+        if module.rule_set is not None and module.rule_set != rule_set:
+            raise InvalidInput("that campaign module is built for another rule set")
+        if module.recommended_rule_sets and rule_set not in module.recommended_rule_sets:
+            raise InvalidInput("that campaign module is not built for that rule set")
+        template = module.world_template
+    else:
+        if world_template not in library.world_templates:
+            raise InvalidInput("that world template is not available on this server")
+        template = library.world_templates[world_template]
     if template.rule_set is not None and rule_set != template.rule_set:
         raise InvalidInput(
             f"that world only works with the {library.rule_sets[template.rule_set].name} rule set"
         )
     try:
-        library.world_content(world_template, rule_set)
+        library.world_content_for(template, rule_set)
     except ContentError as error:
         raise InvalidInput(f"that world does not work with that rule set: {error}") from error
     rules = library.rule_sets[rule_set]
@@ -465,12 +487,28 @@ def _read_campaign(data: dict[str, Any], library: ContentLibrary) -> dict[str, A
             not isinstance(item, str) for item in raw_genres
         ):
             raise InvalidInput("table_genres must be a list of strings")
-        try:
-            genres = read_table_genres(raw_genres, "table genres")
-        except ContentError as error:
-            raise InvalidInput(str(error)) from error
+        # Files from before the vocabulary was standardized may name categories this
+        # release no longer has. Keep the valid ones, and use the rule set's defaults when
+        # none remain, just as a stored campaign selection does.
+        genres = effective_table_genres(json.dumps(raw_genres), rules)
     else:
         genres = rules.table_genres
+    if "table_tones" in data:
+        raw_tones = data.get("table_tones")
+        if raw_tones is None:
+            raw_tones = []
+        if isinstance(raw_tones, str):
+            try:
+                raw_tones = json.loads(raw_tones)
+            except ValueError as exc:
+                raise InvalidInput("table_tones must be a list of strings") from exc
+        if not isinstance(raw_tones, list) or any(not isinstance(item, str) for item in raw_tones):
+            raise InvalidInput("table_tones must be a list of strings")
+        # A tone this release no longer offers is treated the same way, so an older
+        # export still imports and falls back to the rule set's tones when necessary.
+        tones = effective_table_tones(json.dumps(raw_tones), rules)
+    else:
+        tones = rules.table_tones
     # A file exported before the option existed keeps the rule set's limits, as the campaign it
     # came from did.
     use_inventory_space = data.get("use_inventory_space", True)
@@ -502,6 +540,7 @@ def _read_campaign(data: dict[str, Any], library: ContentLibrary) -> dict[str, A
         "model": _text(data, "model", MAX_MODEL),
         "setting": _text(data, "setting", MAX_SETTING),
         "table_genres": genres,
+        "table_tones": tones,
         "use_inventory_space": use_inventory_space,
         "use_survival_needs": use_survival_needs,
         "start_level": start_level,

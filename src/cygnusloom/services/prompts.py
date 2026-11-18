@@ -140,7 +140,9 @@ STATE_INSTRUCTION = (
     "Use buy_item only for objects a character keeps, and buy_service for rooms, meals, "
     "passage, tolls, and other services that are not carried. "
     "Write no scene prose in this step: the narration step writes it. Do not narrate here; the "
-    "narration comes in the next step. When several changes do not depend on "
+    "narration comes in the next step. Every place, person, or object the action can depend on "
+    "must be recorded in this step; do not leave it for the narration to introduce. When several "
+    "changes do not depend on "
     "each other, make every one of their tool calls in this same reply: three NPCs, a location and "
     "its people, or a pile of setting facts are one round, not one round each. Every extra round "
     "costs the player another wait."
@@ -522,19 +524,20 @@ def system_parts(
 
 
 def opening_prompt(template: WorldTemplate | None) -> str:
-    """The opening instruction, with the world's start when it has one: where the player character
-    begins, and the hooks that bring the party there."""
-    if template is None or template.start is None:
-        return OPENING_PROMPT
-    start = template.start
-    place = next(loc for loc in template.locations if loc.id == start.location)
-    return (
-        f"{OPENING_PROMPT}\n\nThe campaign starts at {place.name} (location id {place.id}). Place the "
-        f"player character there with move_actor, and do not place them anywhere else. The adventure's "
-        f"hooks, which bring the party to this start, are below. Work them into the introduction as "
-        f"what the player character has heard or been asked to do; do not state them as a list.\n\n"
-        f"{start.hooks}"
-    )
+    """The opening instruction, with the world's start when it has one: where the player
+    character begins, and the hooks that bring the party there."""
+    start = template.start if template is not None else None
+    text = OPENING_PROMPT
+    if start is not None:
+        place = next(loc for loc in template.locations if loc.id == start.location)
+        text += (
+            f"\n\nThe campaign starts at {place.name} (location id {place.id}). Place the "
+            f"player character there with move_actor, and do not place them anywhere else. The "
+            f"adventure's hooks, which bring the party to this start, are below. Work them into "
+            f"the introduction as what the player character has heard or been asked to do; do "
+            f"not state them as a list.\n\n{start.hooks}"
+        )
+    return text
 
 
 def _prompt_fragments(rule_set: RuleSet, world: WorldTemplate | None) -> list[PromptFragment]:
@@ -605,7 +608,9 @@ def speech_instruction(sentence_cap: int | None) -> str:
         "evade straight. Personality, accent, and quirks color the words you choose, but they never "
         "make a line ornate, drawn out, or hard to read; keep any accent or dialect light. Keep the "
         "one or two points the intent gives and stop. Do not answer for anyone else, do not add a "
-        "second line, and do not repeat a line the intent says is already queued. Do not describe "
+        "second line, and do not repeat a line the intent says is already queued. Do not invent a "
+        "place, person, faction, or clue the intent does not name; use only what the intent or "
+        "the speaker's profile gives. Do not describe "
         "actions, do not narrate, and do not add anything the intent does not call for. Stage "
         "directions such as gestures, tone, or what the speaker does belong to the narration, not to "
         "the speech: every word you write must be something the speaker says. Ignore the style of "

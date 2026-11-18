@@ -63,8 +63,11 @@
     "name": "Memory Prism",
     "looks_like": "tool",
     "feature_type": "item",
-    "description": "Absorbs the final moments of a person's life on a minute by minute basis. The longer the exposure, the more memories are recovered. If another dies in its presence, their memories replace those that were stored. Direct contact with the prism replays the stored memories directly to the the mind of the person in contact with it, as if they were experiencing them first-hand.",
-    "size": "bulky"
+    "description": "Absorbs the final moments of a person's life on a minute by minute basis. The longer the exposure, the more memories are recovered. If another dies in its presence, their memories replace those that were stored. Direct contact with the prism replays the stored memories directly to the the mind of the person in contact with it, as if they were experiencing them first-hand. Bulky, worth 1000gp.",
+    "size": "bulky",
+    "rules": [
+      "memory-prism-current-memories"
+    ]
   },
   {
     "type": "feature",

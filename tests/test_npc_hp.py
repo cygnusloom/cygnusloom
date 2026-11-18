@@ -23,7 +23,7 @@ from tests.test_content import _core, _world, _write
 from tests.test_world import _db
 
 LIBRARY = content_library()
-TWIN_LAKES = LIBRARY.world_templates["twin-lakes"]
+TWIN_LAKES = LIBRARY.setting_template("twin-lakes")
 STATLESS = (
     "Reeve Trellis",
     "Aldra",

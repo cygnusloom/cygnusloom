@@ -33,6 +33,7 @@
       }
     },
     "table_genres": ["generic", "fantasy"],
+    "table_tones": ["grim", "mystery", "whimsical", "relaxing", "adventure"],
     "ordered_feature_tags": ["focus"],
     "skill_progression": {
       "untrained": -1,

@@ -76,6 +76,7 @@ def _create_character(
     pronouns: str | None = "she/her",
     setting: str | None = None,
     table_genres: list[str] | None = None,
+    table_tones: list[str] | None = None,
 ):
     token = csrf_token(client, f"/campaigns/{campaign_id}")
     # A browser posts checked boxes, and both tracking switches start checked.
@@ -92,6 +93,8 @@ def _create_character(
         form["setting"] = setting
     if table_genres is not None:
         form["table_genres"] = table_genres
+    if table_tones is not None:
+        form["table_tones"] = table_tones
     return client.post(
         f"/campaigns/{campaign_id}/creation",
         data=form,
@@ -344,7 +347,7 @@ def test_default_labels_number_each_world_separately(
     _new_campaign(client, label="")
     twin_lakes = _new_campaign(client, label="", world_template="twin-lakes", rule_set="cairn2e")
     assert twin_lakes.status_code == 303
-    assert _label_of(client, _created_campaign_id(twin_lakes)) == "Twin Lakes #1"
+    assert _label_of(client, _created_campaign_id(twin_lakes)) == "Trouble in Twin Lakes #1"
 
 
 def test_new_campaign_form_asks_for_the_label_last(
@@ -435,9 +438,9 @@ def test_setting_belongs_to_the_campaign_options_creation_page(
     assert 'name="setting" rows="6" maxlength="4000"' in page
     assert 'name="table_genres"' in page
     assert page.index("Campaign options") < page.index('name="setting"')
-    assert page.index("Campaign options") < page.index("Creative and lore tables")
+    assert page.index("Campaign options") < page.index("Creative sources")
     assert page.index('name="setting"') < page.index("Your character")
-    assert page.index("Creative and lore tables") < page.index("Your character")
+    assert page.index("Creative sources") < page.index("Your character")
     assert "Blank is ignored." in page
 
 
@@ -490,12 +493,39 @@ def test_creation_stores_the_chosen_table_genres(client_factory: Callable[[], Te
     response = _new_campaign(client, label="Weird west")
     assert response.status_code == 303
     campaign_id = _created_campaign_id(response)
-    created = _create_character(client, campaign_id, table_genres=["generic", "historical"])
+    created = _create_character(client, campaign_id, table_genres=["generic", "fantasy"])
     assert created.status_code == 303
-    with Session(client.app.state.engine) as db:
-        campaign = db.get(Campaign, campaign_id)
+    with Session(client.app.state.engine) as session:
+        campaign = session.get(Campaign, campaign_id)
         assert campaign is not None
-        assert json.loads(campaign.table_genres) == ["generic", "historical"]
+        assert json.loads(campaign.table_genres) == ["generic", "fantasy"]
+
+
+def test_creation_stores_the_chosen_table_tones(client_factory: Callable[[], TestClient]):
+    client = _signed_in(client_factory)
+    response = _new_campaign(client, label="Quiet mystery")
+    assert response.status_code == 303
+    campaign_id = _created_campaign_id(response)
+    created = _create_character(client, campaign_id, table_tones=["grim", "mystery"])
+    assert created.status_code == 303
+    with Session(client.app.state.engine) as session:
+        campaign = session.get(Campaign, campaign_id)
+        assert campaign is not None
+        assert json.loads(campaign.table_tones) == ["grim", "mystery"]
+
+
+def test_creation_rejects_an_unknown_tone_and_keeps_the_rest(
+    client_factory: Callable[[], TestClient],
+):
+    client = _signed_in(client_factory)
+    response = _new_campaign(client)
+    assert response.status_code == 303
+    campaign_id = _created_campaign_id(response)
+    created = _create_character(client, campaign_id, table_tones=["grim", "silly"])
+    assert created.status_code == 400
+    assert "unknown tone" in created.text
+    assert 'name="table_tones" value="grim" checked' in created.text
+    assert 'name="table_tones" value="silly"' not in created.text
 
 
 def test_creation_keeps_the_rule_sets_table_genres_when_none_are_chosen(
@@ -610,7 +640,7 @@ def test_create_rejects_a_rule_set_the_world_is_not_played_with(
     client = _signed_in(client_factory)
     response = _new_campaign(client, world_template="twin-lakes", rule_set="worldswithoutnumber")
     assert response.status_code == 400
-    assert "only works with the Cairn 2e rule set" in response.text
+    assert "that module only works with the Cairn 2e rule set" in response.text
 
 
 def test_new_campaign_form_marks_a_world_that_names_its_rule_set(
@@ -618,7 +648,7 @@ def test_new_campaign_form_marks_a_world_that_names_its_rule_set(
 ):
     client = _signed_in(client_factory)
     page = client.get("/campaigns/new").text
-    assert '<option value="twin-lakes" data-rule-set="cairn2e"' in page
+    assert re.search(r'<option value="twin-lakes"[^>]*data-rule-set="cairn2e"', page)
     assert "/static/new_campaign.js" in page
 
 
