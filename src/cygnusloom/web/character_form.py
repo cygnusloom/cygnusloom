@@ -78,7 +78,7 @@ def creation_view(spec: CharacterSpec, rolled: dict[str, int]) -> dict[str, Any]
             "modifier_bands": [list(band) for band in stat.modifier_bands],
         }
         for stat in spec.stats.values()
-        if stat.derived is None
+        if stat.derived is None and not stat.hidden
     ]
     templates = [
         {
@@ -93,6 +93,7 @@ def creation_view(spec: CharacterSpec, rolled: dict[str, int]) -> dict[str, Any]
             "skill_picks": _skill_picks_view(spec, template),
             "feat_picks": _feat_picks_view(spec, template),
             "skill_grants": dict(template.skills),
+            "features": [granted.feature for granted in template.features],
             "grants": _template_grants(spec, template),
             "summary": " · ".join(_template_grants(spec, template)),
             "compatible_with": {
@@ -254,7 +255,7 @@ def submission_from_form(
     of one of its table's options."""
     stats: dict[str, Any] = {}
     for stat in spec.stats.values():
-        if stat.derived is not None:
+        if stat.derived is not None or stat.hidden:
             continue
         raw = form_text(form, STAT_PREFIX + stat.id)
         try:
@@ -575,13 +576,15 @@ def _plural_noun(noun: str, count: int) -> str:
 
 
 def _pick_noun(pick: Any) -> str:
-    """The noun a pick offers, for headings and summaries: spell, potion, subject, focus, art."""
+    """The noun a pick offers, for headings and summaries: spell, potion, subject, focus,
+    fighting style. A feat pick names its tag when it has one, so a rule set can call its feats
+    what its own book calls them."""
     if pick.feature_type in {"spell", "potion", "enchantment", "subject", "item"}:
         return pick.feature_type
     if pick.tag in {"focus", "origin"}:
         return pick.tag
     if pick.feature_type == "feat":
-        return "art"
+        return pick.tag.replace("-", " ").replace("_", " ") if pick.tag else "feat"
     return pick.feature_type or pick.tag or "feature"
 
 

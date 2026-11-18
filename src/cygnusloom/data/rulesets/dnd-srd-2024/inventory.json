@@ -1,0 +1,11 @@
+[
+  {
+    "type": "inventory",
+    "id": "dnd-srd-2024",
+    "capacity": 30,
+    "penalty_name": "Encumbered",
+    "penalty_lasts": "until you drop enough gear",
+    "penalty_item": "encumbered",
+    "penalty_slots": 0
+  }
+]

@@ -166,7 +166,12 @@ def test_bundled_content_loads():
     assert library.setting_template("twin-lakes").name == "Trouble in Twin Lakes"
     twin_lakes = library.setting_template("twin-lakes")
     assert twin_lakes.locations
-    assert set(library.rule_sets) == {"academia-arcana", "cairn2e", "worldswithoutnumber"}
+    assert set(library.rule_sets) == {
+        "academia-arcana",
+        "cairn2e",
+        "dnd-srd-2024",
+        "worldswithoutnumber",
+    }
     assert library.world_content("twin-lakes", "cairn2e").monsters
     assert library.rule_sets["worldswithoutnumber"].character.skills
     assert library.rule_sets["worldswithoutnumber"].monsters

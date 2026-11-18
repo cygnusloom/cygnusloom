@@ -161,7 +161,9 @@ def buy_item(
             text=text,
             uses=uses,
             max_uses=uses,
-            flags=("shield",) if listed is not None and listed.armor_mode == "shield" else (),
+            flags=("shield",)
+            if listed is not None and listed.armor_mode in {"shield", "shield_flat"}
+            else (),
         ),
         cause="bought",
     )
@@ -169,18 +171,26 @@ def buy_item(
         if (
             combat is not None
             and combat.defense_base
-            and listed.armor_mode in {"max", "set", "shield"}
+            and listed.armor_mode in {"max", "set", "shield", "shield_flat"}
         ):
             if character is None:
                 raise InvalidInput("equipped defense requires the character rules")
-            if listed.armor_mode == "shield":
+            if listed.armor_mode in {"shield", "shield_flat"}:
                 slot = (
                     (listed.name, listed.armor)
                     if listed.armor > buyer.equipped_shield_value
                     else None
                 )
                 armor = (
-                    set_defense_equipment(db, campaign_id, buyer, character, combat, shield=slot)
+                    set_defense_equipment(
+                        db,
+                        campaign_id,
+                        buyer,
+                        character,
+                        combat,
+                        shield=slot,
+                        shield_mode=listed.armor_mode,
+                    )
                     if slot is not None
                     else buyer.armor
                 )

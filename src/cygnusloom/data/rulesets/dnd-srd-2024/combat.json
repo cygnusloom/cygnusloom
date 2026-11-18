@@ -1,0 +1,96 @@
+[
+  {
+    "type": "combat",
+    "id": "dnd-srd-2024",
+    "damage": [
+      {
+        "kind": "harm",
+        "stat": "hp"
+      }
+    ],
+    "check_die": "1d20",
+    "initiative_stat": "dex",
+    "defeat": {
+      "player_character": "unconscious",
+      "player_character_dead": "dead",
+      "important_npc": "unconscious",
+      "npc": "dead",
+      "nonlethal": "unconscious"
+    },
+    "outside_harm": [
+      "hp"
+    ],
+    "healing_stat": "hp",
+    "hit_mode": "roll_vs_defense",
+    "hit_bonus_stat": "attack_bonus",
+    "attribute_damage": true,
+    "defeat_at_zero": [
+      "hp"
+    ],
+    "dying_hours": 0,
+    "dying_rounds": 0,
+    "armor_max": 0,
+    "multi_attack": "each",
+    "defense_base": 10,
+    "defense_modifier": "dex",
+    "natural_one_misses": true,
+    "natural_max_hits": true,
+    "total_defense": 0,
+    "range_bands": {
+      "normal": 0,
+      "long": 0
+    },
+    "ranges": {
+      "melee": 5,
+      "sight_blocked_by": [
+        "wall",
+        "tree",
+        "boulder",
+        "pillar",
+        "statue",
+        "altar",
+        "gate",
+        "portcullis",
+        "bookshelf",
+        "cart",
+        "fountain",
+        "throne",
+        "obelisk",
+        "pine",
+        "cabinet",
+        "shelf",
+        "shrine",
+        "wagon",
+        "fireplace",
+        "barrel",
+        "crate",
+        "table",
+        "counter"
+      ]
+    },
+    "attacks_per_turn": 1,
+    "unarmed": {
+      "damage": "1d1",
+      "names": [
+        "unarmed",
+        "fist",
+        "fists",
+        "punch",
+        "kick"
+      ],
+      "attributes": [
+        "str",
+        "dex"
+      ]
+    },
+    "save": {
+      "mode": "roll_over"
+    },
+    "initiative": {
+      "die": "1d20",
+      "bonus_stat": "dex",
+      "side": false
+    },
+    "initiative_mode": "roll_order"
+  }
+]

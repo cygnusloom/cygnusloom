@@ -55,7 +55,10 @@ def test_bundled_rule_sets_recommend_their_preferred_worlds():
     assert library.recommended_world_ids("cairn2e") == set()
     assert library.recommended_world_ids("academia-arcana") == {"unwritten-academy"}
     assert library.recommended_world_ids("worldswithoutnumber") == {"unwritten-world"}
-    assert library.recommending_rule_sets("unwritten-world") == ("worldswithoutnumber",)
+    assert library.recommending_rule_sets("unwritten-world") == (
+        "dnd-srd-2024",
+        "worldswithoutnumber",
+    )
 
 
 def test_offered_worlds_leave_out_other_rule_sets_and_put_recommended_first():
@@ -157,7 +160,7 @@ def test_the_new_campaign_form_groups_recommended_worlds_first(
     assert '<option value="unwritten-world"' in group
     assert '<option value="twin-lakes"' not in group
     assert '<option value="unwritten-academy"' not in group
-    assert "data-recommended-for='[\"worldswithoutnumber\"]'" in group
+    assert "data-recommended-for='[\"dnd-srd-2024\", \"worldswithoutnumber\"]'" in group
 
 
 def test_the_campaign_pickers_open_from_the_summary(

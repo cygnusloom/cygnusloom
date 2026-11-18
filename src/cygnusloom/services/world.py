@@ -698,11 +698,16 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
             if held is None:
                 raise InvalidInput(f"{found.name} carries no {item!r}")
             listed = self._listed(held.name, include_character=True)
-            if listed is None or listed.armor_mode not in {"max", "set", "shield"}:
+            if listed is None or listed.armor_mode not in {
+                "max",
+                "set",
+                "shield",
+                "shield_flat",
+            }:
                 raise InvalidInput(f"{held.name} is not equippable armor or a shield")
             if equipped and not held.ready:
                 raise InvalidInput(f"{held.name} is stowed; ready it before equipping it")
-            is_shield = listed.armor_mode == "shield"
+            is_shield = listed.armor_mode in {"shield", "shield_flat"}
             current = found.equipped_shield if is_shield else found.equipped_armor
             if not equipped and (not current or not same_item_name(current, held.name)):
                 raise InvalidInput(f"{found.name} does not have {held.name} equipped")
@@ -715,6 +720,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 rules,
                 armor=None if is_shield else selected,
                 shield=selected if is_shield else None,
+                shield_mode=listed.armor_mode if is_shield else "shield",
             )
             db.commit()
             return {
@@ -1051,6 +1057,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
         dice_values: list[int] | None = None,
         use_optional: bool = True,
         player_rolls_reaction: bool = False,
+        roll_mode: str = "normal",
     ) -> dict[str, Any]:
         try:
             check_id = resolve_id(
@@ -1086,6 +1093,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 dice_values=dice_values,
                 use_optional=use_optional,
                 player_rolls_reaction=player_rolls_reaction,
+                roll_mode=roll_mode,
             )
 
     def optional_check_reactions(
@@ -1921,6 +1929,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
         count: int = 0,
         force: bool = False,
         nonlethal: bool = False,
+        roll_mode: str = "normal",
     ) -> dict[str, Any]:
         attacks = count or self.attacks_per_action(attacker)
         if attacks > 1 and targets is None:
@@ -1936,7 +1945,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 }
                 for _ in range(attacks)
             ]
-            return self.resolve_attacks(target, entries, force=force)
+            return self.resolve_attacks(target, entries, force=force, roll_mode=roll_mode)
         with session_scope(self.engine) as db:
             return combat.attack(
                 db,
@@ -1957,6 +1966,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 force=force,
                 cell_feet=self._cell_feet(),
                 nonlethal=nonlethal,
+                roll_mode=roll_mode,
             )
 
     def _cell_feet(self) -> int | None:
@@ -1980,7 +1990,11 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
             return template.attacks_per_action if template is not None else 1
 
     def resolve_attacks(
-        self, target: str, attacks: Sequence[Mapping[str, str]], force: bool = False
+        self,
+        target: str,
+        attacks: Sequence[Mapping[str, str]],
+        force: bool = False,
+        roll_mode: str = "normal",
     ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return combat.resolve_attacks(
@@ -1995,6 +2009,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 spec=self.character,
                 force=force,
                 cell_feet=self._cell_feet(),
+                roll_mode=roll_mode,
             )
 
     def player_attack(
@@ -2012,6 +2027,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
         force: bool = False,
         character: str = "",
         nonlethal: bool = False,
+        roll_mode: str = "normal",
     ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return combat.player_attack(
@@ -2037,6 +2053,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 character=character,
                 cell_feet=self._cell_feet(),
                 nonlethal=nonlethal,
+                roll_mode=roll_mode,
             )
 
     def attack_dice(self, weapon: str, modifier: str = "") -> str:
@@ -2221,7 +2238,12 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
             if rule.kind != "text" and choice in taken:
                 raise InvalidInput(f"{choice!r} is already chosen for {found.name}")
             skill = choice if rule.grant == "trained" else ""
+            skill_amount = 0
+            if rule.grant == "skill":
+                skill = choice
+                skill_amount = rule.amount
             stat = ""
+            stat_amount = 0
             if rule.grant == "modifier":
                 bonus = spec.modifier(character.stats, choice) + character.stat_modifiers.get(
                     choice, 0
@@ -2232,6 +2254,15 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                         f"{rule.max_value}; {found.name} cannot raise it further"
                     )
                 stat = choice
+            elif rule.grant == "score":
+                score = character.stats.get(choice, 0)
+                if rule.max_value and score + rule.amount > rule.max_value:
+                    raise InvalidInput(
+                        f"{character.name}'s {spec.stats[choice].name} is already at "
+                        f"{rule.max_value}; {found.name} cannot raise it further"
+                    )
+                stat = choice
+                stat_amount = rule.amount
             record(
                 db,
                 self.campaign_id,
@@ -2241,7 +2272,9 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                     pick=pick,
                     choice=choice,
                     skill=skill,
+                    skill_amount=skill_amount,
                     stat=stat,
+                    stat_amount=stat_amount,
                 ),
             )
             db.commit()

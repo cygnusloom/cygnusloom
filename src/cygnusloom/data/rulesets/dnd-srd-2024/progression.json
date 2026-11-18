@@ -1,0 +1,3200 @@
+[
+  {
+    "type": "rule_data",
+    "id": "progression",
+    "python_module": "dnd_srd_2024",
+    "configure": "configure_progression",
+    "max_level": 20,
+    "xp": {
+      "standard": [
+        0,
+        300,
+        900,
+        2700,
+        6500,
+        14000,
+        23000,
+        34000,
+        48000,
+        64000,
+        85000,
+        100000,
+        120000,
+        140000,
+        165000,
+        195000,
+        225000,
+        265000,
+        305000,
+        355000
+      ]
+    },
+    "classes": {
+      "barbarian": {
+        "hit_die": 12,
+        "saves": [
+          "con",
+          "str"
+        ],
+        "casting": "none",
+        "ability": "",
+        "subclass_level": 3,
+        "asi_levels": [
+          4,
+          8,
+          12,
+          16,
+          19
+        ],
+        "fighting_style_levels": [],
+        "expertise_levels": [],
+        "cantrips": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "spells": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "slot_table": "none",
+        "features": {
+          "1": [
+            "class-barbarian-rage",
+            "class-barbarian-unarmored-defense",
+            "class-barbarian-weapon-mastery"
+          ],
+          "2": [
+            "class-barbarian-danger-sense",
+            "class-barbarian-reckless-attack"
+          ],
+          "3": [
+            "class-barbarian-primal-knowledge"
+          ],
+          "5": [
+            "class-barbarian-extra-attack",
+            "class-barbarian-fast-movement"
+          ],
+          "7": [
+            "class-barbarian-feral-instinct",
+            "class-barbarian-instinctive-pounce"
+          ],
+          "9": [
+            "class-barbarian-brutal-strike"
+          ],
+          "11": [
+            "class-barbarian-relentless-rage"
+          ],
+          "13": [
+            "class-barbarian-improved-brutal-strike"
+          ],
+          "15": [
+            "class-barbarian-persistent-rage"
+          ],
+          "17": [
+            "class-barbarian-improved-brutal-strike-enhanced"
+          ],
+          "18": [
+            "class-barbarian-indomitable-might"
+          ],
+          "20": [
+            "class-barbarian-primal-champion"
+          ]
+        }
+      },
+      "bard": {
+        "hit_die": 8,
+        "saves": [
+          "cha",
+          "dex"
+        ],
+        "casting": "full",
+        "ability": "cha",
+        "subclass_level": 1,
+        "asi_levels": [
+          4,
+          8,
+          12,
+          16,
+          19
+        ],
+        "fighting_style_levels": [],
+        "expertise_levels": [
+          2
+        ],
+        "cantrips": [
+          2,
+          2,
+          2,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        "spells": [
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          14,
+          15,
+          16,
+          18,
+          19,
+          19,
+          20,
+          20,
+          22,
+          22,
+          22
+        ],
+        "slot_table": "full",
+        "features": {
+          "1": [
+            "class-bard-bard-spell-list",
+            "class-bard-bardic-inspiration",
+            "class-bard-spellcasting"
+          ],
+          "2": [
+            "class-bard-jack-of-all-trades"
+          ],
+          "5": [
+            "class-bard-font-of-inspiration"
+          ],
+          "7": [
+            "class-bard-countercharm"
+          ],
+          "10": [
+            "class-bard-magical-secrets"
+          ],
+          "18": [
+            "class-bard-superior-inspiration"
+          ],
+          "20": [
+            "class-bard-words-of-creation"
+          ]
+        }
+      },
+      "cleric": {
+        "hit_die": 8,
+        "saves": [
+          "cha",
+          "wis"
+        ],
+        "casting": "full",
+        "ability": "wis",
+        "subclass_level": 3,
+        "asi_levels": [
+          4,
+          8,
+          12,
+          16,
+          19
+        ],
+        "fighting_style_levels": [],
+        "expertise_levels": [],
+        "cantrips": [
+          3,
+          3,
+          3,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5
+        ],
+        "spells": [
+          4,
+          5,
+          6,
+          7,
+          9,
+          10,
+          11,
+          12,
+          14,
+          15,
+          16,
+          16,
+          17,
+          17,
+          18,
+          18,
+          19,
+          20,
+          21,
+          22
+        ],
+        "slot_table": "full",
+        "features": {
+          "1": [
+            "class-cleric-cleric-spell-list",
+            "class-cleric-divine-order",
+            "class-cleric-spellcasting"
+          ],
+          "2": [
+            "class-cleric-channel-divinity"
+          ],
+          "5": [
+            "class-cleric-sear-undead"
+          ],
+          "7": [
+            "class-cleric-blessed-strikes"
+          ],
+          "10": [
+            "class-cleric-divine-intervention"
+          ],
+          "14": [
+            "class-cleric-improved-blessed-strikes"
+          ],
+          "20": [
+            "class-cleric-greater-divine-intervention"
+          ]
+        }
+      },
+      "druid": {
+        "hit_die": 8,
+        "saves": [
+          "int",
+          "wis"
+        ],
+        "casting": "full",
+        "ability": "wis",
+        "subclass_level": 3,
+        "asi_levels": [
+          4,
+          8,
+          12,
+          16,
+          19
+        ],
+        "fighting_style_levels": [],
+        "expertise_levels": [],
+        "cantrips": [
+          2,
+          2,
+          2,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        "spells": [
+          4,
+          5,
+          6,
+          7,
+          9,
+          10,
+          11,
+          12,
+          14,
+          15,
+          16,
+          16,
+          17,
+          17,
+          18,
+          18,
+          19,
+          20,
+          21,
+          22
+        ],
+        "slot_table": "full",
+        "features": {
+          "1": [
+            "class-druid-druid-spell-list",
+            "class-druid-druidic",
+            "class-druid-primal-order",
+            "class-druid-spellcasting",
+            "class-druid-wild-shape-uses"
+          ],
+          "2": [
+            "class-druid-wild-companion",
+            "class-druid-wild-shape"
+          ],
+          "5": [
+            "class-druid-wild-resurgence"
+          ],
+          "7": [
+            "class-druid-elemental-fury"
+          ],
+          "15": [
+            "class-druid-improved-elemental-fury"
+          ],
+          "18": [
+            "class-druid-beast-spells"
+          ],
+          "20": [
+            "class-druid-archdruid"
+          ]
+        }
+      },
+      "fighter": {
+        "hit_die": 10,
+        "saves": [
+          "dex",
+          "str"
+        ],
+        "casting": "none",
+        "ability": "",
+        "subclass_level": 3,
+        "asi_levels": [
+          4,
+          6,
+          8,
+          12,
+          14,
+          16,
+          19
+        ],
+        "fighting_style_levels": [
+          1
+        ],
+        "expertise_levels": [],
+        "cantrips": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "spells": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "slot_table": "none",
+        "features": {
+          "1": [
+            "class-fighter-second-wind",
+            "class-fighter-weapon-mastery"
+          ],
+          "2": [
+            "class-fighter-action-surge",
+            "class-fighter-tactical-mind"
+          ],
+          "5": [
+            "class-fighter-extra-attack",
+            "class-fighter-tactical-shift"
+          ],
+          "9": [
+            "class-fighter-indomitable",
+            "class-fighter-tactical-master"
+          ],
+          "11": [
+            "class-fighter-two-extra-attacks"
+          ],
+          "13": [
+            "class-fighter-indomitable",
+            "class-fighter-studied-attacks"
+          ],
+          "17": [
+            "class-fighter-action-surge",
+            "class-fighter-indomitable"
+          ],
+          "20": [
+            "class-fighter-three-extra-attacks"
+          ]
+        }
+      },
+      "monk": {
+        "hit_die": 8,
+        "saves": [
+          "dex",
+          "wis"
+        ],
+        "casting": "none",
+        "ability": "",
+        "subclass_level": 3,
+        "asi_levels": [
+          4,
+          8,
+          12,
+          16,
+          19
+        ],
+        "fighting_style_levels": [],
+        "expertise_levels": [],
+        "cantrips": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "spells": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "slot_table": "none",
+        "features": {
+          "1": [
+            "class-monk-deflect-attacks",
+            "class-monk-martial-arts",
+            "class-monk-unarmored-defense"
+          ],
+          "2": [
+            "class-monk-monks-focus",
+            "class-monk-unarmored-movement",
+            "class-monk-uncanny-metabolism"
+          ],
+          "3": [
+            "class-monk-stunning-strike"
+          ],
+          "4": [
+            "class-monk-slow-fall"
+          ],
+          "5": [
+            "class-monk-extra-attack",
+            "class-monk-stunning-strike"
+          ],
+          "6": [
+            "class-monk-empowered-strikes"
+          ],
+          "7": [
+            "class-monk-evasion"
+          ],
+          "9": [
+            "class-monk-acrobatic-movement"
+          ],
+          "10": [
+            "class-monk-heightened-focus",
+            "class-monk-self-restoration"
+          ],
+          "13": [
+            "class-monk-deflect-energy"
+          ],
+          "14": [
+            "class-monk-disciplined-survivor"
+          ],
+          "15": [
+            "class-monk-perfect-focus"
+          ],
+          "18": [
+            "class-monk-superior-defense"
+          ],
+          "20": [
+            "class-monk-body-and-mind"
+          ]
+        }
+      },
+      "paladin": {
+        "hit_die": 10,
+        "saves": [
+          "cha",
+          "wis"
+        ],
+        "casting": "half",
+        "ability": "cha",
+        "subclass_level": 3,
+        "asi_levels": [
+          4,
+          8,
+          12,
+          16,
+          19
+        ],
+        "fighting_style_levels": [
+          2
+        ],
+        "expertise_levels": [],
+        "cantrips": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "spells": [
+          2,
+          3,
+          4,
+          5,
+          6,
+          6,
+          7,
+          7,
+          8,
+          8,
+          9,
+          9,
+          10,
+          10,
+          11,
+          11,
+          12,
+          12,
+          13,
+          13
+        ],
+        "slot_table": "half",
+        "features": {
+          "1": [
+            "class-paladin-lay-on-hands",
+            "class-paladin-spell-list",
+            "class-paladin-spellcasting",
+            "class-paladin-weapon-mastery"
+          ],
+          "2": [
+            "class-paladin-paladins-smite"
+          ],
+          "3": [
+            "class-paladin-channel-divinity"
+          ],
+          "5": [
+            "class-paladin-extra-attack",
+            "class-paladin-faithful-steed"
+          ],
+          "6": [
+            "class-paladin-aura-of-protection"
+          ],
+          "9": [
+            "class-paladin-abjure-foes"
+          ],
+          "10": [
+            "class-paladin-aura-of-courage"
+          ],
+          "11": [
+            "class-paladin-radiant-strikes"
+          ],
+          "14": [
+            "class-paladin-restoring-touch"
+          ],
+          "18": [
+            "class-paladin-aura-expansion"
+          ]
+        }
+      },
+      "ranger": {
+        "hit_die": 10,
+        "saves": [
+          "dex",
+          "str"
+        ],
+        "casting": "half",
+        "ability": "wis",
+        "subclass_level": 3,
+        "asi_levels": [
+          4,
+          8,
+          12,
+          16,
+          19
+        ],
+        "fighting_style_levels": [
+          2
+        ],
+        "expertise_levels": [
+          9
+        ],
+        "cantrips": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "spells": [
+          2,
+          3,
+          4,
+          5,
+          6,
+          6,
+          7,
+          7,
+          8,
+          8,
+          9,
+          9,
+          10,
+          10,
+          11,
+          11,
+          12,
+          12,
+          13,
+          13
+        ],
+        "slot_table": "half",
+        "features": {
+          "1": [
+            "class-ranger-favored-enemy",
+            "class-ranger-spell-list",
+            "class-ranger-spellcasting",
+            "class-ranger-weapon-mastery"
+          ],
+          "2": [
+            "class-ranger-deft-explorer"
+          ],
+          "5": [
+            "class-ranger-extra-attack"
+          ],
+          "6": [
+            "class-ranger-roving"
+          ],
+          "10": [
+            "class-ranger-tireless"
+          ],
+          "13": [
+            "class-ranger-relentless-hunter"
+          ],
+          "14": [
+            "class-ranger-natures-veil"
+          ],
+          "17": [
+            "class-ranger-precise-hunter"
+          ],
+          "18": [
+            "class-ranger-feral-senses"
+          ],
+          "20": [
+            "class-ranger-foe-slayer"
+          ]
+        }
+      },
+      "rogue": {
+        "hit_die": 8,
+        "saves": [
+          "dex",
+          "int"
+        ],
+        "casting": "none",
+        "ability": "",
+        "subclass_level": 3,
+        "asi_levels": [
+          4,
+          8,
+          10,
+          12,
+          16,
+          19
+        ],
+        "fighting_style_levels": [],
+        "expertise_levels": [
+          6
+        ],
+        "cantrips": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "spells": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "slot_table": "none",
+        "features": {
+          "1": [
+            "class-rogue-sneak-attack",
+            "class-rogue-thieves-cant",
+            "class-rogue-weapon-mastery"
+          ],
+          "2": [
+            "class-rogue-cunning-action"
+          ],
+          "3": [
+            "class-rogue-steady-aim"
+          ],
+          "5": [
+            "class-rogue-cunning-strike",
+            "class-rogue-uncanny-dodge"
+          ],
+          "7": [
+            "class-rogue-evasion",
+            "class-rogue-reliable-talent"
+          ],
+          "11": [
+            "class-rogue-improved-cunning-strike"
+          ],
+          "14": [
+            "class-rogue-devious-strikes"
+          ],
+          "15": [
+            "class-rogue-slippery-mind"
+          ],
+          "18": [
+            "class-rogue-elusive"
+          ],
+          "20": [
+            "class-rogue-stroke-of-luck"
+          ]
+        }
+      },
+      "sorcerer": {
+        "hit_die": 6,
+        "saves": [
+          "cha",
+          "con"
+        ],
+        "casting": "full",
+        "ability": "cha",
+        "subclass_level": 3,
+        "asi_levels": [
+          4,
+          8,
+          12,
+          16,
+          19
+        ],
+        "fighting_style_levels": [],
+        "expertise_levels": [],
+        "cantrips": [
+          4,
+          4,
+          4,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6
+        ],
+        "spells": [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21
+        ],
+        "slot_table": "full",
+        "features": {
+          "1": [
+            "class-sorcerer-innate-sorcery",
+            "class-sorcerer-sorcerer-spell-list",
+            "class-sorcerer-spellcasting"
+          ],
+          "2": [
+            "class-sorcerer-font-of-magic",
+            "class-sorcerer-metamagic"
+          ],
+          "5": [
+            "class-sorcerer-sorcerous-restoration"
+          ],
+          "7": [
+            "class-sorcerer-sorcery-incarnate"
+          ],
+          "10": [
+            "class-sorcerer-metamagic"
+          ],
+          "20": [
+            "class-sorcerer-arcane-apotheosis"
+          ]
+        }
+      },
+      "warlock": {
+        "hit_die": 8,
+        "saves": [
+          "cha",
+          "wis"
+        ],
+        "casting": "pact",
+        "ability": "cha",
+        "subclass_level": 3,
+        "asi_levels": [
+          4,
+          8,
+          12,
+          16,
+          19
+        ],
+        "fighting_style_levels": [],
+        "expertise_levels": [],
+        "cantrips": [
+          2,
+          2,
+          2,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        "spells": [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          10,
+          11,
+          11,
+          12,
+          12,
+          13,
+          13,
+          14,
+          14,
+          15,
+          15
+        ],
+        "slot_table": "pact",
+        "features": {
+          "1": [
+            "class-warlock-eldritch-invocations",
+            "class-warlock-pact-magic",
+            "class-warlock-warlock-spell-list"
+          ],
+          "2": [
+            "class-warlock-magical-cunning"
+          ],
+          "9": [
+            "class-warlock-contact-patron"
+          ],
+          "11": [
+            "class-warlock-mystic-arcanum"
+          ],
+          "13": [
+            "class-warlock-mystic-arcanum"
+          ],
+          "15": [
+            "class-warlock-mystic-arcanum"
+          ],
+          "17": [
+            "class-warlock-mystic-arcanum"
+          ],
+          "20": [
+            "class-warlock-eldritch-master"
+          ]
+        }
+      },
+      "wizard": {
+        "hit_die": 6,
+        "saves": [
+          "int",
+          "wis"
+        ],
+        "casting": "full",
+        "ability": "int",
+        "subclass_level": 3,
+        "asi_levels": [
+          4,
+          8,
+          12,
+          16,
+          19
+        ],
+        "fighting_style_levels": [],
+        "expertise_levels": [],
+        "cantrips": [
+          3,
+          3,
+          3,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5
+        ],
+        "spells": [
+          4,
+          5,
+          6,
+          7,
+          9,
+          10,
+          11,
+          12,
+          14,
+          15,
+          16,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24
+        ],
+        "slot_table": "full",
+        "features": {
+          "1": [
+            "class-wizard-arcane-recovery",
+            "class-wizard-ritual-adept",
+            "class-wizard-spellcasting",
+            "class-wizard-wizard-spell-list"
+          ],
+          "2": [
+            "class-wizard-scholar"
+          ],
+          "5": [
+            "class-wizard-memorize-spell"
+          ],
+          "18": [
+            "class-wizard-spell-mastery"
+          ],
+          "20": [
+            "class-wizard-signature-spells"
+          ]
+        }
+      }
+    },
+    "subclasses": {
+      "champion": {
+        "class": "fighter",
+        "features": {
+          "3": [
+            "subclass-champion-improved-critical",
+            "subclass-champion-remarkable-athlete"
+          ],
+          "7": [
+            "subclass-champion-additional-fighting-style"
+          ],
+          "10": [
+            "subclass-champion-heroic-warrior"
+          ],
+          "15": [
+            "subclass-champion-superior-critical"
+          ],
+          "18": [
+            "subclass-champion-survivor"
+          ]
+        }
+      },
+      "circle-of-the-land": {
+        "class": "druid",
+        "features": {
+          "3": [
+            "subclass-circle-of-the-land-spell-list",
+            "subclass-circle-of-the-land-lands-aid"
+          ],
+          "6": [
+            "subclass-circle-of-the-land-natural-recovery"
+          ],
+          "10": [
+            "subclass-circle-of-the-land-natures-ward"
+          ],
+          "14": [
+            "subclass-circle-of-the-land-natures-sanctuary"
+          ]
+        }
+      },
+      "college-of-lore": {
+        "class": "bard",
+        "features": {
+          "3": [
+            "subclass-college-of-lore-bonus-proficiencies",
+            "subclass-college-of-lore-cutting-words"
+          ],
+          "6": [
+            "subclass-college-of-lore-magical-discoveries"
+          ],
+          "14": [
+            "subclass-college-of-lore-peerless-skill"
+          ]
+        }
+      },
+      "draconic-sorcery": {
+        "class": "sorcerer",
+        "features": {
+          "3": [
+            "subclass-draconic-sorcery-draconic-resilience",
+            "subclass-draconic-sorcery-draconic-spells"
+          ],
+          "6": [
+            "subclass-draconic-sorcery-elemental-affinity"
+          ],
+          "14": [
+            "subclass-draconic-sorcery-dragon-wings"
+          ],
+          "19": [
+            "subclass-draconic-sorcery-dragon-companion"
+          ]
+        }
+      },
+      "evoker": {
+        "class": "wizard",
+        "features": {
+          "3": [
+            "subclass-evoker-evocation-savant",
+            "subclass-evoker-potent-cantrip"
+          ],
+          "6": [
+            "subclass-evoker-sculpt-spells"
+          ],
+          "10": [
+            "subclass-evoker-empowered-evocation"
+          ],
+          "14": [
+            "subclass-evoker-overchannel"
+          ]
+        }
+      },
+      "fiend-patron": {
+        "class": "warlock",
+        "features": {
+          "3": [
+            "subclass-fiend-patron-dark-ones-blessing",
+            "subclass-fiend-patron-fiend-spells"
+          ],
+          "6": [
+            "subclass-fiend-patron-dark-ones-own-luck"
+          ],
+          "10": [
+            "subclass-fiend-patron-fiendish-resilience"
+          ],
+          "14": [
+            "subclass-fiend-patron-hurl-through-hell"
+          ]
+        }
+      },
+      "hunter": {
+        "class": "ranger",
+        "features": {
+          "3": [
+            "subclass-hunter-hunters-lore",
+            "subclass-hunter-hunters-prey"
+          ],
+          "7": [
+            "subclass-hunter-defensive-tactics"
+          ],
+          "11": [
+            "subclass-hunter-superior-hunters-prey"
+          ],
+          "15": [
+            "subclass-hunter-superior-hunters-defense"
+          ]
+        }
+      },
+      "life-domain": {
+        "class": "cleric",
+        "features": {
+          "3": [
+            "subclass-life-domain-disciple-of-life",
+            "subclass-life-domain-life-domain-spells",
+            "subclass-life-domain-preserve-life"
+          ],
+          "6": [
+            "subclass-life-domain-blessed-healer"
+          ],
+          "17": [
+            "subclass-life-domain-supreme-healing"
+          ]
+        }
+      },
+      "oath-of-devotion": {
+        "class": "paladin",
+        "features": {
+          "3": [
+            "subclass-oath-of-devotion-sacred-weapon",
+            "subclass-oath-of-devotion-spells"
+          ],
+          "7": [
+            "subclass-oath-of-devotion-aura-of-devotion"
+          ],
+          "15": [
+            "subclass-oath-of-devotion-smite-of-protection"
+          ],
+          "20": [
+            "subclass-oath-of-devotion-holy-nimbus"
+          ]
+        }
+      },
+      "path-of-the-berserker": {
+        "class": "barbarian",
+        "features": {
+          "3": [
+            "subclass-path-of-the-berserker-frenzy"
+          ],
+          "6": [
+            "subclass-path-of-the-berserker-mindless-rage"
+          ],
+          "10": [
+            "subclass-path-of-the-berserker-retaliation"
+          ],
+          "14": [
+            "subclass-path-of-the-berserker-intimidating-presence"
+          ]
+        }
+      },
+      "thief": {
+        "class": "rogue",
+        "features": {
+          "3": [
+            "subclass-thief-fast-hands",
+            "subclass-thief-second-story-work"
+          ],
+          "9": [
+            "subclass-thief-supreme-sneak"
+          ],
+          "13": [
+            "subclass-thief-use-magic-device"
+          ],
+          "17": [
+            "subclass-thief-thiefs-reflexes"
+          ]
+        }
+      },
+      "warrior-of-the-open-hand": {
+        "class": "monk",
+        "features": {
+          "3": [
+            "subclass-warrior-of-the-open-hand-open-hand-technique"
+          ],
+          "6": [
+            "subclass-warrior-of-the-open-hand-wholeness-of-body"
+          ],
+          "11": [
+            "subclass-warrior-of-the-open-hand-fleet-step"
+          ],
+          "17": [
+            "subclass-warrior-of-the-open-hand-quivering-palm"
+          ]
+        }
+      }
+    },
+    "spell_lists": {
+      "wizard": {
+        "0": [
+          "spell-acid-splash",
+          "spell-chill-touch",
+          "spell-dancing-lights",
+          "spell-elementalism",
+          "spell-fire-bolt",
+          "spell-light",
+          "spell-mage-hand",
+          "spell-mending",
+          "spell-message",
+          "spell-minor-illusion",
+          "spell-poison-spray",
+          "spell-prestidigitation",
+          "spell-ray-of-frost",
+          "spell-shocking-grasp",
+          "spell-true-strike"
+        ],
+        "1": [
+          "spell-alarm",
+          "spell-burning-hands",
+          "spell-charm-person",
+          "spell-chromatic-orb",
+          "spell-color-spray",
+          "spell-comprehend-languages",
+          "spell-detect-magic",
+          "spell-disguise-self",
+          "spell-expeditious-retreat",
+          "spell-false-life",
+          "spell-feather-fall",
+          "spell-find-familiar",
+          "spell-floating-disk",
+          "spell-fog-cloud",
+          "spell-grease",
+          "spell-hideous-laughter",
+          "spell-ice-knife",
+          "spell-identify",
+          "spell-illusory-script",
+          "spell-jump",
+          "spell-longstrider",
+          "spell-mage-armor",
+          "spell-magic-missile",
+          "spell-protection-from-evil-and-good",
+          "spell-ray-of-sickness",
+          "spell-shield",
+          "spell-silent-image",
+          "spell-sleep",
+          "spell-thunderwave",
+          "spell-unseen-servant"
+        ],
+        "2": [
+          "spell-acid-arrow",
+          "spell-alter-self",
+          "spell-arcane-lock",
+          "spell-arcanists-magic-aura",
+          "spell-augury",
+          "spell-blindnessdeafness",
+          "spell-blur",
+          "spell-continual-flame",
+          "spell-darkness",
+          "spell-darkvision",
+          "spell-detect-thoughts",
+          "spell-dragons-breath",
+          "spell-enhance-ability",
+          "spell-enlargereduce",
+          "spell-flaming-sphere",
+          "spell-gentle-repose",
+          "spell-gust-of-wind",
+          "spell-hold-person",
+          "spell-invisibility",
+          "spell-knock",
+          "spell-levitate",
+          "spell-locate-object",
+          "spell-magic-mouth",
+          "spell-magic-weapon",
+          "spell-mind-spike",
+          "spell-mirror-image",
+          "spell-misty-step",
+          "spell-phantasmal-force",
+          "spell-ray-of-enfeeblement",
+          "spell-rope-trick",
+          "spell-scorching-ray",
+          "spell-see-invisibility",
+          "spell-shatter",
+          "spell-spider-climb",
+          "spell-suggestion",
+          "spell-web"
+        ],
+        "3": [
+          "spell-animate-dead",
+          "spell-bestow-curse",
+          "spell-blink",
+          "spell-clairvoyance",
+          "spell-counterspell",
+          "spell-dispel-magic",
+          "spell-fear",
+          "spell-fireball",
+          "spell-fly",
+          "spell-gaseous-form",
+          "spell-glyph-of-warding",
+          "spell-haste",
+          "spell-hypnotic-pattern",
+          "spell-lightning-bolt",
+          "spell-magic-circle",
+          "spell-major-image",
+          "spell-nondetection",
+          "spell-phantom-steed",
+          "spell-protection-from-energy",
+          "spell-remove-curse",
+          "spell-sending",
+          "spell-sleet-storm",
+          "spell-slow",
+          "spell-speak-with-dead",
+          "spell-stinking-cloud",
+          "spell-tiny-hut",
+          "spell-tongues",
+          "spell-vampiric-touch",
+          "spell-water-breathing"
+        ],
+        "4": [
+          "spell-arcane-eye",
+          "spell-banishment",
+          "spell-black-tentacles",
+          "spell-blight",
+          "spell-charm-monster",
+          "spell-confusion",
+          "spell-conjure-minor-elementals",
+          "spell-control-water",
+          "spell-dimension-door",
+          "spell-divination",
+          "spell-fabricate",
+          "spell-faithful-hound",
+          "spell-fire-shield",
+          "spell-greater-invisibility",
+          "spell-hallucinatory-terrain",
+          "spell-ice-storm",
+          "spell-locate-creature",
+          "spell-phantasmal-killer",
+          "spell-polymorph",
+          "spell-private-sanctum",
+          "spell-resilient-sphere",
+          "spell-secret-chest",
+          "spell-stone-shape",
+          "spell-stoneskin",
+          "spell-vitriolic-sphere",
+          "spell-wall-of-fire"
+        ],
+        "5": [
+          "spell-animate-objects",
+          "spell-arcane-hand",
+          "spell-cloudkill",
+          "spell-cone-of-cold",
+          "spell-conjure-elemental",
+          "spell-contact-other-plane",
+          "spell-creation",
+          "spell-dominate-person",
+          "spell-dream",
+          "spell-geas",
+          "spell-hold-monster",
+          "spell-legend-lore",
+          "spell-mislead",
+          "spell-modify-memory",
+          "spell-passwall",
+          "spell-planar-binding",
+          "spell-scrying",
+          "spell-seeming",
+          "spell-summon-dragon",
+          "spell-telekinesis",
+          "spell-telepathic-bond",
+          "spell-teleportation-circle",
+          "spell-wall-of-force",
+          "spell-wall-of-stone"
+        ],
+        "6": [
+          "spell-chain-lightning",
+          "spell-circle-of-death",
+          "spell-contingency",
+          "spell-create-undead",
+          "spell-disintegrate",
+          "spell-eyebite",
+          "spell-flesh-to-stone",
+          "spell-freezing-sphere",
+          "spell-globe-of-invulnerability",
+          "spell-guards-and-wards",
+          "spell-instant-summons",
+          "spell-irresistible-dance",
+          "spell-magic-jar",
+          "spell-mass-suggestion",
+          "spell-move-earth",
+          "spell-programmed-illusion",
+          "spell-sunbeam",
+          "spell-true-seeing",
+          "spell-wall-of-ice"
+        ],
+        "7": [
+          "spell-arcane-sword",
+          "spell-delayed-blast-fireball",
+          "spell-etherealness",
+          "spell-finger-of-death",
+          "spell-forcecage",
+          "spell-magnificent-mansion",
+          "spell-mirage-arcane",
+          "spell-plane-shift",
+          "spell-prismatic-spray",
+          "spell-project-image",
+          "spell-reverse-gravity",
+          "spell-sequester",
+          "spell-simulacrum",
+          "spell-symbol",
+          "spell-teleport"
+        ],
+        "8": [
+          "spell-antimagic-field",
+          "spell-antipathysympathy",
+          "spell-befuddlement",
+          "spell-clone",
+          "spell-control-weather",
+          "spell-demiplane",
+          "spell-dominate-monster",
+          "spell-incendiary-cloud",
+          "spell-maze",
+          "spell-mind-blank",
+          "spell-power-word-stun",
+          "spell-sunburst"
+        ],
+        "9": [
+          "spell-astral-projection",
+          "spell-foresight",
+          "spell-gate",
+          "spell-imprisonment",
+          "spell-meteor-swarm",
+          "spell-power-word-kill",
+          "spell-prismatic-wall",
+          "spell-shapechange",
+          "spell-time-stop",
+          "spell-true-polymorph",
+          "spell-weird",
+          "spell-wish"
+        ]
+      },
+      "sorcerer": {
+        "0": [
+          "spell-acid-splash",
+          "spell-chill-touch",
+          "spell-dancing-lights",
+          "spell-elementalism",
+          "spell-fire-bolt",
+          "spell-light",
+          "spell-mage-hand",
+          "spell-mending",
+          "spell-message",
+          "spell-minor-illusion",
+          "spell-poison-spray",
+          "spell-prestidigitation",
+          "spell-ray-of-frost",
+          "spell-shocking-grasp",
+          "spell-sorcerous-burst",
+          "spell-true-strike"
+        ],
+        "1": [
+          "spell-burning-hands",
+          "spell-charm-person",
+          "spell-chromatic-orb",
+          "spell-color-spray",
+          "spell-comprehend-languages",
+          "spell-detect-magic",
+          "spell-disguise-self",
+          "spell-expeditious-retreat",
+          "spell-false-life",
+          "spell-feather-fall",
+          "spell-fog-cloud",
+          "spell-grease",
+          "spell-ice-knife",
+          "spell-jump",
+          "spell-mage-armor",
+          "spell-magic-missile",
+          "spell-ray-of-sickness",
+          "spell-shield",
+          "spell-silent-image",
+          "spell-sleep",
+          "spell-thunderwave"
+        ],
+        "2": [
+          "spell-alter-self",
+          "spell-blindnessdeafness",
+          "spell-blur",
+          "spell-darkness",
+          "spell-darkvision",
+          "spell-detect-thoughts",
+          "spell-dragons-breath",
+          "spell-enhance-ability",
+          "spell-enlargereduce",
+          "spell-flame-blade",
+          "spell-flaming-sphere",
+          "spell-gust-of-wind",
+          "spell-hold-person",
+          "spell-invisibility",
+          "spell-knock",
+          "spell-levitate",
+          "spell-magic-weapon",
+          "spell-mind-spike",
+          "spell-mirror-image",
+          "spell-misty-step",
+          "spell-phantasmal-force",
+          "spell-scorching-ray",
+          "spell-see-invisibility",
+          "spell-shatter",
+          "spell-spider-climb",
+          "spell-suggestion",
+          "spell-web"
+        ],
+        "3": [
+          "spell-blink",
+          "spell-clairvoyance",
+          "spell-counterspell",
+          "spell-daylight",
+          "spell-dispel-magic",
+          "spell-fear",
+          "spell-fireball",
+          "spell-fly",
+          "spell-gaseous-form",
+          "spell-haste",
+          "spell-hypnotic-pattern",
+          "spell-lightning-bolt",
+          "spell-major-image",
+          "spell-protection-from-energy",
+          "spell-sleet-storm",
+          "spell-slow",
+          "spell-stinking-cloud",
+          "spell-tongues",
+          "spell-vampiric-touch",
+          "spell-water-breathing",
+          "spell-water-walk"
+        ],
+        "4": [
+          "spell-banishment",
+          "spell-blight",
+          "spell-charm-monster",
+          "spell-confusion",
+          "spell-dimension-door",
+          "spell-dominate-beast",
+          "spell-fire-shield",
+          "spell-greater-invisibility",
+          "spell-ice-storm",
+          "spell-polymorph",
+          "spell-stoneskin",
+          "spell-vitriolic-sphere",
+          "spell-wall-of-fire"
+        ],
+        "5": [
+          "spell-animate-objects",
+          "spell-arcane-hand",
+          "spell-cloudkill",
+          "spell-cone-of-cold",
+          "spell-creation",
+          "spell-dominate-person",
+          "spell-hold-monster",
+          "spell-insect-plague",
+          "spell-seeming",
+          "spell-telekinesis",
+          "spell-teleportation-circle",
+          "spell-wall-of-stone"
+        ],
+        "6": [
+          "spell-chain-lightning",
+          "spell-circle-of-death",
+          "spell-disintegrate",
+          "spell-eyebite",
+          "spell-flesh-to-stone",
+          "spell-freezing-sphere",
+          "spell-globe-of-invulnerability",
+          "spell-mass-suggestion",
+          "spell-move-earth",
+          "spell-sunbeam",
+          "spell-true-seeing"
+        ],
+        "7": [
+          "spell-delayed-blast-fireball",
+          "spell-etherealness",
+          "spell-finger-of-death",
+          "spell-fire-storm",
+          "spell-plane-shift",
+          "spell-prismatic-spray",
+          "spell-reverse-gravity",
+          "spell-teleport"
+        ],
+        "8": [
+          "spell-demiplane",
+          "spell-dominate-monster",
+          "spell-earthquake",
+          "spell-incendiary-cloud",
+          "spell-power-word-stun",
+          "spell-sunburst"
+        ],
+        "9": [
+          "spell-gate",
+          "spell-meteor-swarm",
+          "spell-power-word-kill",
+          "spell-time-stop",
+          "spell-wish"
+        ]
+      },
+      "bard": {
+        "0": [
+          "spell-dancing-lights",
+          "spell-light",
+          "spell-mage-hand",
+          "spell-mending",
+          "spell-message",
+          "spell-minor-illusion",
+          "spell-prestidigitation",
+          "spell-starry-wisp",
+          "spell-true-strike",
+          "spell-vicious-mockery"
+        ],
+        "1": [
+          "spell-animal-friendship",
+          "spell-bane",
+          "spell-charm-person",
+          "spell-color-spray",
+          "spell-command",
+          "spell-comprehend-languages",
+          "spell-cure-wounds",
+          "spell-detect-magic",
+          "spell-disguise-self",
+          "spell-dissonant-whispers",
+          "spell-faerie-fire",
+          "spell-feather-fall",
+          "spell-healing-word",
+          "spell-heroism",
+          "spell-hideous-laughter",
+          "spell-identify",
+          "spell-illusory-script",
+          "spell-longstrider",
+          "spell-silent-image",
+          "spell-sleep",
+          "spell-speak-with-animals",
+          "spell-thunderwave",
+          "spell-unseen-servant"
+        ],
+        "2": [
+          "spell-aid",
+          "spell-animal-messenger",
+          "spell-blindnessdeafness",
+          "spell-calm-emotions",
+          "spell-detect-thoughts",
+          "spell-enhance-ability",
+          "spell-enlargereduce",
+          "spell-enthrall",
+          "spell-heat-metal",
+          "spell-hold-person",
+          "spell-invisibility",
+          "spell-knock",
+          "spell-lesser-restoration",
+          "spell-locate-animals-or-plants",
+          "spell-locate-object",
+          "spell-magic-mouth",
+          "spell-mirror-image",
+          "spell-phantasmal-force",
+          "spell-see-invisibility",
+          "spell-shatter",
+          "spell-silence",
+          "spell-suggestion",
+          "spell-zone-of-truth"
+        ],
+        "3": [
+          "spell-bestow-curse",
+          "spell-clairvoyance",
+          "spell-dispel-magic",
+          "spell-fear",
+          "spell-glyph-of-warding",
+          "spell-hypnotic-pattern",
+          "spell-major-image",
+          "spell-mass-healing-word",
+          "spell-nondetection",
+          "spell-plant-growth",
+          "spell-sending",
+          "spell-slow",
+          "spell-speak-with-dead",
+          "spell-speak-with-plants",
+          "spell-stinking-cloud",
+          "spell-tiny-hut",
+          "spell-tongues"
+        ],
+        "4": [
+          "spell-charm-monster",
+          "spell-compulsion",
+          "spell-confusion",
+          "spell-dimension-door",
+          "spell-freedom-of-movement",
+          "spell-greater-invisibility",
+          "spell-hallucinatory-terrain",
+          "spell-locate-creature",
+          "spell-phantasmal-killer",
+          "spell-polymorph"
+        ],
+        "5": [
+          "spell-animate-objects",
+          "spell-awaken",
+          "spell-dominate-person",
+          "spell-dream",
+          "spell-geas",
+          "spell-greater-restoration",
+          "spell-hold-monster",
+          "spell-legend-lore",
+          "spell-mass-cure-wounds",
+          "spell-mislead",
+          "spell-modify-memory",
+          "spell-planar-binding",
+          "spell-raise-dead",
+          "spell-scrying",
+          "spell-seeming",
+          "spell-telepathic-bond",
+          "spell-teleportation-circle"
+        ],
+        "6": [
+          "spell-eyebite",
+          "spell-find-the-path",
+          "spell-guards-and-wards",
+          "spell-heroes-feast",
+          "spell-irresistible-dance",
+          "spell-mass-suggestion",
+          "spell-programmed-illusion",
+          "spell-true-seeing"
+        ],
+        "7": [
+          "spell-arcane-sword",
+          "spell-etherealness",
+          "spell-forcecage",
+          "spell-magnificent-mansion",
+          "spell-mirage-arcane",
+          "spell-prismatic-spray",
+          "spell-project-image",
+          "spell-regenerate",
+          "spell-resurrection",
+          "spell-symbol",
+          "spell-teleport"
+        ],
+        "8": [
+          "spell-antipathysympathy",
+          "spell-befuddlement",
+          "spell-dominate-monster",
+          "spell-glibness",
+          "spell-mind-blank",
+          "spell-power-word-stun"
+        ],
+        "9": [
+          "spell-foresight",
+          "spell-power-word-heal",
+          "spell-power-word-kill",
+          "spell-prismatic-wall",
+          "spell-true-polymorph"
+        ]
+      },
+      "cleric": {
+        "0": [
+          "spell-guidance",
+          "spell-light",
+          "spell-mending",
+          "spell-resistance",
+          "spell-sacred-flame",
+          "spell-spare-the-dying",
+          "spell-thaumaturgy"
+        ],
+        "1": [
+          "spell-bane",
+          "spell-bless",
+          "spell-command",
+          "spell-create-or-destroy-water",
+          "spell-cure-wounds",
+          "spell-detect-evil-and-good",
+          "spell-detect-magic",
+          "spell-detect-poison-and-disease",
+          "spell-guiding-bolt",
+          "spell-healing-word",
+          "spell-inflict-wounds",
+          "spell-protection-from-evil-and-good",
+          "spell-purify-food-and-drink",
+          "spell-sanctuary",
+          "spell-shield-of-faith"
+        ],
+        "2": [
+          "spell-aid",
+          "spell-augury",
+          "spell-blindnessdeafness",
+          "spell-calm-emotions",
+          "spell-continual-flame",
+          "spell-enhance-ability",
+          "spell-find-traps",
+          "spell-gentle-repose",
+          "spell-hold-person",
+          "spell-lesser-restoration",
+          "spell-locate-object",
+          "spell-prayer-of-healing",
+          "spell-protection-from-poison",
+          "spell-silence",
+          "spell-spiritual-weapon",
+          "spell-warding-bond",
+          "spell-zone-of-truth"
+        ],
+        "3": [
+          "spell-animate-dead",
+          "spell-beacon-of-hope",
+          "spell-bestow-curse",
+          "spell-clairvoyance",
+          "spell-create-food-and-water",
+          "spell-daylight",
+          "spell-dispel-magic",
+          "spell-glyph-of-warding",
+          "spell-magic-circle",
+          "spell-mass-healing-word",
+          "spell-meld-into-stone",
+          "spell-protection-from-energy",
+          "spell-remove-curse",
+          "spell-revivify",
+          "spell-sending",
+          "spell-speak-with-dead",
+          "spell-spirit-guardians",
+          "spell-tongues",
+          "spell-water-walk"
+        ],
+        "4": [
+          "spell-aura-of-life",
+          "spell-banishment",
+          "spell-control-water",
+          "spell-death-ward",
+          "spell-divination",
+          "spell-freedom-of-movement",
+          "spell-guardian-of-faith",
+          "spell-locate-creature",
+          "spell-stone-shape"
+        ],
+        "5": [
+          "spell-commune",
+          "spell-contagion",
+          "spell-dispel-evil-and-good",
+          "spell-flame-strike",
+          "spell-geas",
+          "spell-greater-restoration",
+          "spell-hallow",
+          "spell-insect-plague",
+          "spell-legend-lore",
+          "spell-mass-cure-wounds",
+          "spell-planar-binding",
+          "spell-raise-dead",
+          "spell-scrying"
+        ],
+        "6": [
+          "spell-blade-barrier",
+          "spell-create-undead",
+          "spell-find-the-path",
+          "spell-forbiddance",
+          "spell-harm",
+          "spell-heal",
+          "spell-heroes-feast",
+          "spell-planar-ally",
+          "spell-sunbeam",
+          "spell-true-seeing",
+          "spell-word-of-recall"
+        ],
+        "7": [
+          "spell-conjure-celestial",
+          "spell-divine-word",
+          "spell-etherealness",
+          "spell-fire-storm",
+          "spell-plane-shift",
+          "spell-regenerate",
+          "spell-resurrection",
+          "spell-symbol"
+        ],
+        "8": [
+          "spell-antimagic-field",
+          "spell-control-weather",
+          "spell-earthquake",
+          "spell-holy-aura",
+          "spell-sunburst"
+        ],
+        "9": [
+          "spell-astral-projection",
+          "spell-gate",
+          "spell-mass-heal",
+          "spell-power-word-heal",
+          "spell-true-resurrection"
+        ]
+      },
+      "druid": {
+        "0": [
+          "spell-druidcraft",
+          "spell-elementalism",
+          "spell-guidance",
+          "spell-mending",
+          "spell-message",
+          "spell-poison-spray",
+          "spell-produce-flame",
+          "spell-resistance",
+          "spell-shillelagh",
+          "spell-spare-the-dying",
+          "spell-starry-wisp"
+        ],
+        "1": [
+          "spell-animal-friendship",
+          "spell-charm-person",
+          "spell-create-or-destroy-water",
+          "spell-cure-wounds",
+          "spell-detect-magic",
+          "spell-detect-poison-and-disease",
+          "spell-entangle",
+          "spell-faerie-fire",
+          "spell-fog-cloud",
+          "spell-goodberry",
+          "spell-healing-word",
+          "spell-ice-knife",
+          "spell-jump",
+          "spell-longstrider",
+          "spell-protection-from-evil-and-good",
+          "spell-purify-food-and-drink",
+          "spell-speak-with-animals",
+          "spell-thunderwave"
+        ],
+        "2": [
+          "spell-aid",
+          "spell-animal-messenger",
+          "spell-augury",
+          "spell-barkskin",
+          "spell-continual-flame",
+          "spell-darkvision",
+          "spell-enhance-ability",
+          "spell-enlargereduce",
+          "spell-find-traps",
+          "spell-flame-blade",
+          "spell-flaming-sphere",
+          "spell-gust-of-wind",
+          "spell-heat-metal",
+          "spell-hold-person",
+          "spell-lesser-restoration",
+          "spell-locate-animals-or-plants",
+          "spell-locate-object",
+          "spell-moonbeam",
+          "spell-pass-without-trace",
+          "spell-protection-from-poison",
+          "spell-spike-growth"
+        ],
+        "3": [
+          "spell-call-lightning",
+          "spell-conjure-animals",
+          "spell-daylight",
+          "spell-dispel-magic",
+          "spell-meld-into-stone",
+          "spell-plant-growth",
+          "spell-protection-from-energy",
+          "spell-revivify",
+          "spell-sleet-storm",
+          "spell-speak-with-plants",
+          "spell-water-breathing",
+          "spell-water-walk",
+          "spell-wind-wall"
+        ],
+        "4": [
+          "spell-blight",
+          "spell-charm-monster",
+          "spell-confusion",
+          "spell-conjure-minor-elementals",
+          "spell-conjure-woodland-beings",
+          "spell-control-water",
+          "spell-divination",
+          "spell-dominate-beast",
+          "spell-fire-shield",
+          "spell-freedom-of-movement",
+          "spell-giant-insect",
+          "spell-hallucinatory-terrain",
+          "spell-ice-storm",
+          "spell-locate-creature",
+          "spell-polymorph",
+          "spell-stone-shape",
+          "spell-stoneskin",
+          "spell-wall-of-fire"
+        ],
+        "5": [
+          "spell-antilife-shell",
+          "spell-awaken",
+          "spell-commune-with-nature",
+          "spell-cone-of-cold",
+          "spell-conjure-elemental",
+          "spell-contagion",
+          "spell-geas",
+          "spell-greater-restoration",
+          "spell-insect-plague",
+          "spell-mass-cure-wounds",
+          "spell-planar-binding",
+          "spell-reincarnate",
+          "spell-scrying",
+          "spell-tree-stride",
+          "spell-wall-of-stone"
+        ],
+        "6": [
+          "spell-conjure-fey",
+          "spell-find-the-path",
+          "spell-flesh-to-stone",
+          "spell-heal",
+          "spell-heroes-feast",
+          "spell-move-earth",
+          "spell-sunbeam",
+          "spell-transport-via-plants",
+          "spell-wall-of-thorns",
+          "spell-wind-walk"
+        ],
+        "7": [
+          "spell-fire-storm",
+          "spell-mirage-arcane",
+          "spell-plane-shift",
+          "spell-regenerate",
+          "spell-reverse-gravity",
+          "spell-symbol"
+        ],
+        "8": [
+          "spell-animal-shapes",
+          "spell-antipathysympathy",
+          "spell-befuddlement",
+          "spell-control-weather",
+          "spell-earthquake",
+          "spell-incendiary-cloud",
+          "spell-sunburst",
+          "spell-tsunami"
+        ],
+        "9": [
+          "spell-foresight",
+          "spell-shapechange",
+          "spell-storm-of-vengeance",
+          "spell-true-resurrection"
+        ]
+      },
+      "paladin": {
+        "1": [
+          "spell-bless",
+          "spell-command",
+          "spell-cure-wounds",
+          "spell-detect-evil-and-good",
+          "spell-detect-magic",
+          "spell-detect-poison-and-disease",
+          "spell-divine-favor",
+          "spell-divine-smite",
+          "spell-heroism",
+          "spell-protection-from-evil-and-good",
+          "spell-purify-food-and-drink",
+          "spell-searing-smite",
+          "spell-shield-of-faith"
+        ],
+        "2": [
+          "spell-aid",
+          "spell-find-steed",
+          "spell-gentle-repose",
+          "spell-lesser-restoration",
+          "spell-locate-object",
+          "spell-magic-weapon",
+          "spell-prayer-of-healing",
+          "spell-protection-from-poison",
+          "spell-shining-smite",
+          "spell-warding-bond",
+          "spell-zone-of-truth"
+        ],
+        "3": [
+          "spell-create-food-and-water",
+          "spell-daylight",
+          "spell-dispel-magic",
+          "spell-magic-circle",
+          "spell-remove-curse",
+          "spell-revivify"
+        ],
+        "4": [
+          "spell-aura-of-life",
+          "spell-banishment",
+          "spell-death-ward",
+          "spell-locate-creature"
+        ],
+        "5": [
+          "spell-dispel-evil-and-good",
+          "spell-geas",
+          "spell-greater-restoration",
+          "spell-raise-dead"
+        ]
+      },
+      "ranger": {
+        "1": [
+          "spell-alarm",
+          "spell-animal-friendship",
+          "spell-cure-wounds",
+          "spell-detect-magic",
+          "spell-detect-poison-and-disease",
+          "spell-ensnaring-strike",
+          "spell-entangle",
+          "spell-fog-cloud",
+          "spell-goodberry",
+          "spell-hunters-mark",
+          "spell-jump",
+          "spell-longstrider",
+          "spell-speak-with-animals"
+        ],
+        "2": [
+          "spell-aid",
+          "spell-animal-messenger",
+          "spell-barkskin",
+          "spell-darkvision",
+          "spell-enhance-ability",
+          "spell-find-traps",
+          "spell-gust-of-wind",
+          "spell-lesser-restoration",
+          "spell-locate-animals-or-plants",
+          "spell-locate-object",
+          "spell-magic-weapon",
+          "spell-pass-without-trace",
+          "spell-protection-from-poison",
+          "spell-silence",
+          "spell-spike-growth"
+        ],
+        "3": [
+          "spell-conjure-animals",
+          "spell-daylight",
+          "spell-dispel-magic",
+          "spell-meld-into-stone",
+          "spell-nondetection",
+          "spell-plant-growth",
+          "spell-protection-from-energy",
+          "spell-revivify",
+          "spell-speak-with-plants",
+          "spell-water-breathing",
+          "spell-water-walk",
+          "spell-wind-wall"
+        ],
+        "4": [
+          "spell-conjure-woodland-beings",
+          "spell-dominate-beast",
+          "spell-freedom-of-movement",
+          "spell-locate-creature",
+          "spell-stoneskin"
+        ],
+        "5": [
+          "spell-commune-with-nature",
+          "spell-greater-restoration",
+          "spell-tree-stride"
+        ]
+      },
+      "warlock": {
+        "0": [
+          "spell-chill-touch",
+          "spell-eldritch-blast",
+          "spell-mage-hand",
+          "spell-minor-illusion",
+          "spell-poison-spray",
+          "spell-prestidigitation",
+          "spell-true-strike"
+        ],
+        "1": [
+          "spell-bane",
+          "spell-charm-person",
+          "spell-comprehend-languages",
+          "spell-detect-magic",
+          "spell-expeditious-retreat",
+          "spell-hellish-rebuke",
+          "spell-hex",
+          "spell-hideous-laughter",
+          "spell-illusory-script",
+          "spell-protection-from-evil-and-good",
+          "spell-speak-with-animals",
+          "spell-unseen-servant"
+        ],
+        "2": [
+          "spell-darkness",
+          "spell-enthrall",
+          "spell-hold-person",
+          "spell-invisibility",
+          "spell-mind-spike",
+          "spell-mirror-image",
+          "spell-misty-step",
+          "spell-ray-of-enfeeblement",
+          "spell-spider-climb",
+          "spell-suggestion"
+        ],
+        "3": [
+          "spell-counterspell",
+          "spell-dispel-magic",
+          "spell-fear",
+          "spell-fly",
+          "spell-gaseous-form",
+          "spell-hypnotic-pattern",
+          "spell-magic-circle",
+          "spell-major-image",
+          "spell-remove-curse",
+          "spell-tongues",
+          "spell-vampiric-touch"
+        ],
+        "4": [
+          "spell-banishment",
+          "spell-blight",
+          "spell-charm-monster",
+          "spell-dimension-door",
+          "spell-hallucinatory-terrain"
+        ],
+        "5": [
+          "spell-contact-other-plane",
+          "spell-dream",
+          "spell-hold-monster",
+          "spell-mislead",
+          "spell-planar-binding",
+          "spell-scrying",
+          "spell-teleportation-circle"
+        ],
+        "6": [
+          "spell-circle-of-death",
+          "spell-create-undead",
+          "spell-eyebite",
+          "spell-true-seeing"
+        ],
+        "7": [
+          "spell-etherealness",
+          "spell-finger-of-death",
+          "spell-forcecage",
+          "spell-plane-shift"
+        ],
+        "8": [
+          "spell-befuddlement",
+          "spell-demiplane",
+          "spell-dominate-monster",
+          "spell-glibness",
+          "spell-power-word-stun"
+        ],
+        "9": [
+          "spell-astral-projection",
+          "spell-foresight",
+          "spell-gate",
+          "spell-imprisonment",
+          "spell-power-word-kill",
+          "spell-true-polymorph",
+          "spell-weird"
+        ]
+      }
+    },
+    "slots": {
+      "none": [
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "full": [
+        [
+          2,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          3,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          4,
+          2,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          4,
+          3,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          4,
+          3,
+          2,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          4,
+          3,
+          3,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          4,
+          3,
+          3,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          4,
+          3,
+          3,
+          2,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          4,
+          3,
+          3,
+          3,
+          1,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          4,
+          3,
+          3,
+          3,
+          2,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          4,
+          3,
+          3,
+          3,
+          2,
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          4,
+          3,
+          3,
+          3,
+          2,
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          4,
+          3,
+          3,
+          3,
+          2,
+          1,
+          1,
+          0,
+          0
+        ],
+        [
+          4,
+          3,
+          3,
+          3,
+          2,
+          1,
+          1,
+          0,
+          0
+        ],
+        [
+          4,
+          3,
+          3,
+          3,
+          2,
+          1,
+          1,
+          1,
+          0
+        ],
+        [
+          4,
+          3,
+          3,
+          3,
+          2,
+          1,
+          1,
+          1,
+          0
+        ],
+        [
+          4,
+          3,
+          3,
+          3,
+          2,
+          1,
+          1,
+          1,
+          1
+        ],
+        [
+          4,
+          3,
+          3,
+          3,
+          3,
+          1,
+          1,
+          1,
+          1
+        ],
+        [
+          4,
+          3,
+          3,
+          3,
+          3,
+          2,
+          1,
+          1,
+          1
+        ],
+        [
+          4,
+          3,
+          3,
+          3,
+          3,
+          2,
+          2,
+          1,
+          1
+        ]
+      ],
+      "half": [
+        [
+          2,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          2,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          3,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          3,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          4,
+          2,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          4,
+          2,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          4,
+          3,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          4,
+          3,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          4,
+          3,
+          2,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          4,
+          3,
+          2,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          4,
+          3,
+          3,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          4,
+          3,
+          3,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          4,
+          3,
+          3,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          4,
+          3,
+          3,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          4,
+          3,
+          3,
+          2,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          4,
+          3,
+          3,
+          2,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          4,
+          3,
+          3,
+          3,
+          1,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          4,
+          3,
+          3,
+          3,
+          1,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          4,
+          3,
+          3,
+          3,
+          2,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          4,
+          3,
+          3,
+          3,
+          2,
+          0,
+          0,
+          0,
+          0
+        ]
+      ]
+    },
+    "pact_slots": [
+      [
+        1,
+        1
+      ],
+      [
+        2,
+        1
+      ],
+      [
+        2,
+        2
+      ],
+      [
+        2,
+        2
+      ],
+      [
+        2,
+        3
+      ],
+      [
+        2,
+        3
+      ],
+      [
+        2,
+        4
+      ],
+      [
+        2,
+        4
+      ],
+      [
+        2,
+        5
+      ],
+      [
+        2,
+        5
+      ],
+      [
+        3,
+        5
+      ],
+      [
+        3,
+        5
+      ],
+      [
+        3,
+        5
+      ],
+      [
+        3,
+        5
+      ],
+      [
+        3,
+        5
+      ],
+      [
+        3,
+        5
+      ],
+      [
+        4,
+        5
+      ],
+      [
+        4,
+        5
+      ],
+      [
+        4,
+        5
+      ],
+      [
+        4,
+        5
+      ]
+    ]
+  }
+]

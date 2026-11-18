@@ -1,0 +1,240 @@
+[
+  {
+    "type": "table",
+    "id": "all_skills",
+    "options": [
+      "acrobatics",
+      "animal_handling",
+      "arcana",
+      "athletics",
+      "deception",
+      "history",
+      "insight",
+      "intimidation",
+      "investigation",
+      "medicine",
+      "nature",
+      "perception",
+      "performance",
+      "persuasion",
+      "religion",
+      "sleight_of_hand",
+      "stealth",
+      "survival"
+    ]
+  },
+  {
+    "type": "table",
+    "id": "names",
+    "options": [
+      "Aelric",
+      "Bryn",
+      "Calla",
+      "Daric",
+      "Elowen",
+      "Fenn",
+      "Galen",
+      "Hesta",
+      "Ilyana",
+      "Jorunn",
+      "Kael",
+      "Lira",
+      "Marek",
+      "Nessa",
+      "Orin",
+      "Perrin",
+      "Quilla",
+      "Rhea",
+      "Sable",
+      "Tamsin",
+      "Ulric",
+      "Vessa",
+      "Wren",
+      "Yara"
+    ]
+  },
+  {
+    "type": "campaign_field",
+    "id": "xp_rate",
+    "name": "Experience",
+    "description": "The experience track this campaign follows.",
+    "table": "xp_rate"
+  },
+  {
+    "type": "table",
+    "id": "xp_rate",
+    "options": [
+      {
+        "name": "Standard",
+        "description": "Levels every few encounters, at the SRD's standard pace."
+      }
+    ]
+  },
+  {
+    "type": "table",
+    "id": "skills_barbarian",
+    "options": [
+      "animal_handling",
+      "athletics",
+      "intimidation",
+      "nature",
+      "perception",
+      "survival"
+    ]
+  },
+  {
+    "type": "table",
+    "id": "skills_bard",
+    "options": [
+      "acrobatics",
+      "animal_handling",
+      "arcana",
+      "athletics",
+      "deception",
+      "history",
+      "insight",
+      "intimidation",
+      "investigation",
+      "medicine",
+      "nature",
+      "perception",
+      "performance",
+      "persuasion",
+      "religion",
+      "sleight_of_hand",
+      "stealth",
+      "survival"
+    ]
+  },
+  {
+    "type": "table",
+    "id": "skills_cleric",
+    "options": [
+      "history",
+      "insight",
+      "medicine",
+      "persuasion",
+      "religion"
+    ]
+  },
+  {
+    "type": "table",
+    "id": "skills_druid",
+    "options": [
+      "animal_handling",
+      "arcana",
+      "insight",
+      "medicine",
+      "nature",
+      "perception",
+      "religion",
+      "survival"
+    ]
+  },
+  {
+    "type": "table",
+    "id": "skills_fighter",
+    "options": [
+      "acrobatics",
+      "animal_handling",
+      "athletics",
+      "history",
+      "insight",
+      "intimidation",
+      "perception",
+      "survival"
+    ]
+  },
+  {
+    "type": "table",
+    "id": "skills_monk",
+    "options": [
+      "acrobatics",
+      "athletics",
+      "history",
+      "insight",
+      "religion",
+      "stealth"
+    ]
+  },
+  {
+    "type": "table",
+    "id": "skills_paladin",
+    "options": [
+      "athletics",
+      "insight",
+      "intimidation",
+      "medicine",
+      "persuasion",
+      "religion"
+    ]
+  },
+  {
+    "type": "table",
+    "id": "skills_ranger",
+    "options": [
+      "animal_handling",
+      "athletics",
+      "insight",
+      "investigation",
+      "nature",
+      "perception",
+      "stealth",
+      "survival"
+    ]
+  },
+  {
+    "type": "table",
+    "id": "skills_rogue",
+    "options": [
+      "acrobatics",
+      "athletics",
+      "deception",
+      "insight",
+      "intimidation",
+      "investigation",
+      "perception",
+      "persuasion",
+      "sleight_of_hand",
+      "stealth"
+    ]
+  },
+  {
+    "type": "table",
+    "id": "skills_sorcerer",
+    "options": [
+      "arcana",
+      "deception",
+      "insight",
+      "intimidation",
+      "persuasion",
+      "religion"
+    ]
+  },
+  {
+    "type": "table",
+    "id": "skills_warlock",
+    "options": [
+      "arcana",
+      "deception",
+      "history",
+      "intimidation",
+      "investigation",
+      "nature",
+      "religion"
+    ]
+  },
+  {
+    "type": "table",
+    "id": "skills_wizard",
+    "options": [
+      "arcana",
+      "history",
+      "insight",
+      "investigation",
+      "medicine",
+      "nature",
+      "religion"
+    ]
+  }
+]

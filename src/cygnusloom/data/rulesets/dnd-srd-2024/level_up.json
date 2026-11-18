@@ -1,0 +1,87 @@
+[
+  {
+    "type": "level_up",
+    "id": "level",
+    "label": "Level Up",
+    "description": "Advance one class level. Hit points, the proficiency bonus, spell slots, and the level's class features are automatic; the choices below spend the picks the level grants.",
+    "level_counter": "level",
+    "xp_counter": "xp",
+    "rate_option": "xp_rate",
+    "xp_source": "progression.xp",
+    "template_kinds": [
+      "class"
+    ],
+    "python_module": "dnd_srd_2024",
+    "apply_level": "apply_level_up",
+    "summary": "level_up_summary",
+    "picks": [
+      {
+        "id": "spells",
+        "label": "Spells",
+        "kind": "feature",
+        "counter": "spell_picks",
+        "feature_type": "spell",
+        "options": "spell_options",
+        "apply": "apply_spell_pick"
+      },
+      {
+        "id": "cantrips",
+        "label": "Cantrips",
+        "kind": "feature",
+        "counter": "cantrip_picks",
+        "feature_type": "spell",
+        "options": "spell_options",
+        "apply": "apply_spell_pick"
+      },
+      {
+        "id": "asi",
+        "label": "Feat or Ability Scores",
+        "kind": "feature",
+        "counter": "asi_picks",
+        "feature_type": "feat",
+        "tags": [
+          "general",
+          "epic-boon"
+        ],
+        "options": "feat_options",
+        "apply": "apply_feat_pick"
+      },
+      {
+        "id": "fighting_style",
+        "label": "Fighting Style",
+        "kind": "feature",
+        "counter": "fighting_style_picks",
+        "feature_type": "feat",
+        "tags": [
+          "fighting-style"
+        ],
+        "options": "fighting_style_options",
+        "apply": "apply_fighting_style_pick"
+      },
+      {
+        "id": "subclass",
+        "label": "Subclass",
+        "kind": "feature",
+        "counter": "subclass_picks",
+        "feature_type": "trait",
+        "tags": [
+          "subclass"
+        ],
+        "options": "subclass_options",
+        "apply": "apply_subclass_pick"
+      },
+      {
+        "id": "expertise",
+        "label": "Expertise",
+        "kind": "feature",
+        "counter": "expertise_picks",
+        "feature_type": "trait",
+        "tags": [
+          "expertise"
+        ],
+        "options": "expertise_options",
+        "apply": "apply_expertise_pick"
+      }
+    ]
+  }
+]

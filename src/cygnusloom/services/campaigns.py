@@ -496,7 +496,9 @@ def respec_character(
         if state.encounter is not None:
             raise InvalidInput("a respec waits until the encounter is over")
         chosen = submitted.get("stats", {})
-        rolled_stats = {stat.id for stat in spec.stats.values() if stat.derived is None}
+        rolled_stats = {
+            stat.id for stat in spec.stats.values() if stat.derived is None and not stat.hidden
+        }
         if set(chosen) != rolled_stats:
             raise InvalidInput("every stat needs a value")
         # The form showed only the mechanical fields. The character's own words stay as they

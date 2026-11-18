@@ -434,12 +434,14 @@ def _carry_granted_kit(
     inventory: InventoryRules | None,
     item_sizes: Mapping[str, int] | None,
     rng: random.Random,
-) -> tuple[tuple[str, int], tuple[str, int], int]:
+) -> tuple[tuple[str, int], tuple[str, int], int, str]:
     """Carry what the chosen templates grant: catalogue items, starting money, and the armor and
-    shield already worn. Returns the equipped armor and shield the kit gives, and the silver.
+    shield already worn. Returns the equipped armor and shield the kit gives, the silver, and
+    the shield's armor mode.
     A kind left unchosen may roll starting silver instead, such as 3d6 × 10 for a kit."""
     armor: tuple[str, int] = ("", 0)
     shield: tuple[str, int] = ("", 0)
+    shield_mode = "shield"
     silver = 0
     for template_id in sheet.templates.values():
         grant = spec.templates[template_id].grant
@@ -472,8 +474,9 @@ def _carry_granted_kit(
             listed = market_service.listed_item(marketplace, item_name)
             if listed is None:
                 raise InvalidInput(f"there is no catalogue item named {item_name!r}")
-            if listed.armor_mode == "shield":
+            if listed.armor_mode in {"shield", "shield_flat"}:
                 shield = (listed.name, listed.armor)
+                shield_mode = listed.armor_mode
             else:
                 armor = (listed.name, listed.armor)
         if grant.silver:
@@ -494,7 +497,7 @@ def _carry_granted_kit(
             db, campaign_id, marketplace, name, amount, "starting silver"
         )
         silver += amount
-    return armor, shield, silver
+    return armor, shield, silver, shield_mode
 
 
 def create_player_character(
@@ -538,7 +541,7 @@ def create_player_character(
     pronouns = bounded_text(pronouns, "pronouns", MAX_NAME)
     _ensure_free_name(state, name)
     chosen = submitted.get("stats", {})
-    rolled_stats = {s.id for s in spec.stats.values() if s.derived is None}
+    rolled_stats = {s.id for s in spec.stats.values() if s.derived is None and not s.hidden}
     if set(chosen) != rolled_stats:
         raise InvalidInput("every stat needs a value")
     try:
@@ -579,7 +582,7 @@ def create_player_character(
         magic,
         defense=bool(combat_rules is not None and combat_rules.defense_base),
     )
-    granted_armor, granted_shield, _ = _carry_granted_kit(
+    granted_armor, granted_shield, _, granted_shield_mode = _carry_granted_kit(
         db, campaign_id, name, sheet, spec, marketplace, inventory, item_sizes, rng
     )
     if granted_armor[0]:
@@ -598,6 +601,7 @@ def create_player_character(
             armor=equipped_armor,
             shield=equipped_shield,
             adjustment=sheet.armor,
+            shield_mode=granted_shield_mode,
         )
     elif armor:
         cap = armor_max or combat.UNCAPPED_ARMOR

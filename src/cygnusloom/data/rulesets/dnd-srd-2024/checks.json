@@ -1,0 +1,12 @@
+[
+  {
+    "type": "check",
+    "id": "ability",
+    "label": "Ability check",
+    "dice": "1d20",
+    "unskilled": 0,
+    "default_difficulty": 15,
+    "minimum_difficulty": 1,
+    "maximum_difficulty": 30
+  }
+]

@@ -15,6 +15,9 @@ TERM = r"[1-9][0-9]?d[1-9][0-9]*"
 ROLL = re.compile(rf"{TERM}(?:(?:[+-]{TERM})|(?:[+-][0-9]+))*")
 TERM_PATTERN = re.compile(r"([+-]?)(?:([1-9][0-9]?)d([1-9][0-9]*)|([0-9]+))")
 PLUS_MODES = ("sum", "highest")
+# How a d20-style roll treats a second die: normal keeps one, advantage keeps the higher total,
+# and disadvantage keeps the lower.
+ROLL_MODES = ("normal", "advantage", "disadvantage")
 
 
 def is_formula(text: object) -> bool:
@@ -63,6 +66,27 @@ def roll_values(
         raise ValueError(f"unknown plus mode: {plus!r}")
     kept = max(totals) if plus == "highest" else sum(totals)
     return values, kept + flat
+
+
+def roll_mode_values(
+    formula: str,
+    rng: random.Random | None = None,
+    *,
+    plus: str | None = None,
+    mode: str = "normal",
+) -> tuple[list[int], int]:
+    """Roll a formula under a roll mode and return the kept dice and their total. Advantage and
+    disadvantage roll the formula twice and keep the higher or lower total; the discarded dice
+    are left out of the returned values, so their sum matches the total when the formula is one
+    die."""
+    if mode not in ROLL_MODES:
+        raise ValueError(f"unknown roll mode: {mode!r}")
+    values, total = roll_values(formula, rng, plus=plus)
+    if mode == "normal":
+        return values, total
+    other_values, other = roll_values(formula, rng, plus=plus)
+    keep_other = other > total if mode == "advantage" else other < total
+    return (other_values, other) if keep_other else (values, total)
 
 
 def max_total(formula: str, plus: str | None = None) -> int:

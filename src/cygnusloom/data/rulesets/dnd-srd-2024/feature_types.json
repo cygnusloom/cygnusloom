@@ -1,0 +1,35 @@
+[
+  {
+    "type": "feature_type",
+    "id": "spell",
+    "name": "Spell",
+    "plural": "Spells",
+    "group": "Spells",
+    "rank_label": "Level",
+    "tag_label": "School",
+    "unique": true
+  },
+  {
+    "type": "feature_type",
+    "id": "trait",
+    "name": "Trait",
+    "plural": "Traits",
+    "group": "Traits"
+  },
+  {
+    "type": "feature_type",
+    "id": "feat",
+    "name": "Feat",
+    "plural": "Feats",
+    "group": "Feats",
+    "rank_label": "Level"
+  },
+  {
+    "type": "feature_type",
+    "id": "item",
+    "name": "Item",
+    "plural": "Items",
+    "group": "Items",
+    "inventory": true
+  }
+]

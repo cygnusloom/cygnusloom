@@ -397,6 +397,34 @@
     return hasFeasibleCompletion(assignment);
   };
 
+  // A feature that asks for a skill, attribute, or free text shows its panel only while the
+  // player has it: selected as a feature pick, or granted by a chosen template. Disabled
+  // controls are not submitted, so a hidden panel cannot send a stale choice for a feature the
+  // player did not take.
+  function syncFeatureChoicePanels() {
+    const chosen = new Set(
+      [...document.querySelectorAll("select[data-feature-choice]")]
+        .map((select) => select.value)
+        .filter(Boolean),
+    );
+    for (const radio of document.querySelectorAll("input[data-template-select]:checked")) {
+      let granted = [];
+      try {
+        granted = JSON.parse(radio.dataset.featureGrants || "[]");
+      } catch {
+        granted = [];
+      }
+      for (const feature of granted) chosen.add(feature);
+    }
+    for (const panel of document.querySelectorAll("[data-feature-choice-for]")) {
+      const shown = chosen.has(panel.dataset.featureChoiceFor);
+      panel.hidden = !shown;
+      for (const control of panel.querySelectorAll("select, input")) {
+        control.disabled = !shown;
+      }
+    }
+  }
+
   const clearTemplateChoice = (radio) => {
     radio.checked = false;
     refreshSummary(radio.name);
@@ -510,6 +538,7 @@
       }
       panel.hidden = !offered;
     }
+    syncFeatureChoicePanels();
     return anyCleared;
   };
 
@@ -693,26 +722,6 @@
   refreshTaggedPicks();
   refreshSkillPickOptions();
   refreshFeaturePickOptions();
-
-  const featureChoicePanels = [...document.querySelectorAll("[data-feature-choice-for]")];
-
-  // A feature that asks for a skill, attribute, or free text shows its panel only while one of
-  // the feature selects names it. Disabled controls are not submitted, so a hidden panel cannot
-  // send a stale choice for a feature the player did not take.
-  const syncFeatureChoicePanels = () => {
-    const chosen = new Set(
-      [...document.querySelectorAll("select[data-feature-choice]")]
-        .map((select) => select.value)
-        .filter(Boolean),
-    );
-    for (const panel of featureChoicePanels) {
-      const shown = chosen.has(panel.dataset.featureChoiceFor);
-      panel.hidden = !shown;
-      for (const control of panel.querySelectorAll("select, input")) {
-        control.disabled = !shown;
-      }
-    }
-  };
 
   syncFeatureChoicePanels();
 

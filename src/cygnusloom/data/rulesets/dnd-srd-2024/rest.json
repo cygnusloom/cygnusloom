@@ -1,0 +1,37 @@
+[
+  {
+    "type": "rest",
+    "id": "dnd-srd-2024",
+    "lengths": {
+      "short": {
+        "hours": 1,
+        "full": false,
+        "restores": [],
+        "clears": [],
+        "ends": [
+          "rest"
+        ],
+        "upkeep": false
+      },
+      "long": {
+        "hours": 8,
+        "full": true,
+        "restores": [
+          "hp"
+        ],
+        "clears": [],
+        "ends": [
+          "rest",
+          "long_rest"
+        ],
+        "upkeep": false
+      }
+    }
+  },
+  {
+    "type": "hooks",
+    "id": "dnd-srd-2024",
+    "python_module": "dnd_srd_2024",
+    "after_rest": "after_rest"
+  }
+]

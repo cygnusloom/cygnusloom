@@ -1,0 +1,128 @@
+[
+  {
+    "type": "skill",
+    "id": "acrobatics",
+    "name": "Acrobatics",
+    "icon": "boots",
+    "description": "A Dexterity check to acrobatics. Add the proficiency bonus when the character is proficient."
+  },
+  {
+    "type": "skill",
+    "id": "animal_handling",
+    "name": "Animal Handling",
+    "icon": "horse",
+    "description": "A Wisdom check to animal handling. Add the proficiency bonus when the character is proficient."
+  },
+  {
+    "type": "skill",
+    "id": "arcana",
+    "name": "Arcana",
+    "icon": "book",
+    "description": "A Intelligence check to arcana. Add the proficiency bonus when the character is proficient."
+  },
+  {
+    "type": "skill",
+    "id": "athletics",
+    "name": "Athletics",
+    "icon": "rope",
+    "description": "A Strength check to athletics. Add the proficiency bonus when the character is proficient."
+  },
+  {
+    "type": "skill",
+    "id": "deception",
+    "name": "Deception",
+    "icon": "speech",
+    "description": "A Charisma check to deception. Add the proficiency bonus when the character is proficient."
+  },
+  {
+    "type": "skill",
+    "id": "history",
+    "name": "History",
+    "icon": "scroll",
+    "description": "A Intelligence check to history. Add the proficiency bonus when the character is proficient."
+  },
+  {
+    "type": "skill",
+    "id": "insight",
+    "name": "Insight",
+    "icon": "eye",
+    "description": "A Wisdom check to insight. Add the proficiency bonus when the character is proficient."
+  },
+  {
+    "type": "skill",
+    "id": "intimidation",
+    "name": "Intimidation",
+    "icon": "fist",
+    "description": "A Charisma check to intimidation. Add the proficiency bonus when the character is proficient."
+  },
+  {
+    "type": "skill",
+    "id": "investigation",
+    "name": "Investigation",
+    "icon": "eye",
+    "description": "A Intelligence check to investigation. Add the proficiency bonus when the character is proficient."
+  },
+  {
+    "type": "skill",
+    "id": "medicine",
+    "name": "Medicine",
+    "icon": "potion",
+    "description": "A Wisdom check to medicine. Add the proficiency bonus when the character is proficient."
+  },
+  {
+    "type": "skill",
+    "id": "nature",
+    "name": "Nature",
+    "icon": "plant",
+    "description": "A Intelligence check to nature. Add the proficiency bonus when the character is proficient."
+  },
+  {
+    "type": "skill",
+    "id": "perception",
+    "name": "Perception",
+    "icon": "eye",
+    "description": "A Wisdom check to perception. Add the proficiency bonus when the character is proficient."
+  },
+  {
+    "type": "skill",
+    "id": "performance",
+    "name": "Performance",
+    "icon": "lute",
+    "description": "A Charisma check to performance. Add the proficiency bonus when the character is proficient."
+  },
+  {
+    "type": "skill",
+    "id": "persuasion",
+    "name": "Persuasion",
+    "icon": "handshake",
+    "description": "A Charisma check to persuasion. Add the proficiency bonus when the character is proficient."
+  },
+  {
+    "type": "skill",
+    "id": "religion",
+    "name": "Religion",
+    "icon": "altar",
+    "description": "A Intelligence check to religion. Add the proficiency bonus when the character is proficient."
+  },
+  {
+    "type": "skill",
+    "id": "sleight_of_hand",
+    "name": "Sleight of Hand",
+    "icon": "ring",
+    "description": "A Dexterity check to sleight of hand. Add the proficiency bonus when the character is proficient."
+  },
+  {
+    "type": "skill",
+    "id": "stealth",
+    "name": "Stealth",
+    "icon": "boots",
+    "description": "A Dexterity check to stealth. Add the proficiency bonus when the character is proficient."
+  },
+  {
+    "type": "skill",
+    "id": "survival",
+    "name": "Survival",
+    "icon": "campfire",
+    "description": "A Wisdom check to survival. Add the proficiency bonus when the character is proficient."
+  }
+]

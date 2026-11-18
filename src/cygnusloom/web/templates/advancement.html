@@ -166,6 +166,12 @@
     <p class="form-error" data-budget-error hidden></p>
     <button type="submit">{% if view.kind == "level" %}Level up to {{ view.summary.new_level }}{% else %}Spend picks{% endif %}</button>
   </form>
+  {% elif view.kind == "level" and view.level_up %}
+  <form method="post" action="/campaigns/{{ campaign.id }}/advancement" class="advancement-form" data-busy-label="Applying level {{ view.summary.new_level }}…">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="character" value="{{ view.character }}">
+    <button type="submit">Level up to {{ view.summary.new_level }}</button>
+  </form>
   {% else %}
   <p class="muted">There is nothing to advance right now.</p>
   {% endif %}
