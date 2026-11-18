@@ -28,6 +28,7 @@ from cygnusloom.content.character import (
 )
 from cygnusloom.content.definitions import ContentError
 from cygnusloom.content.library import (
+    TABLE_GENRES,
     AdvancementOption,
     CheckRules,
     ConditionRules,
@@ -55,6 +56,7 @@ from cygnusloom.content.library import (
     Wilderness,
     WorldTemplate,
     WorldTerrain,
+    table_genre_offered,
 )
 from cygnusloom.services import custom_features
 from cygnusloom.services.events import (
@@ -244,11 +246,14 @@ def compendium_view(
     rule_set_id: str,
     world_id: str,
     state: CampaignState | None = None,
+    *,
+    table_genres: Sequence[str] | None = None,
 ) -> Compendium:
     """Build the compendium for a rule set and world, plus the discovered parts of a campaign.
 
     An unknown rule set or world gives an empty compendium rather than an error, so a stale link
-    or a handbook page with no world still renders.
+    or a handbook page with no world still renders. A creative genre selection hides creative
+    tables that selection would not offer; all other compendium content is unchanged.
     """
     rule_set = library.rule_sets.get(rule_set_id)
     try:
@@ -257,7 +262,7 @@ def compendium_view(
         world = None
     if rule_set is None or world is None:
         return Compendium(world=None, rule_set=None, sections=())
-    return _build(library, rule_set, world, state)
+    return _build(library, rule_set, world, state, table_genres=table_genres)
 
 
 @dataclass
@@ -278,8 +283,11 @@ def _build(
     rule_set: RuleSet,
     world: WorldTemplate,
     state: CampaignState | None,
+    *,
+    table_genres: Sequence[str] | None = None,
 ) -> Compendium:
     spec = rule_set.character
+    genres = tuple(table_genres) if table_genres is not None else TABLE_GENRES
     world_content = _world_content(library, world, rule_set)
     world_rules = world_content.rules if world_content is not None else {}
     safe_rule_text = {**rule_set.rules, **rule_set.attached_rules}
@@ -671,6 +679,8 @@ def _build(
             (table_id, name, name_key(name)),
         )
     for table in rule_set.dice_tables.values():
+        if table.creative and not table_genre_offered(table.genres, genres):
+            continue
         add("dice", f"dice:{table.id}", _dice_draft(table))
 
     if state is not None:
@@ -1613,11 +1623,12 @@ def _dice_draft(table: DiceTable) -> _Draft:
         if row.text:
             text += f" ({row.text})"
         lines.append(text)
+    tags = ("creative", table.role, *table.genres) if table.creative else ()
     return _Draft(
         name=table.name,
         summary=f"{table.dice}, {len(table.rows)} entries",
         text="\n".join(lines),
-        tags=("creative",) if table.creative else (),
+        tags=tags,
         group="Creative Tables" if table.creative else "Random Tables",
     )
 

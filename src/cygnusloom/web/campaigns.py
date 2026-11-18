@@ -23,7 +23,11 @@ from starlette.responses import Response
 from cygnusloom import CAMPAIGN_MAJOR_VERSION
 from cygnusloom.auth.deps import page_user, verify_csrf
 from cygnusloom.content.character import NO_CAMPAIGN, NO_CHARACTER, character_schema
-from cygnusloom.content.library import CREATIVE_CATEGORY_HELP, TONE_HELP
+from cygnusloom.content.library import (
+    CREATIVE_CATEGORY_HELP,
+    TONE_HELP,
+    effective_table_genres,
+)
 from cygnusloom.db.models import User
 from cygnusloom.llm.base import LLMError
 from cygnusloom.llm.presets import PRESETS
@@ -2125,7 +2129,17 @@ def _campaign_page(
         newest = last_event_id(db, campaign.id)
     world = campaign_world(engine, user.id, campaign.id)
     world_template = library.setting_template(campaign.world_template)
-    compendium = compendium_view(library, campaign.rule_set, campaign.world_template, world.state)
+    compendium = compendium_view(
+        library,
+        campaign.rule_set,
+        campaign.world_template,
+        world.state,
+        table_genres=(
+            effective_table_genres(campaign.table_genres, rule_set)
+            if rule_set is not None
+            else None
+        ),
+    )
     viewer_pc = world.state.player_character(user.id)
     world_map = map_view(world.state, rule_set.world_terrain if rule_set else None, pc=viewer_pc)
     options_pending, character_pending = _creation_pending(world.state, rule_set, user.id)

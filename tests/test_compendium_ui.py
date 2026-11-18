@@ -45,6 +45,13 @@ def test_the_standalone_page_offers_rule_set_and_world_pickers(
     assert 'action="/compendium"' in page
     assert 'name="rule_set"' in page
     assert 'name="world_template"' in page
+    assert 'name="table_genres"' in page
+    assert 'name="table_tones"' in page
+    assert '<details class="compendium-creative-sources">' in page
+    assert "<summary>Creative sources</summary>" in page
+    assert '<details class="compendium-creative-sources" open' not in page
+    assert "Creative sources" in page
+    assert "Module tones" in page
     assert "data-compendium-search" in page
     assert 'role="tablist"' in page
     assert 'data-compendium-tab="world"' in page
@@ -76,6 +83,29 @@ def test_story_module_cards_hide_the_gm_location_density(
     assert "grim" in page
     assert "mystery" in page
     assert "low density" not in page
+
+
+def test_creative_source_filters_narrow_tables_and_story_modules(
+    client_factory: Callable[[], TestClient],
+):
+    client = signed_in_client(client_factory)
+    page = client.get(
+        "/compendium?rule_set=cairn2e&world_template=twin-lakes"
+        "&table_genres=magicschool&table_tones=relaxing"
+    ).text
+    assert 'name="table_genres" value="magicschool" checked' in page
+    assert 'name="table_tones" value="relaxing" checked' in page
+    assert 'id="compendium-dice-action"' in page
+    assert 'id="compendium-dice-setting-premise"' not in page
+    assert "The Hermit of Ash Hollow" not in page
+    assert "No story modules fit these creative sources." in page
+
+    page = client.get(
+        "/compendium?rule_set=cairn2e&world_template=twin-lakes"
+        "&table_genres=fantasy&table_tones=grim"
+    ).text
+    assert 'id="compendium-dice-setting-premise"' in page
+    assert "The Hermit of Ash Hollow" in page
 
 
 def test_a_campaign_has_a_compendium_view(

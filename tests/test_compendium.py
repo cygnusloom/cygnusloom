@@ -47,6 +47,17 @@ def test_cairn_compendium_has_the_sourcebook_sections():
     assert shop_item.name in _entry_names(compendium, "items")
 
 
+def test_creative_tables_follow_the_selected_categories():
+    library = content_library()
+    compendium = compendium_view(library, "cairn2e", "twin-lakes", table_genres=("magicschool",))
+    dice = _sections(compendium)["dice"]
+    ids = {entry.id for entry in dice.entries}
+    assert "compendium-dice-action" in ids
+    assert "compendium-dice-setting-premise" not in ids
+    action = next(entry for entry in dice.entries if entry.id == "compendium-dice-action")
+    assert {"creative", "oracle", "generic"} <= set(action.tags)
+
+
 def test_compendium_tabs_group_the_sections():
     library = content_library()
     compendium = compendium_view(library, "cairn2e", "twin-lakes")

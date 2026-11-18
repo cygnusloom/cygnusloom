@@ -29,6 +29,26 @@
           </optgroup>
         {% endcall %}
       </div>
+      <details class="compendium-creative-sources">
+        <summary>Creative sources</summary>
+        <p class="muted">These categories choose which creative tables and mini story modules the compendium shows. The rule set's own choice is checked; narrow it only when you want a different kind of setting.</p>
+        <div class="genre-options">
+          {% for genre in table_genres %}
+            <label><input type="checkbox" name="table_genres" value="{{ genre }}"{% if genre in selected_table_genres %} checked{% endif %}> {{ genre.replace("-", " ").capitalize() }}</label>
+          {% endfor %}
+        </div>
+        <p class="muted">{% for genre in table_genres %}{{ genre.replace("-", " ").capitalize() }}: {{ category_help[genre] }}{% if not loop.last %} {% endif %}{% endfor %}</p>
+        {% if table_tones %}
+        <h4>Module tones</h4>
+        <p class="muted">These tones narrow which mini story modules the compendium shows. Leave the rule set's own choice alone unless you want a different mood.</p>
+        <div class="genre-options">
+          {% for tone in table_tones %}
+            <label><input type="checkbox" name="table_tones" value="{{ tone }}"{% if tone in selected_table_tones %} checked{% endif %}> {{ tone.capitalize() }}</label>
+          {% endfor %}
+        </div>
+        <p class="muted">{% for tone in table_tones %}{{ tone.capitalize() }}: {{ tone_help[tone] }}{% if not loop.last %} {% endif %}{% endfor %}</p>
+        {% endif %}
+      </details>
       <button type="submit">Show</button>
     </form>
   </section>
@@ -39,17 +59,19 @@
   {% else %}
   <p class="muted compendium-empty-page">No compendium content is available for this world and rule set.</p>
   {% endif %}
-  {% if story_modules %}
   <section class="card">
     <h2>Story modules</h2>
-    <p class="muted">Human-written mini modules the GM may draw on for this rule set. Their full material stays with the GM.</p>
+    <p class="muted">Human-written mini modules the GM may draw on for this rule set and these creative sources. Their full material stays with the GM.</p>
+    {% if story_modules %}
     <ul class="plain-list">
       {% for module in story_modules %}
         <li><strong>{{ module.name }}</strong> — {{ module.blurb or module.description }} <span class="muted">({{ module.categories | join(", ") }}; {{ module.tones | join(", ") }})</span></li>
       {% endfor %}
     </ul>
+    {% else %}
+    <p class="muted">No story modules fit these creative sources.</p>
+    {% endif %}
   </section>
-  {% endif %}
 {% endblock %}
 {% block scripts %}
   {{ super() }}

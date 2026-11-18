@@ -207,7 +207,9 @@ def test_the_creative_table_picker_lives_in_the_campaign_options(client_factory)
     start = page.index('<section class="creation-panel table-genres"')
     end = page.index("</section>", start)
     section = page[start:end]
-    assert '<h3 id="panel-table-genres">Creative sources</h3>' in section
+    assert '<details class="creative-sources-details">' in section
+    assert '<summary id="panel-table-genres">Creative sources</summary>' in section
+    assert '<details class="creative-sources-details" open' not in section
     available = content_library().available_table_genres
     for genre in available:
         assert f'name="table_genres" value="{genre}"' in section

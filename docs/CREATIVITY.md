@@ -231,8 +231,14 @@ notes are the **continuity** layer. The engine does not track plot progress.
 
 - A campaign module's public setting entries and a world's public entries appear in the
   compendium as they always have.
+- The compendium has the same **Creative sources** categories and module tones as campaign
+  creation. They default to the rule set's choices, and they narrow which creative table entries
+  and story modules the page shows. A campaign's compendium tab uses that campaign's saved
+  choices. The source panel is collapsed until opened. Each creative table entry carries its
+  role and category tags.
 - Mini modules are listed as cards in the compendium's "Story modules" section: name, blurb,
-  categories, and tones only. Their `body` and location densities stay with the GM.
+  categories, and tones only. Their `body` and location densities stay with the GM. The section
+  says plainly when no story module fits the selected sources.
 - There is no in-play module tab or module progress. A mini module's material appears only after
   the GM uses it; a campaign module's private notes are GM-only.
 
