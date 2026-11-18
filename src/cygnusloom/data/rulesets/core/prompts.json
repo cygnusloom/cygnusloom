@@ -14,9 +14,15 @@
   },
   {
     "type": "prompt",
+    "id": "creative_sources",
+    "step": "state",
+    "text": "Use the world, module, and active storylines as the first source of any new detail. Before you invent a new place, faction, conflict, mystery, clue, complication, or direction, see what the creative tables offer with list_dice_tables and roll the relevant one with roll_creative: setting tables build a world, its factions, conflicts, and mysteries, while oracle tables seed new places, directions, and complications. Read each result as a prompt, not a command: keep what fits the established story, drop what clashes, and build the detail from what remains. Invent only when no applicable table fits or its result contradicts established facts; then keep the invention small and record it. Do not invent a new element while an applicable table could answer it. Leave an NPC's personality, accent, and quirks to the create_npc tables unless the story already defines them. Never roll for an outcome the rules or the player's message decides."
+  },
+  {
+    "type": "prompt",
     "id": "creative_oracle",
     "step": "state",
-    "text": "When a scene has run its course or the player is unsure what to do next, and no active storyline gives you the next beat, roll on the oracle tables with roll_creative: leave role out or pass role \"oracle\", and name action, theme, and plot_twist, plus location or location_descriptor when the scene is about a place. Read each result as a prompt, not a command: keep what fits the established story, drop what clashes, and make it yours. Do not roll on consecutive turns, do not roll when the player has a clear goal, and never roll in the middle of an encounter."
+    "text": "When a scene has run its course or the player is unsure what to do next, and no active storyline gives you the next beat, roll on the oracle tables with roll_creative: leave role out or pass role \"oracle\", and name action, theme, and plot_twist, plus location or location_descriptor when the scene is about a place. Read each result as a prompt, not a command: keep what fits the established story, drop what clashes, and make it yours. Do not roll the same full oracle set on consecutive turns just to keep a scene moving; use a specific table when you need a specific kind of detail. Do not roll merely to fill a scene when the player has a clear goal, and never roll in the middle of an encounter."
   },
   {
     "type": "prompt",

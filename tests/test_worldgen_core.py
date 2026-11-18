@@ -77,6 +77,25 @@ def test_the_setting_forge_names_no_table_a_genre_choice_could_hide():
         assert re.search(rf"\b{re.escape(table_id)}\b", prompt) is None
 
 
+def test_core_carries_the_creative_source_policy():
+    core = bundled_library().core.prompt_fragments
+    sources = next(fragment for fragment in core if fragment.id == "creative_sources")
+    assert sources.step == "state"
+    assert "world, module, and active storylines" in sources.text
+    assert "list_dice_tables" in sources.text
+    assert "roll_creative" in sources.text
+    assert "Invent only when no applicable table fits" in sources.text
+    assert "Do not invent a new element" in sources.text
+    assert "create_npc tables" in sources.text
+
+
+@pytest.mark.parametrize("rule_set", BUNDLED_RULE_SETS)
+def test_every_bundled_rule_set_carries_the_creative_source_policy(rule_set: str):
+    text = state_instruction(bundled_library().rule_sets[rule_set], None)
+    assert "world, module, and active storylines" in text
+    assert "Before you invent" in text
+
+
 def test_core_carries_the_mid_play_oracle_prompt():
     core = bundled_library().core.prompt_fragments
     oracle = next(fragment for fragment in core if fragment.id == "creative_oracle")
@@ -85,6 +104,7 @@ def test_core_carries_the_mid_play_oracle_prompt():
     assert '"oracle"' in oracle.text
     for table_id in ("action", "theme", "plot_twist", "location", "location_descriptor"):
         assert table_id in oracle.text
+    assert "same full oracle set" in oracle.text
     assert "encounter" in oracle.text
 
 

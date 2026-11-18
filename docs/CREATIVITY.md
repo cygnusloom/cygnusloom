@@ -82,10 +82,12 @@ explanations appear on the card returned by `list_modules`. The AI GM picks one 
 densities to decide where the seed can meet the party and how far it can spread. Density never
 appears in the player-facing compendium and is not part of the campaign form.
 
-The core `creative_oracle` state prompt tells the GM to roll oracle tables when the scene stalls
-or the player is unsure, not on consecutive turns, and never in the middle of an encounter. The
-first sentence of the tool description carries the same trigger because `brief` mode keeps only
-that sentence.
+The core `creative_sources` state prompt puts the world, module, and active storylines first,
+then requires the GM to consult the creative tables before inventing a new place, faction,
+conflict, mystery, clue, complication, or direction. The core `creative_oracle` prompt tells the
+GM to roll oracle tables when the scene stalls or the player is unsure, and never in the middle
+of an encounter. The first sentence of the tool description carries the source-before-invention
+trigger because `brief` mode keeps only that sentence.
 
 ## Campaign modules own their setting
 
@@ -194,14 +196,20 @@ text.
 
 ### AI GM loop
 
+The world, campaign module, and active storylines are the first source of any detail. When none
+of them supplies a new place, faction, conflict, mystery, clue, complication, or direction, the
+GM uses the creative tables before inventing it: setting tables build a world and its powers,
+while oracle tables seed play. The GM invents only when no applicable table fits or the result
+contradicts established facts, and keeps that invention small.
+
 1. Look up what the action depends on.
 2. If the action follows a focused storyline, a world entry, or an obvious consequence, play it.
-3. If the scene is complete or the player is unsure and nothing obvious follows:
-   - if a mini module fits, `list_modules` then `use_module`;
-   - otherwise `roll_creative` with the oracle tables;
-   - if the player is mid-encounter, use the encounter's own logic.
-4. Treat the result as a prompt, not a command; keep what fits and drop what clashes.
-5. Record changes, update storylines/notes, and finish the state step.
+3. If the action needs a new element, seed it with the relevant creative table first. If a mini
+   module fits, `list_modules` then `use_module` is another authored source.
+4. If the scene is complete or the player is unsure and nothing obvious follows, `roll_creative`
+   with the oracle tables; if the player is mid-encounter, use the encounter's own logic.
+5. Treat the result as a prompt, not a command; keep what fits and drop what clashes.
+6. Record changes, update storylines/notes, and finish the state step.
 
 A campaign module's setting, worlds, and mini modules are the **injection** layer; storylines and
 notes are the **continuity** layer. The engine does not track plot progress.

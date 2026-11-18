@@ -87,8 +87,12 @@ def test_core_offers_the_roll_creative_tool():
     tools = bundled_library().core.tool_calls
     tool = tools["roll_creative"]
     assert tool.description.startswith(
-        "Roll on the oracle tables when a scene stalls or the player is unsure what to do next."
+        "Roll on the creative tables for a new idea: use list_dice_tables to see their roles, "
+        "then pass role 'setting' for a world, faction, conflict, or mystery, and use the oracle "
+        "tables before inventing a scene, place, or complication that the world, module, and "
+        "active storylines do not already supply."
     )
+    assert "same full oracle set" in tool.description
     assert tool.parameters["properties"]["role"]["enum"] == ["oracle", "setting", "module"]
 
 
