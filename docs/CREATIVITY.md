@@ -46,6 +46,10 @@ The audit predates the shipped changes.
 `roll_creative` with no `tables` rolls only the requested role. Named tables still work and win
 over the role. `list_dice_tables` returns each table's role and categories.
 
+Every `creative_table` definition lives in a `creative.json` file in its rule set, world, or
+module directory. Ordinary dice tables stay in their own files, such as
+`worldgen_tables.json`; the loader rejects a creative table found anywhere else.
+
 ### Categories, tones, and density
 
 Tables and modules use the same three creative categories: `generic`, `fantasy`, and

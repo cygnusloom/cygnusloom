@@ -15,6 +15,10 @@ class ContentError(Exception):
 
 
 DEFAULTS_TYPE = "defaults"
+# Creative tables are the oracle and setting tables a rule set, world, or module owns. Keeping
+# them in one named file makes the source of a table obvious and keeps ordinary dice tables
+# separate.
+CREATIVE_TABLE_FILE = "creative.json"
 
 
 @dataclass(frozen=True)
@@ -146,6 +150,10 @@ def read_definitions(directory: Path) -> list[Definition]:
             if kind == DEFAULTS_TYPE:
                 continue
             ident = required_text(item, "id", label)
+            if kind == "creative_table" and path.name != CREATIVE_TABLE_FILE:
+                raise ContentError(
+                    f"{label}: creative tables must live in a file named {CREATIVE_TABLE_FILE!r}"
+                )
             key = (kind, ident)
             if key in seen:
                 raise ContentError(

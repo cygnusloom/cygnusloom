@@ -280,6 +280,21 @@ def test_a_world_may_define_its_own_creative_table(tree: Path):
     assert [row.result for row in tables["heist"].rows] == ["vault", "vent"]
 
 
+def test_a_creative_table_must_live_in_creative_json(tree: Path):
+    _write(
+        tree,
+        {
+            "worlds/testland/tables.json": [
+                {"type": "creative_table", "id": "heist", "entries": ["vault", "vent"]}
+            ]
+        },
+    )
+    with pytest.raises(
+        ContentError, match="creative tables must live in a file named 'creative.json'"
+    ):
+        ContentLibrary.load(tree)
+
+
 def test_a_world_cannot_add_to_or_remove_from_a_core_table(tree: Path):
     _write(
         tree,
@@ -436,9 +451,13 @@ def test_a_patch_may_give_its_own_source():
 
 
 def test_every_core_creative_table_credits_its_source():
-    data = json.loads((DATA_DIR / "rulesets" / "core" / "creative_tables.json").read_text())
-    assert [table["id"] for table in data] == CORE_ORACLE_TABLES
-    assert [table["role"] for table in data] == ["oracle"] * len(CORE_ORACLE_TABLES)
+    data = json.loads((DATA_DIR / "rulesets" / "core" / "creative.json").read_text())
+    assert [table["id"] for table in data] == ALL_CORE_CREATIVE_TABLES
     for table in data:
+        assert table["role"] in {"oracle", "setting"}
+        assert table["source"]
+    for table in data[: len(CORE_ORACLE_TABLES)]:
         assert "CC BY 4.0" in table["source"], table["id"]
         assert "Ironsworn" in table["source"], table["id"]
+    for table in data[len(CORE_ORACLE_TABLES) :]:
+        assert "Original content written for Cygnus Loom." in table["source"], table["id"]
