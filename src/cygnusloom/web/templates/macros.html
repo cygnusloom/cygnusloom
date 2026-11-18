@@ -170,7 +170,7 @@
       <span class="map-region-label" style="left: {{ region.label_left }}%; top: {{ region.label_top }}%">{{ region.name }}</span>
     {% endfor %}
     {% for marker in view.markers %}
-      <span data-label="{{ marker.name }}" class="map-marker{% if marker.here %} here{% endif %}" style="left: {{ marker.left }}%; top: {{ marker.top }}%" role="img" aria-label="{{ marker.label }}" data-tip="{{ marker.name }}{% if marker.here %} (you){% endif %}"><img src="{{ place_icon_path(marker.icon) }}" alt=""></span>
+      <span class="map-marker{% if marker.here %} here{% endif %}" style="left: {{ marker.left }}%; top: {{ marker.top }}%" role="img" aria-label="{{ marker.name }}" data-tip="{{ marker.name }}{% if marker.here %} (you){% endif %}"><img src="{{ place_icon_path(marker.icon) }}" alt=""><span class="map-marker-name" data-name="{{ marker.name }}" aria-hidden="true">{{ marker.name }}</span></span>
     {% endfor %}
     <div class="map-compass" aria-hidden="true">
       <svg viewBox="0 0 40 40">

@@ -455,13 +455,14 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 }
 .map-region-label {
   position: absolute; transform: translate(-50%, -50%) scale(calc(1 / var(--zoom, 1)));
-  z-index: 3; max-width: 10rem; padding: 0.05rem 0.35rem; border-radius: 0.35rem;
-  font-size: 0.62rem; font-weight: 600; letter-spacing: 0.06em; line-height: 1.15;
+  z-index: 3; max-width: clamp(4rem, 30cqmin, 10rem); padding: 0.05rem 0.35rem; border-radius: 0.35rem;
+  font-size: clamp(0.55rem, 1.7cqmin, 0.62rem); font-weight: 600; letter-spacing: 0.06em; line-height: 1.15;
   text-align: center; text-transform: uppercase; white-space: normal; overflow-wrap: anywhere;
   color: var(--world-ink); background: color-mix(in srgb, var(--world-bg) 78%, transparent);
   border: 1px solid color-mix(in srgb, var(--world-line) 55%, transparent);
   pointer-events: none;
 }
+.map-region-label[hidden] { display: none; }
 .world-map .map-marker { z-index: 4; }
 .world-map .map-compass, .world-map .map-scalebar { z-index: 5; color: var(--world-ink); }
 .world-map .map-scalebar {
@@ -469,7 +470,11 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
   border-color: color-mix(in srgb, var(--world-line) 65%, transparent);
 }
 .map-page { display: flex; flex-direction: column; }
-.map-page .map-frame { flex: 1 1 auto; min-height: 14rem; }
+/* The map page gives the map its own square instead of a band the width of the page: the square
+   is what a north-up chart with one scale can be, and it uses the space the empty sides wasted. */
+.map-page .map-frame {
+  flex: 0 0 auto; min-height: 0; width: min(100%, 40rem, 70vh); aspect-ratio: 1; margin: 0 auto;
+}
 .time-strip {
   display: flex; align-items: center; justify-content: center; gap: 0.35rem; flex: none;
   margin: 0; padding: 0.25rem 0 0; color: var(--muted); font-size: 0.875rem;
@@ -517,24 +522,34 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 .map-region-shade { pointer-events: none; mix-blend-mode: multiply; opacity: 0.9; }
 .map-marker {
   position: absolute; transform: translate(-50%, -50%) scale(calc(1 / var(--zoom, 1)));
-  display: grid; place-items: center; min-width: 2.2rem; height: 1.8rem; box-sizing: border-box;
-  padding: 0 0.4rem; white-space: nowrap;
+  display: grid; place-items: center; box-sizing: border-box;
+  min-width: clamp(1.7rem, 6cqmin, 2.2rem); height: clamp(1.45rem, 5.2cqmin, 1.8rem);
+  padding: 0 clamp(0.15rem, 1.2cqmin, 0.4rem); white-space: nowrap;
   font-size: 0.7rem; font-weight: 600; border-radius: 999px;
   background: var(--panel); border: 1px solid var(--border);
   z-index: 3;
 }
 .map-marker.here { color: var(--accent); border-color: var(--accent); }
-.map-marker img { width: 1.55rem; height: 1.55rem; vertical-align: -0.2em; }
-.map-marker::after {
-  content: attr(data-label);
+.map-marker img {
+  width: clamp(1.15rem, 4.3cqmin, 1.55rem); height: clamp(1.15rem, 4.3cqmin, 1.55rem);
+  vertical-align: -0.2em;
+}
+/* The name hangs under its token. The map hides the ones that will not fit, so it is an element
+   rather than generated content: the browser can measure it. */
+.map-marker-name {
   position: absolute; top: calc(100% + 0.15rem); left: 50%; transform: translateX(-50%);
-  max-width: 9rem; overflow: hidden; text-overflow: ellipsis;
+  max-width: clamp(4.5rem, 26cqmin, 9rem); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   padding: 0.05rem 0.3rem; border-radius: 0.35rem;
-  font-size: 0.6rem; font-weight: 500; line-height: 1.2; color: var(--text);
+  font-size: clamp(0.55rem, 1.8cqmin, 0.6rem); font-weight: 500; line-height: 1.2; color: var(--text);
   background: color-mix(in srgb, var(--panel) 82%, transparent);
   border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
   pointer-events: none;
 }
+/* The map moves a name to whichever side of its token is free. */
+.map-marker-name[data-side="above"] { top: auto; bottom: calc(100% + 0.15rem); }
+.map-marker-name[data-side="right"] { top: 50%; left: calc(100% + 0.25rem); transform: translateY(-50%); }
+.map-marker-name[data-side="left"] { top: 50%; left: auto; right: calc(100% + 0.25rem); transform: translateY(-50%); }
+.map-marker-name[hidden] { display: none; }
 .world-map::after {
   content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 2;
   box-shadow: inset 0 0 2.5rem rgba(46, 38, 32, 0.35);

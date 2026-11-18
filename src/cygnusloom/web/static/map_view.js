@@ -55,6 +55,115 @@
     document.querySelectorAll(".map-frame").forEach((frame) => refreshers.get(frame)?.());
   });
 
+  // A busy map is a chart, not a list: a label that would collide is held back. A marker keeps
+  // its full name when a free side exists and otherwise its readable first word. Zooming in
+  // makes room, so the rest return.
+  const LABEL_GAP = 1;
+  const LABEL_SIDES = ["", "above", "right", "left"];
+
+  const boxOf = (element) => {
+    const rect = element.getBoundingClientRect();
+    if (!rect.width || !rect.height) return null;
+    return { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom };
+  };
+  // A label needs a little air around it; two labels this close look like one block of text.
+  const padded = (box) => ({
+    left: box.left - LABEL_GAP, top: box.top - LABEL_GAP,
+    right: box.right + LABEL_GAP, bottom: box.bottom + LABEL_GAP,
+  });
+  const overlaps = (a, b) =>
+    a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+
+  // The readable fallback for a name that does not fit: its first word, without an article.
+  const briefName = (name) => {
+    const words = name.split(/\s+/).filter(Boolean);
+    if (words.length > 1 && /^(the|a|an)$/i.test(words[0])) words.shift();
+    return words[0] || name;
+  };
+
+  const declutter = (frame, board) => {
+    const markers = [...board.querySelectorAll(".map-marker")];
+    const names = markers
+      .map((marker) => marker.querySelector(".map-marker-name"))
+      .filter(Boolean);
+    const regions = [...board.querySelectorAll(".map-region-label")];
+    if (!names.length && !regions.length) return;
+    const frameRect = frame.getBoundingClientRect();
+    if (!frameRect.width || !frameRect.height) return;
+    const frameBox = {
+      left: frameRect.left + LABEL_GAP, top: frameRect.top + LABEL_GAP,
+      right: frameRect.right - LABEL_GAP, bottom: frameRect.bottom - LABEL_GAP,
+    };
+    // Measure every label visible. This runs before the browser paints, so the reveal is unseen.
+    names.forEach((name) => { name.hidden = false; });
+    regions.forEach((label) => { label.hidden = false; });
+    const pills = markers
+      .map((marker) => ({ marker, box: boxOf(marker) }))
+      .filter((pill) => pill.box)
+      .map((pill) => ({ marker: pill.marker, box: padded(pill.box) }));
+    const kept = [];
+    const fits = (raw, own) => {
+      if (
+        !raw ||
+        raw.left < frameBox.left || raw.top < frameBox.top ||
+        raw.right > frameBox.right || raw.bottom > frameBox.bottom
+      ) {
+        return false;
+      }
+      const box = padded(raw);
+      if (kept.some((other) => overlaps(box, other))) return false;
+      return !pills.some((pill) => pill.marker !== own && overlaps(box, pill.box));
+    };
+    // A first word only stands in for its own name when no other marker starts with it.
+    const briefs = new Map();
+    const briefCounts = new Map();
+    for (const marker of markers) {
+      const name = marker.querySelector(".map-marker-name");
+      if (!name) continue;
+      const brief = briefName(name.dataset.name || name.textContent);
+      briefs.set(marker, brief);
+      const key = brief.toLocaleLowerCase();
+      briefCounts.set(key, (briefCounts.get(key) || 0) + 1);
+    }
+    // The place the player is at keeps its name first; the rest follow in the page's order.
+    const ordered = [...markers].sort(
+      (a, b) => Number(b.classList.contains("here")) - Number(a.classList.contains("here")),
+    );
+    for (const marker of ordered) {
+      const name = marker.querySelector(".map-marker-name");
+      if (!name) continue;
+      const full = name.dataset.name || name.textContent;
+      const brief = briefs.get(marker) || "";
+      const candidates = [full];
+      if (brief && brief !== full && briefCounts.get(brief.toLocaleLowerCase()) === 1) {
+        candidates.push(brief);
+      }
+      let shown = null;
+      for (const text of candidates) {
+        for (const side of LABEL_SIDES) {
+          name.dataset.side = side;
+          name.textContent = text;
+          name.hidden = false;
+          // A name the CSS had to cut short says less than the next fallback would.
+          if (name.scrollWidth > name.clientWidth) break;
+          const box = boxOf(name);
+          if (fits(box, marker)) {
+            shown = box;
+            break;
+          }
+        }
+        if (shown) break;
+      }
+      if (shown) kept.push(padded(shown));
+      else name.hidden = true;
+    }
+    for (const label of regions) {
+      const box = boxOf(label);
+      if (fits(box, null)) kept.push(padded(box));
+      else label.hidden = true;
+    }
+  };
+
   const attach = (frame) => {
     if (attachedFrames.has(frame)) return;
     attachedFrames.add(frame);
@@ -104,11 +213,14 @@
     const settle = () => {
       stateOf(board).renderedScale = null;
       flush();
+      // The gesture moved what is under the labels, so let the ones that now fit come back.
+      if (stateOf(board).measured) declutter(frame, board);
     };
     const refresh = () => {
       measure(frame, board);
       frameRect = null;
       flush();
+      if (stateOf(board).measured) declutter(frame, board);
     };
     // Clamp against the cached metrics: no layout reads while a gesture is running.
     const clampState = (state) => {
@@ -272,6 +384,11 @@
     // Hidden frames stay unmeasured until ResizeObserver reports a size.
     refresh();
   };
+
+  // Text widths settle when the font arrives, so measure the labels once more then.
+  document.fonts?.ready?.then(() => {
+    document.querySelectorAll(".map-frame").forEach((frame) => refreshers.get(frame)?.());
+  });
 
   // Token names pop up in the same pill as the token. The popup sits on the page, not in the board,
   // so zooming does not scale it.

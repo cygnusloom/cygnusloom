@@ -1837,7 +1837,7 @@ def test_a_place_inside_another_has_no_map_point_of_its_own(
     view = world.map_view(_state(app, campaign_id))
     assert "Ferry Post" in [p.name for p in view.places]
     assert "Ferry Post" not in [m.name for m in view.markers]
-    assert {m.name: m.label for m in view.markers} == {"Ashen Ford": "AF", "Mossbell Hollow": "MH"}
+    assert {m.name for m in view.markers} == {"Ashen Ford", "Mossbell Hollow"}
 
     refused = _tool(
         app,
@@ -2087,8 +2087,8 @@ def test_map_and_page_show_only_discovered_places_with_positions(
     )
     view = world.map_view(_state(app, campaign_id))
     assert [place.name for place in view.places] == ["Mossbell Hollow"]
-    assert [(m.name, m.label, m.left, m.top, m.here) for m in view.markers] == [
-        ("Mossbell Hollow", "MH", 50.0, 50.0, True)
+    assert [(m.name, m.left, m.top, m.here) for m in view.markers] == [
+        ("Mossbell Hollow", 50.0, 50.0, True)
     ]
     assert view.radius_km == 13.2
 
@@ -2115,18 +2115,15 @@ def test_map_and_page_show_only_discovered_places_with_positions(
     assert markers["Glowcap Ring"].here is False
     assert "Spore Bridge" not in markers
     assert all(0 <= m.left <= 100 and 0 <= m.top <= 100 for m in view.markers)
-    assert {m.name: m.label for m in view.markers} == {
-        "Far Shore": "FS",
-        "Glowcap Ring": "GR",
-        "Mossbell Hollow": "MH",
-    }
 
     page = client.get(f"/campaigns/{campaign_id}").text
     map_view = page[page.index('data-view="map"') : page.index('data-view="journal"')]
     assert (
-        'class="map-marker here" style="left: 50.0%; top: 50.0%" role="img" aria-label="MH" '
-        'data-tip="Mossbell Hollow (you)"><img src="/static/icons/terrain/town.svg" alt=""></span>'
-        in map_view
+        'class="map-marker here" style="left: 50.0%; top: 50.0%" role="img" '
+        'aria-label="Mossbell Hollow" data-tip="Mossbell Hollow (you)">'
+        '<img src="/static/icons/terrain/town.svg" alt="">'
+        '<span class="map-marker-name" data-name="Mossbell Hollow" '
+        'aria-hidden="true">Mossbell Hollow</span></span>' in map_view
     )
     assert "Glowcap Ring" in map_view
     assert "Spore Bridge" not in map_view

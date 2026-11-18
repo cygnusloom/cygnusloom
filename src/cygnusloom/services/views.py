@@ -54,7 +54,6 @@ from cygnusloom.services.events import (
     hit_points,
     name_key,
     same_item_name,
-    token_labels,
 )
 from cygnusloom.services.geometry import contains, representative_point, signed_area
 from cygnusloom.services.hooks import HookContext, call_hook
@@ -266,7 +265,6 @@ class MapMarker:
     """A token for one place. Left and top are percentages of the map's width and height."""
 
     name: str
-    label: str
     left: float
     top: float
     here: bool
@@ -615,11 +613,9 @@ def map_view(
     )
     radius = reach * MAP_MARGIN
     at = viewer.location if viewer is not None else None
-    labels = token_labels(place.name for place in places)
     markers = [
         MapMarker(
             name=place.name,
-            label=labels[place.name],
             left=round(50 + (pos.x - cx) / radius * 50, 2),
             top=round(50 - (pos.y - cy) / radius * 50, 2),
             here=place.name == marked_name,
