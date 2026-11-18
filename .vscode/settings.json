@@ -2,4 +2,6 @@
     "chat.defaultConfiguration": {
         "approvals": "allowAll"
     },
+    "git.detectWorktrees": true,
+    "git.detectWorktreesLimit": 50,
 }
