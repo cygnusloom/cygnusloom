@@ -86,7 +86,11 @@ def test_core_carries_the_creative_source_policy():
     assert "roll_creative" in sources.text
     assert "Invent only when no applicable table fits" in sources.text
     assert "Do not invent a new element" in sources.text
-    assert "create_npc tables" in sources.text
+    assert "make that roll before the create call" in sources.text
+    assert "Do not leave a new place, person, or object for the narration" in sources.text
+    assert "leave each one out of the create_npc call" in sources.text
+    assert "rolls that trait from its tables" in sources.text
+    assert "NPC's speech" in sources.text
 
 
 @pytest.mark.parametrize("rule_set", BUNDLED_RULE_SETS)

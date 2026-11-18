@@ -151,6 +151,12 @@ def test_speech_instruction_asks_for_one_quoted_line_only():
     assert "no name, action, or stage direction outside them" in text
 
 
+def test_speech_instruction_does_not_invent_new_world_facts():
+    text = speech_instruction(None)
+    assert "Do not invent a place, person, faction, or clue" in text
+    assert "only what the intent or the speaker's profile gives" in text
+
+
 def test_state_prompt_keeps_dialogue_for_moments_that_turn_on_speech():
     text = state_instruction(rules_for())
     assert "Call speak only when the moment turns on what is said" in text
@@ -254,6 +260,8 @@ def test_the_state_step_requires_the_turn_checklist():
 def test_the_state_step_batches_the_finish_call_and_leaves_prose_to_narration():
     text = state_instruction(rules_for())
     assert "Write no scene prose in this step" in text
+    assert "Every place, person, or object the action can depend on" in text
+    assert "do not leave it for the narration to introduce" in text
     assert "stage_encounter" in text
     assert "include finish_state_step in the same reply" in STATE_CLOSING
     assert "do not spend a separate round" in STATE_CLOSING

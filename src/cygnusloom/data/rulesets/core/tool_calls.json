@@ -4,7 +4,7 @@
     "id": "create_location",
     "python_module": "core",
     "function": "create_location",
-    "description": "Add a new location to the campaign. Use it when the story reaches a place that does not exist yet. Names must be unique among locations and NPCs, and a name that repeats an existing place in other words (such as 'Market Street' for 'Market Road') is refused. Set discovered to true only when anyone in the world would have heard of the place, so the player already knows it. A place given a map point (x and y) must lie inside a region of the map with at least 0.5 km of ground between the point and the region's edge; if none does, the refusal says so, and you must create that region with create_region first. To put a place inside another, give parent set to the name of that top-level location; such a place has no map point of its own, so leave out x and y.",
+    "description": "Add a new location to the campaign; before adding an invented place, seed it with roll_creative (location and location_descriptor) unless the world, module, storylines, or a table already supplies it. This tool records the place, it does not invent it. Use it when the story reaches a place that does not exist yet. Names must be unique among locations and NPCs, and a name that repeats an existing place in other words (such as 'Market Street' for 'Market Road') is refused. Set discovered to true only when anyone in the world would have heard of the place, so the player already knows it. A place given a map point (x and y) must lie inside a region of the map with at least 0.5 km of ground between the point and the region's edge; if none does, the refusal says so, and you must create that region with create_region first. To put a place inside another, give parent set to the name of that top-level location; such a place has no map point of its own, so leave out x and y.",
     "parameters": {
       "properties": {
         "name": {
@@ -202,7 +202,7 @@
     "id": "create_npc",
     "character_options": true,
     "npc_hp_tier": true,
-    "description": "Add an NPC to the campaign and place them at an existing location. Leave personality, accent, or quirks out to have them generated at random; give them only when the story calls for a specific trait. Give character options, such as appearance or biography, only when the story calls for them; anything left out is rolled or left blank. A name that matches a published statblock, such as a creature in the source material, takes that statblock's stats, armor, and attacks, so leave the stats out of the character options. Give armor and attacks when the NPC is meant to fight; this arms them in the same call, so a whole band can be created before stage_encounter. Give summary when the player has met them and should see a brief entry on the Characters page. Names must be unique among locations and NPCs.",
+    "description": "Add an NPC to the campaign and place them at an existing location; leave personality, accent, and quirks out so create_npc rolls them from its tables, and pass only a trait the player or an earlier record already fixes. Do not infer a trait from the NPC's role or the scene. Give character options, such as appearance or biography, only when the story calls for them; anything left out is rolled or left blank. A name that matches a published statblock, such as a creature in the source material, takes that statblock's stats, armor, and attacks, so leave the stats out of the character options. Give armor and attacks when the NPC is meant to fight; this arms them in the same call, so a whole band can be created before stage_encounter. Give summary when the player has met them and should see a brief entry on the Characters page. Names must be unique among locations and NPCs.",
     "parameters": {
       "properties": {
         "name": {
@@ -283,18 +283,18 @@
         },
         "personality": {
           "type": "string",
-          "description": "Optional. How the NPC carries themselves. The player learns this on meeting them."
+          "description": "Optional. Omit it to roll it from the tables; give it only when the player or an earlier record fixes this exact trait."
         },
         "accent": {
           "type": "string",
-          "description": "Optional. How the NPC sounds when they speak."
+          "description": "Optional. Omit it to roll it from the tables; give it only when the player or an earlier record fixes this exact trait."
         },
         "quirks": {
           "type": "array",
           "items": {
             "type": "string"
           },
-          "description": "Optional. Habits or mannerisms the NPC shows."
+          "description": "Optional. Omit them to roll them from the tables; give only habits the player or an earlier record fixes."
         },
         "force": {
           "type": "boolean",
@@ -797,7 +797,7 @@
     "id": "speak",
     "python_module": "core",
     "function": "speak",
-    "description": "Get the exact words an NPC says. A separate step writes the dialogue from the NPC's personality, accent, and quirks, so give the intent, not the words. Speak sparingly: call it only when the player character is speaking to this NPC or the NPC must say something the player needs to hear; most actions need description, not dialogue. An NPC the player has not addressed speaks unprompted only when their personality makes it likely. The NPC should be at the player character's location; if not, nothing is written and a warning is returned, unless force is true. In combat, speak only for a line that changes what the player must decide. Quote the returned dialogue as it is.",
+    "description": "Get the exact words an NPC says, using only facts already in the record; do not let the line introduce a new place, faction, or clue. A separate step writes the dialogue from the NPC's personality, accent, and quirks, so give the intent, not the words. Speak sparingly: call it only when the player character is speaking to this NPC or the NPC must say something the player needs to hear; most actions need description, not dialogue. An NPC the player has not addressed speaks unprompted only when their personality makes it likely. The NPC should be at the player character's location; if not, nothing is written and a warning is returned, unless force is true. In combat, speak only for a line that changes what the player must decide. Quote the returned dialogue as it is.",
     "parameters": {
       "properties": {
         "npc": {
@@ -1801,7 +1801,7 @@
     "type": "tool_call",
     "id": "list_dice_tables",
     "lookup": true,
-    "description": "List the dice and creative tables this campaign offers after its genre selection. Use it before inventing a new element, or before roll_tables when you need the table ids, to see what kind of idea tables the setting supports. A creative table shows its role (oracle, setting, or module) and genres."
+    "description": "List the dice and creative tables this campaign offers after its genre selection; use it before inventing a new element, or before roll_tables when you need the table ids, to see what kind of idea tables the setting supports. A creative table shows its role (oracle, setting, or module) and genres."
   },
   {
     "type": "tool_call",

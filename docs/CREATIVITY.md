@@ -89,6 +89,15 @@ GM to roll oracle tables when the scene stalls or the player is unsure, and neve
 of an encounter. The first sentence of the tool description carries the source-before-invention
 trigger because `brief` mode keeps only that sentence.
 
+The creation tools repeat that trigger in their first sentence. `create_location` says to seed an
+invented place with `roll_creative` before recording it. `create_npc` says to leave personality,
+accent, and quirks out so its own tables roll them; the GM passes a trait only when the player or
+an earlier record fixes it. `speak` is likewise told not to let dialogue introduce a new place,
+faction, or clue, and the speech step itself is told to use only what the intent or the speaker's
+profile gives. This matters in play because a model that writes traits itself bypasses the roll
+tables, a model that records a place before rolling has already invented it, and a speech writer
+that adds a landmark can put an unrecorded place into the middle of a turn.
+
 ## Campaign modules own their setting
 
 A campaign module has everything a long-form adventure needs:
@@ -205,7 +214,11 @@ contradicts established facts, and keeps that invention small.
 1. Look up what the action depends on.
 2. If the action follows a focused storyline, a world entry, or an obvious consequence, play it.
 3. If the action needs a new element, seed it with the relevant creative table first. If a mini
-   module fits, `list_modules` then `use_module` is another authored source.
+   module fits, `list_modules` then `use_module` is another authored source. For a new NPC, omit
+   personality, accent, and quirks unless the player or an earlier record already fixes them;
+   `create_npc` rolls the omitted traits. Record a place, person, or actionable object in the
+   state step before the narration names it; a detail that appears only in narration is not a
+   source for later play.
 4. If the scene is complete or the player is unsure and nothing obvious follows, `roll_creative`
    with the oracle tables; if the player is mid-encounter, use the encounter's own logic.
 5. Treat the result as a prompt, not a command; keep what fits and drop what clashes.

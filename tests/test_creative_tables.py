@@ -18,6 +18,7 @@ from cygnusloom.content.library import (
     _load_creative_table,
     _patch_creative_table,
 )
+from cygnusloom.rules.context import brief
 from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.dice_tables import roll_creative
 from cygnusloom.services.events import decode, events_since
@@ -94,6 +95,20 @@ def test_core_offers_the_roll_creative_tool():
     )
     assert "same full oracle set" in tool.description
     assert tool.parameters["properties"]["role"]["enum"] == ["oracle", "setting", "module"]
+
+
+def test_creation_tools_state_the_creative_source_rule_in_their_first_sentence():
+    tools = bundled_library().core.tool_calls
+    location = brief(tools["create_location"].description, 240)
+    assert "roll_creative" in location
+    assert "location_descriptor" in location
+    npc = brief(tools["create_npc"].description, 240)
+    assert "leave personality, accent, and quirks out" in npc
+    assert "create_npc rolls them from its tables" in npc
+    tables = brief(tools["list_dice_tables"].description, 240)
+    assert "before inventing a new element" in tables
+    speech = brief(tools["speak"].description, 240)
+    assert "do not let the line introduce" in speech
 
 
 def test_a_rule_set_adds_and_removes_entries_from_a_core_table(tree: Path):
