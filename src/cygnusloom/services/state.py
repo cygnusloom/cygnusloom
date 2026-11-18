@@ -269,6 +269,9 @@ class Character:
     equipped_armor_value: int = 0
     equipped_shield: str = ""
     equipped_shield_value: int = 0
+    # How the equipped shield adds its value: "shield" for the older mode, "shield_flat"
+    # for a shield that always adds its full value.
+    shield_mode: str = "shield"
     # How much of the armor total comes from the wielded shield, so a shield bash can suspend
     # exactly that contribution.
     shield_bonus: int = 0

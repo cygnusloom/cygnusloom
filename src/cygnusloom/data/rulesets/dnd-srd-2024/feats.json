@@ -1,0 +1,360 @@
+[
+  {
+    "type": "feature",
+    "id": "feat-ability-score-improvement",
+    "name": "Ability Score Improvement",
+    "feature_type": "feat",
+    "description": "Increase one ability score by 2, or two ability scores by 1. No ability can rise above 20. You may take this feat more than once.",
+    "tag": "general",
+    "rank": 4,
+    "repeatable": true,
+    "picks": [
+      {
+        "id": "first",
+        "kind": "stat",
+        "label": "First ability",
+        "grant": "score",
+        "amount": 1,
+        "choices": [
+          "str",
+          "dex",
+          "con",
+          "int",
+          "wis",
+          "cha"
+        ]
+      },
+      {
+        "id": "second",
+        "kind": "stat",
+        "label": "Second ability",
+        "grant": "score",
+        "amount": 1,
+        "choices": [
+          "str",
+          "dex",
+          "con",
+          "int",
+          "wis",
+          "cha"
+        ]
+      }
+    ]
+  },
+  {
+    "type": "feature",
+    "id": "feat-alert",
+    "name": "Alert",
+    "feature_type": "feat",
+    "description": "You gain the following benefits.\n\nWhen you roll Initiative, you can add your Proficiency Bonus to the roll.\n\nImmediately after you roll Initiative, you can swap your Initiative with the Initiative of one willing ally in the same combat. You can't make this swap if you or the ally has the Incapacitated condition.",
+    "tag": "origin",
+    "rank": 1
+  },
+  {
+    "type": "feature",
+    "id": "feat-archery",
+    "name": "Archery",
+    "feature_type": "feat",
+    "description": "You gain a +2 bonus to attack rolls you make with Ranged weapons.",
+    "tag": "fighting-style",
+    "rank": 1
+  },
+  {
+    "type": "feature",
+    "id": "feat-boon-of-combat-prowess",
+    "name": "Boon of Combat Prowess",
+    "feature_type": "feat",
+    "description": "You gain the following benefits.\n\nIncrease one ability score of your choice by 1, to a maximum of 30.\n\nWhen you miss with an attack roll, you can hit instead. Once you use this benefit, you can't use it again until the start of your next turn.",
+    "tag": "epic-boon",
+    "rank": 19
+  },
+  {
+    "type": "feature",
+    "id": "feat-boon-of-dimensional-travel",
+    "name": "Boon of Dimensional Travel",
+    "feature_type": "feat",
+    "description": "You gain the following benefits.\n\nIncrease one ability score of your choice by 1, to a maximum of 30.\n\nImmediately after you take the Attack action or the Magic action, you can teleport up to 30 feet to an unoccupied space you can see.",
+    "tag": "epic-boon",
+    "rank": 19
+  },
+  {
+    "type": "feature",
+    "id": "feat-boon-of-fate",
+    "name": "Boon of Fate",
+    "feature_type": "feat",
+    "description": "You gain the following benefits.\n\nIncrease one ability score of your choice by 1, to a maximum of 30.\n\nWhen you or another creature within 60 feet of you succeeds on or fails a D20 Test, you can roll 2d4 and apply the total rolled as a bonus or penalty to the d20 roll. Once you use this benefit, you can't use it again until you roll Initiative or finish a Short or Long Rest.",
+    "tag": "epic-boon",
+    "rank": 19
+  },
+  {
+    "type": "feature",
+    "id": "feat-boon-of-irresistible-offense",
+    "name": "Boon of Irresistible Offense",
+    "feature_type": "feat",
+    "description": "You gain the following benefits.\n\nIncrease one ability score of your choice by 1, to a maximum of 30.\n\nThe Bludgeoning, Piercing, and Slashing damage you deal always ignores Resistance.\n\nWhen you roll a 20 on the d20 for an attack roll, you can deal extra damage to the target equal to the ability score increased by this feat. The extra damage's type is the same as the attack's type.",
+    "tag": "epic-boon",
+    "rank": 19
+  },
+  {
+    "type": "feature",
+    "id": "feat-boon-of-spell-recall",
+    "name": "Boon of Spell Recall",
+    "feature_type": "feat",
+    "description": "You gain the following benefits.\n\nIncrease one ability score of your choice by 1, to a maximum of 30.\n\nWhenever you cast a spell with a level 1\u20134 spell slot, roll 1d4. If the number you roll is the same as the slot's level, the slot isn't expended.",
+    "tag": "epic-boon",
+    "rank": 19
+  },
+  {
+    "type": "feature",
+    "id": "feat-boon-of-the-night-spirit",
+    "name": "Boon of the Night Spirit",
+    "feature_type": "feat",
+    "description": "You gain the following benefits.\n\nIncrease one ability score of your choice by 1, to a maximum of 30.\n\nWhile within Dim Light or Darkness, you can give yourself the Invisible condition as a Bonus Action. The condition ends on you immediately after you take an action, a Bonus Action, or a Reaction.\n\nWhile within Dim Light or Darkness, you have Resistance to all damage except Psychic and Radiant.",
+    "tag": "epic-boon",
+    "rank": 19
+  },
+  {
+    "type": "feature",
+    "id": "feat-boon-of-truesight",
+    "name": "Boon of Truesight",
+    "feature_type": "feat",
+    "description": "You gain the following benefits.\n\nIncrease one ability score of your choice by 1, to a maximum of 30.\n\nYou have Truesight with a range of 60 feet.",
+    "tag": "epic-boon",
+    "rank": 19
+  },
+  {
+    "type": "feature",
+    "id": "feat-defense",
+    "name": "Defense",
+    "feature_type": "feat",
+    "description": "While you're wearing Light, Medium, or Heavy armor, you gain a +1 bonus to Armor Class.",
+    "tag": "fighting-style",
+    "rank": 1
+  },
+  {
+    "type": "feature",
+    "id": "feat-grappler",
+    "name": "Grappler",
+    "feature_type": "feat",
+    "description": "You gain the following benefits.\n\nIncrease your Strength or Dexterity score by 1, to a maximum of 20.\n\nWhen you hit a creature with an Unarmed Strike as part of the Attack action on your turn, you can use both the Damage and the Grapple option. You can use this benefit only once per turn.\n\nYou have Advantage on attack rolls against a creature Grappled by you.\n\nYou don't have to spend extra movement to move a creature Grappled by you if the creature is your size or smaller.",
+    "tag": "general",
+    "rank": 4
+  },
+  {
+    "type": "feature",
+    "id": "feat-great-weapon-fighting",
+    "name": "Great Weapon Fighting",
+    "feature_type": "feat",
+    "description": "When you roll damage for an attack you make with a Melee weapon that you are holding with two hands, you can treat any 1 or 2 on a damage die as a 3. The weapon must have the Two-Handed or Versatile property to gain this benefit.",
+    "tag": "fighting-style",
+    "rank": 1
+  },
+  {
+    "type": "feature",
+    "id": "feat-magic-initiate",
+    "name": "Magic Initiate",
+    "feature_type": "feat",
+    "description": "You gain the following benefits.\n\nYou learn two cantrips of your choice from the Cleric, Druid, or Wizard spell list. Intelligence, Wisdom, or Charisma is your spellcasting ability for this feat's spells (choose when you select this feat).\n\nChoose a level 1 spell from the same list you selected for this feat's cantrips. You always have that spell prepared. You can cast it once without a spell slot, and you regain the ability to cast it in that way when you finish a Long Rest. You can also cast the spell using any spell slots you have.\n\nWhenever you gain a new level, you can replace one of the spells you chose for this feat with a different spell of the same level from the chosen spell list.\n\nYou can take this feat more than once, but you must choose a different spell list each time.",
+    "tag": "origin",
+    "rank": 1
+  },
+  {
+    "type": "feature",
+    "id": "feat-savage-attacker",
+    "name": "Savage Attacker",
+    "feature_type": "feat",
+    "description": "You've trained to deal particularly damaging strikes. Once per turn when you hit a target with a weapon, you can roll the weapon's damage dice twice and use either roll against the target.",
+    "tag": "origin",
+    "rank": 1
+  },
+  {
+    "type": "feature",
+    "id": "feat-skilled",
+    "name": "Skilled",
+    "feature_type": "feat",
+    "description": "You gain proficiency in any combination of three skills or tools of your choice.\n\nYou can take this feat more than once.",
+    "tag": "origin",
+    "rank": 1,
+    "picks": [
+      {
+        "id": "skills",
+        "kind": "skill",
+        "label": "Skills",
+        "grant": "skill",
+        "amount": 1,
+        "count": 3
+      }
+    ]
+  },
+  {
+    "type": "feature",
+    "id": "feat-two-weapon-fighting",
+    "name": "Two-Weapon Fighting",
+    "feature_type": "feat",
+    "description": "When you make an extra attack as a result of using a weapon that has the Light property, you can add your ability modifier to the damage of that attack if you aren't already adding it to the damage.",
+    "tag": "fighting-style",
+    "rank": 1
+  },
+  {
+    "type": "feature",
+    "id": "expertise-acrobatics",
+    "name": "Expertise: Acrobatics",
+    "feature_type": "trait",
+    "description": "Double the proficiency bonus on Acrobatics checks.",
+    "tag": "expertise",
+    "rank": 0
+  },
+  {
+    "type": "feature",
+    "id": "expertise-animal_handling",
+    "name": "Expertise: Animal Handling",
+    "feature_type": "trait",
+    "description": "Double the proficiency bonus on Animal Handling checks.",
+    "tag": "expertise",
+    "rank": 0
+  },
+  {
+    "type": "feature",
+    "id": "expertise-arcana",
+    "name": "Expertise: Arcana",
+    "feature_type": "trait",
+    "description": "Double the proficiency bonus on Arcana checks.",
+    "tag": "expertise",
+    "rank": 0
+  },
+  {
+    "type": "feature",
+    "id": "expertise-athletics",
+    "name": "Expertise: Athletics",
+    "feature_type": "trait",
+    "description": "Double the proficiency bonus on Athletics checks.",
+    "tag": "expertise",
+    "rank": 0
+  },
+  {
+    "type": "feature",
+    "id": "expertise-deception",
+    "name": "Expertise: Deception",
+    "feature_type": "trait",
+    "description": "Double the proficiency bonus on Deception checks.",
+    "tag": "expertise",
+    "rank": 0
+  },
+  {
+    "type": "feature",
+    "id": "expertise-history",
+    "name": "Expertise: History",
+    "feature_type": "trait",
+    "description": "Double the proficiency bonus on History checks.",
+    "tag": "expertise",
+    "rank": 0
+  },
+  {
+    "type": "feature",
+    "id": "expertise-insight",
+    "name": "Expertise: Insight",
+    "feature_type": "trait",
+    "description": "Double the proficiency bonus on Insight checks.",
+    "tag": "expertise",
+    "rank": 0
+  },
+  {
+    "type": "feature",
+    "id": "expertise-intimidation",
+    "name": "Expertise: Intimidation",
+    "feature_type": "trait",
+    "description": "Double the proficiency bonus on Intimidation checks.",
+    "tag": "expertise",
+    "rank": 0
+  },
+  {
+    "type": "feature",
+    "id": "expertise-investigation",
+    "name": "Expertise: Investigation",
+    "feature_type": "trait",
+    "description": "Double the proficiency bonus on Investigation checks.",
+    "tag": "expertise",
+    "rank": 0
+  },
+  {
+    "type": "feature",
+    "id": "expertise-medicine",
+    "name": "Expertise: Medicine",
+    "feature_type": "trait",
+    "description": "Double the proficiency bonus on Medicine checks.",
+    "tag": "expertise",
+    "rank": 0
+  },
+  {
+    "type": "feature",
+    "id": "expertise-nature",
+    "name": "Expertise: Nature",
+    "feature_type": "trait",
+    "description": "Double the proficiency bonus on Nature checks.",
+    "tag": "expertise",
+    "rank": 0
+  },
+  {
+    "type": "feature",
+    "id": "expertise-perception",
+    "name": "Expertise: Perception",
+    "feature_type": "trait",
+    "description": "Double the proficiency bonus on Perception checks.",
+    "tag": "expertise",
+    "rank": 0
+  },
+  {
+    "type": "feature",
+    "id": "expertise-performance",
+    "name": "Expertise: Performance",
+    "feature_type": "trait",
+    "description": "Double the proficiency bonus on Performance checks.",
+    "tag": "expertise",
+    "rank": 0
+  },
+  {
+    "type": "feature",
+    "id": "expertise-persuasion",
+    "name": "Expertise: Persuasion",
+    "feature_type": "trait",
+    "description": "Double the proficiency bonus on Persuasion checks.",
+    "tag": "expertise",
+    "rank": 0
+  },
+  {
+    "type": "feature",
+    "id": "expertise-religion",
+    "name": "Expertise: Religion",
+    "feature_type": "trait",
+    "description": "Double the proficiency bonus on Religion checks.",
+    "tag": "expertise",
+    "rank": 0
+  },
+  {
+    "type": "feature",
+    "id": "expertise-sleight_of_hand",
+    "name": "Expertise: Sleight of Hand",
+    "feature_type": "trait",
+    "description": "Double the proficiency bonus on Sleight of Hand checks.",
+    "tag": "expertise",
+    "rank": 0
+  },
+  {
+    "type": "feature",
+    "id": "expertise-stealth",
+    "name": "Expertise: Stealth",
+    "feature_type": "trait",
+    "description": "Double the proficiency bonus on Stealth checks.",
+    "tag": "expertise",
+    "rank": 0
+  },
+  {
+    "type": "feature",
+    "id": "expertise-survival",
+    "name": "Expertise: Survival",
+    "feature_type": "trait",
+    "description": "Double the proficiency bonus on Survival checks.",
+    "tag": "expertise",
+    "rank": 0
+  }
+]

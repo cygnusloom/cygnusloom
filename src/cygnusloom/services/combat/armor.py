@@ -19,14 +19,18 @@ from cygnusloom.services.events import (
     name_key,
     record,
 )
+from cygnusloom.services.state import same_item_name
 
 
 def armor_after(current: int, listed: int, mode: str, defense: int = 0) -> int:
-    """Combine an armor value with the current defense according to its configured mode."""
+    """Combine an armor value with the current defense according to its configured mode.
+    `shield_flat` adds the shield's full listed value whether or not body armor is worn."""
     if mode == "set":
         return defense + listed
     if mode == "max":
         return max(current, defense + listed)
+    if mode == "shield_flat":
+        return max(current, defense) + listed
     if mode == "shield":
         if current <= defense:
             return defense + listed
@@ -35,8 +39,20 @@ def armor_after(current: int, listed: int, mode: str, defense: int = 0) -> int:
 
 
 def equipped_defense(character: Character, spec: CharacterSpec, base: int, modifier: str) -> int:
-    """Calculate defense from passive floors, worn armor, a wielded shield, and adjustments."""
+    """Calculate defense from passive floors, worn armor, a wielded shield, and adjustments.
+    An equipped body armor may cap the Dexterity modifier its wearer adds."""
     bonus = character.modifier(spec, modifier) if modifier else 0
+    if character.equipped_armor:
+        armor = next(
+            (
+                feature
+                for feature in spec.features.values()
+                if same_item_name(feature.name, character.equipped_armor)
+            ),
+            None,
+        )
+        if armor is not None and armor.defense_dex_cap is not None:
+            bonus = min(bonus, armor.defense_dex_cap)
     unarmored = base + bonus
     floor = max(base, character.innate_defense)
     for feature_id, count in character.features.items():
@@ -60,7 +76,12 @@ def equipped_defense(character: Character, spec: CharacterSpec, base: int, modif
         floor = max(floor, value)
     armor = max(unarmored + character.equipped_armor_value, floor + bonus)
     if character.equipped_shield_value and not character.shield_suspended:
-        armor = armor_after(armor, character.equipped_shield_value, "shield", unarmored)
+        armor = _shield_value(
+            armor,
+            character.equipped_shield_value,
+            character.shield_mode or "shield",
+            unarmored,
+        )
     return armor + character.defense_adjustment
 
 
@@ -82,6 +103,30 @@ def recalculate_defense(
     return value
 
 
+def _defense_bonus(character: Character, spec: CharacterSpec, rules: CombatRules) -> int:
+    """The Dexterity (or other) modifier a character adds to base defense, after an armor cap."""
+    bonus = character.modifier(spec, rules.defense_modifier) if rules.defense_modifier else 0
+    if character.equipped_armor:
+        armor = next(
+            (
+                feature
+                for feature in spec.features.values()
+                if same_item_name(feature.name, character.equipped_armor)
+            ),
+            None,
+        )
+        if armor is not None and armor.defense_dex_cap is not None:
+            bonus = min(bonus, armor.defense_dex_cap)
+    return bonus
+
+
+def _shield_value(current: int, value: int, mode: str, unarmored: int) -> int:
+    """The total defense after adding a shield of `value` in its shop-item mode."""
+    if mode == "shield_flat":
+        return current + value
+    return armor_after(current, value, "shield", unarmored)
+
+
 def set_defense_equipment(
     db: Session,
     campaign_id: int,
@@ -92,8 +137,12 @@ def set_defense_equipment(
     armor: tuple[str, int] | None = None,
     shield: tuple[str, int] | None = None,
     adjustment: int | None = None,
+    shield_mode: str = "shield",
 ) -> int:
-    """Change either equipped defense slot or its adjustment, then record the resulting AC."""
+    """Change either equipped defense slot or its adjustment, then record the resulting AC.
+
+    `shield_mode` is the shop item's armor mode for a shield being equipped now; leaving it
+    out keeps the shield contribution already recorded, which is what an adjustment expects."""
     body = (
         armor if armor is not None else (character.equipped_armor, character.equipped_armor_value)
     )
@@ -113,22 +162,33 @@ def set_defense_equipment(
         )
         innate = max(0, character.armor - bonus)
     without_shield = equipped_defense(
-        replace(character, equipped_shield="", equipped_shield_value=0, shield_suspended=False),
-        spec,
-        rules.defense_base,
-        rules.defense_modifier,
-    )
-    with_shield = equipped_defense(
         replace(
             character,
-            equipped_shield=held_shield[0],
-            equipped_shield_value=held_shield[1],
+            equipped_armor=body[0],
+            equipped_armor_value=body[1],
+            equipped_shield="",
+            equipped_shield_value=0,
+            shield_bonus=0,
             shield_suspended=False,
         ),
         spec,
         rules.defense_base,
         rules.defense_modifier,
     )
+    mode = (shield_mode if shield is not None else character.shield_mode) or "shield"
+    shield_bonus = 0
+    if held_shield[0]:
+        unarmored = rules.defense_base + _defense_bonus(
+            replace(
+                character,
+                equipped_armor=body[0],
+                equipped_armor_value=body[1],
+            ),
+            spec,
+            rules,
+        )
+        with_shield = _shield_value(without_shield, held_shield[1], mode, unarmored)
+        shield_bonus = max(0, with_shield - without_shield)
     record(
         db,
         campaign_id,
@@ -138,7 +198,8 @@ def set_defense_equipment(
             equipped_armor_value=body[1],
             equipped_shield=held_shield[0],
             equipped_shield_value=held_shield[1],
-            shield_bonus=max(0, with_shield - without_shield),
+            shield_mode=mode,
+            shield_bonus=shield_bonus,
             innate_defense=innate,
             defense_adjustment=(character.defense_adjustment if adjustment is None else adjustment),
         ),

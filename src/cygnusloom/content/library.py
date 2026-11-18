@@ -1695,8 +1695,10 @@ class Hooks:
 @dataclass(frozen=True)
 class ShopItem:
     """A catalogue item. `price` is in the rule set's currency. `armor` changes the buyer's armor as
-    `armor_mode` says: "add" adds it, "set" replaces the armor with it, and "max" keeps the higher
-    of the two. `damage` is the attack die the item gives, as text for the GM."""
+    `armor_mode` says: "add" adds it, "set" replaces the armor with it, "max" keeps the higher
+    of the two, "shield" adds a shield when no body armor is worn, and "shield_flat" adds the
+    shield's full value over any armor. `damage` is the attack die the item gives, as text for
+    the GM."""
 
     id: str
     name: str
@@ -3445,6 +3447,7 @@ CHARACTER_DEFINITION_KEYS: Mapping[str, frozenset[str]] = {
             "values",
             "formula",
             "standard",
+            "hidden",
         }
     ),
     "skill": frozenset({"type", "id", "name", "description", "icon", "looks_like"}),
@@ -3473,6 +3476,7 @@ CHARACTER_DEFINITION_KEYS: Mapping[str, frozenset[str]] = {
             "effects",
             "reactions",
             "defense_floor",
+            "defense_dex_cap",
             "picks",
             "repeatable",
             "level_hp_bonus",
@@ -7007,7 +7011,11 @@ def _load_marketplace(
                     else _shop_item_value(d.data, feature, "armor", 0)
                 ),
                 armor_mode=_choice(
-                    d.data, "armor_mode", ("add", "set", "max", "shield"), "add", label
+                    d.data,
+                    "armor_mode",
+                    ("add", "set", "max", "shield", "shield_flat"),
+                    "add",
+                    label,
                 ),
                 damage=damage,
                 uses=(

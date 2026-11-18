@@ -14,7 +14,7 @@ from cygnusloom.content.library import (
     ConditionRules,
     GroupRules,
 )
-from cygnusloom.rules.dice import roll_total, roll_values
+from cygnusloom.rules.dice import ROLL_MODES, roll_mode_values, roll_total, roll_values
 from cygnusloom.services import death, ranges, reactions
 from cygnusloom.services.attacks import (
     AttackFlags,
@@ -264,6 +264,7 @@ def _strike(
     hit_breakdown: dict[str, Any] | None = None,
     damage_breakdown: dict[str, Any] | None = None,
     shock_breakdown: dict[str, Any] | None = None,
+    roll_mode: str = "normal",
 ) -> dict[str, Any]:
     """Apply a hit through the rule set's damage steps. A target that owes a save takes no more
     hits. An NPC saves at once; a player character saves when the player rolls. A hit on an NPC
@@ -278,6 +279,8 @@ def _strike(
     `shock` when the defense is at most `shock_ac`, and no armor stops it. One whose hits never do
     less than their shock (`minimum_shock_damage`) raises the damage to `shock` when it applies.
     Harm that takes a stat in `defeat_at_zero` to 0 defeats the target, with the rule set's status."""
+    if roll_mode not in ROLL_MODES:
+        raise InvalidInput(f"roll mode must be normal, advantage, or disadvantage, not {roll_mode!r}")
     if target.save_due is not None:
         raise InvalidInput(f"{target.name} must make their {target.save_due} save first")
     defense = 0 if ignores_armor else target.armor
@@ -288,12 +291,16 @@ def _strike(
     )
     if combat.hit_mode == "roll_vs_defense":
         if to_hit is None:
-            natural = roll_total(combat.check_die, rng, plus=plus)
+            rolled_dice, natural = roll_mode_values(
+                combat.check_die, rng, plus=plus, mode=roll_mode
+            )
             to_hit = natural + hit_bonus
+        else:
+            rolled_dice = [] if natural is None else [natural]
         if hit_breakdown is None:
             hit_breakdown = roll_breakdown(
                 combat.check_die,
-                [] if natural is None else [natural],
+                rolled_dice,
                 [("bonuses", to_hit - (natural or 0))],
                 to_hit,
                 target=defense,
@@ -459,6 +466,7 @@ def attack(
     force: bool = False,
     cell_feet: int | None = None,
     nonlethal: bool = False,
+    roll_mode: str = "normal",
 ) -> dict[str, Any]:
     """An NPC's attack. Under the auto hit mode it always hits, so the attack's damage is the roll.
     A modifier rolls its own dice instead of the attack's. An attack with Blast hits every target in
@@ -511,6 +519,7 @@ def attack(
             spec=spec,
             hit_penalty=distance.penalty,
             damage_modifier=damage_modifier,
+            roll_mode=roll_mode,
         )
         if state.encounter is not None:
             _mark_attack(db, campaign_id, source.name)
@@ -532,6 +541,7 @@ def attack(
             spec=spec,
             hit_penalty=distance.penalty,
             damage_modifier=damage_modifier,
+            roll_mode=roll_mode,
         )
         if state.encounter is not None:
             _mark_attack(db, campaign_id, source.name)
@@ -607,11 +617,13 @@ def attack(
     natural: int | None = None
     hit_breakdown: dict[str, Any] | None = None
     if combat.hit_mode == "roll_vs_defense":
-        natural = roll_total(combat.check_die, rng, plus=plus)
+        hit_dice, natural = roll_mode_values(
+            combat.check_die, rng, plus=plus, mode=roll_mode
+        )
         to_hit = natural + hit_bonus
         hit_breakdown = roll_breakdown(
             combat.check_die,
-            [natural],
+            hit_dice,
             hit_parts,
             to_hit,
             target=struck.armor,
@@ -640,6 +652,7 @@ def attack(
         hit_breakdown=hit_breakdown,
         damage_breakdown=damage_breakdown,
         shock_breakdown=shock_breakdown,
+        roll_mode=roll_mode,
     )
     if state.encounter is not None:
         _mark_attack(db, campaign_id, source.name)
@@ -662,6 +675,7 @@ def _blast_attack(
     spec: CharacterSpec | None = None,
     hit_penalty: int = 0,
     damage_modifier: int = 0,
+    roll_mode: str = "normal",
 ) -> dict[str, Any]:
     """An NPC's attack with Blast. Each target in its area rolls separately. With no area given,
     the area is the named target alone, so its dice roll once. Against a group, blast damage is
@@ -720,6 +734,7 @@ def _blast_attack(
                 shock=shock,
                 shock_ac=shock_ac,
                 spec=spec,
+                roll_mode=roll_mode,
             )
         )
     return {"attacker": source.name, "attack": name, "blast": True, "targets": results}
@@ -740,6 +755,7 @@ def _blast(
     spec: CharacterSpec | None = None,
     hit_penalty: int = 0,
     damage_modifier: int = 0,
+    roll_mode: str = "normal",
 ) -> dict[str, Any]:
     """A group's attack, which has Blast: it rolls the rule set's blast dice separately for each living
     individual on the other side. The named target must be one of them. Every one is hit unless the
@@ -813,6 +829,7 @@ def _blast(
                 shock=shock,
                 shock_ac=shock_ac,
                 spec=spec,
+                roll_mode=roll_mode,
             )
         )
     return {"attacker": source.name, "attack": name, "blast": True, "targets": results}
@@ -831,6 +848,7 @@ def resolve_attacks(
     spec: CharacterSpec | None = None,
     force: bool = False,
     cell_feet: int | None = None,
+    roll_mode: str = "normal",
 ) -> dict[str, Any]:
     """Several NPC attacks on one character, such as two NPCs of the foe side or one NPC's two
     weapons. Every attack rolls its own dice. Under the rule set's "highest" multi-attack the
@@ -917,7 +935,16 @@ def resolve_attacks(
     ]
     if combat.multi_attack == "each":
         result = _strike_each(
-            db, campaign_id, combat, rng, struck.name, planned, rolls, plus=plus, spec=spec
+            db,
+            campaign_id,
+            combat,
+            rng,
+            struck.name,
+            planned,
+            rolls,
+            plus=plus,
+            spec=spec,
+            roll_mode=roll_mode,
         )
         if state.encounter is not None:
             _mark_attacks(db, campaign_id, [attack.attacker for attack in planned])
@@ -950,6 +977,7 @@ def resolve_attacks(
         shock_ac=chosen.shock_ac,
         nonlethal=chosen.nonlethal,
         spec=spec,
+        roll_mode=roll_mode,
     )
     if state.encounter is not None:
         _mark_attacks(db, campaign_id, [attack.attacker for attack in planned])
@@ -984,6 +1012,7 @@ def _strike_each(
     *,
     plus: str,
     spec: CharacterSpec | None = None,
+    roll_mode: str = "normal",
 ) -> dict[str, Any]:
     """Apply each planned attack in turn, with the damage it already rolled. The attacks stop once
     the target is out of the fight or owes a save, and the result is the last hit, with every hit
@@ -1012,6 +1041,7 @@ def _strike_each(
                 shock_ac=attack.shock_ac,
                 nonlethal=attack.nonlethal,
                 spec=spec,
+                roll_mode=roll_mode,
             )
         )
     return {**results[-1], "attacks": results}
@@ -1050,6 +1080,7 @@ def player_attack(
     character: str = "",
     cell_feet: int | None = None,
     nonlethal: bool = False,
+    roll_mode: str = "normal",
 ) -> dict[str, Any]:
     """A player character's hit. The engine rolls the damage unless the player's roll is passed as
     `damage_roll`. The hit mode decides whether it lands. A group takes only impaired attacks.
@@ -1137,9 +1168,13 @@ def player_attack(
     natural: int | None = None
     hit_breakdown: dict[str, Any] | None = None
     if combat.hit_mode == "roll_vs_defense":
-        natural = (
-            attack_roll if attack_roll is not None else roll_total(combat.check_die, rng, plus=plus)
-        )
+        if attack_roll is not None:
+            natural = attack_roll
+            hit_dice = [natural]
+        else:
+            hit_dice, natural = roll_mode_values(
+                combat.check_die, rng, plus=plus, mode=roll_mode
+            )
         if spec is not None and reactions.has_trigger(pc, spec, None, "attack"):
             natural = max(natural, roll_total(combat.check_die, rng, plus=plus))
         hit_parts = list(prepared.bonuses.to_hit_parts)
@@ -1155,7 +1190,7 @@ def player_attack(
         to_hit = natural + sum(value for _, value in hit_parts)
         hit_breakdown = roll_breakdown(
             combat.check_die,
-            [natural],
+            hit_dice,
             hit_parts,
             to_hit,
             target=struck.armor,
@@ -1181,6 +1216,7 @@ def player_attack(
         hit_breakdown=hit_breakdown,
         damage_breakdown=damage_breakdown,
         shock_breakdown=shock_breakdown,
+        roll_mode=roll_mode,
     )
     if state.encounter is not None:
         _mark_attack(db, campaign_id, pc.name)

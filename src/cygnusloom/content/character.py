@@ -206,6 +206,9 @@ class Stat:
     # The parts of the stat, when it is computed from the others rather than rolled. Such a stat
     # takes no formula, values, swap group, or modifier of its own.
     derived: DerivedStat | None = None
+    # A stat the creation form does not ask the player for, such as hit points or a proficiency
+    # bonus. It is still rolled or derived when the character is resolved.
+    hidden: bool = False
 
     def modifier(self, score: int) -> int:
         """The modifier a score gives: the modifier of the highest band it reaches, or the score
@@ -245,8 +248,9 @@ class FeaturePick:
     """A structured choice a feature requires, such as the attribute for Developed Attribute.
     `choices` limits the pick and `exclude` removes options; an empty `choices` means every stat
     or skill of the pick's kind. `grant` says what the choice gives: `trained` makes a skill
-    trained at level 0, `modifier` adds one to a stat's modifier, and `check_best` makes checks
-    with a chosen skill roll `dice` dice and keep the best `keep`."""
+    trained at level 0, `skill` raises a skill by `amount` levels, `modifier` adds one to a
+    stat's modifier, `score` adds `amount` to a stat's score, and `check_best` makes checks with
+    a chosen skill roll `dice` dice and keep the best `keep`."""
 
     id: str
     kind: str
@@ -258,6 +262,8 @@ class FeaturePick:
     grant: str = ""
     dice: int = 0
     keep: int = 0
+    # The score a `score` grant adds to the chosen stat.
+    amount: int = 1
 
 
 @dataclass(frozen=True)
@@ -337,6 +343,9 @@ class Feature:
     reactions: tuple[Reaction, ...] = ()
     # A passive defense floor, optionally restricted by equipped armor or shields.
     defense_floor: DefenseFloor | None = None
+    # The highest Dexterity modifier this armor lets a wearer add to defense, or None for no
+    # cap. Heavy armor uses 0, medium armor 2.
+    defense_dex_cap: int | None = None
     # A feature that may be taken again as a distinct choice.
     repeatable: bool = False
     # Extra maximum hit points this feature adds for every character level, such as Die Hard's 2.
@@ -851,6 +860,7 @@ def _stat(definition: Definition, template: str) -> Stat:
         modifier_bands=bands,
         plus_modifier=plus_modifier,
         minimum=minimum,
+        hidden=_hidden(definition.data, label),
     )
 
 
@@ -891,7 +901,16 @@ def _derived_stat(definition: Definition, label: str, name: str) -> Stat:
         low=0,
         high=0,
         derived=_derived(data["derived"], label),
+        hidden=_hidden(data, label),
     )
+
+
+def _hidden(data: Mapping[str, Any], label: str) -> bool:
+    """Whether a stat is kept off the creation form."""
+    value = data.get("hidden", False)
+    if not isinstance(value, bool):
+        raise ContentError(f"{label}: 'hidden' must be true or false")
+    return value
 
 
 def _derived(value: object, label: str) -> DerivedStat:
@@ -1086,7 +1105,7 @@ def _check_groups(stats: Mapping[str, Stat], template: str) -> None:
     none of them."""
     groups: dict[str | None, list[Stat]] = {}
     for stat in stats.values():
-        if stat.swap_group is not None:
+        if stat.swap_group is not None and not stat.hidden:
             groups.setdefault(stat.swap_group, []).append(stat)
     for group, members in groups.items():
         assigned = {bool(m.values) for m in members}
@@ -1226,6 +1245,7 @@ def load_feature(
         effects=_feature_effects(data.get("effects", []), label, stats, skills, counters),
         reactions=_feature_reactions(data.get("reactions", []), label),
         defense_floor=_defense_floor(data.get("defense_floor"), counters, label),
+        defense_dex_cap=_defense_dex_cap(data.get("defense_dex_cap"), label),
         repeatable=repeatable,
         level_hp_bonus=level_hp_bonus,
         stabilizes=stabilizes,
@@ -1290,17 +1310,30 @@ def _feature_picks(
         if isinstance(count, bool) or not isinstance(count, int) or count < 1:
             raise ContentError(f"{label}: pick {pick_id!r} 'count' must be at least 1")
         grant = entry.get("grant", "")
-        if grant not in ("", "trained", "modifier", "check_best"):
+        if grant not in ("", "trained", "skill", "modifier", "score", "check_best"):
             raise ContentError(
-                f"{label}: pick {pick_id!r} 'grant' must be '', 'trained', 'modifier', or "
-                "'check_best'"
+                f"{label}: pick {pick_id!r} 'grant' must be '', 'trained', 'skill', 'modifier', "
+                "'score', or 'check_best'"
             )
-        if grant == "trained" and kind != "skill":
-            raise ContentError(f"{label}: pick {pick_id!r} can grant training only to a skill")
-        if grant == "modifier" and kind != "stat":
-            raise ContentError(f"{label}: pick {pick_id!r} can grant a modifier only to a stat")
+        if grant in ("trained", "skill") and kind != "skill":
+            raise ContentError(
+                f"{label}: pick {pick_id!r} can grant {grant} only to a skill"
+            )
+        if grant in ("modifier", "score") and kind != "stat":
+            raise ContentError(
+                f"{label}: pick {pick_id!r} can grant a {grant} only to a stat"
+            )
         if grant == "check_best" and kind != "skill":
             raise ContentError(f"{label}: pick {pick_id!r} can improve checks only with a skill")
+        amount = _pick_number(entry, "amount", label, pick_id)
+        if grant in ("score", "skill") and "amount" not in entry:
+            amount = 1
+        if grant in ("score", "skill") and amount < 1:
+            raise ContentError(f"{label}: pick {pick_id!r} needs a positive 'amount'")
+        if grant not in ("score", "skill") and "amount" in entry:
+            raise ContentError(
+                f"{label}: pick {pick_id!r} 'amount' needs grant 'score' or 'skill'"
+            )
         dice = _pick_number(entry, "dice", label, pick_id)
         keep = _pick_number(entry, "keep", label, pick_id)
         if grant == "check_best":
@@ -1322,6 +1355,7 @@ def _feature_picks(
                 grant=grant,
                 dice=dice,
                 keep=keep,
+                amount=amount,
             )
         )
     return tuple(picks)
@@ -1362,6 +1396,15 @@ def _stat_ids(value: object, key: str, stats: Collection[str], label: str) -> tu
     if unknown:
         raise ContentError(f"{label}: {key!r} names no stat ({unknown[0]!r})")
     return tuple(value)
+
+
+def _defense_dex_cap(value: object, label: str) -> int | None:
+    """An armor's Dexterity modifier cap, or None when the armor has none."""
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise ContentError(f"{label}: 'defense_dex_cap' must be a whole number, 0 or more")
+    return value
 
 
 def _defense_floor(value: object, counters: Collection[str], label: str) -> DefenseFloor | None:
@@ -2392,7 +2435,7 @@ def character_schema(spec: CharacterSpec) -> dict[str, Any]:
     combination, and anything left out is rolled or left blank. A field that takes a table value
     lists its values with `choice_options`, not here; `check_choices` checks them."""
     properties: dict[str, Any] = {}
-    rolled = [s for s in spec.stats.values() if s.derived is None]
+    rolled = [s for s in spec.stats.values() if s.derived is None and not s.hidden]
     if rolled:
         properties["stats"] = _object(
             {
@@ -2896,6 +2939,10 @@ def _check_feature_choices(spec: CharacterSpec, submitted: Mapping[str, Any]) ->
     if not isinstance(given, Mapping):
         raise CharacterError("'feature_choices' must map feature picks to lists of choices")
     possible = set(submitted.get("features", []))
+    for template_id in _pick_object(submitted.get("templates", {}), "templates").values():
+        template = spec.templates.get(str(template_id))
+        if template is not None:
+            possible.update(granted.feature for granted in template.features)
     for values in _pick_object(submitted.get("feature_picks", {}), "feature_picks").values():
         if isinstance(values, list):
             possible.update(values)
@@ -3107,7 +3154,7 @@ def check_swaps(spec: CharacterSpec, rolled: Mapping[str, int], chosen: Mapping[
     stat is computed, not chosen."""
     groups: dict[str | None, list[Stat]] = {}
     for stat in spec.stats.values():
-        if stat.derived is None:
+        if stat.derived is None and not stat.hidden:
             groups.setdefault(stat.swap_group, []).append(stat)
     for group, members in groups.items():
         ids = [stat.id for stat in members]
@@ -3291,9 +3338,27 @@ def resolve(
             )
     _check_ordered_feature_ranks(spec, features)
     stat_modifiers: dict[str, int] = {}
+    stat_bonuses: dict[str, int] = {}
     feature_choices = _feature_choice_values(
-        spec, features, given_feature_choices, increments, stat_modifiers
+        spec, features, given_feature_choices, increments, stat_modifiers, stat_bonuses
     )
+    # A choice can raise a score that another stat adds the modifier of, such as Constitution
+    # to hit points. That stat was computed before the choices, so raise it by the same change.
+    modifiers_before = {
+        stat.id: spec.modifier(stats, stat.id)
+        for stat in spec.stats.values()
+        if stat.derived is None
+    }
+    for stat_id, bonus in stat_bonuses.items():
+        stats[stat_id] += bonus
+    for stat in spec.stats.values():
+        if not stat.plus_modifier:
+            continue
+        delta = spec.modifier(stats, stat.plus_modifier) - modifiers_before.get(
+            stat.plus_modifier, 0
+        )
+        if delta:
+            stats[stat.id] += delta
     counters = {
         counter_id: _within(spec.counters[counter_id], spec.counters[counter_id].initial + amount)
         for counter_id, amount in counter_amounts.items()
@@ -3349,6 +3414,7 @@ def _feature_choice_values(
     given: Mapping[str, list[str]],
     increments: dict[str, int],
     stat_modifiers: dict[str, int],
+    stat_bonuses: dict[str, int],
 ) -> dict[str, list[str]]:
     """Validate the choices the features the character holds ask for, filling in one when a
     rolled feature left the choice blank. A `trained` choice marks a level-0 skill as trained."""
@@ -3391,9 +3457,15 @@ def _feature_choice_values(
             if pick.grant == "trained":
                 for value in values:
                     increments.setdefault(value, 0)
+            elif pick.grant == "skill":
+                for value in values:
+                    increments[value] = increments.get(value, 0) + pick.amount
             elif pick.grant == "modifier":
                 for value in values:
                     stat_modifiers[value] = stat_modifiers.get(value, 0) + 1
+            elif pick.grant == "score":
+                for value in values:
+                    stat_bonuses[value] = stat_bonuses.get(value, 0) + pick.amount
     return choices
 
 

@@ -544,6 +544,12 @@
           "type": "boolean",
           "default": false,
           "description": "Resolve the attack even though this is not the attacker's turn, or the attacker has already used its attack action this turn. Set it only when the story needs it: an ambush outside the turn order, or a player who insists for the story's sake."
+        },
+        "roll_mode": {
+          "type": "string",
+          "enum": ["normal", "advantage", "disadvantage"],
+          "default": "normal",
+          "description": "How the attack is rolled when the rules give advantage or disadvantage: normal keeps one d20, advantage keeps the higher of two, and disadvantage keeps the lower."
         }
       },
       "required": ["attacker", "attack", "target"]
@@ -577,6 +583,12 @@
           "type": "boolean",
           "default": false,
           "description": "Resolve the attack even though it is not the player character's turn, or their attacks for this turn are spent. Set it only when the player insists for the story."
+        },
+        "roll_mode": {
+          "type": "string",
+          "enum": ["normal", "advantage", "disadvantage"],
+          "default": "normal",
+          "description": "How the attack is rolled when the rules give advantage or disadvantage: normal keeps one d20, advantage keeps the higher of two, and disadvantage keeps the lower. The player's reported roll is used as given."
         }
       },
       "required": ["target", "weapon"]

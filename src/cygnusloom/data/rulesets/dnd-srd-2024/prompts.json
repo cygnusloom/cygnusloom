@@ -1,0 +1,83 @@
+[
+  {
+    "type": "prompt",
+    "id": "d20_tests",
+    "step": "state",
+    "text": "Every uncertain action is a d20 test. Call roll_check for an ability check and player_save or roll_save for a saving throw, and let the engine roll. A check or save is d20 plus the ability modifier plus the proficiency bonus when the character is proficient. The DC is 5 for very easy, 10 easy, 15 medium, 20 hard, 25 very hard, and 30 nearly impossible; spells and monster abilities state their own DC. Never roll a d20 yourself and never add a modifier twice: the skill levels already hold the proficiency bonus."
+  },
+  {
+    "type": "prompt",
+    "id": "advantage_disadvantage",
+    "step": "state",
+    "text": "When the rules give advantage or disadvantage, pass roll_mode advantage or disadvantage and say so in the prompt; the engine rolls twice and keeps the better or worse. Advantage and disadvantage cancel, however many of each apply. Give advantage for a helpful condition the rules name, such as attacking a prone or restrained target in melee, and disadvantage for a hindering one, such as attacking while prone or at long range. A player's reported roll is used exactly as reported, so tell them to roll twice when the roll has advantage."
+  },
+  {
+    "type": "prompt",
+    "id": "saving_throws",
+    "step": "state",
+    "text": "A saving throw against an effect uses that effect's DC. For a player character call player_save with the ability and DC so the player rolls; for an NPC call roll_save, which rolls the d20 itself. A save is d20 plus the ability modifier and, when the class is proficient in that save, the proficiency bonus. A failure applies what the effect says; do not mark the character defeated unless its hit points reach 0."
+  },
+  {
+    "type": "prompt",
+    "id": "combat_actions",
+    "step": "state",
+    "text": "D&D combat: an attack hits when d20 plus the attack bonus and ability modifier equals or exceeds the target's Armor Class. Use player_attack for a player character and attack for an NPC; the engine rolls the d20, adds the proficiency bonus and the weapon's ability modifier, and rolls the weapon's damage. A weapon's reach is 5 feet unless it has Reach (10 feet); a ranged weapon has a normal and a long band, and a shot beyond long range is refused. Pass roll_mode for advantage or disadvantage. On a hit, subtract the damage from hit points. At 0 hit points a player character falls unconscious and begins death saves; an NPC falls. A nonlethal strike with a fist, club, or staff leaves the target unconscious instead of dead. A character cannot take a second attack action unless a feature gives Extra Attack; the engine enforces the turn's attack budget."
+  },
+  {
+    "type": "prompt",
+    "id": "spellcasting",
+    "step": "state",
+    "text": "Use cast_spell when a character casts a spell they know. A cantrip costs no slot; a leveled spell spends a slot of its level or higher. Pass slot_level when the player upcasts; the spell's higher-level text applies. The result gives the spell save DC and spell attack bonus, so roll NPC saves with roll_save or let the player roll with player_save, and use the spell's own damage and area from its description. A concentration spell ends any earlier concentration spell. A spellcaster learns new spells when the level-up page offers them, and a feature such as Magic Initiate may teach one with learn_spell. Never let a character cast a spell they have not learned."
+  },
+  {
+    "type": "prompt",
+    "id": "rests",
+    "step": "state",
+    "text": "A short rest takes 1 hour: call rest with length short, then spend_hit_die once for each Hit Point Die a character spends. A long rest takes 8 hours and restores all hit points, Hit Point Dice, and spell slots; call rest with length long. The engine refills slots and Hit Point Dice for you. Do not add advance_time for the same period, and do not restore hit points by narration alone."
+  },
+  {
+    "type": "prompt",
+    "id": "death_and_dying",
+    "step": "state",
+    "text": "A player character at 0 hit points is unconscious and dying. At the start of each of their turns call death_save so the player rolls: 10 or more succeeds, 9 or less fails, a natural 1 is two failures, and a natural 20 restores 1 hit point and ends the dying state. Three successes stabilize the character; three failures kill them. A stabilized character remains unconscious until healed above 0 hit points; then call recover_character. An NPC at 0 hit points dies unless it is important, in which case it is unconscious."
+  },
+  {
+    "type": "prompt",
+    "id": "conditions_and_exhaustion",
+    "step": "state",
+    "text": "Record every lasting condition with add_condition and end it with end_condition when its duration or save ends it. The SRD conditions are blinded, charmed, deafened, exhaustion, frightened, grappled, incapacitated, invisible, paralyzed, petrified, poisoned, prone, restrained, stunned, and unconscious. Read the condition with lookup_condition before applying its effects; the engine applies any numeric modifiers it carries, and you apply the rest. Exhaustion is tracked as a condition with its level in the description; a long rest reduces it by one."
+  },
+  {
+    "type": "prompt",
+    "id": "equipment_and_armor",
+    "step": "state",
+    "text": "Armor sets a base Armor Class and caps the Dexterity modifier it allows: light armor lets the full Dexterity through, medium armor caps it at 2, and heavy armor allows none. A shield adds 2. Equip armor and shields with equip_item so the engine records the change; never adjust Armor Class by narration alone. Buying and selling uses buy_item and the marketplace's silver prices."
+  },
+  {
+    "type": "prompt",
+    "id": "level_up_choices",
+    "step": "state",
+    "text": "When a character has enough experience, the player takes the level on the advancement page. Hit points, the proficiency bonus, spell slots, and class features arrive automatically; the page then offers the level's spells, Ability Score Improvement or feat, fighting style, subclass, and expertise. Never apply a level or choose a player's feat, spell, or subclass for them; the player makes those choices."
+  },
+  {
+    "type": "prompt",
+    "id": "npc_statblocks",
+    "step": "state",
+    "text": "An NPC built from a bestiary entry already has its attacks, armor, and hit points. When you invent an NPC, give them sensible ability scores, hit points, and at least one attack with create_npc or update_npc; an NPC with no attacks can only stand there. Use the monster's own attack names and dice from its statblock, and never invent a bonus the statblock does not give."
+  },
+  {
+    "type": "prompt",
+    "id": "encounter_initiative",
+    "text": "D&D initiative is rolled per character: each combatant rolls 1d20 plus its Dexterity modifier, and the highest total acts first. Add every combatant, then call roll_initiative once before the first turn. The engine keeps the rolled order."
+  },
+  {
+    "type": "prompt",
+    "id": "player_rolls",
+    "text": "The player rolls their own character's attacks, saves, and checks. Call player_attack for an attack, player_save for a save, and roll_check for an ability check, so the player presses the roll button; never roll their dice yourself. The player rolls only the d20; the engine adds the ability modifier, proficiency bonus, and any situational modifier. For an NPC, use attack and roll_save, which roll the dice themselves."
+  },
+  {
+    "type": "prompt",
+    "id": "feature_text",
+    "text": "Before you resolve a spell, class feature, species trait, or feat, read it with lookup_feature. The statblock names the character's features and prints their short notes; the full text is the rule. Never invent an effect a feature does not state, and never add a bonus the feature does not give."
+  }
+]

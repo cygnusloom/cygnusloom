@@ -3048,16 +3048,24 @@ class FeatureChoiceMade(GameEvent):
     choice: str
     # A skill the choice trains at level 0, when the feature's pick grants training.
     skill: str = ""
+    # Levels the choice adds to `skill`, when the pick grants skill levels.
+    skill_amount: int = 0
     # A stat whose modifier the choice raises by one, when the pick grants a modifier.
     stat: str = ""
+    # A score the choice adds to `stat`, when the pick grants a score.
+    stat_amount: int = 0
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         character = state.characters[name_key(self.name)]
         key = f"{self.feature}:{self.pick}"
         character.feature_choices.setdefault(key, []).append(self.choice)
-        if self.skill:
+        if self.skill_amount:
+            character.skills[self.skill] = character.skills.get(self.skill, 0) + self.skill_amount
+        elif self.skill:
             character.skills.setdefault(self.skill, 0)
-        if self.stat:
+        if self.stat_amount:
+            character.stats[self.stat] = character.stats.get(self.stat, 0) + self.stat_amount
+        elif self.stat:
             character.stat_modifiers[self.stat] = character.stat_modifiers.get(self.stat, 0) + 1
 
     def render(self) -> str:
@@ -3587,6 +3595,7 @@ class DefenseEquipmentSet(GameEvent):
     equipped_armor_value: int = 0
     equipped_shield: str = ""
     equipped_shield_value: int = 0
+    shield_mode: str = "shield"
     shield_bonus: int = 0
     innate_defense: int = 0
     defense_adjustment: int = 0
@@ -3597,6 +3606,7 @@ class DefenseEquipmentSet(GameEvent):
         character.equipped_armor_value = self.equipped_armor_value
         character.equipped_shield = self.equipped_shield
         character.equipped_shield_value = self.equipped_shield_value
+        character.shield_mode = self.shield_mode or "shield"
         character.shield_bonus = self.shield_bonus
         character.innate_defense = self.innate_defense
         character.defense_adjustment = self.defense_adjustment

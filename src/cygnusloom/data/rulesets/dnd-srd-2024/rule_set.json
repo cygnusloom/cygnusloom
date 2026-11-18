@@ -1,0 +1,81 @@
+[
+  {
+    "type": "rule_set",
+    "id": "dnd-srd-2024",
+    "icon": "sword",
+    "name": "Dungeons & Dragons 5.5e (SRD 5.2)",
+    "blurb": "The 2024 D&D rules from the System Reference Document: d20 checks, twelve classes, nine species, spells, and a bestiary of monsters.",
+    "third_party": true,
+    "description": "Character creation and play for the 2024 edition of the world's best-known fantasy roleplaying game, using the System Reference Document 5.2.1. Abilities are assigned from the standard array, species and background shape the character, and one of twelve classes carries them from level 1 to 20. Checks and saves are d20 plus an ability modifier and the proficiency bonus; spellcasters track slots level by level. The full SRD spell list, bestiary, and magic item catalogue are included. Text adapted from the System Reference Document 5.2.1, licensed under CC BY 4.0.",
+    "capabilities": {
+      "magic": "prepared",
+      "travel": "none",
+      "wilderness": false,
+      "dungeon": false,
+      "combat": true,
+      "social": [
+        "conditions",
+        "counters",
+        "checks"
+      ]
+    },
+    "plus": "highest",
+    "item_sizes": {
+      "tiny": 0,
+      "small": 1,
+      "normal": 1,
+      "large": 2,
+      "huge": 4,
+      "massive": 8
+    },
+    "stat_presets": {
+      "abilities": {
+        "formula": "3d6",
+        "swap_group": "abilities"
+      }
+    },
+    "table_genres": [
+      "generic",
+      "fantasy"
+    ],
+    "skill_progression": {
+      "untrained": 0,
+      "first_level": 2,
+      "creation_maximum": 4,
+      "maximum": 12
+    },
+    "condition_ends": [
+      "rest",
+      "long_rest",
+      "save",
+      "time",
+      "magic"
+    ],
+    "npc_hp_stat": "hp",
+    "npc_hp": {
+      "average": 4,
+      "hardier": 11,
+      "serious": 22,
+      "elite": 45,
+      "heroic": 90
+    },
+    "default_campaign": {
+      "rule_set": "dnd-srd-2024",
+      "world_template": "unwritten-world"
+    },
+    "recommended_worlds": [
+      "unwritten-world"
+    ]
+  },
+  {
+    "type": "encounter_grid",
+    "id": "dnd-srd-2024",
+    "cell_feet": 5,
+    "move_feet": 30
+  },
+  {
+    "type": "python_module",
+    "id": "dnd_srd_2024",
+    "module": "cygnusloom.rules.dnd_srd_2024"
+  }
+]

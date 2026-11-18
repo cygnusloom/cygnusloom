@@ -1,0 +1,175 @@
+[
+  {
+    "type": "counter",
+    "id": "level",
+    "label": "Level",
+    "min": 1,
+    "max": 20,
+    "initial": 1,
+    "description": "The character's class level, from 1 to 20."
+  },
+  {
+    "type": "counter",
+    "id": "xp",
+    "label": "Experience",
+    "min": 0,
+    "initial": 0,
+    "description": "Cumulative experience points."
+  },
+  {
+    "type": "counter",
+    "id": "hit_dice",
+    "label": "Hit Point Dice",
+    "min": 0,
+    "max": 20,
+    "initial": 0,
+    "description": "Hit Point Dice available to spend on a short rest."
+  },
+  {
+    "type": "counter",
+    "id": "death_saves",
+    "label": "Death Save Failures",
+    "min": 0,
+    "max": 3,
+    "initial": 0,
+    "description": "Failed death saves; three kills the character."
+  },
+  {
+    "type": "counter",
+    "id": "death_successes",
+    "label": "Death Save Successes",
+    "min": 0,
+    "max": 3,
+    "initial": 0,
+    "description": "Successful death saves; three stabilize the character."
+  },
+  {
+    "type": "counter",
+    "id": "spell_picks",
+    "label": "Spells to Learn",
+    "min": 0,
+    "initial": 0,
+    "description": "New leveled spells the character may learn."
+  },
+  {
+    "type": "counter",
+    "id": "cantrip_picks",
+    "label": "Cantrips to Learn",
+    "min": 0,
+    "initial": 0,
+    "description": "New cantrips the character may learn."
+  },
+  {
+    "type": "counter",
+    "id": "asi_picks",
+    "label": "Ability Score Improvements",
+    "min": 0,
+    "initial": 0,
+    "description": "Feat or ability score choices waiting at this level."
+  },
+  {
+    "type": "counter",
+    "id": "fighting_style_picks",
+    "label": "Fighting Style Picks",
+    "min": 0,
+    "initial": 0,
+    "description": "Fighting Style feats the character may choose."
+  },
+  {
+    "type": "counter",
+    "id": "subclass_picks",
+    "label": "Subclass Picks",
+    "min": 0,
+    "initial": 0,
+    "description": "A subclass choice waiting at level 3."
+  },
+  {
+    "type": "counter",
+    "id": "expertise_picks",
+    "label": "Expertise Picks",
+    "min": 0,
+    "initial": 0,
+    "description": "Proficient skills the character may sharpen into expertise."
+  },
+  {
+    "type": "counter",
+    "id": "slot_1",
+    "label": "Level 1 Spell Slots",
+    "min": 0,
+    "max": 4,
+    "initial": 0,
+    "description": "Unspent level 1 spell slots."
+  },
+  {
+    "type": "counter",
+    "id": "slot_2",
+    "label": "Level 2 Spell Slots",
+    "min": 0,
+    "max": 4,
+    "initial": 0,
+    "description": "Unspent level 2 spell slots."
+  },
+  {
+    "type": "counter",
+    "id": "slot_3",
+    "label": "Level 3 Spell Slots",
+    "min": 0,
+    "max": 4,
+    "initial": 0,
+    "description": "Unspent level 3 spell slots."
+  },
+  {
+    "type": "counter",
+    "id": "slot_4",
+    "label": "Level 4 Spell Slots",
+    "min": 0,
+    "max": 4,
+    "initial": 0,
+    "description": "Unspent level 4 spell slots."
+  },
+  {
+    "type": "counter",
+    "id": "slot_5",
+    "label": "Level 5 Spell Slots",
+    "min": 0,
+    "max": 4,
+    "initial": 0,
+    "description": "Unspent level 5 spell slots."
+  },
+  {
+    "type": "counter",
+    "id": "slot_6",
+    "label": "Level 6 Spell Slots",
+    "min": 0,
+    "max": 4,
+    "initial": 0,
+    "description": "Unspent level 6 spell slots."
+  },
+  {
+    "type": "counter",
+    "id": "slot_7",
+    "label": "Level 7 Spell Slots",
+    "min": 0,
+    "max": 4,
+    "initial": 0,
+    "description": "Unspent level 7 spell slots."
+  },
+  {
+    "type": "counter",
+    "id": "slot_8",
+    "label": "Level 8 Spell Slots",
+    "min": 0,
+    "max": 4,
+    "initial": 0,
+    "description": "Unspent level 8 spell slots."
+  },
+  {
+    "type": "counter",
+    "id": "slot_9",
+    "label": "Level 9 Spell Slots",
+    "min": 0,
+    "max": 4,
+    "initial": 0,
+    "description": "Unspent level 9 spell slots."
+  }
+]

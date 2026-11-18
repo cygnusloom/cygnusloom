@@ -1,0 +1,157 @@
+[
+  {
+    "type": "world_terrain",
+    "id": "lake",
+    "rule": "Open water. Nothing crosses it on foot; the way round follows the shore."
+  },
+  {
+    "type": "world_terrain",
+    "id": "open",
+    "rule": "Open grassland and scrub. Easy going: travel on foot."
+  },
+  {
+    "type": "world_terrain",
+    "id": "forest",
+    "rule": "Forest without a path. Tough going: travel by rough terrain."
+  },
+  {
+    "type": "world_terrain",
+    "id": "hills",
+    "rule": "Hills and broken ground. Tough going: travel by rough terrain."
+  },
+  {
+    "type": "world_terrain",
+    "id": "fen",
+    "rule": "Marsh and fen. Perilous going: travel by rough terrain."
+  },
+  {
+    "type": "world_terrain",
+    "id": "desert",
+    "rule": "Sand and scrub. Tough going in heat: travel by rough terrain, and carry water."
+  },
+  {
+    "type": "world_terrain",
+    "id": "tundra",
+    "rule": "Cold, open ground. Tough going in weather: travel by rough terrain."
+  },
+  {
+    "type": "world_terrain",
+    "id": "glacier",
+    "rule": "Ice and crevasses. Perilous going: travel by rough terrain, and rope up."
+  },
+  {
+    "type": "world_terrain",
+    "id": "volcano",
+    "rule": "Ash, lava, and poisonous air. Perilous going: travel by rough terrain."
+  },
+  {
+    "type": "world_terrain",
+    "id": "jungle",
+    "rule": "Dense tropical forest. Tough going: travel by rough terrain."
+  },
+  {
+    "type": "world_terrain",
+    "id": "moor",
+    "rule": "Heath and peat. Tough going: travel by rough terrain."
+  },
+  {
+    "type": "world_terrain",
+    "id": "steppe",
+    "rule": "Open grassy plain. Easy going: travel on foot."
+  },
+  {
+    "type": "world_terrain",
+    "id": "badlands",
+    "rule": "Eroded gullies and broken rock. Tough going: travel by rough terrain."
+  },
+  {
+    "type": "world_terrain",
+    "id": "farmland",
+    "rule": "Tilled fields and hedgerows. Easy going while the tracks are dry: travel on foot."
+  },
+  {
+    "type": "world_terrain",
+    "id": "ocean",
+    "rule": "Open water. Nothing crosses it on foot; a boat is needed."
+  },
+  {
+    "type": "world_terrain",
+    "id": "reef",
+    "rule": "Shallow coral water. Small boats may cross slowly; larger craft cannot."
+  },
+  {
+    "type": "world_terrain",
+    "id": "island",
+    "rule": "An isolated shore. Easy going on the land; reaching it needs a boat."
+  },
+  {
+    "type": "world_terrain",
+    "id": "plateau",
+    "rule": "Raised tableland. Tough going up or down the rim: travel by rough terrain."
+  },
+  {
+    "type": "world_terrain",
+    "id": "mountains",
+    "rule": "Mountain country. Perilous going: travel by rough terrain; passes are few."
+  },
+  {
+    "type": "world_terrain",
+    "id": "swamp",
+    "rule": "Bog and standing water. Perilous going: travel by rough terrain."
+  },
+  {
+    "type": "world_terrain",
+    "id": "coast",
+    "rule": "Shoreline and coastal water. Easy going along the shore; boats keep close in."
+  },
+  {
+    "type": "world_terrain",
+    "id": "river",
+    "rule": "Flowing water. Cross at a ford, bridge, or boat; the banks are easy going."
+  },
+  {
+    "type": "world_terrain",
+    "id": "meadow",
+    "rule": "Flower meadows and soft grass. Easy going on foot."
+  },
+  {
+    "type": "world_terrain",
+    "id": "pinewood",
+    "rule": "Dark conifer forest. Tough going: travel by rough terrain."
+  },
+  {
+    "type": "world_terrain",
+    "id": "canyon",
+    "rule": "Sheer walls and a broken floor. Perilous going: travel by rough terrain."
+  },
+  {
+    "type": "world_terrain",
+    "id": "saltflat",
+    "rule": "Cracked white pan. Easy going when dry, but there is no water or cover."
+  },
+  {
+    "type": "world_terrain",
+    "id": "ashland",
+    "rule": "Cold ash and cinders. Tough going, and the air stings the throat."
+  },
+  {
+    "type": "world_terrain",
+    "id": "lagoon",
+    "rule": "Calm, shallow water. Cross by boat or wade the warm shallows."
+  },
+  {
+    "type": "world_terrain",
+    "id": "orchard",
+    "rule": "Rows of fruit trees and mown grass. Easy going between the trunks."
+  },
+  {
+    "type": "world_terrain",
+    "id": "highland",
+    "rule": "Wind-scoured upland. Tough going: travel by rough terrain."
+  },
+  {
+    "type": "world_terrain",
+    "id": "bog",
+    "rule": "Deep, sucking bog. Perilous going: travel by rough terrain, and test the ground."
+  }
+]

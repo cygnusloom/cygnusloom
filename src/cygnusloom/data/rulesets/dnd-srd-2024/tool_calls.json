@@ -1,0 +1,321 @@
+[
+  {
+    "type": "tool_call",
+    "id": "roll_check",
+    "bind": {
+      "check": "ability"
+    },
+    "description": "Ask the player to roll an ability check: d20 plus the ability modifier and the proficiency bonus when the character is proficient. Call it whenever an action is uncertain and a skill or ability applies. Give a DC: 10 easy, 15 medium, 20 hard, 25 very hard. Pass roll_mode advantage or disadvantage when the rules give it.",
+    "parameters": {
+      "properties": {
+        "prompt": {
+          "type": "string",
+          "description": "What the GM says to invite the roll. The player sees this text."
+        },
+        "character": {
+          "type": "string",
+          "description": "The player character making the check."
+        },
+        "skill": {
+          "type": "string",
+          "enum_from": "skills",
+          "description": "The skill used, such as perception, stealth, or persuasion."
+        },
+        "stat": {
+          "type": "string",
+          "enum": [
+            "str",
+            "dex",
+            "con",
+            "int",
+            "wis",
+            "cha"
+          ],
+          "description": "The ability whose modifier is added."
+        },
+        "difficulty": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 30,
+          "default": 15,
+          "description": "The DC: 10 easy, 15 medium, 20 hard."
+        },
+        "modifier": {
+          "type": "integer",
+          "minimum": -10,
+          "maximum": 10,
+          "default": 0,
+          "description": "A situational bonus or penalty."
+        },
+        "roll_mode": {
+          "type": "string",
+          "enum": [
+            "normal",
+            "advantage",
+            "disadvantage"
+          ],
+          "default": "normal",
+          "description": "Advantage or disadvantage on the d20."
+        },
+        "cause": {
+          "type": "string",
+          "description": "What the check is for, in a few words."
+        }
+      },
+      "required": [
+        "prompt",
+        "character",
+        "skill",
+        "stat"
+      ]
+    },
+    "player_input": {
+      "param": "roll",
+      "dice": "1d20",
+      "dice_values_param": "dice_values",
+      "details": "The engine adds your ability modifier and proficiency bonus."
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "player_save",
+    "python_module": "dnd_srd_2024",
+    "function": "roll_save",
+    "description": "Ask the player to roll an ability save against an effect's DC. Use it for a player character; an NPC saves with roll_save. The engine adds the ability modifier and the proficiency bonus when the class is proficient in that save.",
+    "parameters": {
+      "properties": {
+        "prompt": {
+          "type": "string",
+          "description": "What the GM says to invite the save. The player sees this text."
+        },
+        "name": {
+          "type": "string",
+          "description": "The player character saving."
+        },
+        "stat": {
+          "type": "string",
+          "enum": [
+            "str",
+            "dex",
+            "con",
+            "int",
+            "wis",
+            "cha"
+          ],
+          "description": "The ability the save uses."
+        },
+        "dc": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 40,
+          "description": "The saving throw DC."
+        },
+        "cause": {
+          "type": "string",
+          "description": "What the save is for."
+        },
+        "roll_mode": {
+          "type": "string",
+          "enum": [
+            "normal",
+            "advantage",
+            "disadvantage"
+          ],
+          "default": "normal",
+          "description": "Advantage or disadvantage on the save."
+        }
+      },
+      "required": [
+        "prompt",
+        "name",
+        "stat",
+        "dc",
+        "cause"
+      ]
+    },
+    "player_input": {
+      "param": "roll",
+      "dice": "1d20",
+      "details": "The engine adds your save bonus."
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "roll_save",
+    "python_module": "dnd_srd_2024",
+    "function": "roll_save",
+    "description": "Roll an NPC's or monster's ability save against an effect's DC. The engine rolls the d20 and adds the ability modifier. Use player_save instead for a player character.",
+    "parameters": {
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The NPC saving."
+        },
+        "stat": {
+          "type": "string",
+          "enum": [
+            "str",
+            "dex",
+            "con",
+            "int",
+            "wis",
+            "cha"
+          ],
+          "description": "The ability the save uses."
+        },
+        "dc": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 40,
+          "description": "The saving throw DC."
+        },
+        "cause": {
+          "type": "string",
+          "description": "What the save is for."
+        },
+        "roll_mode": {
+          "type": "string",
+          "enum": [
+            "normal",
+            "advantage",
+            "disadvantage"
+          ],
+          "default": "normal",
+          "description": "Advantage or disadvantage on the save."
+        }
+      },
+      "required": [
+        "name",
+        "stat",
+        "dc",
+        "cause"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "death_save",
+    "python_module": "dnd_srd_2024",
+    "function": "death_save",
+    "description": "Ask a dying player character to roll a death save at the start of their turn. Ten or more succeeds, nine or less fails, a natural 1 counts as two failures, and a natural 20 restores 1 hit point. Three successes stabilize; three failures kill.",
+    "parameters": {
+      "properties": {
+        "prompt": {
+          "type": "string",
+          "description": "What the GM says to invite the death save."
+        },
+        "name": {
+          "type": "string",
+          "description": "The dying player character."
+        }
+      },
+      "required": [
+        "prompt",
+        "name"
+      ]
+    },
+    "player_input": {
+      "param": "roll",
+      "dice": "1d20",
+      "details": "Roll a death save: 10 or more succeeds."
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "spend_hit_die",
+    "python_module": "dnd_srd_2024",
+    "function": "spend_hit_die",
+    "description": "Spend one of a character's Hit Point Dice on a short rest to regain its roll plus the Constitution modifier. Call it once per die spent, after the rest.",
+    "parameters": {
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The character spending a Hit Point Die."
+        }
+      },
+      "required": [
+        "name"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "cast_spell",
+    "python_module": "dnd_srd_2024",
+    "function": "cast_spell",
+    "description": "Cast a spell a character knows, spending a slot of its level or higher. Cantrips cost no slot. Pass slot_level when upcasting. The result gives the spell save DC, spell attack bonus, and the spell's text for its effect.",
+    "parameters": {
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The caster."
+        },
+        "spell": {
+          "type": "string",
+          "description": "The spell's name or id."
+        },
+        "slot_level": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9,
+          "default": 0,
+          "description": "The slot level spent; 0 uses the spell's own level."
+        }
+      },
+      "required": [
+        "name",
+        "spell"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "learn_spell",
+    "python_module": "dnd_srd_2024",
+    "function": "learn_spell",
+    "description": "Teach a character a spell or cantrip, for a feature such as Magic Initiate that grants one. This records the spell without spending a spell pick.",
+    "parameters": {
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The character learning the spell."
+        },
+        "spell": {
+          "type": "string",
+          "description": "The spell's name or id."
+        }
+      },
+      "required": [
+        "name",
+        "spell"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "learn_feature",
+    "python_module": "dnd_srd_2024",
+    "function": "learn_feature",
+    "description": "Teach a character a feature, feat, or trait by name, for a choice a species or background grants. Do not use it to bypass a level-up choice the player has not made.",
+    "parameters": {
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The character learning the feature."
+        },
+        "feature": {
+          "type": "string",
+          "description": "The feature's name or id."
+        },
+        "cause": {
+          "type": "string",
+          "description": "Why the character learns it."
+        }
+      },
+      "required": [
+        "name",
+        "feature"
+      ]
+    }
+  }
+]

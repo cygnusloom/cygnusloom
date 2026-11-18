@@ -1,0 +1,162 @@
+[
+  {
+    "type": "feature",
+    "id": "background-asi-acolyte",
+    "name": "Acolyte: Ability Scores",
+    "feature_type": "trait",
+    "description": "Increase the three abilities this background trains by 1 each: Intelligence, Wisdom, Charisma.",
+    "tag": "background",
+    "rank": 0,
+    "picks": [
+      {
+        "id": "scores",
+        "kind": "stat",
+        "label": "Abilities",
+        "grant": "score",
+        "amount": 1,
+        "count": 3,
+        "choices": [
+          "int",
+          "wis",
+          "cha"
+        ]
+      }
+    ]
+  },
+  {
+    "type": "template",
+    "id": "acolyte",
+    "kind": "background",
+    "name": "Acolyte",
+    "icon": "altar",
+    "description": "Acolyte. Tool proficiency: Calligrapher's Supplies. Equipment: *Choose A or B:* (A) Calligrapher's Supplies, Book (prayers), Holy Symbol, Parchment (10 sheets), Robe, 8 GP; or (B) 50 GP",
+    "skills": {
+      "insight": 1,
+      "religion": 1
+    },
+    "features": [
+      "background-asi-acolyte",
+      "feat-magic-initiate"
+    ]
+  },
+  {
+    "type": "feature",
+    "id": "background-asi-criminal",
+    "name": "Criminal: Ability Scores",
+    "feature_type": "trait",
+    "description": "Increase the three abilities this background trains by 1 each: Dexterity, Constitution, Intelligence.",
+    "tag": "background",
+    "rank": 0,
+    "picks": [
+      {
+        "id": "scores",
+        "kind": "stat",
+        "label": "Abilities",
+        "grant": "score",
+        "amount": 1,
+        "count": 3,
+        "choices": [
+          "dex",
+          "con",
+          "int"
+        ]
+      }
+    ]
+  },
+  {
+    "type": "template",
+    "id": "criminal",
+    "kind": "background",
+    "name": "Criminal",
+    "icon": "key",
+    "description": "Criminal. Tool proficiency: Thieves' Tools. Equipment: *Choose A or B:* (A) 2 Daggers, Thieves' Tools, Crowbar, 2 Pouches, Traveler's Clothes, 16 GP; or (B) 50 GP",
+    "skills": {
+      "sleight_of_hand": 1,
+      "stealth": 1
+    },
+    "features": [
+      "background-asi-criminal",
+      "feat-alert"
+    ]
+  },
+  {
+    "type": "feature",
+    "id": "background-asi-sage",
+    "name": "Sage: Ability Scores",
+    "feature_type": "trait",
+    "description": "Increase the three abilities this background trains by 1 each: Constitution, Intelligence, Wisdom.",
+    "tag": "background",
+    "rank": 0,
+    "picks": [
+      {
+        "id": "scores",
+        "kind": "stat",
+        "label": "Abilities",
+        "grant": "score",
+        "amount": 1,
+        "count": 3,
+        "choices": [
+          "con",
+          "int",
+          "wis"
+        ]
+      }
+    ]
+  },
+  {
+    "type": "template",
+    "id": "sage",
+    "kind": "background",
+    "name": "Sage",
+    "icon": "book",
+    "description": "Sage. Tool proficiency: Calligrapher's Supplies. Equipment: *Choose A or B:* (A) Quarterstaff, Calligrapher's Supplies, Book (history), Parchment (8 sheets), Robe, 8 GP; or (B) 50 GP",
+    "skills": {
+      "arcana": 1,
+      "history": 1
+    },
+    "features": [
+      "background-asi-sage",
+      "feat-magic-initiate"
+    ]
+  },
+  {
+    "type": "feature",
+    "id": "background-asi-soldier",
+    "name": "Soldier: Ability Scores",
+    "feature_type": "trait",
+    "description": "Increase the three abilities this background trains by 1 each: Strength, Dexterity, Constitution.",
+    "tag": "background",
+    "rank": 0,
+    "picks": [
+      {
+        "id": "scores",
+        "kind": "stat",
+        "label": "Abilities",
+        "grant": "score",
+        "amount": 1,
+        "count": 3,
+        "choices": [
+          "str",
+          "dex",
+          "con"
+        ]
+      }
+    ]
+  },
+  {
+    "type": "template",
+    "id": "soldier",
+    "kind": "background",
+    "name": "Soldier",
+    "icon": "sword",
+    "description": "Soldier. Tool proficiency: Choose one kind of Gaming Set. Equipment: *Choose A or B:* (A) Spear, Shortbow, 20 Arrows, Gaming Set (same as above), Healer's Kit, Quiver, Traveler's Clothes, 14 GP; or (B) 50 GP",
+    "skills": {
+      "athletics": 1,
+      "intimidation": 1
+    },
+    "features": [
+      "background-asi-soldier",
+      "feat-savage-attacker"
+    ]
+  }
+]

@@ -368,7 +368,7 @@ def give_item(
         raise InvalidInput(f"{damage!r} is not a dice formula such as 'd6'")
     flags: tuple[str, ...] = ()
     if listed is not None:
-        if listed.armor_mode == "shield":
+        if listed.armor_mode in {"shield", "shield_flat"}:
             flags = ("shield",)
         elif listed.armor > 0:
             flags = ("armor",)
@@ -404,7 +404,7 @@ def carry_listed(
     if listed.size not in item_sizes:
         raise InvalidInput(f"there is no item size named {listed.size!r}")
     flags: tuple[str, ...] = ()
-    if listed.armor_mode == "shield":
+    if listed.armor_mode in {"shield", "shield_flat"}:
         flags = ("shield",)
     elif listed.armor > 0:
         flags = ("armor",)
