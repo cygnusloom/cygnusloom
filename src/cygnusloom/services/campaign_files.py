@@ -19,7 +19,11 @@ from sqlalchemy import Engine, select
 
 from cygnusloom import CAMPAIGN_MAJOR_VERSION, __version__
 from cygnusloom.content.definitions import ContentError
-from cygnusloom.content.library import ContentLibrary, read_table_genres
+from cygnusloom.content.library import (
+    ContentLibrary,
+    read_table_genres,
+    read_table_tones,
+)
 from cygnusloom.db.models import Campaign, Event, utcnow
 from cygnusloom.services import level_up as level_up_service
 from cygnusloom.services.campaigns import (
@@ -101,6 +105,12 @@ def export_campaign(engine: Engine, owner_id: int, campaign_id: int) -> tuple[st
         genres = []
     if not isinstance(genres, list):
         genres = []
+    try:
+        tones = json.loads(campaign.table_tones) if campaign.table_tones else []
+    except ValueError:
+        tones = []
+    if not isinstance(tones, list):
+        tones = []
     document = {
         "format": EXPORT_FORMAT,
         "version": EXPORT_VERSION,
@@ -119,6 +129,7 @@ def export_campaign(engine: Engine, owner_id: int, campaign_id: int) -> tuple[st
             "model": campaign.model,
             "setting": campaign.setting,
             "table_genres": genres,
+            "table_tones": tones,
             "use_inventory_space": campaign.use_inventory_space,
             "use_survival_needs": campaign.use_survival_needs,
             "start_level": campaign.start_level,
@@ -187,6 +198,7 @@ def import_campaign(
             model=model,
             setting=config["setting"],
             table_genres=json.dumps(list(config["table_genres"])),
+            table_tones=json.dumps(list(config["table_tones"])),
             use_inventory_space=config["use_inventory_space"],
             use_survival_needs=config["use_survival_needs"],
             start_level=config["start_level"],
@@ -481,6 +493,23 @@ def _read_campaign(data: dict[str, Any], library: ContentLibrary) -> dict[str, A
             raise InvalidInput(str(error)) from error
     else:
         genres = rules.table_genres
+    if "table_tones" in data:
+        raw_tones = data.get("table_tones")
+        if raw_tones is None:
+            raw_tones = []
+        if isinstance(raw_tones, str):
+            try:
+                raw_tones = json.loads(raw_tones)
+            except ValueError as exc:
+                raise InvalidInput("table_tones must be a list of strings") from exc
+        if not isinstance(raw_tones, list) or any(not isinstance(item, str) for item in raw_tones):
+            raise InvalidInput("table_tones must be a list of strings")
+        try:
+            tones = read_table_tones(raw_tones, "module tones")
+        except ContentError as error:
+            raise InvalidInput(str(error)) from error
+    else:
+        tones = rules.table_tones
     # A file exported before the option existed keeps the rule set's limits, as the campaign it
     # came from did.
     use_inventory_space = data.get("use_inventory_space", True)
@@ -512,6 +541,7 @@ def _read_campaign(data: dict[str, Any], library: ContentLibrary) -> dict[str, A
         "model": _text(data, "model", MAX_MODEL),
         "setting": _text(data, "setting", MAX_SETTING),
         "table_genres": genres,
+        "table_tones": tones,
         "use_inventory_space": use_inventory_space,
         "use_survival_needs": use_survival_needs,
         "start_level": start_level,

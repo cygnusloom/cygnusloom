@@ -27,6 +27,7 @@
       }
     },
     "table_genres": ["generic", "fantasy"],
+    "table_tones": ["grim", "mystery", "whimsical", "relaxing", "adventure"],
     "condition_ends": ["rest", "extended_rest", "aid", "time"],
     "npc_hp_stat": "hp",
     "npc_hp": {

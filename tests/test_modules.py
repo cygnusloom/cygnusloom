@@ -53,21 +53,32 @@ def test_a_campaign_module_owns_its_setting():
     assert library.setting_template(TWIN_LAKES) is world
 
 
-def test_a_mini_module_is_only_prose_and_tags():
+def test_a_mini_module_is_prose_and_shared_metadata():
     module = content_library().modules[HERMIT]
     assert module.kind == "mini"
     assert module.world_template is None
+    assert module.blurb == (
+        "A reclusive herbwife in a burnt-out hut knows what happened at the mill."
+    )
+    assert module.description == module.blurb
+    assert "Create the herbwife" in module.body
     assert "The herbwife saw the miller's son" in module.body
-    assert "Create the herbwife" in module.gm_notes
-    assert "Mara" not in module.body and "Mara" not in module.gm_notes
-    assert module.tags["genres"] == ("fantasy", "mystery")
+    assert "Mara" not in module.body
+    assert module.categories == ("fantasy",)
+    assert module.tones == ("grim", "mystery")
+    assert module.location_density == "low"
 
 
 def test_list_modules_offers_a_fitting_seed_once(client_factory):
     client = signed_in_client(client_factory)
     campaign_id = create_campaign_direct(client, world_template=TWIN_LAKES, rule_set="cairn2e")
     tools = _tools(client, campaign_id)
-    assert [card["id"] for card in tools.list_modules()["modules"]] == [HERMIT]
+    cards = tools.list_modules()["modules"]
+    assert [card["id"] for card in cards] == [HERMIT]
+    assert cards[0]["categories"] == ["fantasy"]
+    assert cards[0]["tones"] == ["grim", "mystery"]
+    assert cards[0]["location_density"] == "low"
+    assert "compact site" in cards[0]["location_density_note"]
     with pytest.raises(InvalidInput, match="use_module"):
         tools.lookup_module(HERMIT)
     text = tools.use_module(HERMIT, "a rumour on the river road")["text"]
@@ -81,6 +92,29 @@ def test_list_modules_offers_a_fitting_seed_once(client_factory):
     assert "The herbwife saw the miller's son" in tools.lookup_module(HERMIT)["text"]
     with pytest.raises(InvalidInput, match="already used"):
         tools.use_module(HERMIT)
+
+
+def test_campaign_tones_and_explicit_filters_narrow_the_seed_pool(client_factory):
+    client = signed_in_client(client_factory)
+    campaign_id = create_campaign_direct(client, world_template=TWIN_LAKES, rule_set="cairn2e")
+    tools = _tools(client, campaign_id)
+    assert tools.list_modules(tone="mystery")["modules"][0]["id"] == HERMIT
+    assert tools.list_modules(tone="relaxing")["modules"] == []
+    with pytest.raises(InvalidInput, match="no module tone"):
+        tools.list_modules(tone="cozy")
+
+    quiet_id = create_campaign_direct(
+        client, label="Quiet", world_template=TWIN_LAKES, rule_set="cairn2e"
+    )
+    choose_campaign_options(client, quiet_id, "cairn2e")
+    create_character_direct(
+        client,
+        quiet_id,
+        fields=creation_fields(client, quiet_id),
+        table_tones=["relaxing"],
+    )
+    quiet = _tools(client, quiet_id)
+    assert quiet.list_modules()["modules"] == []
 
 
 def test_the_state_prompt_mentions_available_mini_modules():

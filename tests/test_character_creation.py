@@ -406,8 +406,8 @@ def test_cairn_campaign_asks_for_its_options_and_character_on_one_page(
     assert 'name="setting" rows="6" maxlength="4000"' in page
     assert 'name="table_genres"' in page
     assert page.index("Campaign options") < page.index('name="setting"')
-    assert page.index('name="setting"') < page.index("Creative and lore tables")
-    assert page.index("Creative and lore tables") < page.index("Your character")
+    assert page.index('name="setting"') < page.index("Creative sources")
+    assert page.index("Creative sources") < page.index("Your character")
     assert 'name="stat-str"' in page
     assert page.count('data-randomize="all"') == 1
     assert page.count('data-randomize="unchosen"') == 1
@@ -427,7 +427,7 @@ def test_a_rule_set_without_campaign_options_still_offers_the_setting(
     assert 'name="setting" rows="6" maxlength="4000"' in page
     assert 'name="table_genres"' in page
     assert page.index("Campaign options") < page.index('name="setting"')
-    assert page.index('name="setting"') < page.index("Creative and lore tables")
+    assert page.index('name="setting"') < page.index("Creative sources")
     assert "Your character" in page
 
 

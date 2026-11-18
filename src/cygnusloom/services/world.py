@@ -20,6 +20,8 @@ from cygnusloom.content.character import (
     TableOption,
 )
 from cygnusloom.content.library import (
+    TABLE_GENRES,
+    TONES,
     AdvancementRules,
     CheckRules,
     ClockRules,
@@ -275,7 +277,8 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
     dice_tables: Mapping[str, DiceTable] = field(default_factory=dict)
     # Mini story seeds and the rule set's default genre selection, for seed browsing.
     modules: Mapping[str, ModuleTemplate] = field(default_factory=dict)
-    table_genres: tuple[str, ...] = ()
+    table_genres: tuple[str, ...] = TABLE_GENRES
+    table_tones: tuple[str, ...] = TONES
     # The rule set's moves by id.
     moves: Mapping[str, MoveRules] = field(default_factory=dict)
     # The rule set's counters by id, such as Experience or Luck.
@@ -359,11 +362,11 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
 
     def list_modules(
         self,
-        tags: list[str] | None = None,
-        setting: str = "",
+        category: str = "",
+        tone: str = "",
         random: bool = False,
     ) -> dict[str, Any]:
-        """List the mini modules that fit this campaign's tags and have not been used up."""
+        """List the mini modules that fit this campaign and have not been used up."""
         with session_scope(self.engine) as db:
             campaign = db.get(Campaign, self.campaign_id)
             if campaign is None:
@@ -376,8 +379,9 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 campaign,
                 state,
                 default_genres=self.table_genres,
-                tags=tags or [],
-                setting=setting,
+                default_tones=self.table_tones,
+                category=category,
+                tone=tone,
             )
         ]
         if random:
@@ -413,6 +417,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                     campaign,
                     state,
                     default_genres=self.table_genres,
+                    default_tones=self.table_tones,
                 )
             }
             if module not in available:

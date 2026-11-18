@@ -97,13 +97,37 @@ TABLE_GENRES = (
     "generic",
     "fantasy",
     "magicschool",
-    "science-fiction",
-    "horror",
-    "modern",
-    "historical",
-    "mystery",
 )
 GENERIC_GENRE = "generic"
+# The mood a module is written for. A campaign's selected tones narrow which mini modules the
+# GM may introduce; a module may list more than one.
+TONES = (
+    "grim",
+    "mystery",
+    "whimsical",
+    "relaxing",
+    "adventure",
+)
+# How much ground a module expects. The player never chooses this; the GM uses it to decide
+# whether a seed fits the current place and how far to spread it.
+LOCATION_DENSITIES = ("low", "moderate", "dense")
+CREATIVE_CATEGORY_HELP = {
+    "generic": "Fits any setting without assuming a particular world.",
+    "fantasy": "Magic, old ruins, and pre-industrial worlds.",
+    "magicschool": "A school of magic, its students, staff, and intrigues.",
+}
+TONE_HELP = {
+    "grim": "Bleak, dangerous, and morally costly.",
+    "mystery": "Clues, secrets, and investigation.",
+    "whimsical": "Light, strange, and playful.",
+    "relaxing": "Low stakes, cozy, and restorative.",
+    "adventure": "Action, exploration, and bold choices.",
+}
+LOCATION_DENSITY_HELP = {
+    "low": "One compact site or scene, with no travel network.",
+    "moderate": "A handful of nearby sites, with a short trip between them.",
+    "dense": "A connected area with many locations to explore.",
+}
 # What a creative table is for: `oracle` tables give a fresh idea during play, `setting` tables
 # invent the world at the opening, and `module` tables belong to an active story module. The
 # role keeps a worldgen table from being mixed into a scene and the other way around.
@@ -218,6 +242,38 @@ def table_genre_offered(tags: Sequence[str], genres: Sequence[str]) -> bool:
     return bool(set(tags) & set(genres))
 
 
+def read_table_tones(value: Any, label: str, *, default: tuple[str, ...] = ()) -> tuple[str, ...]:
+    """Read a `tones` list, checked against TONES. An absent list keeps the caller's default."""
+    if value is None:
+        return default
+    entries = _text_list(value, label)
+    unknown = [entry for entry in entries if entry not in TONES]
+    if unknown:
+        names = ", ".join(repr(entry) for entry in unknown)
+        raise ContentError(f"{label}: unknown tone(s) {names}; choose from {', '.join(TONES)}")
+    if len(set(entries)) != len(entries):
+        raise ContentError(f"{label}: a tone may be named only once")
+    return tuple(entries)
+
+
+def tone_offered(tags: Sequence[str], tones: Sequence[str]) -> bool:
+    """Whether a tone selection offers a module. An untagged module fits every tone; otherwise
+    at least one of its tones must be selected."""
+    if not tags:
+        return True
+    return bool(set(tags) & set(tones))
+
+
+def read_location_density(value: Any, label: str) -> str:
+    """Read a module's single location density and check it against LOCATION_DENSITIES."""
+    density = required_text({"value": value}, "value", label)
+    if density not in LOCATION_DENSITIES:
+        raise ContentError(
+            f"{label}: 'location_density' must be one of {', '.join(LOCATION_DENSITIES)}"
+        )
+    return density
+
+
 def tables_for_genres(
     tables: Mapping[str, DiceTable], genres: Sequence[str]
 ) -> dict[str, DiceTable]:
@@ -246,6 +302,24 @@ def effective_table_genres(stored: str, rule_set: RuleSet) -> tuple[str, ...]:
         dict.fromkeys(entry for entry in value if isinstance(entry, str) and entry in TABLE_GENRES)
     )
     return chosen or rule_set.table_genres
+
+
+def effective_table_tones(stored: str, rule_set: RuleSet) -> tuple[str, ...]:
+    """The tones a campaign's mini modules are filtered by, falling back to the rule set's
+    available tones when the stored choice is blank, unreadable, or unknown."""
+    text = (stored or "").strip()
+    if not text:
+        return rule_set.table_tones
+    try:
+        value = json.loads(text)
+    except json.JSONDecodeError:
+        return rule_set.table_tones
+    if not isinstance(value, list):
+        return rule_set.table_tones
+    chosen = tuple(
+        dict.fromkeys(entry for entry in value if isinstance(entry, str) and entry in TONES)
+    )
+    return chosen or rule_set.table_tones
 
 
 @dataclass(frozen=True)
@@ -369,21 +443,22 @@ class ModuleTemplate:
     id: str
     kind: str
     name: str
+    # The long public description. A mini module uses its blurb here, since it has no setting.
     description: str
     blurb: str | None
     icon: str
-    tags: Mapping[str, tuple[str, ...]]
-    gm_notes: str
+    # Shared creative categories, tones, and the amount of ground the module expects.
+    categories: tuple[str, ...]
+    tones: tuple[str, ...]
+    location_density: str
     rule_set: str | None
     recommended_rule_sets: tuple[str, ...]
     third_party: bool
     source: str | None
     world_template: WorldTemplate | None = None
+    # The private GM text. A mini module requires it; a campaign module may add long notes.
     body: str = ""
     repeatable: bool = False
-
-    def tag_values(self, category: str) -> tuple[str, ...]:
-        return self.tags.get(category, ())
 
     @property
     def start(self) -> WorldStart | None:
@@ -2157,6 +2232,9 @@ class RuleSet:
     # A core table tagged `generic`, or with no tags, is always offered; any other core table must
     # share a tag with this selection to reach the rule set.
     table_genres: tuple[str, ...] = ()
+    # The tones this rule set offers for mini modules. A campaign may narrow the choice further;
+    # omitting the rule set's `table_tones` makes every tone available.
+    table_tones: tuple[str, ...] = TONES
     # Rule-data values validated by the ruleset modules that declared them.
     rule_data: Mapping[str, object] = field(default_factory=dict)
     # The optional engine parts this rule set offers, declared in its head or inferred from its
@@ -3033,12 +3111,13 @@ def _load_module(directory: Path) -> ModuleTemplate:
             "description",
             "blurb",
             "icon",
-            "tags",
+            "categories",
+            "tones",
+            "location_density",
             "rule_set",
             "recommended_rulesets",
             "third_party",
             "source",
-            "gm_notes",
             "start",
             "body",
             "repeatable",
@@ -3050,15 +3129,29 @@ def _load_module(directory: Path) -> ModuleTemplate:
         raise ContentError(f"{label}: 'kind' must be one of {', '.join(MODULE_KINDS)}")
     name = required_text(module_def.data, "name", label)
     blurb = _optional_text(module_def.data, "blurb", label)
-    description = _optional_text(module_def.data, "description", label) or blurb or name
+    categories = read_table_genres(module_def.data.get("categories"), f"{label}: 'categories'")
+    if not categories:
+        raise ContentError(f"{label}: a module needs at least one 'categories' entry")
+    tones = read_table_tones(module_def.data.get("tones"), f"{label}: 'tones'")
+    if not tones:
+        raise ContentError(f"{label}: a module needs at least one 'tones' entry")
+    location_density = read_location_density(
+        module_def.data.get("location_density"), f"{label}: 'location_density'"
+    )
     rule_set = _optional_text(module_def.data, "rule_set", label)
     world_definitions = [d for d in definitions if d.type in WORLD_DEFINITION_TYPES]
     if kind == "mini":
         if world_definitions:
             raise ContentError(f"{label}: a mini module has no setting definitions")
+        if "description" in module_def.data:
+            raise ContentError(f"{label}: a mini module uses 'blurb', not 'description'")
+        if blurb is None:
+            raise ContentError(f"{label}: a mini module needs a 'blurb'")
+        description = blurb
         world_template = None
         body = required_text(module_def.data, "body", label)
     else:
+        description = _optional_text(module_def.data, "description", label) or blurb or name
         head: dict[str, Any] = {
             "type": "world",
             "id": module_def.id,
@@ -3083,8 +3176,9 @@ def _load_module(directory: Path) -> ModuleTemplate:
         description=description,
         blurb=blurb,
         icon=_definition_icon(module_def.data, label, FALLBACK_WORLD),
-        tags=_load_module_tags(module_def.data.get("tags"), label),
-        gm_notes=_optional_text(module_def.data, "gm_notes", label) or "",
+        categories=categories,
+        tones=tones,
+        location_density=location_density,
         rule_set=rule_set,
         recommended_rule_sets=_optional_text_list(module_def.data, "recommended_rulesets", label),
         third_party=_flag(module_def.data, "third_party", label),
@@ -3093,25 +3187,6 @@ def _load_module(directory: Path) -> ModuleTemplate:
         body=body,
         repeatable=_flag(module_def.data, "repeatable", label),
     )
-
-
-def _load_module_tags(value: object, label: str) -> Mapping[str, tuple[str, ...]]:
-    if value is None:
-        return {}
-    if not isinstance(value, Mapping):
-        raise ContentError(f"{label}: 'tags' must be an object of tag lists")
-    tags: dict[str, tuple[str, ...]] = {}
-    for category, entries in value.items():
-        if not isinstance(category, str) or not category.strip():
-            raise ContentError(f"{label}: each tag category needs a name")
-        tag_label = f"{label}: tags.{category}"
-        values = _text_list(entries, tag_label)
-        if len(set(values)) != len(values):
-            raise ContentError(f"{tag_label}: a tag may be named only once")
-        if category == "genres":
-            read_table_genres(values, tag_label)
-        tags[category] = tuple(values)
-    return tags
 
 
 def _has_statblock(data: Mapping[str, Any]) -> bool:
@@ -4374,6 +4449,7 @@ def _build_rule_set(
             "npc_hp",
             "npc_hp_stat",
             "table_genres",
+            "table_tones",
             "capabilities",
             "default_campaign",
             "recommended_worlds",
@@ -4383,6 +4459,9 @@ def _build_rule_set(
     )
     if table_genres is None:
         table_genres = _rule_set_table_genres(definitions, template)
+    table_tones = read_table_tones(
+        head.data.get("table_tones"), f"{label}: 'table_tones'", default=TONES
+    )
     # A compact `starting_years` head block expands into `starting_year` templates before the
     # character spec is built; an explicit template with the same id wins over its entry.
     definitions = [
@@ -4605,6 +4684,7 @@ def _build_rule_set(
         icon=_definition_icon(head.data, label, FALLBACK_RULE_SET),
         third_party=_flag(head.data, "third_party", label),
         table_genres=table_genres,
+        table_tones=table_tones,
         content=RuleContent(
             rules=rules,
             attached_rules=written,

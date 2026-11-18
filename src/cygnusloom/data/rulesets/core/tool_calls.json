@@ -1386,19 +1386,16 @@
     "type": "tool_call",
     "id": "list_modules",
     "lookup": true,
-    "description": "List the mini modules this campaign can use. The result has cards for seeds that fit the campaign's tags and have not been used. Use it when the story needs a new thread or a new place to go, then call use_module to bring one into play.",
+    "description": "List the mini modules this campaign can use. The result has cards for seeds that fit the campaign's selected categories and tones and have not been used. Each card also gives its location density: low is one compact site, moderate is a handful of nearby sites, and dense is a connected area with many places. Use the density to choose a seed that fits where the party is and how far they can travel, then call use_module to bring it into play.",
     "parameters": {
       "properties": {
-        "tags": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Optional tags to narrow the mini modules, such as mystery, wilderness, or social."
-        },
-        "setting": {
+        "category": {
           "type": "string",
-          "description": "Optional setting tag to narrow the mini modules, such as urban, wilderness, or dungeon."
+          "description": "Optional creative category to narrow the seeds: generic, fantasy, or magicschool."
+        },
+        "tone": {
+          "type": "string",
+          "description": "Optional tone to narrow the seeds: grim, mystery, whimsical, relaxing, or adventure."
         },
         "random": {
           "type": "boolean",

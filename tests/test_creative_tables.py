@@ -118,8 +118,8 @@ def test_a_rule_set_may_replace_a_core_table_with_entries(tree: Path):
 
 
 def test_a_creative_table_reads_its_genre_tags():
-    table = _load_creative_table(_creative(["a", "b"], genres=["horror"]), "testset")
-    assert table.genres == ("horror",)
+    table = _load_creative_table(_creative(["a", "b"], genres=["fantasy"]), "testset")
+    assert table.genres == ("fantasy",)
     assert table.role == "oracle"
 
 

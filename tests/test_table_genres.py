@@ -97,17 +97,17 @@ def test_a_core_table_is_left_out_when_the_rule_set_does_not_fit_it(tmp_path: Pa
         tmp_path,
         core=[
             _dice_table("realm", ["fantasy"]),
-            _dice_table("hunt", ["horror"]),
+            _dice_table("hunt", ["magicschool"]),
             _dice_table("coin", ["generic"]),
             _dice_table("untagged"),
             _creative_table("spark", ["generic", "fantasy"]),
         ],
-        rule_set={"table_genres": ["generic", "horror"]},
+        rule_set={"table_genres": ["generic", "magicschool"]},
         definitions=[_dice_table("own_fantasy", ["fantasy"])],
     )
     library = ContentLibrary.load(tree)
     rules = library.rule_sets["testset"]
-    assert rules.table_genres == ("generic", "horror")
+    assert rules.table_genres == ("generic", "magicschool")
     assert {"hunt", "coin", "untagged", "spark", "own_fantasy"} <= set(rules.dice_tables)
     assert "realm" not in rules.dice_tables
     # The sourcebook keeps every table, so the compendium can still describe them.
@@ -119,13 +119,13 @@ def test_a_rule_set_without_a_choice_offers_generic_and_its_own_genres(tmp_path:
         tmp_path,
         core=[
             _dice_table("realm", ["fantasy"]),
-            _dice_table("hunt", ["horror"]),
+            _dice_table("hunt", ["magicschool"]),
             _dice_table("coin", ["generic"]),
         ],
-        definitions=[_dice_table("curse", ["horror"])],
+        definitions=[_dice_table("curse", ["magicschool"])],
     )
     rules = ContentLibrary.load(tree).rule_sets["testset"]
-    assert rules.table_genres == ("generic", "horror")
+    assert rules.table_genres == ("generic", "magicschool")
     assert {"coin", "hunt", "curse"} <= set(rules.dice_tables)
     assert "realm" not in rules.dice_tables
 
@@ -151,7 +151,7 @@ def test_the_bundled_rule_sets_offer_generic_and_fantasy_tables():
 def test_a_campaign_without_a_choice_uses_the_rule_set_default():
     rules = bundled_library().rule_sets["cairn2e"]
     assert effective_table_genres("", rules) == ("generic", "fantasy")
-    assert effective_table_genres('["horror"]', rules) == ("horror",)
+    assert effective_table_genres('["magicschool"]', rules) == ("magicschool",)
     assert effective_table_genres("not json", rules) == ("generic", "fantasy")
     assert effective_table_genres("[]", rules) == ("generic", "fantasy")
 
@@ -207,14 +207,16 @@ def test_the_creative_table_picker_lives_in_the_campaign_options(client_factory)
     start = page.index('<section class="creation-panel table-genres"')
     end = page.index("</section>", start)
     section = page[start:end]
-    assert '<h3 id="panel-table-genres">Creative and lore tables</h3>' in section
+    assert '<h3 id="panel-table-genres">Creative sources</h3>' in section
     available = content_library().available_table_genres
     for genre in available:
         assert f'name="table_genres" value="{genre}"' in section
     for genre in set(TABLE_GENRES) - set(available):
         assert f'name="table_genres" value="{genre}"' not in section
+    for tone in content_library().rule_sets["cairn2e"].table_tones:
+        assert f'name="table_tones" value="{tone}"' in section
     # The form starts on the selected rule set's own choice: the bundled sets are generic+fantasy.
     assert 'name="table_genres" value="generic" checked' in section
     assert 'name="table_genres" value="fantasy" checked' in section
-    assert page.index("Campaign options") < page.index("Creative and lore tables")
-    assert page.index("Creative and lore tables") < page.index("Your character")
+    assert page.index("Campaign options") < page.index("Creative sources")
+    assert page.index("Creative sources") < page.index("Your character")

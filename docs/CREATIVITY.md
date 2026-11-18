@@ -15,11 +15,12 @@ Three content concepts remain:
    campaign module; a module's setting is never registered as one. The picker offers worlds and
    campaign modules side by side.
 3. **Mini modules** are small story seeds. They have no setting of their own: a module is a short
-   prose `body`, tags, compatibility, and GM notes. The AI GM may pick one when the campaign needs
-   a new thread.
+   `blurb`, one private `body` of notes and prose, shared categories and tones, and a location
+   density. The AI GM may pick one when the campaign needs a new thread.
 
 Creative tables remain a fourth input: the oracle tables suggest fresh material during play,
-while the setting tables invent an unwritten world at the opening.
+while the setting tables invent an unwritten world at the opening. Tables and modules draw on one
+shared category and tone vocabulary, chosen in the campaign's Creative sources panel.
 
 ## Audit
 
@@ -43,7 +44,37 @@ The audit predates the shipped changes.
 - `module`: a module's own tables, named explicitly when relevant.
 
 `roll_creative` with no `tables` rolls only the requested role. Named tables still work and win
-over the role. `list_dice_tables` returns each table's role and genres.
+over the role. `list_dice_tables` returns each table's role and categories.
+
+### Categories, tones, and density
+
+Tables and modules use the same three creative categories: `generic`, `fantasy`, and
+`magicschool`. `generic` fits every setting; otherwise a table or module must share at least one
+category with the campaign. The vocabulary lives in `TABLE_GENRES` so a table tag and a module tag
+cannot drift apart.
+
+Modules also declare one or more tones from a fixed list: `grim`, `mystery`, `whimsical`,
+`relaxing`, and `adventure`. A campaign's selected tones narrow which mini modules the GM may
+introduce. Category and tone matching are both overlap tests: a module tagged `grim` and `mystery`
+is offered when either tone is selected. A module with no tones fits every tone, but module loading
+requires at least one, so shipped modules always state their mood.
+
+Each rule set declares its default `table_genres` and `table_tones`. The campaign form starts with
+those boxes checked; the player may narrow either selection, and a blank stored selection falls
+back to the rule set's defaults. Campaigns store the category selection in `table_genres` and the
+tone selection in `table_tones`. The columns keep the existing names so exports and existing
+campaigns remain compatible.
+
+`location_density` is one of `low`, `moderate`, or `dense`. It is GM guidance, not a player
+setting:
+
+- `low`: one compact site or scene, with no travel network.
+- `moderate`: a handful of nearby sites, with a short trip between them.
+- `dense`: a connected area with many locations to explore.
+
+The density and its explanation appear on the card returned by `list_modules`. The AI GM uses it
+to decide whether the seed fits the current place and how far to spread it. Density never appears
+in the player-facing compendium and is not part of the campaign form.
 
 The core `creative_oracle` state prompt tells the GM to roll oracle tables when the scene stalls
 or the player is unsure, not on consecutive turns, and never in the middle of an encounter. The
@@ -55,6 +86,7 @@ that sentence.
 A campaign module has everything a long-form adventure needs:
 
 - a name, blurb, description, icon, rule set, and start;
+- categories, tones, and a location density;
 - locations, NPCs, regions, routes, and local maps;
 - monsters, features, tables, rules, and outcome text;
 - a campaign start and hooks, plus private GM notes.
@@ -89,23 +121,25 @@ A mini module is a small story seed with no setting of its own. It lives in
     "type": "module",
     "id": "the-hermit-of-ash-hollow",
     "name": "The Hermit of Ash Hollow",
-    "description": "A guarded herbwife, a burnt hut, and a purse of hush-money.",
     "blurb": "A reclusive herbwife knows what happened at the mill.",
     "icon": "campfire",
-    "tags": {"genres": ["fantasy", "mystery"], "settings": ["wilderness"]},
+    "categories": ["fantasy"],
+    "tones": ["grim", "mystery"],
+    "location_density": "low",
     "rule_set": null,
     "recommended_rulesets": [],
     "third_party": false,
     "source": "Original content written for Cygnus Loom.",
-    "gm_notes": "The herbwife is frightened, not villainous. She will trade the truth for her grandchild's safety. Create her, the miller, and his son as named characters, and keep notes on what the player learns.",
-    "body": "The herbwife saw the miller's son set the fire...",
+    "body": "The herbwife is frightened, not villainous... Create her, the miller, and his son as named characters, and keep notes on what the player learns.\n\nThe herbwife saw the miller's son set the fire...",
     "repeatable": false
   }
 ]
 ```
 
 The parser reads `module` and ordinary world definitions. A mini module accepts only
-`module`; `body` is required and is the seed's adventure text. There are no scene, clue, front,
+`module`; `blurb` is its short public card and `body` is its required private GM text. It has no
+`description` and no `gm_notes`; the seed's notes and prose share one `body`. Every module names
+at least one category, one tone, and one location density. There are no scene, clue, front,
 ending, hook, storyline, or inline entry types.
 
 A mini module describes roles, not named people or places: `the herbwife`, `the miller`, `the
@@ -113,8 +147,8 @@ burnt hut`. When one enters play, the GM creates it with the normal tools, choos
 the creativity tables or their own invention, and records what the player learns in notes. That
 keeps one campaign record and lets the same seed fit any setting.
 
-A campaign module may also carry an optional `body`: extra long-form GM prose that is not setting
-data. It reaches the state prompt with `gm_notes`, never the player-facing narration.
+A campaign module keeps `description` as its long public setting text, `blurb` as its short card,
+and `body` as its optional private GM notes and prose. There is no separate `gm_notes` field.
 
 ## Runtime
 
@@ -123,9 +157,9 @@ data. It reaches the state prompt with `gm_notes`, never the player-facing narra
 The opening prompt uses `ContentLibrary.setting_template(...)`'s `start` and hooks, so it works
 the same for a world and for a campaign module. There is no separate module opening card.
 
-For a campaign module, the state prompt adds the module's private GM notes (and optional long
-`body`) as `Campaign module notes: ...`, capped. Storylines and notes remain the continuity
-record; the engine does not track plot progress.
+For a campaign module, the state prompt adds the module's private `body` as
+`Campaign module notes: ...`, capped. Storylines and notes remain the continuity record; the
+engine does not track plot progress.
 
 The state prompt adds one short note when mini modules are available:
 
@@ -134,18 +168,20 @@ Mini modules available: 3. Call list_modules when the story needs a new thread, 
 to bring one in.
 ```
 
-The note is not repeated in narration or review. A mini module's body never enters the state
-prompt; it arrives only when the seed is used. A campaign module's `body` and `gm_notes` are
-private state-prompt text.
+The note is not repeated in narration or review. A mini module's `body` never enters the state
+prompt; it arrives only when the seed is used. A campaign module's `body` is private state-prompt
+text.
 
 ### Tools
 
 - A campaign module uses the setting's ordinary world tools: lookups, maps, locations, NPCs,
   encounters, tables, and rule attachments. It has no module-specific tool.
-- `list_modules(tags?, setting?, random?)` returns mini-module cards that fit the campaign's
-  genres, rule set, and unused one-shot state.
-- `use_module(module, reason?)` returns the seed's GM notes and body, records `module.used`, and
-  removes a non-repeatable seed from the pool.
+- `list_modules(category?, tone?, random?)` returns mini-module cards that fit the campaign's
+  categories, tones, rule set, and unused one-shot state. A card carries the module's categories,
+  tones, location density, and the help text for each. The optional `category` and `tone`
+  arguments filter an already-available card; unknown values are rejected.
+- `use_module(module, reason?)` returns the seed's private body, records `module.used`, and removes
+  a non-repeatable seed from the pool.
 - `lookup_module(module)` rereads a seed already used in this campaign.
 - Mini-module tools ignore campaign modules; a campaign module is chosen once at creation.
 
@@ -167,8 +203,8 @@ notes are the **continuity** layer. The engine does not track plot progress.
 
 - A campaign module's public setting entries and a world's public entries appear in the
   compendium as they always have.
-- Mini modules are listed as cards in the compendium's "Story modules" section: name, blurb, and
-  genres only. Their `gm_notes` and `body` stay with the GM.
+- Mini modules are listed as cards in the compendium's "Story modules" section: name, blurb,
+  categories, and tones only. Their `body` and `location_density` stay with the GM.
 - There is no in-play module tab or module progress. A mini module's material appears only after
   the GM uses it; a campaign module's private notes are GM-only.
 
@@ -188,8 +224,8 @@ name `world_template: "twin-lakes"` keep working because the module id is the co
 
 The full suite passes with the final model. `tests/test_modules.py` covers campaign modules,
 mini modules, the picker, and the module state note; campaign and content tests cover selecting
-Twin Lakes by module id and resolving its setting; migration tests confirm no module migration
-was added.
+Twin Lakes by module id and resolving its setting; migration tests confirm the only new migration
+adds `campaign.table_tones`.
 
 Live DeepSeek checks on Twin Lakes:
 
@@ -201,8 +237,9 @@ Live DeepSeek checks on Twin Lakes:
 
 ## Deferred
 
-- A content-defined tag vocabulary; `TABLE_GENRES` remains the genre list, extended with
-  `mystery`.
+- Moving the category and tone vocabularies out of Python constants and into content data.
+- Filtering the campaign-module picker by category or tone; it is still chosen before campaign
+  options exist.
 - A separate content report for mini modules.
 - Authoring docs beyond this document and the sample module.
 - User-imported mini modules.

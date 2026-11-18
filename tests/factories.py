@@ -257,6 +257,7 @@ def create_character_direct(
     pronouns: str = DEFAULT_PRONOUNS,
     setting: str | None = None,
     table_genres: Sequence[str] | None = None,
+    table_tones: Sequence[str] | None = None,
     email: str = "ada@example.com",
 ) -> None:
     """Create the player character through the service the creation form submits.
@@ -302,6 +303,7 @@ def create_character_direct(
         ),
         setting=setting,
         table_genres=table_genres,
+        table_tones=table_tones,
     )
 
 

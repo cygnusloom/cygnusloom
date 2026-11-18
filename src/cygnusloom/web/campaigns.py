@@ -23,6 +23,7 @@ from starlette.responses import Response
 from cygnusloom import CAMPAIGN_MAJOR_VERSION
 from cygnusloom.auth.deps import page_user, verify_csrf
 from cygnusloom.content.character import NO_CAMPAIGN, NO_CHARACTER, character_schema
+from cygnusloom.content.library import CREATIVE_CATEGORY_HELP, TONE_HELP
 from cygnusloom.db.models import User
 from cygnusloom.llm.base import LLMError
 from cygnusloom.llm.presets import PRESETS
@@ -454,6 +455,7 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
     key = _roll_key(campaign_id)
     setting = ""
     table_genres: list[str] | None = None
+    table_tones: list[str] | None = None
     use_inventory_space: bool | None = None
     use_survival_needs: bool | None = None
     allow_respec: bool | None = None
@@ -476,6 +478,7 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
             table_genres = [
                 value for value in form.getlist("table_genres") if isinstance(value, str)
             ]
+            table_tones = [value for value in form.getlist("table_tones") if isinstance(value, str)]
             use_inventory_space = form_text(form, "use_inventory_space") == "1"
             use_survival_needs = form_text(form, "use_survival_needs") == "1"
             allow_respec = form_text(form, "allow_respec") == "1"
@@ -507,6 +510,7 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
                     "Your stats were rolled again. Review them and create your character.",
                     setting=setting,
                     table_genres=table_genres,
+                    table_tones=table_tones,
                     use_inventory_space=use_inventory_space,
                     use_survival_needs=use_survival_needs,
                     allow_respec=allow_respec,
@@ -533,6 +537,7 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
             character=character,
             setting=setting if initial_setup else None,
             table_genres=table_genres,
+            table_tones=table_tones,
             use_inventory_space=use_inventory_space,
             use_survival_needs=use_survival_needs,
             allow_respec=allow_respec,
@@ -548,6 +553,7 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
             str(exc),
             setting=setting,
             table_genres=table_genres,
+            table_tones=table_tones,
             use_inventory_space=use_inventory_space,
             use_survival_needs=use_survival_needs,
             allow_respec=allow_respec,
@@ -563,6 +569,7 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
             str(exc),
             setting=setting,
             table_genres=table_genres,
+            table_tones=table_tones,
             use_inventory_space=use_inventory_space,
             use_survival_needs=use_survival_needs,
             allow_respec=allow_respec,
@@ -1364,6 +1371,11 @@ async def change_campaign_settings(request: Request, campaign_id: int) -> Respon
                 if form_text(form, "table_genres_present") == "1"
                 else None
             ),
+            table_tones=(
+                [value for value in form.getlist("table_tones") if isinstance(value, str)]
+                if form_text(form, "table_tones_present") == "1"
+                else None
+            ),
             allow_respec=allow_respec,
             options=options,
             campaign_options=campaign_options,
@@ -2060,6 +2072,7 @@ def _campaign_page(
     draft: str = "",
     setting: str = "",
     table_genres: Sequence[str] | None = None,
+    table_tones: Sequence[str] | None = None,
     use_inventory_space: bool | None = None,
     use_survival_needs: bool | None = None,
     allow_respec: bool | None = None,
@@ -2211,6 +2224,14 @@ def _campaign_page(
                 if table_genres
                 else (rule_set.table_genres if rule_set is not None else ())
             ),
+            table_tones=rule_set.table_tones if rule_set is not None else (),
+            selected_table_tones=(
+                tuple(table_tones)
+                if table_tones
+                else (rule_set.table_tones if rule_set is not None else ())
+            ),
+            category_help=CREATIVE_CATEGORY_HELP,
+            tone_help=TONE_HELP,
             options=campaign_view(options) if options_pending else None,
             show_character=character_pending,
             character=character,
@@ -2358,6 +2379,10 @@ def _campaign_page(
         "campaign_setting": campaign.setting,
         "available_table_genres": library.available_table_genres,
         "selected_table_genres": _campaign_genres(campaign, rule_set),
+        "available_table_tones": rule_set.table_tones if rule_set is not None else (),
+        "selected_table_tones": _campaign_tones(campaign, rule_set),
+        "category_help": CREATIVE_CATEGORY_HELP,
+        "tone_help": TONE_HELP,
         "allow_respec": campaign.allow_respec,
         "editable_names": editable_names,
         "respec_names": respec_names,
@@ -2511,8 +2536,8 @@ def _local_map(state: CampaignState, rule_set: Any, player: Any = None) -> dict[
 
 
 def _campaign_genres(campaign: Any, rule_set: Any) -> tuple[str, ...]:
-    """The genres the campaign's generation tables are filtered by, in the rule set's order when
-    it has a say. A campaign with no stored choice keeps the rule set's own selection."""
+    """The categories the campaign's tables and modules are filtered by, in the rule set's order
+    when it has a say. A campaign with no stored choice keeps the rule set's own selection."""
     if campaign.table_genres:
         try:
             stored = json.loads(campaign.table_genres)
@@ -2521,6 +2546,19 @@ def _campaign_genres(campaign: Any, rule_set: Any) -> tuple[str, ...]:
         if isinstance(stored, list) and all(isinstance(item, str) for item in stored):
             return tuple(stored)
     return rule_set.table_genres if rule_set is not None else ()
+
+
+def _campaign_tones(campaign: Any, rule_set: Any) -> tuple[str, ...]:
+    """The tones the campaign's mini modules are filtered by. A campaign with no stored choice
+    keeps the rule set's available tones."""
+    if campaign.table_tones:
+        try:
+            stored = json.loads(campaign.table_tones)
+        except ValueError:
+            stored = None
+        if isinstance(stored, list) and all(isinstance(item, str) for item in stored):
+            return tuple(stored)
+    return rule_set.table_tones if rule_set is not None else ()
 
 
 def _creation_pending(state: Any, rule_set: Any, user_id: int) -> tuple[bool, bool]:

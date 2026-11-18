@@ -13,18 +13,26 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 from cygnusloom.content.library import (
+    CREATIVE_CATEGORY_HELP,
+    LOCATION_DENSITY_HELP,
     TABLE_GENRES,
+    TONE_HELP,
+    TONES,
     ModuleTemplate,
     table_genre_offered,
+    tone_offered,
 )
 from cygnusloom.db.models import Campaign
+from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.events import CampaignState
 
 MAX_BODY_CHARS = 10000
 
 
-def _campaign_genres(stored: str, default: Sequence[str]) -> tuple[str, ...]:
-    """The campaign's genre selection, falling back to the rule set's own choice."""
+def _campaign_selection(
+    stored: str, default: Sequence[str], allowed: Sequence[str]
+) -> tuple[str, ...]:
+    """A campaign's JSON-string selection, falling back to the rule set's own choice."""
     text = (stored or "").strip()
     if not text:
         return tuple(default)
@@ -35,7 +43,7 @@ def _campaign_genres(stored: str, default: Sequence[str]) -> tuple[str, ...]:
     if not isinstance(value, list):
         return tuple(default)
     chosen = tuple(
-        dict.fromkeys(item for item in value if isinstance(item, str) and item in TABLE_GENRES)
+        dict.fromkeys(item for item in value if isinstance(item, str) and item in allowed)
     )
     return chosen or tuple(default)
 
@@ -45,14 +53,18 @@ def available_modules(
     campaign: Campaign,
     state: CampaignState,
     *,
-    default_genres: Sequence[str] = (),
-    tags: Sequence[str] = (),
-    setting: str = "",
+    default_genres: Sequence[str] = TABLE_GENRES,
+    default_tones: Sequence[str] = TONES,
+    category: str = "",
+    tone: str = "",
 ) -> tuple[ModuleTemplate, ...]:
-    """The mini modules this campaign may draw on, filtered by its genres and supplied tags."""
-    genres = _campaign_genres(campaign.table_genres, default_genres)
-    wanted = {tag.casefold() for tag in tags if tag.strip()}
-    setting_key = setting.strip().casefold()
+    """The mini modules this campaign may draw on, filtered by its categories and tones."""
+    categories = _campaign_selection(campaign.table_genres, default_genres, TABLE_GENRES)
+    tones = _campaign_selection(campaign.table_tones, default_tones, TONES)
+    if category and category not in TABLE_GENRES:
+        raise InvalidInput(f"there is no creative category named {category!r}")
+    if tone and tone not in TONES:
+        raise InvalidInput(f"there is no module tone named {tone!r}")
     available: list[ModuleTemplate] = []
     for module in modules.values():
         if module.kind != "mini":
@@ -67,12 +79,13 @@ def available_modules(
             continue
         if module.id in state.used_modules and not module.repeatable:
             continue
-        if not table_genre_offered(genres, module.tag_values("genres")):
+        if not table_genre_offered(categories, module.categories):
             continue
-        module_tags = {value.casefold() for values in module.tags.values() for value in values}
-        if wanted and not wanted.intersection(module_tags):
+        if not tone_offered(tones, module.tones):
             continue
-        if setting_key and setting_key not in module_tags:
+        if category and not table_genre_offered((category,), module.categories):
+            continue
+        if tone and tone not in module.tones:
             continue
         available.append(module)
     return tuple(available)
@@ -84,7 +97,12 @@ def module_card(module: ModuleTemplate) -> dict[str, Any]:
         "id": module.id,
         "name": module.name,
         "blurb": module.blurb or module.description,
-        "tags": {category: list(values) for category, values in module.tags.items()},
+        "categories": list(module.categories),
+        "category_notes": [CREATIVE_CATEGORY_HELP[value] for value in module.categories],
+        "tones": list(module.tones),
+        "tone_notes": [TONE_HELP[value] for value in module.tones],
+        "location_density": module.location_density,
+        "location_density_note": LOCATION_DENSITY_HELP[module.location_density],
         "repeatable": module.repeatable,
     }
 
@@ -96,12 +114,8 @@ def _cap(text: str, limit: int) -> str:
 
 
 def module_text(module: ModuleTemplate) -> str:
-    """The module's GM notes and prose, capped for a tool result."""
-    parts = []
-    if module.gm_notes:
-        parts.append(f"GM notes: {module.gm_notes}")
-    parts.append(module.body)
-    return _cap("\n\n".join(parts), MAX_BODY_CHARS)
+    """The module's private GM text, capped for a tool result."""
+    return _cap(module.body, MAX_BODY_CHARS)
 
 
 def module_state_text(
@@ -109,22 +123,20 @@ def module_state_text(
     campaign: Campaign,
     state: CampaignState,
     *,
-    default_genres: Sequence[str] = (),
+    default_genres: Sequence[str] = TABLE_GENRES,
+    default_tones: Sequence[str] = TONES,
 ) -> str:
     """The campaign module's private notes plus the mini-module availability note."""
     blocks: list[str] = []
     campaign_module = modules.get(campaign.world_template)
-    if campaign_module is not None and campaign_module.kind == "campaign":
-        notes = campaign_module.gm_notes
-        if campaign_module.body:
-            notes = f"{notes}\n\n{campaign_module.body}".strip()
-        if notes:
-            blocks.append(_cap(f"Campaign module notes: {notes}", 3000))
+    if campaign_module is not None and campaign_module.kind == "campaign" and campaign_module.body:
+        blocks.append(_cap(f"Campaign module notes: {campaign_module.body}", 3000))
     available = available_modules(
         modules,
         campaign,
         state,
         default_genres=default_genres,
+        default_tones=default_tones,
     )
     if available:
         blocks.append(

@@ -67,6 +67,17 @@ def test_the_standalone_page_notes_third_party_content(
     assert "Includes third-party material." not in original
 
 
+def test_story_module_cards_hide_the_gm_location_density(
+    client_factory: Callable[[], TestClient],
+):
+    client = signed_in_client(client_factory)
+    page = client.get("/compendium?rule_set=cairn2e&world_template=twin-lakes").text
+    assert "The Hermit of Ash Hollow" in page
+    assert "grim" in page
+    assert "mystery" in page
+    assert "low density" not in page
+
+
 def test_a_campaign_has_a_compendium_view(
     client_factory: Callable[[], TestClient],
 ):

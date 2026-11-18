@@ -687,6 +687,7 @@ def _tool_context(
         faction_assets=rule_set.faction_assets,
         modules=modules or {},
         table_genres=genres,
+        table_tones=rule_set.table_tones,
         moves=rule_set.moves,
         counters=rule_set.counters,
         advancements=rule_set.advancements,
@@ -1573,6 +1574,7 @@ async def _begin(run: _Run, turn: Turn) -> AsyncIterator[TurnEvent]:
         run.campaign,
         state,
         default_genres=run.rule_set.table_genres,
+        default_tones=run.rule_set.table_tones,
     )
     groups = state_tool_groups(state, message) | run.extra_groups
     checklist, _ = _checklist_for(run, turn)
