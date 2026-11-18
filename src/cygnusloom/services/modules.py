@@ -9,15 +9,20 @@ helpers decide which seeds fit a campaign and what the GM reads when one is used
 from __future__ import annotations
 
 import json
+import random
 from collections.abc import Mapping, Sequence
 from typing import Any
 
+from cygnusloom.content.character import TableOption
 from cygnusloom.content.library import (
     TABLE_GENRES,
+    DiceTable,
     ModuleTemplate,
     table_genre_offered,
 )
 from cygnusloom.db.models import Campaign
+from cygnusloom.rules.dice import roll_total
+from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.events import CampaignState
 
 MAX_BODY_CHARS = 10000
@@ -95,12 +100,53 @@ def _cap(text: str, limit: int) -> str:
     return text[: limit - 1].rstrip() + "…"
 
 
-def module_text(module: ModuleTemplate) -> str:
-    """The module's GM notes and prose, capped for a tool result."""
+def resolve_rolls(
+    rolls: Mapping[str, str],
+    character_tables: Mapping[str, Sequence[TableOption]],
+    dice_tables: Mapping[str, DiceTable],
+    rng: random.Random,
+    *,
+    plus: str,
+) -> dict[str, str]:
+    """Roll a mini module's placeholders once, without recording separate table events.
+
+    A table may be a character table, such as the core `names` table, or a dice or creative
+    table. Character-table results are kept distinct, so two names in one seed never collide."""
+    values: dict[str, str] = {}
+    taken: set[str] = set()
+    for token, table_id in rolls.items():
+        if table_id in character_tables:
+            options = [option.value for option in character_tables[table_id]]
+            if not options:
+                raise InvalidInput(f"the table {table_id!r} has no options to roll")
+            remaining = [option for option in options if option not in taken] or options
+            value = rng.choice(remaining)
+        elif table_id in dice_tables:
+            table = dice_tables[table_id]
+            value = table.row_for(roll_total(table.dice, rng, plus=plus)).result
+        else:
+            raise InvalidInput(
+                f"the module asks for a table named {table_id!r}, which this campaign does not have"
+            )
+        values[token] = value
+        taken.add(value)
+    return values
+
+
+def _fill_rolls(text: str, rolls: Mapping[str, str]) -> str:
+    for token, value in rolls.items():
+        text = text.replace("{{" + token + "}}", value)
+    return text
+
+
+def module_text(module: ModuleTemplate, rolls: Mapping[str, str] | None = None) -> str:
+    """The module's GM notes and prose, with rolled placeholders filled, capped for a tool
+    result."""
+    values = rolls or {}
     parts = []
     if module.gm_notes:
-        parts.append(f"GM notes: {module.gm_notes}")
-    parts.append(module.body)
+        parts.append(f"GM notes: {_fill_rolls(module.gm_notes, values)}")
+    parts.append(_fill_rolls(module.body, values))
     return _cap("\n\n".join(parts), MAX_BODY_CHARS)
 
 

@@ -1411,7 +1411,7 @@
     "type": "tool_call",
     "id": "lookup_module",
     "lookup": true,
-    "description": "Read a mini module already in play. The text is GM material and must not be quoted to the player.",
+    "description": "Read a mini module already in play. It returns the same rolled names and other placeholder values from when the seed was used. The text is GM material and must not be quoted to the player.",
     "parameters": {
       "properties": {
         "module": {
@@ -1427,7 +1427,7 @@
   {
     "type": "tool_call",
     "id": "use_module",
-    "description": "Bring a mini module into play. It returns its material and is marked used, so a one-shot module is not offered again. Work its people, places, and trouble into the scene with the existing tools, and create a storyline only when the players engage with it.",
+    "description": "Bring a mini module into play. It rolls any names or other table-backed placeholders the seed declares, returns the filled material with the rolled values, and is marked used, so a one-shot module is not offered again. Work its people, places, and trouble into the scene with the existing tools, and create a storyline only when the players engage with it.",
     "parameters": {
       "properties": {
         "module": {

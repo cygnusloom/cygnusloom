@@ -734,6 +734,8 @@ class CampaignState:
     focus_storyline_id: int | None = None
     # Mini modules the GM has used. A one-shot module is no longer offered.
     used_modules: set[str] = field(default_factory=set)
+    # Values rolled for a used module's placeholders, by module id and placeholder token.
+    module_rolls: dict[str, dict[str, str]] = field(default_factory=dict)
     # A one-shot fault the debug panel forces into the next GM turn, or None.
     debug_injection: DebugInjection | None = None
     # Options shared by the whole campaign, keyed by field id. Empty until they are chosen.

@@ -2434,6 +2434,30 @@ def _twin_lakes_copy(tmp_path: Path) -> Path:
     return root
 
 
+def _edit_hermit_module(root: Path, **changes: object) -> None:
+    path = root / "modules" / "the-hermit-of-ash-hollow" / "module.json"
+    entries = json.loads(path.read_text(encoding="utf-8"))
+    entries[0].update(changes)
+    path.write_text(json.dumps(entries, indent=2), encoding="utf-8")
+
+
+def test_a_mini_module_placeholder_must_be_declared(tmp_path: Path):
+    root = _twin_lakes_copy(tmp_path)
+    _edit_hermit_module(root, rolls={})
+    with pytest.raises(ContentError, match=re.escape("undeclared placeholder(s)")):
+        ContentLibrary.load(root)
+
+
+def test_a_mini_module_declared_placeholder_must_be_used(tmp_path: Path):
+    root = _twin_lakes_copy(tmp_path)
+    path = root / "modules" / "the-hermit-of-ash-hollow" / "module.json"
+    entries = json.loads(path.read_text(encoding="utf-8"))
+    rolls = {**entries[0]["rolls"], "unused": "names"}
+    _edit_hermit_module(root, rolls=rolls)
+    with pytest.raises(ContentError, match=re.escape("placeholder(s) not used in the text")):
+        ContentLibrary.load(root)
+
+
 def _edit_twin_lakes_location(root: Path, location_id: str, **changes: object) -> None:
     path = root / "modules" / "twin-lakes" / "locations.json"
     locations = json.loads(path.read_text(encoding="utf-8"))

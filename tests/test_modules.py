@@ -6,6 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
+from cygnusloom.content.character import TableOption
 from cygnusloom.db.models import Campaign
 from cygnusloom.services import modules as modules_service
 from cygnusloom.services.common import InvalidInput
@@ -32,10 +33,11 @@ def _tools(client: TestClient, campaign_id: int) -> WorldTools:
     return WorldTools(
         client.app.state.engine,
         campaign_id,
-        {},
+        {**rules.tables},
         random.Random(1),
         rules.character,
         plus=rules.plus,
+        dice_tables={**rules.dice_tables},
         modules=library.modules,
         table_genres=("generic", "fantasy"),
     )
@@ -53,11 +55,14 @@ def test_a_campaign_module_owns_its_setting():
     assert library.setting_template(TWIN_LAKES) is world
 
 
-def test_a_mini_module_is_only_prose_and_tags():
+def test_a_mini_module_is_prose_tags_and_rolled_placeholders():
     module = content_library().modules[HERMIT]
     assert module.kind == "mini"
     assert module.world_template is None
-    assert "Mara Ash saw the miller's son" in module.body
+    assert "{{herbwife}} saw the miller's son" in module.body
+    assert set(module.rolls) == {"herbwife", "grandchild", "miller", "miller_son"}
+    assert set(module.rolls.values()) == {"names"}
+    assert "Mara" not in module.body and "Mara" not in module.gm_notes
     assert module.tags["genres"] == ("fantasy", "mystery")
 
 
@@ -68,16 +73,63 @@ def test_list_modules_offers_a_fitting_seed_once(client_factory):
     assert [card["id"] for card in tools.list_modules()["modules"]] == [HERMIT]
     with pytest.raises(InvalidInput, match="use_module"):
         tools.lookup_module(HERMIT)
-    text = tools.use_module(HERMIT, "a rumour on the river road")["text"]
-    assert "Mara Ash" in text
-    assert "hush-money" in text
+    used = tools.use_module(HERMIT, "a rumour on the river road")
+    names = used["rolls"]
+    herbwife = names["herbwife"]
+    assert len(set(names.values())) == len(names) == 4
+    assert all(name in used["text"] for name in names.values())
+    assert "{{" not in used["text"]
+    assert "hush-money" in used["text"]
     with Session(client.app.state.engine) as session:
         state = load_state(session, campaign_id)
     assert HERMIT in state.used_modules
+    assert state.module_rolls[HERMIT] == names
     assert tools.list_modules()["modules"] == []
-    assert "Mara Ash" in tools.lookup_module(HERMIT)["text"]
+    again = tools.lookup_module(HERMIT)
+    assert again["rolls"] == names
+    assert herbwife in again["text"]
     with pytest.raises(InvalidInput, match="already used"):
         tools.use_module(HERMIT)
+
+
+def test_module_rolls_keep_character_table_results_distinct():
+    tables = {
+        "names": (
+            TableOption(name=None, description="Alder"),
+            TableOption(name=None, description="Brin"),
+        )
+    }
+    rolls = modules_service.resolve_rolls(
+        {"first": "names", "second": "names"},
+        tables,
+        {},
+        random.Random(1),
+        plus="sum",
+    )
+    assert set(rolls.values()) == {"Alder", "Brin"}
+
+
+def test_module_rolls_can_use_a_creative_table():
+    rules = content_library().rule_sets["cairn2e"]
+    rolls = modules_service.resolve_rolls(
+        {"action": "action"},
+        {},
+        rules.dice_tables,
+        random.Random(1),
+        plus=rules.plus,
+    )
+    assert rolls["action"]
+
+
+def test_a_missing_module_table_is_reported_together_with_the_campaign():
+    with pytest.raises(InvalidInput, match="no-such-table"):
+        modules_service.resolve_rolls(
+            {"herbwife": "no-such-table"},
+            {},
+            {},
+            random.Random(1),
+            plus="sum",
+        )
 
 
 def test_the_state_prompt_mentions_available_mini_modules():
