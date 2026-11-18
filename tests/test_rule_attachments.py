@@ -277,10 +277,8 @@ def test_a_world_place_attaching_an_unknown_rule_is_a_content_error(tmp_path: Pa
 
 UNATTACHED_TWIN_LAKES_RULES = (
     "twin-lakes-overview",
-    "cas-1-procedures",
     "the-roots",
     "victim-schedule",
-    "bandit-ambush",
     "outcome-vuk-reborn",
     "outcome-gate-opened",
     "outcome-vuk-stopped-gate-closed",

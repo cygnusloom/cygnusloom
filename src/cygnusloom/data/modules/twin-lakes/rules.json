@@ -16,11 +16,6 @@
   },
   {
     "type": "rule",
-    "id": "bloodsuckers",
-    "text": "Bloodsuckers swarm, drawn to body heat. They are nearly impossible to fight off, but willingly fly into open flame. Unless avoided, everyone adds a Fatigue."
-  },
-  {
-    "type": "rule",
     "id": "the-downs-travel",
     "text": "Parties traveling by foot add a Fatigue."
   },
@@ -43,11 +38,6 @@
     "type": "rule",
     "id": "trapdoor-butcher-block",
     "text": "A hidden compartment (triggered by a latch underneath) contains the day's current earnings ([1d20] x the hour of the day). The money is taken out each evening and locked in the desk upstairs."
-  },
-  {
-    "type": "rule",
-    "id": "frog-trappers-toad-excretions",
-    "text": "The latter acts as a psychedelic and a sort of truth-serum."
   },
   {
     "type": "rule",
@@ -81,11 +71,6 @@
   },
   {
     "type": "rule",
-    "id": "cas-1-procedures",
-    "text": "This adventure relies on the Cairn 2e Player's Guide, especially the core Backgrounds (p. 19) and Dungeon Exploration procedures (p. 71). Its locations are too far apart for the Wilderness Procedures (p. 75) to be much use; use the random encounter tables instead."
-  },
-  {
-    "type": "rule",
     "id": "faction-tideborn",
     "text": "A hierarchical religious sect that worships Rivulus, a petty god of rivers and lakes. Even the unaffiliated know of its initiation: a ritual drowning that occasionally kills participants. Survivors are dubbed Tideborn and adopt a new, water-related moniker (Carp, Reed, Oxbow, and so on). Only clergy need participate, but in recent years its following among rural folk has grown, especially in villages near water."
   },
@@ -98,11 +83,6 @@
     "type": "rule",
     "id": "bone-sump-discovery",
     "text": "Bone Sump does not appear on any map. The party learns of it only from Fasha or Giva; when one of them names it, record the discovery before sending the party there."
-  },
-  {
-    "type": "rule",
-    "id": "bandit-ambush",
-    "text": "If the party stops to help the woman with the fish cart, three bandits leap from the foliage. Unprepared PCs fail their DEX save automatically. The cart (+4 slots) is in fine condition once unstuck, and the crates are empty."
   },
   {
     "type": "rule",
