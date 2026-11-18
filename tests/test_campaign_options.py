@@ -147,6 +147,9 @@ def test_the_settings_page_shows_the_rule_sets_campaign_options(
     assert 'name="campaign-omen"' in page
     assert f'<option value="{omen}" selected' in page
     assert 'name="setting"' in page
+    assert '<details class="creative-sources-details">' in page
+    assert '<summary id="settings-table-genres-panel">Creative sources</summary>' in page
+    assert '<details class="creative-sources-details" open' not in page
     assert 'name="table_genres_present" value="1"' in page
     assert 'name="table_tones_present" value="1"' in page
     assert "Let players respec their characters" in page

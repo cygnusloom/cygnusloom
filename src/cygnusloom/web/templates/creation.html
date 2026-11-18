@@ -93,24 +93,26 @@
           <p class="muted">Tell Cygnus what kind of world or story you want. Blank is ignored.</p>
         </section>
         <section class="creation-panel table-genres" aria-labelledby="panel-table-genres">
-          <h3 id="panel-table-genres">Creative sources</h3>
-          <p class="muted">These categories choose which generation tables and mini story modules the GM is offered. The rule set's own choice is checked; narrow it only when you want a different kind of setting.</p>
-          <div class="genre-options">
-            {% for genre in table_genres %}
-              <label><input type="checkbox" name="table_genres" value="{{ genre }}"{% if genre in selected_table_genres %} checked{% endif %}> {{ genre.replace("-", " ").capitalize() }}</label>
-            {% endfor %}
-          </div>
-          <p class="muted">{% for genre in table_genres %}{{ genre.replace("-", " ").capitalize() }}: {{ category_help[genre] }}{% if not loop.last %} {% endif %}{% endfor %}</p>
-          {% if table_tones %}
-          <h4>Module tones</h4>
-          <p class="muted">These tones narrow which mini story modules the GM may bring in. Leave the rule set's own choice alone unless you want a different mood.</p>
-          <div class="genre-options">
-            {% for tone in table_tones %}
-              <label><input type="checkbox" name="table_tones" value="{{ tone }}"{% if tone in selected_table_tones %} checked{% endif %}> {{ tone.capitalize() }}</label>
-            {% endfor %}
-          </div>
-          <p class="muted">{% for tone in table_tones %}{{ tone.capitalize() }}: {{ tone_help[tone] }}{% if not loop.last %} {% endif %}{% endfor %}</p>
-          {% endif %}
+          <details class="creative-sources-details">
+            <summary id="panel-table-genres">Creative sources</summary>
+            <p class="muted">These categories choose which generation tables and mini story modules the GM is offered. The rule set's own choice is checked; narrow it only when you want a different kind of setting.</p>
+            <div class="genre-options">
+              {% for genre in table_genres %}
+                <label><input type="checkbox" name="table_genres" value="{{ genre }}"{% if genre in selected_table_genres %} checked{% endif %}> {{ genre.replace("-", " ").capitalize() }}</label>
+              {% endfor %}
+            </div>
+            <p class="muted">{% for genre in table_genres %}{{ genre.replace("-", " ").capitalize() }}: {{ category_help[genre] }}{% if not loop.last %} {% endif %}{% endfor %}</p>
+            {% if table_tones %}
+            <h4>Module tones</h4>
+            <p class="muted">These tones narrow which mini story modules the GM may bring in. Leave the rule set's own choice alone unless you want a different mood.</p>
+            <div class="genre-options">
+              {% for tone in table_tones %}
+                <label><input type="checkbox" name="table_tones" value="{{ tone }}"{% if tone in selected_table_tones %} checked{% endif %}> {{ tone.capitalize() }}</label>
+              {% endfor %}
+            </div>
+            <p class="muted">{% for tone in table_tones %}{{ tone.capitalize() }}: {{ tone_help[tone] }}{% if not loop.last %} {% endif %}{% endfor %}</p>
+            {% endif %}
+          </details>
         </section>
         <section class="creation-panel campaign-tracking" aria-labelledby="panel-tracking">
           <h3 id="panel-tracking">Tracking</h3>
