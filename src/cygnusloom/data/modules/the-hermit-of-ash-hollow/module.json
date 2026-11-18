@@ -16,13 +16,7 @@
     },
     "repeatable": false,
     "source": "Original content written for Cygnus Loom.",
-    "gm_notes": "{{herbwife}} is not a villain. She is frightened and protective. Her grandchild {{grandchild}} works in the kitchen of {{miller}} the miller. {{miller_son}}, the miller's son, set the fire. The miller's men may arrive while the bargain is being struck.",
-    "rolls": {
-      "herbwife": "names",
-      "grandchild": "names",
-      "miller": "names",
-      "miller_son": "names"
-    },
-    "body": "{{herbwife}} saw the miller's son set the fire that killed two workers. The miller paid her to keep quiet, and she took the money to keep her grandchild fed. A purse of hush-money with the miller's mark on the clasp sits in the hut; the coins are new and she has not spent them.\n\n{{herbwife}} has already denied seeing anything when the party arrives. She will name the arsonist only if they promise to get her grandchild out of the miller's service. Complications: the miller's men arrive while the bargain is being struck, or the grandchild does not want to leave. If the party does nothing, the miller moves the child out of the region and {{herbwife}} stops speaking to strangers. Either {{herbwife}} names the son and the party gains a witness, or she keeps silent and the purse is the only proof."
+    "gm_notes": "The herbwife is not a villain. She is frightened and protective. She will trade the truth for a promise that her grandchild will be safe; the child works in the miller's kitchen. The miller's men may arrive while the bargain is being struck. Create the herbwife, her grandchild, the miller, and his son as named characters with the normal tools, and keep track of what the player learns in notes.",
+    "body": "The herbwife saw the miller's son set the fire that killed two workers. The miller paid her to keep quiet, and she took the money to keep her grandchild fed. A purse of hush-money with the miller's mark on the clasp sits in the hut; the coins are new and she has not spent them.\n\nThe herbwife has already denied seeing anything when the party arrives. She will name the arsonist only if they promise to get her grandchild out of the miller's service. Complications: the miller's men arrive while the bargain is being struck, or the grandchild does not want to leave. If the party does nothing, the miller moves the child out of the region and the herbwife stops speaking to strangers. Either the herbwife names the son and the party gains a witness, or she keeps silent and the purse is the only proof."
   }
 ]

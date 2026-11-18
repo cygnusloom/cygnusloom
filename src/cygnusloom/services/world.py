@@ -386,7 +386,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
         return {"modules": cards}
 
     def lookup_module(self, module: str) -> dict[str, Any]:
-        """Read a mini module already in play, with the values rolled when it was used."""
+        """Read a mini module already in play."""
         with session_scope(self.engine) as db:
             state = load_state(db, self.campaign_id)
         found = self.modules.get(module)
@@ -394,8 +394,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
             raise InvalidInput(f"there is no module named {module!r}")
         if module not in state.used_modules:
             raise InvalidInput("call use_module before reading a mini module's text")
-        rolls = state.module_rolls.get(module, {})
-        return {"module": module, "text": modules_service.module_text(found, rolls), "rolls": rolls}
+        return {"module": module, "text": modules_service.module_text(found)}
 
     def use_module(self, module: str, reason: str = "") -> dict[str, Any]:
         """Bring a mini module into play. A one-shot module is not offered again."""
@@ -420,17 +419,10 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 raise InvalidInput(
                     "that mini module is not available in this campaign, or it was already used"
                 )
-            rolls = modules_service.resolve_rolls(
-                found.rolls,
-                self.tables,
-                self.dice_tables,
-                self.rng,
-                plus=self.plus,
-            )
-            text = modules_service.module_text(found, rolls)
-            record(db, self.campaign_id, ModuleUsed(module=module, reason=reason, rolls=rolls))
+            text = modules_service.module_text(found)
+            record(db, self.campaign_id, ModuleUsed(module=module, reason=reason))
             db.commit()
-        return {"module": module, "text": text, "rolls": rolls}
+        return {"module": module, "text": text}
 
     def advance_time(self, days: int = 0, parts: int = 0, hours: int = 0) -> dict[str, Any]:
         with session_scope(self.engine) as db:

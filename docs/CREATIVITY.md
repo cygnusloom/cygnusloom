@@ -97,9 +97,8 @@ A mini module is a small story seed with no setting of its own. It lives in
     "recommended_rulesets": [],
     "third_party": false,
     "source": "Original content written for Cygnus Loom.",
-    "gm_notes": "{{herbwife}} is frightened, not villainous. She will trade the truth for her grandchild's safety.",
-    "rolls": {"herbwife": "names"},
-    "body": "{{herbwife}} saw the miller's son set the fire...",
+    "gm_notes": "The herbwife is frightened, not villainous. She will trade the truth for her grandchild's safety. Create her, the miller, and his son as named characters, and keep notes on what the player learns.",
+    "body": "The herbwife saw the miller's son set the fire...",
     "repeatable": false
   }
 ]
@@ -107,19 +106,15 @@ A mini module is a small story seed with no setting of its own. It lives in
 
 The parser reads `module` and ordinary world definitions. A mini module accepts only
 `module`; `body` is required and is the seed's adventure text. There are no scene, clue, front,
-ending, hook, storyline, or inline entry types. If a seed needs a place or person, the GM creates
-it with the normal tools so the campaign keeps one record.
+ending, hook, storyline, or inline entry types.
 
-A mini module may use `{{placeholders}}` in its `body` and `gm_notes`. Its `rolls` object maps
-each placeholder to a table id; `use_module` rolls each one once, fills the text, and returns the
-values with the material. A later `lookup_module` returns the same values, so a name cannot change
-mid-story. A table may be a character table, a dice table, or a creative table. The core `names`
-table is always available and is the intended source for incidental NPC names; a rule set may
-override it. Two placeholders rolled from the same character table are kept distinct.
+A mini module describes roles, not named people or places: `the herbwife`, `the miller`, `the
+burnt hut`. When one enters play, the GM creates it with the normal tools, chooses its name from
+the creativity tables or their own invention, and records what the player learns in notes. That
+keeps one campaign record and lets the same seed fit any setting.
 
 A campaign module may also carry an optional `body`: extra long-form GM prose that is not setting
-data. It reaches the state prompt with `gm_notes`, never the player-facing narration. Campaign
-modules cannot use placeholders: their setting is authored, not rolled.
+data. It reaches the state prompt with `gm_notes`, never the player-facing narration.
 
 ## Runtime
 
@@ -192,9 +187,9 @@ name `world_template: "twin-lakes"` keep working because the module id is the co
 ## Testing
 
 The full suite passes with the final model. `tests/test_modules.py` covers campaign modules,
-mini modules, the picker, module rolls, and the module state note; campaign and content tests
-cover selecting Twin Lakes by module id, resolving its setting, and rejecting undeclared or unused
-placeholders; migration tests confirm no module migration was added.
+mini modules, the picker, and the module state note; campaign and content tests cover selecting
+Twin Lakes by module id and resolving its setting; migration tests confirm no module migration
+was added.
 
 Live DeepSeek checks on Twin Lakes:
 

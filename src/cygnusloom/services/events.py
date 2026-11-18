@@ -745,12 +745,9 @@ class ModuleUsed(GameEvent):
 
     module: str
     reason: str = ""
-    # Placeholder values rolled when the module was used, so a later lookup reuses them.
-    rolls: Mapping[str, str] = field(default_factory=dict)
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         state.used_modules.add(self.module)
-        state.module_rolls[self.module] = dict(self.rolls)
 
 
 @dataclass(frozen=True)

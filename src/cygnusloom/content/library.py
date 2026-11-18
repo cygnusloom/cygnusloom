@@ -380,9 +380,6 @@ class ModuleTemplate:
     source: str | None
     world_template: WorldTemplate | None = None
     body: str = ""
-    # Placeholder names in the body and notes, each mapped to a table id. A mini module's
-    # placeholders are rolled once when it is used, so the seed can be reused in new campaigns.
-    rolls: Mapping[str, str] = field(default_factory=dict)
     repeatable: bool = False
 
     def tag_values(self, category: str) -> tuple[str, ...]:
@@ -2581,8 +2578,6 @@ WORLD_DEFINITION_TYPES = frozenset({"world", "location", "npc", "region", "route
 # import Python.
 MODULE_DEFINITION_TYPES = frozenset({"module"})
 MODULE_KINDS = ("mini", "campaign")
-# A mini module writes {{placeholder}} in its text and lists the token in `rolls`.
-MODULE_PLACEHOLDER = re.compile(r"\{\{([a-z][a-z0-9_-]*)\}\}")
 
 # Every definition type a rule set loader consumes. A definition with another type is a content
 # error instead of being silently dropped.
@@ -3046,7 +3041,6 @@ def _load_module(directory: Path) -> ModuleTemplate:
             "gm_notes",
             "start",
             "body",
-            "rolls",
             "repeatable",
         },
         label,
@@ -3082,10 +3076,6 @@ def _load_module(directory: Path) -> ModuleTemplate:
         if not world_template.has_setting:
             raise ContentError(f"{label}: a campaign module needs its own setting")
         body = _optional_text(module_def.data, "body", label) or ""
-    gm_notes = _optional_text(module_def.data, "gm_notes", label) or ""
-    rolls = _load_module_rolls(module_def.data.get("rolls"), label, f"{gm_notes}\n{body}")
-    if kind != "mini" and rolls:
-        raise ContentError(f"{label}: only a mini module can roll placeholders")
     return ModuleTemplate(
         id=module_def.id,
         kind=kind,
@@ -3094,50 +3084,15 @@ def _load_module(directory: Path) -> ModuleTemplate:
         blurb=blurb,
         icon=_definition_icon(module_def.data, label, FALLBACK_WORLD),
         tags=_load_module_tags(module_def.data.get("tags"), label),
-        gm_notes=gm_notes,
+        gm_notes=_optional_text(module_def.data, "gm_notes", label) or "",
         rule_set=rule_set,
         recommended_rule_sets=_optional_text_list(module_def.data, "recommended_rulesets", label),
         third_party=_flag(module_def.data, "third_party", label),
         source=_optional_text(module_def.data, "source", label),
         world_template=world_template,
         body=body,
-        rolls=rolls,
         repeatable=_flag(module_def.data, "repeatable", label),
     )
-
-
-def _load_module_rolls(value: object, label: str, text: str) -> Mapping[str, str]:
-    """Read a module's placeholder-to-table mapping and check it against its own text.
-
-    Every declared token must appear in the module text and every token in the text must be
-    declared, so a misspelled or forgotten placeholder fails at load time instead of reaching
-    the GM as literal braces."""
-    if value is None:
-        rolls: dict[str, str] = {}
-    else:
-        if not isinstance(value, Mapping):
-            raise ContentError(f"{label}: 'rolls' must be an object of table ids")
-        rolls = {}
-        for token, table in value.items():
-            if not isinstance(token, str) or not re.fullmatch(r"[a-z][a-z0-9_-]*", token):
-                raise ContentError(
-                    f"{label}: each placeholder name must use lowercase letters, digits, "
-                    "underscores, or hyphens"
-                )
-            if not isinstance(table, str) or not table.strip():
-                raise ContentError(f"{label}: placeholder {token!r} must name a table")
-            rolls[token] = table.strip()
-    declared = set(rolls)
-    found = set(MODULE_PLACEHOLDER.findall(text))
-    unknown = sorted(found - declared)
-    if unknown:
-        names = ", ".join(f"{{{{{token}}}}}" for token in unknown)
-        raise ContentError(f"{label}: undeclared placeholder(s) {names}")
-    unused = sorted(declared - found)
-    if unused:
-        names = ", ".join(f"{{{{{token}}}}}" for token in unused)
-        raise ContentError(f"{label}: placeholder(s) not used in the text: {names}")
-    return rolls
 
 
 def _load_module_tags(value: object, label: str) -> Mapping[str, tuple[str, ...]]:
