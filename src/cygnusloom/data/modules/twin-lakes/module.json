@@ -9,7 +9,7 @@
     "icon": "water",
     "categories": ["fantasy"],
     "tones": ["grim", "mystery", "adventure"],
-    "location_density": "dense",
+    "location_density": ["dense"],
     "rule_set": "cairn2e",
     "third_party": true,
     "source": "This module uses content from CAS-1: Trouble in Twin Lakes by Yochai Gal; see CREDITS.md.",

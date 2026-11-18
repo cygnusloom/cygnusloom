@@ -15,8 +15,8 @@ Three content concepts remain:
    campaign module; a module's setting is never registered as one. The picker offers worlds and
    campaign modules side by side.
 3. **Mini modules** are small story seeds. They have no setting of their own: a module is a short
-   `blurb`, one private `body` of notes and prose, shared categories and tones, and a location
-   density. The AI GM may pick one when the campaign needs a new thread.
+   `blurb`, one private `body` of notes and prose, shared categories and tones, and the location
+   densities it fits. The AI GM may pick one when the campaign needs a new thread.
 
 Creative tables remain a fourth input: the oracle tables suggest fresh material during play,
 while the setting tables invent an unwritten world at the opening. Tables and modules draw on one
@@ -65,16 +65,18 @@ back to the rule set's defaults. Campaigns store the category selection in `tabl
 tone selection in `table_tones`. The columns keep the existing names so exports and existing
 campaigns remain compatible.
 
-`location_density` is one of `low`, `moderate`, or `dense`. It is GM guidance, not a player
-setting:
+`location_density` is a non-empty list of the densities a module can fit. The possible values
+are:
 
 - `low`: one compact site or scene, with no travel network.
 - `moderate`: a handful of nearby sites, with a short trip between them.
 - `dense`: a connected area with many locations to explore.
 
-The density and its explanation appear on the card returned by `list_modules`. The AI GM uses it
-to decide whether the seed fits the current place and how far to spread it. Density never appears
-in the player-facing compendium and is not part of the campaign form.
+A module that can fit anywhere lists all three. A module with one compact site lists only
+`low`. The densities and their explanations appear on the card returned by `list_modules`. The AI
+GM picks one of the listed densities to decide where the seed can meet the party and how far it
+can spread. Density never appears in the player-facing compendium and is not part of the campaign
+form.
 
 The core `creative_oracle` state prompt tells the GM to roll oracle tables when the scene stalls
 or the player is unsure, not on consecutive turns, and never in the middle of an encounter. The
@@ -86,7 +88,7 @@ that sentence.
 A campaign module has everything a long-form adventure needs:
 
 - a name, blurb, description, icon, rule set, and start;
-- categories, tones, and a location density;
+- categories, tones, and the location densities it fits;
 - locations, NPCs, regions, routes, and local maps;
 - monsters, features, tables, rules, and outcome text;
 - a campaign start and hooks, plus private GM notes.
@@ -125,7 +127,7 @@ A mini module is a small story seed with no setting of its own. It lives in
     "icon": "campfire",
     "categories": ["fantasy"],
     "tones": ["grim", "mystery"],
-    "location_density": "low",
+    "location_density": ["low"],
     "rule_set": null,
     "recommended_rulesets": [],
     "third_party": false,
@@ -139,8 +141,8 @@ A mini module is a small story seed with no setting of its own. It lives in
 The parser reads `module` and ordinary world definitions. A mini module accepts only
 `module`; `blurb` is its short public card and `body` is its required private GM text. It has no
 `description` and no `gm_notes`; the seed's notes and prose share one `body`. Every module names
-at least one category, one tone, and one location density. There are no scene, clue, front,
-ending, hook, storyline, or inline entry types.
+at least one category, one tone, and one density. There are no scene, clue, front, ending, hook,
+storyline, or inline entry types.
 
 A mini module describes roles, not named people or places: `the herbwife`, `the miller`, `the
 burnt hut`. When one enters play, the GM creates it with the normal tools, chooses its name from
@@ -178,8 +180,9 @@ text.
   encounters, tables, and rule attachments. It has no module-specific tool.
 - `list_modules(category?, tone?, random?)` returns mini-module cards that fit the campaign's
   categories, tones, rule set, and unused one-shot state. A card carries the module's categories,
-  tones, location density, and the help text for each. The optional `category` and `tone`
-  arguments filter an already-available card; unknown values are rejected.
+  tones, location densities, and the help text for each. A module that fits anywhere lists all
+  three densities. The optional `category` and `tone` arguments filter an already-available
+  card; unknown values are rejected.
 - `use_module(module, reason?)` returns the seed's private body, records `module.used`, and removes
   a non-repeatable seed from the pool.
 - `lookup_module(module)` rereads a seed already used in this campaign.
@@ -204,7 +207,7 @@ notes are the **continuity** layer. The engine does not track plot progress.
 - A campaign module's public setting entries and a world's public entries appear in the
   compendium as they always have.
 - Mini modules are listed as cards in the compendium's "Story modules" section: name, blurb,
-  categories, and tones only. Their `body` and `location_density` stay with the GM.
+  categories, and tones only. Their `body` and location densities stay with the GM.
 - There is no in-play module tab or module progress. A mini module's material appears only after
   the GM uses it; a campaign module's private notes are GM-only.
 

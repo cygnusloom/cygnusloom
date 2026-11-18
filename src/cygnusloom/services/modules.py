@@ -101,8 +101,10 @@ def module_card(module: ModuleTemplate) -> dict[str, Any]:
         "category_notes": [CREATIVE_CATEGORY_HELP[value] for value in module.categories],
         "tones": list(module.tones),
         "tone_notes": [TONE_HELP[value] for value in module.tones],
-        "location_density": module.location_density,
-        "location_density_note": LOCATION_DENSITY_HELP[module.location_density],
+        "location_density": list(module.location_density),
+        "location_density_notes": [
+            LOCATION_DENSITY_HELP[value] for value in module.location_density
+        ],
         "repeatable": module.repeatable,
     }
 

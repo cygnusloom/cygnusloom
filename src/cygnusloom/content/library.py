@@ -109,7 +109,8 @@ TONES = (
     "adventure",
 )
 # How much ground a module expects. The player never chooses this; the GM uses it to decide
-# whether a seed fits the current place and how far to spread it.
+# whether a seed fits the current place and how far to spread it. A module names each density it
+# can fit; a module that can fit anywhere lists all three.
 LOCATION_DENSITIES = ("low", "moderate", "dense")
 CREATIVE_CATEGORY_HELP = {
     "generic": "Fits any setting without assuming a particular world.",
@@ -264,14 +265,25 @@ def tone_offered(tags: Sequence[str], tones: Sequence[str]) -> bool:
     return bool(set(tags) & set(tones))
 
 
-def read_location_density(value: Any, label: str) -> str:
-    """Read a module's single location density and check it against LOCATION_DENSITIES."""
-    density = required_text({"value": value}, "value", label)
-    if density not in LOCATION_DENSITIES:
+def read_location_density(value: Any, label: str) -> tuple[str, ...]:
+    """Read a module's location densities and check them against LOCATION_DENSITIES.
+
+    A module lists every density it can fit, so a seed that works anywhere names all three.
+    The list must name at least one density and may not repeat one.
+    """
+    entries = _text_list(value, label)
+    unknown = [entry for entry in entries if entry not in LOCATION_DENSITIES]
+    if unknown:
+        names = ", ".join(repr(entry) for entry in unknown)
         raise ContentError(
-            f"{label}: 'location_density' must be one of {', '.join(LOCATION_DENSITIES)}"
+            f"{label}: unknown location density(s) {names}; choose from "
+            f"{', '.join(LOCATION_DENSITIES)}"
         )
-    return density
+    if len(set(entries)) != len(entries):
+        raise ContentError(f"{label}: a location density may be named only once")
+    if not entries:
+        raise ContentError(f"{label}: a module needs at least one 'location_density' entry")
+    return tuple(entries)
 
 
 def tables_for_genres(
@@ -447,10 +459,10 @@ class ModuleTemplate:
     description: str
     blurb: str | None
     icon: str
-    # Shared creative categories, tones, and the amount of ground the module expects.
+    # Shared creative categories, tones, and each amount of ground the module can fit.
     categories: tuple[str, ...]
     tones: tuple[str, ...]
-    location_density: str
+    location_density: tuple[str, ...]
     rule_set: str | None
     recommended_rule_sets: tuple[str, ...]
     third_party: bool

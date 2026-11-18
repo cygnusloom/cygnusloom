@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import random
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
+from cygnusloom.content.definitions import ContentError
+from cygnusloom.content.library import ContentLibrary
 from cygnusloom.db.models import Campaign
 from cygnusloom.services import modules as modules_service
 from cygnusloom.services.common import InvalidInput
@@ -21,6 +24,7 @@ from tests.factories import (
     send_message,
     signed_in_client,
 )
+from tests.support import content_tree, write_files
 
 TWIN_LAKES = "twin-lakes"
 HERMIT = "the-hermit-of-ash-hollow"
@@ -66,7 +70,56 @@ def test_a_mini_module_is_prose_and_shared_metadata():
     assert "Mara" not in module.body
     assert module.categories == ("fantasy",)
     assert module.tones == ("grim", "mystery")
-    assert module.location_density == "low"
+    assert module.location_density == ("low",)
+
+
+def _mini_module_manifest(location_density: object) -> dict[str, object]:
+    return {
+        "type": "module",
+        "id": "fits-anywhere",
+        "kind": "mini",
+        "name": "Fits Anywhere",
+        "blurb": "A seed that can appear almost anywhere.",
+        "categories": ["generic"],
+        "tones": ["adventure"],
+        "location_density": location_density,
+        "body": "Bring the seed in wherever the party happens to be.",
+    }
+
+
+def _load_mini_module(tmp_path: Path, location_density: object):
+    root = content_tree(tmp_path)
+    write_files(
+        root,
+        {"modules/fits-anywhere/module.json": [_mini_module_manifest(location_density)]},
+    )
+    return ContentLibrary.load(root).modules["fits-anywhere"]
+
+
+def test_a_module_can_name_every_density_it_fits(tmp_path: Path):
+    module = _load_mini_module(tmp_path, ["low", "moderate", "dense"])
+    assert module.location_density == ("low", "moderate", "dense")
+    card = modules_service.module_card(module)
+    assert card["location_density"] == ["low", "moderate", "dense"]
+    assert len(card["location_density_notes"]) == 3
+    assert "compact site" in card["location_density_notes"][0]
+    assert "connected area" in card["location_density_notes"][2]
+
+
+@pytest.mark.parametrize(
+    ("location_density", "message"),
+    [
+        ("low", "list of non-empty text"),
+        ([], "at least one"),
+        (["low", "low"], "only once"),
+        (["anywhere"], "unknown location density"),
+    ],
+)
+def test_a_bad_location_density_list_is_rejected(
+    tmp_path: Path, location_density: object, message: str
+):
+    with pytest.raises(ContentError, match=message):
+        _load_mini_module(tmp_path, location_density)
 
 
 def test_list_modules_offers_a_fitting_seed_once(client_factory):
@@ -77,8 +130,8 @@ def test_list_modules_offers_a_fitting_seed_once(client_factory):
     assert [card["id"] for card in cards] == [HERMIT]
     assert cards[0]["categories"] == ["fantasy"]
     assert cards[0]["tones"] == ["grim", "mystery"]
-    assert cards[0]["location_density"] == "low"
-    assert "compact site" in cards[0]["location_density_note"]
+    assert cards[0]["location_density"] == ["low"]
+    assert "compact site" in cards[0]["location_density_notes"][0]
     with pytest.raises(InvalidInput, match="use_module"):
         tools.lookup_module(HERMIT)
     text = tools.use_module(HERMIT, "a rumour on the river road")["text"]

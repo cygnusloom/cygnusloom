@@ -1386,7 +1386,7 @@
     "type": "tool_call",
     "id": "list_modules",
     "lookup": true,
-    "description": "List the mini modules this campaign can use. The result has cards for seeds that fit the campaign's selected categories and tones and have not been used. Each card also gives its location density: low is one compact site, moderate is a handful of nearby sites, and dense is a connected area with many places. Use the density to choose a seed that fits where the party is and how far they can travel, then call use_module to bring it into play.",
+    "description": "List the mini modules this campaign can use. The result has cards for seeds that fit the campaign's selected categories and tones and have not been used. Each card also gives the location densities it fits: low is one compact site, moderate is a handful of nearby sites, and dense is a connected area with many places. A seed that fits anywhere lists all three. Use one of those densities to choose where the party can meet the seed and how far it can spread, then call use_module to bring it into play.",
     "parameters": {
       "properties": {
         "category": {
