@@ -6,9 +6,9 @@ engine's content definitions. Run it from the repository root:
 
     .venv/bin/python scripts/build_srd2024.py
 
-It reads /tmp/srd2024_raw (created by the fetch script) and writes the rule set's JSON files.
-The generated files are committed; this script is kept so the content can be regenerated when
-the source data or the engine's schema changes.
+It reads /tmp/srd2024_raw (created by scripts/fetch_srd2024.py) and writes the rule set's JSON
+files. The generated files are committed; this script is kept so the content can be regenerated
+when the source data or the engine's schema changes.
 """
 
 from __future__ import annotations
