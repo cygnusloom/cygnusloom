@@ -1386,17 +1386,9 @@
     "type": "tool_call",
     "id": "list_modules",
     "lookup": true,
-    "description": "List the story modules this campaign can use. The result has cards for active campaign modules and for mini modules that fit the campaign's tags and have not been used. Use it when the story needs a new thread or a new place to go, then call use_module to bring a mini module into play.",
+    "description": "List the mini modules this campaign can use. The result has cards for seeds that fit the campaign's tags and have not been used. Use it when the story needs a new thread or a new place to go, then call use_module to bring one into play.",
     "parameters": {
       "properties": {
-        "kind": {
-          "type": "string",
-          "enum": [
-            "mini",
-            "campaign"
-          ],
-          "description": "Optional. List only mini modules or only active campaign modules."
-        },
         "tags": {
           "type": "array",
           "items": {
@@ -1419,7 +1411,7 @@
     "type": "tool_call",
     "id": "lookup_module",
     "lookup": true,
-    "description": "Read an active campaign module or a mini module already in play. A campaign module often just restates the brief, because its material is the world's own locations, people, and rules. The text is GM material and must not be quoted to the player.",
+    "description": "Read a mini module already in play. The text is GM material and must not be quoted to the player.",
     "parameters": {
       "properties": {
         "module": {
@@ -1435,7 +1427,7 @@
   {
     "type": "tool_call",
     "id": "use_module",
-    "description": "Bring a mini module into play, or begin using an attached campaign module. A mini module returns its material and is marked used, so a one-shot module is not offered again. Work its people, places, and trouble into the scene with the existing tools, and create a storyline only when the players engage with it.",
+    "description": "Bring a mini module into play. It returns its material and is marked used, so a one-shot module is not offered again. Work its people, places, and trouble into the scene with the existing tools, and create a storyline only when the players engage with it.",
     "parameters": {
       "properties": {
         "module": {

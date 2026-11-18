@@ -61,9 +61,10 @@ def test_bundled_rule_sets_recommend_their_preferred_worlds():
 def test_offered_worlds_leave_out_other_rule_sets_and_put_recommended_first():
     library = bundled_library()
 
-    # Twin Lakes is a campaign module's setting now, so it is recommended for Cairn 2e but not
-    # offered as a standalone world.
-    assert [world.id for world in library.offered_worlds("cairn2e")] == ["unwritten-world"]
+    assert [world.id for world in library.offered_worlds("cairn2e")] == [
+        "twin-lakes",
+        "unwritten-world",
+    ]
     assert [world.id for world in library.offered_worlds("academia-arcana")] == [
         "unwritten-academy",
         "unwritten-world",

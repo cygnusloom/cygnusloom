@@ -335,9 +335,7 @@ class WorldTemplate:
     # Areas of ground on the world map. They do not overlap, and are checked against the rule set's
     # world terrain in WorldContent.
     regions: tuple[RegionTemplate, ...] = ()
-    # The campaign module this world is embedded in, or None for a top-level world. It lets the
-    # compendium label and deduplicate a module's setting.
-    module: str | None = None
+
 
     @property
     def has_setting(self) -> bool:
@@ -362,15 +360,13 @@ class WorldContent:
 
 @dataclass(frozen=True)
 class ModuleTemplate:
-    """Human-written story material: a mini module or a full campaign module.
+    """A small, self-contained story seed the AI GM may drop into any fitting campaign.
 
-    A campaign module is mostly its embedded world: locations, NPCs, rules, and tables carry
-    the material, the way a published adventure does. `body` is optional prose for material
-    that has no world entry, and is the whole of a mini module's adventure text.
+    A full adventure is a world. A module is only the extra material that has no world of its
+    own: a short prose `body`, tags, and a little guidance.
     """
 
     id: str
-    kind: str
     name: str
     description: str
     blurb: str | None
@@ -379,23 +375,13 @@ class ModuleTemplate:
     gm_notes: str
     rule_set: str | None
     recommended_rule_sets: tuple[str, ...]
-    world: str | None
-    recommended_worlds: tuple[str, ...]
     third_party: bool
     source: str | None
-    start: WorldStart | None
-    # The module's own world-like content, either an embedded world or a synthetic world built
-    # from its locations, NPCs, regions, and definitions.
-    world_template: WorldTemplate
     body: str = ""
     repeatable: bool = False
 
     def tag_values(self, category: str) -> tuple[str, ...]:
         return self.tags.get(category, ())
-
-    @property
-    def has_setting(self) -> bool:
-        return self.world_template.has_setting
 
 
 @dataclass(frozen=True)
@@ -2324,8 +2310,7 @@ class ContentLibrary:
     # Selectable rule sets. The core rule set is not listed here: it is merged into each of these.
     rule_sets: Mapping[str, RuleSet]
     core: RuleSet
-    # Human-written mini and campaign modules. A campaign module with a setting is also
-    # registered in `world_templates` under its world id, so ordinary world lookups keep working.
+    # Small injectable story seeds. A full adventure is a world, not a module.
     modules: Mapping[str, ModuleTemplate] = field(default_factory=dict)
     # Built on first use for each (world, rule set) pair, since a world's statblocks are checked
     # against the rule set a campaign plays with.
@@ -2344,75 +2329,20 @@ class ContentLibrary:
         return self._world_content[key]
 
     def world_content_for(self, template: WorldTemplate, rule_set: str) -> WorldContent:
-        """The content of a world or a merged campaign world, checked against one rule set."""
+        """A world's content checked against one rule set."""
         return _build_world_content(template, self.rule_sets[rule_set])
 
-    def module_for_world(self, world: str) -> ModuleTemplate | None:
-        """The campaign module whose setting is this world, or None for a top-level world."""
-        for module in self.modules.values():
-            if module.kind == "campaign" and module.world_template.id == world:
-                return module
-        return None
-
-    def offered_modules(
-        self, rule_set: str, *, kind: str | None = None, world: str | None = None
-    ) -> tuple[ModuleTemplate, ...]:
-        """The modules a rule set (and optionally a world) can use, in content order."""
+    def offered_modules(self, rule_set: str) -> tuple[ModuleTemplate, ...]:
+        """The mini modules a rule set can use, in content order."""
         offered: list[ModuleTemplate] = []
         for module in self.modules.values():
-            if kind is not None and module.kind != kind:
-                continue
             if module.rule_set is not None:
                 if module.rule_set != rule_set:
                     continue
             elif module.recommended_rule_sets and rule_set not in module.recommended_rule_sets:
                 continue
-            if world is not None:
-                if module.world is not None and module.world != world:
-                    continue
-                if module.recommended_worlds and world not in module.recommended_worlds:
-                    continue
             offered.append(module)
         return tuple(offered)
-
-    def campaign_world(
-        self, world: str, module_ids: Sequence[str] = ()
-    ) -> WorldTemplate:
-        """The base world with the attached campaign modules' world content layered on top.
-        Module definitions win on id collisions, so a module can deliberately replace a place."""
-        base = self.world_templates[world]
-        layers: list[WorldTemplate] = []
-        for module_id in module_ids:
-            module = self.modules.get(module_id)
-            if module is None or module.kind != "campaign":
-                continue
-            if module.world is not None and module.world != base.id:
-                continue
-            if module.world_template.id == base.id:
-                # An embedded world is already the base, so it needs no second layer.
-                continue
-            layers.append(module.world_template)
-        if not layers:
-            return base
-        locations = {location.id: location for location in base.locations}
-        npcs = {npc.id: npc for npc in base.npcs}
-        regions = {region.id: region for region in base.regions}
-        definitions = {(d.type, d.id): d for d in base.definitions}
-        start = base.start
-        for layer in layers:
-            locations.update({location.id: location for location in layer.locations})
-            npcs.update({npc.id: npc for npc in layer.npcs})
-            regions.update({region.id: region for region in layer.regions})
-            definitions.update({(d.type, d.id): d for d in layer.definitions})
-            start = layer.start or start
-        return replace(
-            base,
-            locations=tuple(locations.values()),
-            npcs=tuple(npcs.values()),
-            regions=tuple(regions.values()),
-            definitions=tuple(definitions.values()),
-            start=start,
-        )
 
     def recommended_world_ids(self, rule_set: str) -> frozenset[str]:
         """The worlds held up first when choosing a world for this rule set. A world is
@@ -2442,7 +2372,7 @@ class ContentLibrary:
         offered = [
             world
             for world in self.world_templates.values()
-            if world.module is None and (world.rule_set is None or world.rule_set == rule_set)
+            if world.rule_set is None or world.rule_set == rule_set
         ]
         recommended = self.recommended_world_ids(rule_set)
         return tuple(sorted(offered, key=lambda world: world.id not in recommended))
@@ -2490,18 +2420,6 @@ class ContentLibrary:
             for d in rule_set_dirs
             if d.name != CORE_RULE_SET and _has_definitions(d)
         }
-        # A campaign module with an authored setting acts like a world, so register its
-        # setting under its world id for old campaigns, exports, and world lookups. Mini
-        # modules and pure-adventure modules do not become worlds.
-        for module in modules.values():
-            if module.kind != "campaign" or not module.world_template.has_setting:
-                continue
-            world_id = module.world_template.id
-            if world_id in worlds:
-                raise ContentError(
-                    f"{module.id}: module setting {world_id!r} collides with a world of that id"
-                )
-            worlds[world_id] = module.world_template
         configured = core.default_campaign
         if configured is not None:
             if configured.rule_set not in rule_sets:
@@ -2556,34 +2474,11 @@ class ContentLibrary:
                     raise ContentError(
                         f"{module.id}: module recommends unknown rule set {recommended!r}"
                     )
-            if module.world is not None:
-                world = worlds.get(module.world)
-                if world is None:
-                    raise ContentError(
-                        f"{module.id}: module names unknown world {module.world!r}"
-                    )
-                if (
-                    module.rule_set is not None
-                    and world.rule_set is not None
-                    and world.rule_set != module.rule_set
-                ):
-                    raise ContentError(
-                        f"{module.id}: module is built for {module.rule_set!r}, but world "
-                        f"{module.world!r} is built for {world.rule_set!r}"
-                    )
-            for recommended in module.recommended_worlds:
-                if recommended not in worlds:
-                    raise ContentError(
-                        f"{module.id}: module recommends unknown world {recommended!r}"
-                    )
         library = cls(world_templates=worlds, rule_sets=rule_sets, core=core, modules=modules)
         if validate_worlds:
             for world in worlds.values():
                 if world.rule_set is not None:
                     library.world_content(world.id, world.rule_set)
-            for module in modules.values():
-                if module.rule_set is not None:
-                    library.world_content_for(module.world_template, module.rule_set)
         return library
 
     def validate(self, *, all_pairs: bool = False) -> list[tuple[str, str]]:
@@ -2652,10 +2547,10 @@ WORLD_TYPES = ("monster", "table", "dice_table", "creative_table", "feature", "r
 # Every definition type a world loader consumes. A rule-set-only definition in a world directory
 # is a content error instead of being silently dropped.
 WORLD_DEFINITION_TYPES = frozenset({"world", "location", "npc", "region", "route", *WORLD_TYPES})
-# A module is a manifest plus ordinary world-like definitions. Modules are data only; no module
-# may import Python.
+# A mini module is one manifest with a prose body. Modules are data only; no module may import
+# Python. A full adventure is a world.
 MODULE_DEFINITION_TYPES = frozenset({"module"})
-MODULE_KINDS = ("mini", "campaign")
+
 # Every definition type a rule set loader consumes. A definition with another type is a content
 # error instead of being silently dropped.
 RULE_SET_DEFINITION_TYPES = frozenset(
@@ -3088,18 +2983,13 @@ def _load_world_start(
 
 
 def _load_module(directory: Path) -> ModuleTemplate:
-    """A module directory: a `module` manifest plus ordinary world content.
+    """A mini module: one `module` definition with a short prose body.
 
-    A campaign module is the source material's own shape: its embedded world carries the
-    locations, people, rules, and tables, and its `body` carries only prose that has no world
-    entry. A mini module gets a synthetic world from its inline entries and uses `body` for the
-    adventure itself.
+    A full adventure is a world. A module is only material that has no world of its own.
     """
     template = directory.name
     definitions = read_definitions(directory)
-    _assert_consumed(
-        definitions, WORLD_DEFINITION_TYPES | MODULE_DEFINITION_TYPES, template
-    )
+    _assert_consumed(definitions, MODULE_DEFINITION_TYPES, template)
     module_def = _single(definitions, "module", template)
     _check_directory_id(template, module_def.id)
     label = f"{template}: module"
@@ -3108,7 +2998,6 @@ def _load_module(directory: Path) -> ModuleTemplate:
         {
             "type",
             "id",
-            "kind",
             "name",
             "description",
             "blurb",
@@ -3116,114 +3005,33 @@ def _load_module(directory: Path) -> ModuleTemplate:
             "tags",
             "rule_set",
             "recommended_rulesets",
-            "world",
-            "recommended_worlds",
             "third_party",
             "source",
             "gm_notes",
-            "start",
             "body",
             "repeatable",
-            "entries",
         },
         label,
     )
-    kind = required_text(module_def.data, "kind", label)
-    if kind not in MODULE_KINDS:
-        raise ContentError(f"{label}: 'kind' must be one of {', '.join(MODULE_KINDS)}")
     name = required_text(module_def.data, "name", label)
     blurb = _optional_text(module_def.data, "blurb", label)
-    description = _optional_text(module_def.data, "description", label) or blurb or name
-    rule_set = _optional_text(module_def.data, "rule_set", label)
-    declared_world = _optional_text(module_def.data, "world", label)
-    inline = _module_inline_definitions(module_def.data.get("entries"), label)
-    all_definitions = [*definitions, *inline]
-    _check_definition_duplicates(all_definitions, template)
-    world_definitions = [d for d in all_definitions if d.type in WORLD_DEFINITION_TYPES]
-    embedded = next((d for d in world_definitions if d.type == "world"), None)
-    if embedded is not None:
-        world_template = _build_world_template(template, world_definitions, check_directory_id=False)
-        if declared_world is not None and declared_world != world_template.id:
-            raise ContentError(
-                f"{label}: 'world' names {declared_world!r}, but the embedded world is "
-                f"{world_template.id!r}"
-            )
-    else:
-        head: dict[str, Any] = {
-            "type": "world",
-            "id": module_def.id,
-            "name": name,
-            "description": description,
-        }
-        if rule_set is not None:
-            head["rule_set"] = rule_set
-        if "start" in module_def.data:
-            head["start"] = module_def.data["start"]
-        synthetic = Definition(type="world", id=module_def.id, data=head)
-        world_template = _build_world_template(
-            template, [synthetic, *world_definitions], check_directory_id=False
-        )
-    if "start" in module_def.data:
-        start = _load_world_start(
-            module_def.data,
-            label,
-            {location.id for location in world_template.locations},
-        )
-        world_template = replace(world_template, start=start)
-    world_template = replace(world_template, module=module_def.id)
     return ModuleTemplate(
         id=module_def.id,
-        kind=kind,
         name=name,
-        description=description,
+        description=_optional_text(module_def.data, "description", label) or blurb or name,
         blurb=blurb,
         icon=_definition_icon(module_def.data, label, FALLBACK_WORLD),
         tags=_load_module_tags(module_def.data.get("tags"), label),
         gm_notes=_optional_text(module_def.data, "gm_notes", label) or "",
-        rule_set=rule_set,
+        rule_set=_optional_text(module_def.data, "rule_set", label),
         recommended_rule_sets=_optional_text_list(
             module_def.data, "recommended_rulesets", label
         ),
-        world=declared_world or (world_template.id if embedded is not None else None),
-        recommended_worlds=_optional_text_list(module_def.data, "recommended_worlds", label),
         third_party=_flag(module_def.data, "third_party", label),
         source=_optional_text(module_def.data, "source", label),
-        start=world_template.start,
-        world_template=world_template,
-        body=_optional_text(module_def.data, "body", label) or "",
+        body=required_text(module_def.data, "body", label),
         repeatable=_flag(module_def.data, "repeatable", label),
     )
-
-
-def _module_inline_definitions(value: object, label: str) -> list[Definition]:
-    if value is None:
-        return []
-    if not isinstance(value, list):
-        raise ContentError(f"{label}: 'entries' must be a list of definitions")
-    definitions: list[Definition] = []
-    for index, item in enumerate(value):
-        item_label = f"{label}: entries[{index}]"
-        if not isinstance(item, Mapping):
-            raise ContentError(f"{item_label} must be an object")
-        kind = required_text(item, "type", item_label)
-        if kind in ("defaults", "module"):
-            raise ContentError(
-                f"{item_label}: {kind!r} is not allowed inside a module's entries"
-            )
-        ident = required_text(item, "id", item_label)
-        definitions.append(Definition(type=kind, id=ident, data=item))
-    return definitions
-
-
-def _check_definition_duplicates(definitions: Sequence[Definition], template: str) -> None:
-    seen: set[tuple[str, str]] = set()
-    for definition in definitions:
-        key = (definition.type, definition.id)
-        if key in seen:
-            raise ContentError(
-                f"{template}: duplicate {definition.type} id {definition.id!r}"
-            )
-        seen.add(key)
 
 
 def _load_module_tags(value: object, label: str) -> Mapping[str, tuple[str, ...]]:

@@ -752,12 +752,8 @@ def _start_run(
     credits = CreditPolicy.for_campaign(engine, settings, campaign)
     meter = UsageMeter(engine, campaign.id or 0, campaign.owner_id, campaign.model)
     metered = MeteredProvider(provider, meter)
-    with session_scope(engine) as db:
-        state = load_state(db, campaign.id or 0)
-    module_ids = modules_service.active_campaign_module_ids(campaign, state)
-    template = library.campaign_world(campaign.world_template, module_ids)
-    world = library.world_content_for(template, campaign.rule_set)
-    opening_module = library.modules.get(campaign.module)
+    schema = library.world_templates[campaign.world_template]
+    world = library.world_content_for(schema, campaign.rule_set)
     speech: _SpeechJobs | None = None
 
     async def queue_speech(speaker: str, profile: str, intent: str, replace: bool) -> None:
@@ -788,9 +784,9 @@ def _start_run(
             speak_handler=queue_speech,
         ),
         cursor=_newest(engine, campaign.id),
-        opening=opening_prompt(template, opening_module),
+        opening=opening_prompt(schema),
         unattached_rules=world.unattached_rules,
-        world=template,
+        world=schema,
         setting=campaign.setting,
         tracks_inventory=campaign.use_inventory_space,
         tracks_survival_needs=campaign.use_survival_needs,

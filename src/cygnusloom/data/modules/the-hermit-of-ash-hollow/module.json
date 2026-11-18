@@ -2,7 +2,6 @@
   {
     "type": "module",
     "id": "the-hermit-of-ash-hollow",
-    "kind": "mini",
     "name": "The Hermit of Ash Hollow",
     "blurb": "A reclusive herbwife in a burnt-out hut knows what happened at the mill.",
     "description": "A small wilderness encounter: a guarded herbwife, a burnt hut, and a purse of hush-money.",
@@ -17,26 +16,6 @@
     "repeatable": false,
     "source": "Original content written for Cygnus Loom.",
     "gm_notes": "Mara is not a villain. She is frightened and protective. She will trade the truth for a promise that her grandchild will be safe; the child works in the miller's kitchen. The miller's men may arrive while the bargain is being struck.",
-    "body": "Mara Ash saw the miller's son set the fire that killed two workers. The miller paid her to keep quiet, and she took the money to keep her grandchild fed. A purse of hush-money with the miller's mark on the clasp sits in the hut; the coins are new and she has not spent them.\n\nMara has already denied seeing anything when the party arrives. She will name the arsonist only if they promise to get her grandchild out of the miller's service. Complications: the miller's men arrive while the bargain is being struck, or the grandchild does not want to leave. If the party does nothing, the miller moves the child out of the region and Mara stops speaking to strangers. Either Mara names the son and the party gains a witness, or she keeps silent and the purse is the only proof.",
-    "entries": [
-      {
-        "type": "npc",
-        "id": "mara-ash",
-        "name": "Mara Ash",
-        "location": "ash-hollow-hut",
-        "description": "A herbwife in her sixties, burned across one hand. She saw the fire and took the miller's money.",
-        "personality": "patient and guarded",
-        "accent": "soft and rural",
-        "quirks": ["taps a finger against her lips when thinking"],
-        "story_only": true
-      },
-      {
-        "type": "location",
-        "id": "ash-hollow-hut",
-        "name": "Ash Hollow Hut",
-        "summary": "A low turf hut with a crooked chimney, set in a black ring of burnt stumps.",
-        "description": "The hut smells of peat smoke and dried yarrow. A child's wooden boat sits on the sill."
-      }
-    ]
+    "body": "Mara Ash saw the miller's son set the fire that killed two workers. The miller paid her to keep quiet, and she took the money to keep her grandchild fed. A purse of hush-money with the miller's mark on the clasp sits in the hut; the coins are new and she has not spent them.\n\nMara has already denied seeing anything when the party arrives. She will name the arsonist only if they promise to get her grandchild out of the miller's service. Complications: the miller's men arrive while the bargain is being struck, or the grandchild does not want to leave. If the party does nothing, the miller moves the child out of the region and Mara stops speaking to strangers. Either Mara names the son and the party gains a witness, or she keeps silent and the purse is the only proof."
   }
 ]

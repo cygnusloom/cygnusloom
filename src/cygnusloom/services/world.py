@@ -273,7 +273,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
     # The rule set's faction assets by id, such as Infantry or Smugglers.
     faction_assets: Mapping[str, FactionAssetDefinition] = field(default_factory=dict)
     dice_tables: Mapping[str, DiceTable] = field(default_factory=dict)
-    # The campaign's modules and the rule set's default genre selection, for module browsing.
+    # Mini story seeds and the rule set's default genre selection, for seed browsing.
     modules: Mapping[str, ModuleTemplate] = field(default_factory=dict)
     table_genres: tuple[str, ...] = ()
     # The rule set's moves by id.
@@ -359,67 +359,45 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
 
     def list_modules(
         self,
-        kind: str | None = None,
         tags: list[str] | None = None,
         setting: str = "",
         random: bool = False,
     ) -> dict[str, Any]:
-        """List the modules this campaign can use: active campaign modules and mini modules
-        that fit its tags and have not been used up."""
-        if kind not in (None, "mini", "campaign"):
-            raise InvalidInput("module kind must be 'mini' or 'campaign'")
+        """List the mini modules that fit this campaign's tags and have not been used up."""
         with session_scope(self.engine) as db:
             campaign = db.get(Campaign, self.campaign_id)
             if campaign is None:
                 raise InvalidInput("campaign not found")
             state = load_state(db, self.campaign_id)
-        cards: list[dict[str, Any]] = []
-        if kind in (None, "campaign"):
-            cards.extend(
-                modules_service.module_card(module)
-                for module in modules_service.active_campaign_modules(
-                    self.modules, campaign, state
-                )
+        cards = [
+            modules_service.module_card(module)
+            for module in modules_service.available_modules(
+                self.modules,
+                campaign,
+                state,
+                default_genres=self.table_genres,
+                tags=tags or [],
+                setting=setting,
             )
-        if kind in (None, "mini"):
-            cards.extend(
-                modules_service.module_card(module)
-                for module in modules_service.available_mini_modules(
-                    self.modules,
-                    campaign,
-                    state,
-                    default_genres=self.table_genres,
-                    tags=tags or [],
-                    setting=setting,
-                )
-            )
+        ]
         if random:
             self.rng.shuffle(cards)
             cards = cards[:6]
         return {"modules": cards}
 
     def lookup_module(self, module: str) -> dict[str, Any]:
-        """Read an active campaign module or a mini module already in play."""
+        """Read a mini module already in play."""
         with session_scope(self.engine) as db:
-            campaign = db.get(Campaign, self.campaign_id)
-            if campaign is None:
-                raise InvalidInput("campaign not found")
             state = load_state(db, self.campaign_id)
         found = self.modules.get(module)
         if found is None:
             raise InvalidInput(f"there is no module named {module!r}")
-        active = set(modules_service.active_campaign_module_ids(campaign, state))
-        if found.kind == "campaign" and module not in active:
-            raise InvalidInput(
-                "that campaign module is not attached; the campaign owner attaches it in Settings"
-            )
-        if found.kind == "mini" and module not in state.used_modules:
-            raise InvalidInput("call use_module before reading a mini module's material")
+        if module not in state.used_modules:
+            raise InvalidInput("call use_module before reading a mini module's text")
         return {"module": module, "text": modules_service.module_text(found)}
 
     def use_module(self, module: str, reason: str = "") -> dict[str, Any]:
-        """Bring a mini module into play, or begin using an attached campaign module. A one-shot
-        mini module is not offered again; the return value is the material to work into the scene."""
+        """Bring a mini module into play. A one-shot module is not offered again."""
         with session_scope(self.engine) as db:
             campaign = db.get(Campaign, self.campaign_id)
             if campaign is None:
@@ -428,29 +406,20 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
             found = self.modules.get(module)
             if found is None:
                 raise InvalidInput(f"there is no module named {module!r}")
-            if found.kind == "campaign":
-                active = set(modules_service.active_campaign_module_ids(campaign, state))
-                if module not in active:
-                    raise InvalidInput(
-                        "that campaign module is not attached; the campaign owner attaches it "
-                        "in Settings"
-                    )
-                text = modules_service.module_text(found)
-            else:
-                available = {
-                    candidate.id
-                    for candidate in modules_service.available_mini_modules(
-                        self.modules,
-                        campaign,
-                        state,
-                        default_genres=self.table_genres,
-                    )
-                }
-                if module not in available:
-                    raise InvalidInput(
-                        "that mini module is not available in this campaign, or it was already used"
-                    )
-                text = modules_service.module_text(found)
+            available = {
+                candidate.id
+                for candidate in modules_service.available_modules(
+                    self.modules,
+                    campaign,
+                    state,
+                    default_genres=self.table_genres,
+                )
+            }
+            if module not in available:
+                raise InvalidInput(
+                    "that mini module is not available in this campaign, or it was already used"
+                )
+            text = modules_service.module_text(found)
             record(db, self.campaign_id, ModuleUsed(module=module, reason=reason))
             db.commit()
         return {"module": module, "text": text}

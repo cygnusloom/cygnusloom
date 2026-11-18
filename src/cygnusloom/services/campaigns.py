@@ -154,7 +154,6 @@ def create_campaign(
     model: str,
     table_genres: Sequence[str] | None = None,
     rng: random.Random | None = None,
-    module: str = "",
 ) -> Campaign:
     name = (name or "").strip()
     if len(name) > MAX_NAME:
@@ -163,52 +162,9 @@ def create_campaign(
         raise InvalidInput("that rule set is not available")
     if model not in allowed_models:
         raise InvalidInput("that model is not available")
-    module_template = library.modules.get(module) if module else None
-    if module and module_template is None:
-        raise InvalidInput("that module is not available")
-    if module_template is not None:
-        if module_template.kind != "campaign":
-            raise InvalidInput("that is a mini module, not a campaign module")
-        if module_template.rule_set is not None and module_template.rule_set != rule_set:
-            raise InvalidInput(
-                f"that module only works with the "
-                f"{library.rule_sets[module_template.rule_set].name} rule set"
-            )
-        if (
-            module_template.recommended_rule_sets
-            and rule_set not in module_template.recommended_rule_sets
-        ):
-            raise InvalidInput("that module is not built for that rule set")
-    if not world_template and module_template is not None:
-        if module_template.world is not None:
-            # The module names the setting it belongs to, whether that setting is embedded or a
-            # top-level world it layers onto.
-            world_template = module_template.world
-        elif module_template.world_template.has_setting:
-            world_template = module_template.world_template.id
-        else:
-            raise InvalidInput("choose a world for this module")
     if world_template not in library.world_templates:
         raise InvalidInput("that world template is not available")
-    if not module:
-        embedded = library.world_templates[world_template]
-        if embedded.module is not None:
-            module = embedded.module
-    if (
-        module_template is not None
-        and module_template.world is not None
-        and module_template.world != world_template
-        and module_template.world_template.id != module_template.world
-    ):
-        raise InvalidInput("that module is built for a different world")
-    if (
-        module_template is not None
-        and module_template.recommended_worlds
-        and world_template not in module_template.recommended_worlds
-    ):
-        raise InvalidInput("that module is not built for that world")
-    base_template = library.world_templates[world_template]
-    template = library.campaign_world(world_template, [module] if module else [])
+    template = library.world_templates[world_template]
     if template.rule_set is not None and rule_set != template.rule_set:
         raise InvalidInput(
             f"that world only works with the {library.rule_sets[template.rule_set].name} rule set"
@@ -227,12 +183,11 @@ def create_campaign(
                     Campaign.world_template == world_template,
                 )
             ).all()
-            name = next_campaign_label(base_template.name, existing)
+            name = next_campaign_label(template.name, existing)
         campaign = Campaign(
             owner_id=owner_id,
             name=name,
             world_template=world_template,
-            module=module,
             rule_set=rule_set,
             major_version=CAMPAIGN_MAJOR_VERSION,
             model=model,

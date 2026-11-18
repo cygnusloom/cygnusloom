@@ -331,7 +331,7 @@
 {# One world in the New Campaign and compendium pickers. The name and description are read by
    the picker dialog, and `recommended-for` lets the page regroup a world under another rule set. #}
 {% macro world_option(world, labels, recommendations, selected) -%}
-  <option value="{{ world.id }}"{% if world.rule_set %} data-rule-set="{{ world.rule_set }}"{% endif %}{% if labels.get(world.id) %} data-label="{{ labels[world.id] }}"{% endif %} data-title="{{ world.name }}{% if world.module %} (campaign module){% endif %}" data-detail="{{ world.blurb or world.description }}" data-icon="{{ icon_path(world.icon) }}" data-third-party="{{ '1' if world.third_party else '0' }}" data-recommended-for='{{ recommendations.get(world.id, [])|tojson }}'{% if world.id == selected %} selected{% endif %}>{{ world.name }}{% if world.module %} · Campaign module{% endif %}</option>
+  <option value="{{ world.id }}"{% if world.rule_set %} data-rule-set="{{ world.rule_set }}"{% endif %}{% if labels.get(world.id) %} data-label="{{ labels[world.id] }}"{% endif %} data-title="{{ world.name }}" data-detail="{{ world.blurb or world.description }}" data-icon="{{ icon_path(world.icon) }}" data-third-party="{{ '1' if world.third_party else '0' }}" data-recommended-for='{{ recommendations.get(world.id, [])|tojson }}'{% if world.id == selected %} selected{% endif %}>{{ world.name }}</option>
 {%- endmacro %}
 
 {% macro dice_button(name, label, attribute="data-dice-for") -%}

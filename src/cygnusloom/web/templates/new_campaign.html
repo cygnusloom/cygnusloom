@@ -17,7 +17,7 @@
         </p>
       </div>
       <div class="campaign-picker">
-        {% call pick_control("world_template", "World", "Worlds recommended for the chosen rule set come first; the rest also work with it. A world is optional when the campaign module brings its own setting.", empty="Choose a world", roll=false, clear=false) %}
+        {% call pick_control("world_template", "World", "Worlds recommended for the chosen rule set come first; the rest also work with it.", "required", empty="Choose a world", roll=false, clear=false) %}
           <optgroup label="Recommended for {{ selected_rule_set_name }}" data-world-group="recommended">
             {% for world in recommended_worlds %}
               {{ world_option(world, world_labels, world_recommendations, selected_world) }}
@@ -32,21 +32,6 @@
         <p class="muted campaign-picker-credits">
           <span data-blurb-credits="world_template"{% if not selected_world_third_party %} hidden{% endif %}> See <a href="/license">content credits</a>.</span>
         </p>
-      </div>
-      <div class="campaign-picker">
-        <label>
-          Campaign module
-          <select name="module">
-            <option value=""{% if not selected_module %} selected{% endif %}>No campaign module — start from the world</option>
-            {% for campaign_module in campaign_modules %}
-              <option value="{{ campaign_module.id }}" data-title="{{ campaign_module.name }}" data-detail="{{ campaign_module.blurb }}" data-icon="{{ icon_path(campaign_module.icon) }}" data-rule-set="{{ campaign_module.rule_set or '' }}" data-third-party="{{ '1' if campaign_module.third_party else '0' }}"{% if campaign_module.id == selected_module %} selected{% endif %}>{{ campaign_module.name }}{% if campaign_module.rule_set %} · {{ campaign_module.rule_set }}{% endif %}</option>
-            {% endfor %}
-          </select>
-        </label>
-        <p class="muted campaign-picker-credits">
-          <span data-blurb-credits="module"{% if not selected_module_third_party %} hidden{% endif %}> See <a href="/license">content credits</a>.</span>
-        </p>
-        <p class="muted">A campaign module is a full human-written adventure. If it brings its own setting, leave the world blank; choose a world too to layer the module onto it. The GM always decides how the module's scenes fit the story.</p>
       </div>
       <label>
         Label

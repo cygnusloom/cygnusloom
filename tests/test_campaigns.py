@@ -51,7 +51,6 @@ def _new_campaign(
     world_template: str = "testhollow",
     rule_set: str = "rolltest",
     model: str | None = None,
-    module: str = "",
 ):
     token = csrf_token(client, "/campaigns/new")
     data: dict[str, str] = {
@@ -59,7 +58,6 @@ def _new_campaign(
         "label": label,
         "world_template": world_template,
         "rule_set": rule_set,
-        "module": module,
     }
     if model is not None:
         data["model"] = model
@@ -578,9 +576,7 @@ def test_new_campaign_form_offers_world_and_rule_set(client_factory: Callable[[]
     client = _signed_in(client_factory)
     page = client.get("/campaigns/new").text
     assert re.search(r'<select name="rule_set"[^>]* required', page)
-    # A campaign module may bring its own setting, so the world is optional.
-    assert not re.search(r'<select name="world_template"[^>]* required', page)
-    assert re.search(r'<select name="module"', page)
+    assert re.search(r'<select name="world_template"[^>]* required', page)
     assert '<option value="testhollow"' in page
     assert '<option value="rolltest"' in page
 
@@ -637,8 +633,7 @@ def test_new_campaign_form_marks_third_party_content_and_offers_credits(
     assert re.search(r'<option value="academia-arcana"[^>]*data-third-party="0"', page)
     assert re.search(r'<span data-blurb-credits="rule_set">', page)
     assert re.search(r'<span data-blurb-credits="world_template" hidden>', page)
-    assert re.search(r'<span data-blurb-credits="module" hidden>', page)
-    assert page.count('<a href="/license">content credits</a>') == 3
+    assert page.count('<a href="/license">content credits</a>') == 2
 
 
 def test_new_campaign_form_puts_credits_in_third_party_descriptions(
@@ -648,9 +643,8 @@ def test_new_campaign_form_puts_credits_in_third_party_descriptions(
     response = _new_campaign(
         client,
         label="x" * 121,
-        world_template="",
+        world_template="twin-lakes",
         rule_set="cairn2e",
-        module="twin-lakes",
     )
     assert response.status_code == 400
     page = response.text
@@ -659,7 +653,7 @@ def test_new_campaign_form_puts_credits_in_third_party_descriptions(
         page,
     )
     assert re.search(
-        r'<span data-blurb-credits="module">\s*See <a href="/license">content credits</a>\.</span>',
+        r'<span data-blurb-credits="world_template">\s*See <a href="/license">content credits</a>\.</span>',
         page,
     )
 

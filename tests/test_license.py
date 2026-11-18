@@ -43,7 +43,7 @@ def test_license_page_serves_the_content_credits(client: TestClient):
     text = " ".join(page.text.split())
     assert "Content credits" in text
     assert "Cairn 2e by Yochai Gal" in text
-    assert "The Twin Lakes campaign module uses content from the CAS-1 module" in text
+    assert "The Twin Lakes world uses content from the CAS-1 module" in text
     assert "https://creativecommons.org/licenses/by-sa/4.0/" in page.text
     assert (
         '<a href="https://cairnrpg.com/second-edition/">https://cairnrpg.com/second-edition/</a>'

@@ -14,7 +14,6 @@ from typing import Any
 from cygnusloom.content.library import (
     ChecklistItem,
     ChecklistRules,
-    ModuleTemplate,
     PromptFragment,
     RuleSet,
     WorldTemplate,
@@ -522,18 +521,13 @@ def system_parts(
     return parts
 
 
-def opening_prompt(
-    template: WorldTemplate | None, module: ModuleTemplate | None = None
-) -> str:
-    """The opening instruction, with the world's or campaign module's start when it has one:
-    where the player character begins, and the hooks that bring the party there."""
-    start = module.start if module is not None and module.start is not None else None
-    if start is None and template is not None:
-        start = template.start
+def opening_prompt(template: WorldTemplate | None) -> str:
+    """The opening instruction, with the world's start when it has one: where the player
+    character begins, and the hooks that bring the party there."""
+    start = template.start if template is not None else None
     text = OPENING_PROMPT
     if start is not None:
-        places = template.locations if template is not None else module.world_template.locations
-        place = next(loc for loc in places if loc.id == start.location)
+        place = next(loc for loc in template.locations if loc.id == start.location)
         text += (
             f"\n\nThe campaign starts at {place.name} (location id {place.id}). Place the "
             f"player character there with move_actor, and do not place them anywhere else. The "
@@ -541,13 +535,6 @@ def opening_prompt(
             f"the introduction as what the player character has heard or been asked to do; do "
             f"not state them as a list.\n\n{start.hooks}"
         )
-    if module is None:
-        return text
-    text += (
-        "\n\nThis campaign begins with a campaign module. Its places, people, and rules are "
-        "ordinary world entries: treat them as preparation, not a script, and let the player's "
-        "choices change the outcome. Create storylines from the hooks as usual."
-    )
     return text
 
 

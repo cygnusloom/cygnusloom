@@ -114,7 +114,6 @@ def export_campaign(engine: Engine, owner_id: int, campaign_id: int) -> tuple[st
         "campaign": {
             "name": campaign.name,
             "world_template": campaign.world_template,
-            "module": campaign.module,
             "rule_set": campaign.rule_set,
             "major_version": campaign.major_version,
             "model": campaign.model,
@@ -183,7 +182,6 @@ def import_campaign(
             owner_id=owner_id,
             name=_unique_name(name, existing),
             world_template=config["world_template"],
-            module=config["module"],
             rule_set=config["rule_set"],
             major_version=major_version,
             model=model,
@@ -439,40 +437,12 @@ def _text(data: dict[str, Any], key: str, limit: int) -> str:
 
 def _read_campaign(data: dict[str, Any], library: ContentLibrary) -> dict[str, Any]:
     world_template = _text(data, "world_template", MAX_COLUMN)
-    module = _text(data, "module", MAX_COLUMN)
     rule_set = _text(data, "rule_set", MAX_COLUMN)
     if world_template not in library.world_templates:
         raise InvalidInput("that world template is not available on this server")
     if rule_set not in library.rule_sets:
         raise InvalidInput("that rule set is not available on this server")
-    if not module:
-        embedded = library.world_templates[world_template]
-        module = embedded.module or ""
-    if module:
-        module_template = library.modules.get(module)
-        if module_template is None:
-            raise InvalidInput("that campaign module is not available on this server")
-        if module_template.kind != "campaign":
-            raise InvalidInput("that file names a mini module as its campaign module")
-        if module_template.rule_set is not None and module_template.rule_set != rule_set:
-            raise InvalidInput("that campaign module is built for another rule set")
-        if (
-            module_template.recommended_rule_sets
-            and rule_set not in module_template.recommended_rule_sets
-        ):
-            raise InvalidInput("that campaign module is not built for that rule set")
-        if (
-            module_template.world is not None
-            and module_template.world != world_template
-            and module_template.world_template.id != module_template.world
-        ):
-            raise InvalidInput("that campaign module is built for another world")
-        if (
-            module_template.recommended_worlds
-            and world_template not in module_template.recommended_worlds
-        ):
-            raise InvalidInput("that campaign module is not built for that world")
-    template = library.campaign_world(world_template, [module] if module else [])
+    template = library.world_templates[world_template]
     if template.rule_set is not None and rule_set != template.rule_set:
         raise InvalidInput(
             f"that world only works with the {library.rule_sets[template.rule_set].name} rule set"
@@ -528,7 +498,6 @@ def _read_campaign(data: dict[str, Any], library: ContentLibrary) -> dict[str, A
     return {
         "name": _text(data, "name", MAX_NAME),
         "world_template": world_template,
-        "module": module,
         "rule_set": rule_set,
         "model": _text(data, "model", MAX_MODEL),
         "setting": _text(data, "setting", MAX_SETTING),

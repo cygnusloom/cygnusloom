@@ -21,10 +21,6 @@ def compendium_page(request: Request, rule_set: str = "", world_template: str = 
     if rule_set not in library.rule_sets:
         rule_set = next(iter(library.rule_sets), "")
     worlds = list(library.offered_worlds(rule_set))
-    for module in library.offered_modules(rule_set, kind="campaign"):
-        world = module.world_template
-        if world.has_setting and all(existing.id != world.id for existing in worlds):
-            worlds.append(world)
     if world_template not in {world.id for world in worlds}:
         world_template = worlds[0].id if worlds else ""
     recommended_ids = library.recommended_world_ids(rule_set)
@@ -35,7 +31,7 @@ def compendium_page(request: Request, rule_set: str = "", world_template: str = 
     # The world picker shows the worlds recommended for the chosen rule set first, then the rest.
     # Its script regroups the options when the rule set changes, so every world is rendered.
     world_templates = list(library.world_templates.values())
-    story_modules = library.offered_modules(rule_set, kind="mini")
+    story_modules = library.offered_modules(rule_set)
     return render(
         request,
         "compendium.html",

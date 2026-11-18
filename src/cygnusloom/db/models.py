@@ -202,8 +202,6 @@ class Campaign(SQLModel, table=True):
     owner_id: int = Field(foreign_key="user.id", index=True)
     name: str = Field(max_length=120)
     world_template: str = Field(max_length=64)
-    # The campaign module the campaign started from, or blank. Attached modules are events.
-    module: str = Field(default="", max_length=64)
     rule_set: str = Field(max_length=64)
     # The campaign contract's major version. Rows from another major remain stored and
     # exportable, but the engine will not play them.
