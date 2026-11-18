@@ -57,6 +57,118 @@ def test_a_campaign_module_owns_its_setting():
     assert library.setting_template(TWIN_LAKES) is world
 
 
+def test_twin_lakes_keeps_the_cas1_source_material():
+    library = content_library()
+    template = library.setting_template(TWIN_LAKES)
+    world = library.world_content(TWIN_LAKES, "cairn2e")
+    assert {
+        "isthmus-town",
+        "the-stuffed-inn",
+        "the-reeve-s-office",
+        "cellar",
+        "butcher-shop",
+        "giva-s-home",
+        "farming-path",
+        "dunston",
+        "fasha-s-farm",
+        "abandoned-home",
+        "old-mill-road",
+        "the-stone-forest",
+        "deadmill",
+        "1-interior",
+        "2-the-waterwheel",
+        "east-lake-pass",
+        "the-downs",
+        "white-tower-fens",
+        "1-whistlewood",
+        "2-pit-trap",
+        "3-log-trap",
+        "the-white-tower",
+        "bone-sump",
+        "temple-of-the-fungal-lizards",
+        "t1-antechamber",
+        "t2-columbarium",
+        "t3-breeding-chamber",
+        "t4-maintenance-tunnel",
+        "t5-hall-of-glyphs",
+        "t6-waste-disposal",
+        "t7-light-room",
+        "t8-preparation-room",
+        "t9-chamber-of-worship",
+        "t10a-interrogation-room-door",
+        "t10b-interrogation-room-interior",
+    } <= {place.id for place in template.locations}
+    assert {
+        "reeve-trellis",
+        "fasha",
+        "aldra",
+        "flavia",
+        "jandy",
+        "giva",
+        "drum",
+        "annafranax",
+        "vuk",
+        "corsetta",
+        "franz",
+        "beju",
+        "nicolas",
+    } <= {npc.id for npc in template.npcs}
+    assert {
+        "night-cat",
+        "bandit-leader",
+        "bandit",
+        "fasha",
+        "annafranax",
+        "suraru",
+        "suraru-imperator",
+    } <= set(world.monsters)
+    assert {
+        "eye-of-vuk",
+        "fletcher-s-ire",
+        "echo-spark",
+        "moon-cloth",
+        "curved-dagger",
+        "watersnatch",
+        "memory-prism",
+        "wisp-lamp",
+    } <= set(world.features)
+    assert {"victims", "rumors", "encounters"} <= set(world.tables)
+    assert {
+        "night-cat-attack",
+        "night-cat-critical-damage",
+        "suraru-imperator-critical-damage",
+        "bandit-morale",
+        "rumors-trigger",
+        "encounters-trigger",
+        "the-downs-travel",
+        "deadmill-sinking",
+        "deadmill-time-loop",
+        "vuk-choking-hold",
+        "memory-prism-current-memories",
+        "trapdoor-butcher-block",
+        "the-roots",
+        "outcome-vuk-reborn",
+        "outcome-gate-opened",
+        "outcome-vuk-reborn-and-gate-opened",
+        "outcome-vuk-stopped-gate-closed",
+        "twin-lakes-overview",
+        "faction-tideborn",
+        "faction-order-of-nine",
+        "bone-sump-discovery",
+        "victim-schedule",
+    } <= set(world.rules)
+    assert "bandit-morale" in world.monsters["bandit"].rules
+    assert "bandit-morale" in world.monsters["bandit-leader"].rules
+    assert "memory-prism-current-memories" in world.features["memory-prism"].rules
+    vuk = next(npc for npc in template.npcs if npc.id == "vuk")
+    assert "memory-prism-current-memories" in vuk.rules
+    assert {"rumors-trigger", "encounters-trigger"} <= set(world.unattached_rules)
+    assert "Reroll repeated results" in world.rules["rumors-trigger"]
+    assert "Roll twice at night" in world.rules["encounters-trigger"]
+    assert "cowl is removed" in world.rules["memory-prism-current-memories"]
+    assert "short bow" in world.monsters["bandit"].description
+
+
 def test_a_mini_module_is_prose_and_shared_metadata():
     module = content_library().modules[HERMIT]
     assert module.kind == "mini"
@@ -106,10 +218,14 @@ def test_a_module_can_name_every_density_it_fits(tmp_path: Path):
     assert "connected area" in card["location_density_notes"][2]
 
 
+def test_a_single_density_from_an_old_manifest_still_loads(tmp_path: Path):
+    module = _load_mini_module(tmp_path, "low")
+    assert module.location_density == ("low",)
+
+
 @pytest.mark.parametrize(
     ("location_density", "message"),
     [
-        ("low", "list of non-empty text"),
         ([], "at least one"),
         (["low", "low"], "only once"),
         (["anywhere"], "unknown location density"),

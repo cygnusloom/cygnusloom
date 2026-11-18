@@ -16,6 +16,26 @@
   },
   {
     "type": "rule",
+    "id": "bandit-morale",
+    "text": "When testing Morale, save using the leader's WIL. If their leader is killed, the bandits retreat."
+  },
+  {
+    "type": "rule",
+    "id": "rumors-trigger",
+    "text": "Roll 1d6 on the Rumors table whenever the party leaves Isthmus Town. Reroll repeated results."
+  },
+  {
+    "type": "rule",
+    "id": "encounters-trigger",
+    "text": "Roll 1d6 on the Encounters table whenever the party travels between two points. Roll twice at night."
+  },
+  {
+    "type": "rule",
+    "id": "memory-prism-current-memories",
+    "text": "At first there is only darkness; then a cowl is removed from the viewer's face, and it is evident that they are in T10, their arms strung up by the same two chains hanging from the ceiling. They are being interviewed in a harsh, unintelligible tongue by two humanoids wearing grotesque masks with large, reddish crests.\n\nFinally, one of the interrogators points to a lizard-like humanoid creature in the corner, which responds by attacking the stomach of the viewer with its talons. There is a bright light as their stomach is sliced open.\n\nSuddenly, the door to the room opens and someone else enters the room. There is more gibberish, and then both the interrogators and the lizards rush from the room, slamming the door shut behind them. The viewer looks down at the wound in their stomach, and then everything goes dark."
+  },
+  {
+    "type": "rule",
     "id": "the-downs-travel",
     "text": "Parties traveling by foot add a Fatigue."
   },

@@ -73,10 +73,10 @@ are:
 - `dense`: a connected area with many locations to explore.
 
 A module that can fit anywhere lists all three. A module with one compact site lists only
-`low`. The densities and their explanations appear on the card returned by `list_modules`. The AI
-GM picks one of the listed densities to decide where the seed can meet the party and how far it
-can spread. Density never appears in the player-facing compendium and is not part of the campaign
-form.
+`low`; a lone string in an older manifest is read as a one-entry list. The densities and their
+explanations appear on the card returned by `list_modules`. The AI GM picks one of the listed
+densities to decide where the seed can meet the party and how far it can spread. Density never
+appears in the player-facing compendium and is not part of the campaign form.
 
 The core `creative_oracle` state prompt tells the GM to roll oracle tables when the scene stalls
 or the player is unsure, not on consecutive turns, and never in the middle of an encounter. The
@@ -220,8 +220,24 @@ hooks from CAS-1. The files beside it follow the source's sections without addin
 `monsters.json` the bestiary, `features.json` the Relics & Items, `tables.json` the rumors,
 encounters, and Victims table, and `rules.json` the key rules, faction lore, and four endings.
 
+The content was audited against the published CAS-1 markdown: setup, hooks, both mysteries, the
+Victim Schedule, every Important NPC, every location and temple room T1-T10b, both random tables
+and their roll triggers, the bandit leader and bandit statblocks with their morale rule, all Relics
+& Items, the memory-prism vision, both factions, Vald lore, and all four endings. The audit's
+inventory lives in `tests/test_modules.py` so a later edit cannot silently drop a section.
+
 There is no `worlds/twin-lakes` copy and no `world.json`. Existing campaigns and exports that
 name `world_template: "twin-lakes"` keep working because the module id is the content id.
+
+## Compatibility
+
+Module manifests are bundled content, not campaign data, so changing their categories, tones, or
+location densities needs no campaign migration. A campaign whose saved `table_genres` names a
+retired category keeps the valid categories and ignores the rest; when none remain it falls back
+to the rule set's choices. Campaigns created before the `table_tones` column get the rule set's
+tones, and an import with no `table_tones` does the same. A single-string `location_density` in an
+older manifest is read as a one-entry list. Unknown categories or tones in an old export are
+dropped on import instead of rejecting the file.
 
 ## Testing
 

@@ -21,8 +21,8 @@ from cygnusloom import CAMPAIGN_MAJOR_VERSION, __version__
 from cygnusloom.content.definitions import ContentError
 from cygnusloom.content.library import (
     ContentLibrary,
-    read_table_genres,
-    read_table_tones,
+    effective_table_genres,
+    effective_table_tones,
 )
 from cygnusloom.db.models import Campaign, Event, utcnow
 from cygnusloom.services import level_up as level_up_service
@@ -487,10 +487,10 @@ def _read_campaign(data: dict[str, Any], library: ContentLibrary) -> dict[str, A
             not isinstance(item, str) for item in raw_genres
         ):
             raise InvalidInput("table_genres must be a list of strings")
-        try:
-            genres = read_table_genres(raw_genres, "table genres")
-        except ContentError as error:
-            raise InvalidInput(str(error)) from error
+        # Files from before the vocabulary was standardized may name categories this
+        # release no longer has. Keep the valid ones, and use the rule set's defaults when
+        # none remain, just as a stored campaign selection does.
+        genres = effective_table_genres(json.dumps(raw_genres), rules)
     else:
         genres = rules.table_genres
     if "table_tones" in data:
@@ -504,10 +504,9 @@ def _read_campaign(data: dict[str, Any], library: ContentLibrary) -> dict[str, A
                 raise InvalidInput("table_tones must be a list of strings") from exc
         if not isinstance(raw_tones, list) or any(not isinstance(item, str) for item in raw_tones):
             raise InvalidInput("table_tones must be a list of strings")
-        try:
-            tones = read_table_tones(raw_tones, "module tones")
-        except ContentError as error:
-            raise InvalidInput(str(error)) from error
+        # A tone this release no longer offers is treated the same way, so an older
+        # export still imports and falls back to the rule set's tones when necessary.
+        tones = effective_table_tones(json.dumps(raw_tones), rules)
     else:
         tones = rules.table_tones
     # A file exported before the option existed keeps the rule set's limits, as the campaign it

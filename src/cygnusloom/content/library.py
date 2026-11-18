@@ -269,9 +269,13 @@ def read_location_density(value: Any, label: str) -> tuple[str, ...]:
     """Read a module's location densities and check them against LOCATION_DENSITIES.
 
     A module lists every density it can fit, so a seed that works anywhere names all three.
-    The list must name at least one density and may not repeat one.
+    The list must name at least one density and may not repeat one. A single string is the
+    pre-list manifest format, so it is read as a one-entry list.
     """
-    entries = _text_list(value, label)
+    if isinstance(value, str):
+        entries = [value.strip()] if value.strip() else []
+    else:
+        entries = _text_list(value, label)
     unknown = [entry for entry in entries if entry not in LOCATION_DENSITIES]
     if unknown:
         names = ", ".join(repr(entry) for entry in unknown)

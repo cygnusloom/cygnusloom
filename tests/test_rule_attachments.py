@@ -22,6 +22,7 @@ LIBRARY = content_library()
 TWIN_LAKES = LIBRARY.setting_template("twin-lakes")
 VUK = "Vuk"
 CHOKING = "vuk-choking-hold"
+MEMORIES = "memory-prism-current-memories"
 TEXT = {CHOKING: "The Ash Phantom chokes with its hand."}
 
 
@@ -44,14 +45,14 @@ def _story_only_world(**npc: object) -> list[dict[str, object]]:
 
 def test_twin_lakes_attaches_vuks_choking_hold():
     vuk = next(n for n in TWIN_LAKES.npcs if n.name == VUK)
-    assert vuk.rules == (CHOKING,)
+    assert vuk.rules == (CHOKING, MEMORIES)
 
 
 def test_seeding_gives_vuk_her_rules(client_factory: Callable[[], TestClient]):
     client, campaign_id = _cairn_campaign(client_factory)
     vuk = _state(client.app, campaign_id).named(VUK)
     assert vuk is not None
-    assert list(vuk.rules) == [CHOKING]
+    assert list(vuk.rules) == [CHOKING, MEMORIES]
 
 
 def test_twin_lakes_monsters_attach_their_module_rules():
