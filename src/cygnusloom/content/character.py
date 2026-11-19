@@ -227,7 +227,9 @@ class Stat:
 
 @dataclass(frozen=True)
 class DefenseFloor:
-    """A minimum base defense with optional counter and equipment restrictions."""
+    """A minimum base defense with optional counter, ability modifiers, and equipment restrictions.
+    `modifiers` names ability scores whose modifiers add to the floor, as Unarmored Defense does
+    with Constitution or Wisdom."""
 
     base: int
     counter: str = ""
@@ -235,6 +237,7 @@ class DefenseFloor:
     round_up: bool = True
     requires_no_armor: bool = False
     requires_no_shield: bool = False
+    modifiers: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -349,6 +352,8 @@ class Feature:
     reactions: tuple[Reaction, ...] = ()
     # A passive defense floor, optionally restricted by equipped armor or shields.
     defense_floor: DefenseFloor | None = None
+    # A flat Armor Class bonus this feature gives while it is held, such as a fighting style.
+    defense_bonus: int = 0
     # The highest Dexterity modifier this armor lets a wearer add to defense, or None for no
     # cap. Heavy armor uses 0, medium armor 2.
     defense_dex_cap: int | None = None
@@ -1235,6 +1240,9 @@ def load_feature(
     if not isinstance(timer_label, str):
         raise ContentError(f"{label}: 'timer_label' must be text")
     weapon_bonuses = _weapon_bonuses(data.get("weapon_bonus", []), skills, label)
+    defense_bonus = data.get("defense_bonus", 0)
+    if isinstance(defense_bonus, bool) or not isinstance(defense_bonus, int) or defense_bonus < 0:
+        raise ContentError(f"{label}: 'defense_bonus' must be a whole number, 0 or more")
     if shock and "shock_ac" not in data:
         raise ContentError(f"{label}: 'shock' needs a 'shock_ac'")
     icon = data.get("icon")
@@ -1279,7 +1287,8 @@ def load_feature(
         ),
         effects=_feature_effects(data.get("effects", []), label, stats, skills, counters),
         reactions=_feature_reactions(data.get("reactions", []), label),
-        defense_floor=_defense_floor(data.get("defense_floor"), counters, label),
+        defense_floor=_defense_floor(data.get("defense_floor"), counters, stats, label),
+        defense_bonus=defense_bonus,
         defense_dex_cap=_defense_dex_cap(data.get("defense_dex_cap"), label),
         repeatable=repeatable,
         level_hp_bonus=level_hp_bonus,
@@ -1436,7 +1445,9 @@ def _defense_dex_cap(value: object, label: str) -> int | None:
     return value
 
 
-def _defense_floor(value: object, counters: Collection[str], label: str) -> DefenseFloor | None:
+def _defense_floor(
+    value: object, counters: Collection[str], stats: Collection[str], label: str
+) -> DefenseFloor | None:
     if value is None:
         return None
     if not isinstance(value, Mapping):
@@ -1449,6 +1460,17 @@ def _defense_floor(value: object, counters: Collection[str], label: str) -> Defe
         raise ContentError(f"{label}: defense_floor 'counter' must be a counter id")
     if counter and counters and counter not in counters:
         raise ContentError(f"{label}: defense_floor names no counter ({counter!r})")
+    modifiers = value.get("modifiers", [])
+    if not isinstance(modifiers, list) or not all(
+        isinstance(item, str) and item.strip() for item in modifiers
+    ):
+        raise ContentError(f"{label}: defense_floor 'modifiers' must be a list of stat ids")
+    if stats:
+        unknown = sorted(set(modifiers) - set(stats))
+        if unknown:
+            raise ContentError(
+                f"{label}: defense_floor names no stats ({', '.join(repr(name) for name in unknown)})"
+            )
     divisor = value.get("divisor", 1)
     if isinstance(divisor, bool) or not isinstance(divisor, int) or divisor < 1:
         raise ContentError(f"{label}: defense_floor 'divisor' must be a whole number, 1 or more")
@@ -1470,6 +1492,7 @@ def _defense_floor(value: object, counters: Collection[str], label: str) -> Defe
         round_up=round_up,
         requires_no_armor=requires_no_armor,
         requires_no_shield=requires_no_shield,
+        modifiers=tuple(modifiers),
     )
 
 

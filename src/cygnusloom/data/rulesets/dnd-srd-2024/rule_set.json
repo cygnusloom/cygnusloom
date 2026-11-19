@@ -19,7 +19,7 @@
         "checks"
       ]
     },
-    "plus": "highest",
+    "plus": "sum",
     "item_sizes": {
       "tiny": 0,
       "small": 1,

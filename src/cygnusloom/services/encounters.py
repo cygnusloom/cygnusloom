@@ -193,12 +193,15 @@ def _moves_left(encounter: Encounter, grid: EncounterGrid | None) -> int | None:
     return max(0, grid.move_cells - encounter.moved)
 
 
-def _attacks_left(encounter: Encounter, combat: CombatRules | None) -> int | None:
+def _attacks_left(
+    encounter: Encounter, combat: CombatRules | None, acting: Character | None = None
+) -> int | None:
     """How many attack actions the acting participant has left this turn. None between turns
     or when the rule set has no combat."""
     if combat is None or encounter.acting is None:
         return None
-    return max(0, combat.attacks_per_turn - encounter.attacked)
+    limit = combat.attacks_per_turn_for(acting) if acting is not None else combat.attacks_per_turn
+    return max(0, limit - encounter.attacked)
 
 
 def _id_list(known: Mapping[str, object]) -> str:
@@ -1189,11 +1192,7 @@ def add_participant(
     placed: tuple[int, int] | None = None
     if token is not None and token not in encounter.cells.values():
         placed = token
-    elif (
-        auto_place
-        and entry is not None
-        and character.location == encounter.location
-    ):
+    elif auto_place and entry is not None and character.location == encounter.location:
         occupied = set(encounter.cells.values()) | set(entry.tokens.values())
         placed = _free_side_cell(entry, encounter_objects or {}, occupied, side)
     if placed is not None:
@@ -1294,8 +1293,7 @@ def stage_encounter(
     encounter = _encounter(state)
     if map_name is not None and name_key(map_name) != name_key(encounter.map):
         raise InvalidInput(
-            f"the encounter is on {encounter.map}; use that map, or end it before starting "
-            "another"
+            f"the encounter is on {encounter.map}; use that map, or end it before starting another"
         )
     staged: list[dict[str, Any]] = []
     warnings: list[str] = []
@@ -1752,6 +1750,9 @@ def encounter_view(
     encounter_objects = encounter_objects or {}
     colors = side_colors(encounter)
     hp_stat = combat.hit_pool if combat is not None else None
+    acting_character = (
+        state.characters.get(name_key(encounter.acting)) if encounter.acting is not None else None
+    )
     participants = []
     characters = [state.characters[name_key(display)] for display in encounter.order]
     labels = token_labels(character.name for character in characters)
@@ -1800,8 +1801,14 @@ def encounter_view(
         "settled": encounter.settled,
         "side_initiative": encounter.side_initiative,
         "awaiting_initiative": awaiting_initiative(state),
-        "attacks_left": _attacks_left(encounter, combat),
-        "attacks_per_turn": combat.attacks_per_turn if combat is not None else None,
+        "attacks_left": _attacks_left(encounter, combat, acting_character),
+        "attacks_per_turn": (
+            combat.attacks_per_turn_for(acting_character)
+            if combat is not None and acting_character is not None
+            else combat.attacks_per_turn
+            if combat is not None
+            else None
+        ),
         "moves_left": _moves_left(encounter, grid),
         "move_cells": grid.move_cells if grid is not None else None,
         "cell_feet": grid.cell_feet if grid is not None else None,

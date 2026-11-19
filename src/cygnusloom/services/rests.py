@@ -26,9 +26,11 @@ from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.conditions import end_condition
 from cygnusloom.services.events import (
     PC_KIND,
+    CharacterRecovered,
     CounterChanged,
     Recovered,
     RestTaken,
+    current,
     load_state,
     name_key,
     record,
@@ -89,6 +91,10 @@ def take_rest(
         targets = [target]
     else:
         targets = [c for c in state.characters.values() if c.kind == PC_KIND]
+    if combat is not None and combat.rest_requires_positive_hp:
+        for target in targets:
+            if current(target, "hp") <= 0:
+                raise InvalidInput(f"{target.name} must have at least 1 hit point to take a rest")
     if advance_clock is None:
         # A per-character recovery must not make the party sleep once per character. A caller
         # that wants the clock moved for a single character can ask for it explicitly.
@@ -140,6 +146,7 @@ def take_rest(
     recovering = [c for c in party if not held[c.name]]
     result["held_back"] = [c.name for c in party if held[c.name]]
     for member in recovering:
+        was_defeated = member.defeated
         for stat in rest.restores:
             restored = recover(member, stat, member.harm.get(stat, 0))
             if restored:
@@ -153,6 +160,22 @@ def take_rest(
                         restores=list(rest.restores),
                     ),
                 )
+        if (
+            combat is not None
+            and combat.heal_clears_defeat
+            and was_defeated
+            and not member.dead
+            and current(member, "hp") > 0
+        ):
+            record(
+                db,
+                campaign_id,
+                CharacterRecovered(
+                    name=member.name,
+                    explanation=f"{member.name} wakes after the {rest.id} rest.",
+                    consequence="",
+                ),
+            )
     if rest.full and rest.clears:
         clear_items(db, campaign_id, [c.name for c in recovering], rest.clears)
     if rest.clear_counters and spec is not None:

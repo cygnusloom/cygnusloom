@@ -69,6 +69,10 @@
       ]
     },
     "attacks_per_turn": 1,
+    "critical_dice": true,
+    "heal_clears_defeat": true,
+    "rest_requires_positive_hp": true,
+    "stabilize_without_clock": true,
     "unarmed": {
       "damage": "1d1",
       "names": [
@@ -79,8 +83,7 @@
         "kick"
       ],
       "attributes": [
-        "str",
-        "dex"
+        "str"
       ]
     },
     "save": {

@@ -15,6 +15,7 @@
         "label": "First ability",
         "grant": "score",
         "amount": 1,
+        "max_value": 20,
         "choices": [
           "str",
           "dex",
@@ -30,6 +31,7 @@
         "label": "Second ability",
         "grant": "score",
         "amount": 1,
+        "max_value": 20,
         "choices": [
           "str",
           "dex",
@@ -129,7 +131,8 @@
     "feature_type": "feat",
     "description": "While you're wearing Light, Medium, or Heavy armor, you gain a +1 bonus to Armor Class.",
     "tag": "fighting-style",
-    "rank": 1
+    "rank": 1,
+    "defense_bonus": 1
   },
   {
     "type": "feature",

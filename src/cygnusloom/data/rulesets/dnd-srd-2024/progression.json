@@ -193,7 +193,7 @@
         ],
         "casting": "full",
         "ability": "cha",
-        "subclass_level": 1,
+        "subclass_level": 3,
         "asi_levels": [
           4,
           8,
@@ -203,7 +203,8 @@
         ],
         "fighting_style_levels": [],
         "expertise_levels": [
-          2
+          2,
+          9
         ],
         "cantrips": [
           2,
@@ -232,7 +233,6 @@
           5,
           6,
           7,
-          8,
           9,
           10,
           11,
@@ -240,13 +240,14 @@
           14,
           15,
           16,
+          16,
+          17,
+          17,
+          18,
           18,
           19,
-          19,
           20,
-          20,
-          22,
-          22,
+          21,
           22
         ],
         "slot_table": "full",
@@ -577,8 +578,7 @@
             "class-druid-druid-spell-list",
             "class-druid-druidic",
             "class-druid-primal-order",
-            "class-druid-spellcasting",
-            "class-druid-wild-shape-uses"
+            "class-druid-spellcasting"
           ],
           "2": [
             "class-druid-wild-companion",
@@ -604,8 +604,8 @@
       "fighter": {
         "hit_die": 10,
         "saves": [
-          "dex",
-          "str"
+          "str",
+          "con"
         ],
         "casting": "none",
         "ability": "",
@@ -797,7 +797,7 @@
         "hit_die": 8,
         "saves": [
           "dex",
-          "wis"
+          "str"
         ],
         "casting": "none",
         "ability": "",
@@ -906,7 +906,6 @@
         ],
         "features": {
           "1": [
-            "class-monk-deflect-attacks",
             "class-monk-martial-arts",
             "class-monk-unarmored-defense"
           ],
@@ -916,7 +915,7 @@
             "class-monk-uncanny-metabolism"
           ],
           "3": [
-            "class-monk-stunning-strike"
+            "class-monk-deflect-attacks"
           ],
           "4": [
             "class-monk-slow-fall"
@@ -1767,11 +1766,11 @@
           17,
           18,
           19,
-          20,
           21,
           22,
           23,
-          24
+          24,
+          25
         ],
         "slot_table": "full",
         "resources": {
@@ -1986,7 +1985,7 @@
           "14": [
             "subclass-draconic-sorcery-dragon-wings"
           ],
-          "19": [
+          "18": [
             "subclass-draconic-sorcery-dragon-companion"
           ]
         },

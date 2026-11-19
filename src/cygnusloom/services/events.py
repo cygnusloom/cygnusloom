@@ -2955,6 +2955,9 @@ class InitiativeSettled(GameEvent):
     sides: bool = False
     # Each side's die, bonus, and total, when the engine recorded them.
     rolls: list[dict[str, Any]] = field(default_factory=list)
+    # True when one tool rolled every character at once, so each player character has already
+    # rolled and late joiners are handled by the ordinary individual-initiative path.
+    individual: bool = False
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         encounter = state.encounter
@@ -2963,6 +2966,12 @@ class InitiativeSettled(GameEvent):
         encounter.order = list(self.order)
         encounter.up = 0
         encounter.settled = True
+        if self.individual:
+            encounter.fixed_order = True
+            for name in self.order:
+                character = state.characters.get(name_key(name))
+                if character is not None and character.kind == PC_KIND:
+                    encounter.initiative[name_key(name)] = True
         if self.sides:
             encounter.side_initiative = True
         # Settling can reorder the sides after a player character already joined and had a turn
@@ -2982,9 +2991,39 @@ class InitiativeSettled(GameEvent):
                     [(str(entry.get("bonus_label", "bonus")), int(entry.get("bonus", 0)))],
                     int(entry.get("total", 0)),
                 )
-                parts.append(f"{entry.get('side', 'side')}: {breakdown_text(breakdown)}")
+                parts.append(
+                    f"{entry.get('name') or entry.get('side', 'side')}: {breakdown_text(breakdown)}"
+                )
             return "; ".join(parts) + ". Initiative is set: " + ", ".join(self.order) + "."
         return "Initiative is set: " + ", ".join(self.order) + "."
+
+
+@dataclass(frozen=True)
+class SpellAttackMade(GameEvent):
+    """A spell attack roll against a target's Armor Class. The spell's damage is applied
+    separately by the GM after a hit."""
+
+    kind: ClassVar[str] = "combat.spell_attack"
+
+    name: str
+    spell: str
+    target: str
+    roll: int
+    bonus: int
+    total: int
+    target_ac: int
+    hit: bool
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        return None
+
+    def render(self) -> str:
+        sign = f"{self.bonus:+d}" if self.bonus else ""
+        result = "hits" if self.hit else "misses"
+        return (
+            f"{self.name} casts {self.spell} at {self.target}: 1d20 {self.roll}{sign} = "
+            f"{self.total} against AC {self.target_ac} and {result}."
+        )
 
 
 @dataclass(frozen=True)
@@ -3253,6 +3292,7 @@ class Struck(GameEvent):
     hit_breakdown: dict[str, Any] | None = None
     damage_breakdown: dict[str, Any] | None = None
     shock_breakdown: dict[str, Any] | None = None
+    critical: bool = False
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         character = state.characters[name_key(self.name)]
@@ -3291,6 +3331,8 @@ class Struck(GameEvent):
                 text += f" {self.name} is {self.status}."
             return text
         text = f"{self.attacker} strikes {self.name} with the {weapon}"
+        if self.critical:
+            text += " in a critical hit"
         if self.hit_breakdown:
             text += f" ({breakdown_text(self.hit_breakdown)})"
         text += f" for {self.raw}"

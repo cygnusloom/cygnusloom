@@ -590,6 +590,17 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
             # The starting level's experience is in place, so the normal advancement pages take
             # the player through each level's gains and choices before play begins.
             return RedirectResponse(f"/campaigns/{campaign_id}/advancement", status_code=303)
+        if rule_set is not None:
+            world = library.world_content(campaign.world_template, campaign.rule_set)
+            try:
+                pending = level_up_service.pages_for_player(
+                    engine, campaign.id, rule_set, world, user.id
+                )
+            except InvalidInput:
+                pending = []
+            if pending:
+                # A first-level spellcaster still has its cantrip and spell choices to spend.
+                return RedirectResponse(f"/campaigns/{campaign_id}/advancement", status_code=303)
     return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
 
 

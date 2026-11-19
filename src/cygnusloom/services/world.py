@@ -2462,7 +2462,9 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 raise InvalidInput("this rule set has no default healing stat")
             stat = self.combat.healing_stat
         with session_scope(self.engine) as db:
-            return combat.heal_character(db, self.campaign_id, name, stat, amount, cause)
+            return combat.heal_character(
+                db, self.campaign_id, name, stat, amount, cause, self.combat
+            )
 
     def harm_character(self, name: str, stat: str, amount: int, cause: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:

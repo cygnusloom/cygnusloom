@@ -68,6 +68,16 @@ def roll_values(
     return values, kept + flat
 
 
+def roll_dice(formula: str, rng: random.Random | None = None) -> int:
+    """Roll only the dice in a formula, leaving out flat bonuses. A critical hit uses this to add
+    a second set of weapon dice without doubling the ability modifier."""
+    if not is_formula(formula):
+        raise ValueError(f"not a dice formula: {formula!r}")
+    generator = rng or random.Random()
+    dice, _flat = _terms(formula)
+    return sum(generator.randint(1, sides) for count, sides in dice for _ in range(count))
+
+
 def roll_mode_values(
     formula: str,
     rng: random.Random | None = None,

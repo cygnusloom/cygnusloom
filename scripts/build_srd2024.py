@@ -167,6 +167,7 @@ CLASS_SKILLS = {
         "insight",
         "intimidation",
         "perception",
+        "persuasion",
         "survival",
     ],
     "monk": ["acrobatics", "athletics", "history", "insight", "religion", "stealth"],
@@ -349,7 +350,7 @@ CLASS_CANTRIPS = CANTrips
 
 CLASS_SPELLS = {
     "barbarian": [0] * 20,
-    "bard": [4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 16, 18, 19, 19, 20, 20, 22, 22, 22],
+    "bard": [4, 5, 6, 7, 9, 10, 11, 12, 14, 15, 16, 16, 17, 17, 18, 18, 19, 20, 21, 22],
     "cleric": [4, 5, 6, 7, 9, 10, 11, 12, 14, 15, 16, 16, 17, 17, 18, 18, 19, 20, 21, 22],
     "druid": [4, 5, 6, 7, 9, 10, 11, 12, 14, 15, 16, 16, 17, 17, 18, 18, 19, 20, 21, 22],
     "fighter": [0] * 20,
@@ -359,7 +360,28 @@ CLASS_SPELLS = {
     "rogue": [0] * 20,
     "sorcerer": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21],
     "warlock": [2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 11, 11, 12, 12, 13, 13, 14, 14, 15, 15],
-    "wizard": [4, 5, 6, 7, 9, 10, 11, 12, 14, 15, 16, 16, 17, 18, 19, 20, 21, 22, 23, 24],
+    "wizard": [4, 5, 6, 7, 9, 10, 11, 12, 14, 15, 16, 16, 17, 18, 19, 21, 22, 23, 24, 25],
+}
+
+# Open5e's class records use the 2014 save pair for two classes. The 2024 SRD is explicit.
+CLASS_SAVES = {
+    "fighter": ("str", "con"),
+    "monk": ("dex", "str"),
+}
+
+# A few feature effects are fixed by the 2024 class text and cannot be read from its prose.
+FEATURE_DEFENSE = {
+    ("barbarian", "Unarmored Defense"): {
+        "base": 10,
+        "modifiers": ["con"],
+        "requires_no_armor": True,
+    },
+    ("monk", "Unarmored Defense"): {
+        "base": 10,
+        "modifiers": ["wis"],
+        "requires_no_armor": True,
+        "requires_no_shield": True,
+    },
 }
 
 XP_STANDARD = [
@@ -585,7 +607,7 @@ def build_rule_set() -> None:
                     "combat": True,
                     "social": ["conditions", "counters", "checks"],
                 },
-                "plus": "highest",
+                "plus": "sum",
                 "item_sizes": {
                     "tiny": 0,
                     "small": 1,
@@ -1061,10 +1083,14 @@ def build_combat() -> None:
                 "range_bands": {"normal": 0, "long": 0},
                 "ranges": {"melee": 5, "sight_blocked_by": sight},
                 "attacks_per_turn": 1,
+                "critical_dice": True,
+                "heal_clears_defeat": True,
+                "rest_requires_positive_hp": True,
+                "stabilize_without_clock": True,
                 "unarmed": {
                     "damage": "1d1",
                     "names": ["unarmed", "fist", "fists", "punch", "kick"],
-                    "attributes": ["str", "dex"],
+                    "attributes": ["str"],
                 },
                 "save": {"mode": "roll_over"},
                 "initiative": {"die": "1d20", "bonus_stat": "dex", "side": False},
@@ -1695,6 +1721,7 @@ def build_feats() -> list[dict[str, Any]]:
                     "label": "First ability",
                     "grant": "score",
                     "amount": 1,
+                    "max_value": 20,
                     "choices": list(ABILITY_NAMES),
                 },
                 {
@@ -1703,6 +1730,7 @@ def build_feats() -> list[dict[str, Any]]:
                     "label": "Second ability",
                     "grant": "score",
                     "amount": 1,
+                    "max_value": 20,
                     "choices": list(ABILITY_NAMES),
                 },
             ],
@@ -1717,6 +1745,8 @@ def build_feats() -> list[dict[str, Any]]:
         ).strip()
         text = "\n\n".join(part for part in (feat.get("desc", ""), benefits) if part)
         extra: dict[str, Any] = {}
+        if ident == "feat-defense":
+            extra["defense_bonus"] = 1
         if ident == "feat-skilled":
             extra["picks"] = [
                 {
@@ -1930,6 +1960,10 @@ CLASS_SKIP_FEATURES = {
     "Epic Boon",
     "Fighting Style",
     "Proficiency Bonus",
+    "Cantrips Known",
+}
+CLASS_FEATURE_NAMES = {
+    "Magic Cunning": "Magical Cunning",
 }
 CASTING_ABILITY = {
     "bard": "cha",
@@ -2229,14 +2263,26 @@ def build_classes(spell_lists: dict[str, dict[int, list[str]]]) -> None:
                 continue
             if name == "Expertise":
                 expertise_levels.update(levels)
+                # The 2024 Bard's second Expertise is at level 9; Open5e's class table omits it.
+                if class_id == "bard":
+                    expertise_levels.add(9)
                 continue
             if "Subclass" in name:
-                subclass_level = min(levels)
+                # Every 2024 class chooses its subclass at level 3.
+                subclass_level = 3
                 continue
             if name in CLASS_SKIP_FEATURES:
                 continue
             ident = class_feature_id(class_id, entry)
+            name = CLASS_FEATURE_NAMES.get(name, name)
             rank = min(levels)
+            # The 2024 Monk features moved between levels in the SRD table.
+            if class_id == "monk" and name == "Deflect Attacks":
+                levels = [3]
+                rank = 3
+            elif class_id == "monk" and name == "Stunning Strike":
+                levels = [5]
+                rank = 5
             details = "; ".join(
                 f"Level {item['level']}: {item['detail']}"
                 for item in entry.get("gained_at", [])
@@ -2245,6 +2291,10 @@ def build_classes(spell_lists: dict[str, dict[int, list[str]]]) -> None:
             text = entry.get("desc", "").strip()
             if details:
                 text = f"{text}\n\n{details}".strip()
+            extra: dict[str, Any] = {}
+            defense = FEATURE_DEFENSE.get((class_id, name))
+            if defense is not None:
+                extra["defense_floor"] = defense
             definitions.append(
                 feature(
                     ident,
@@ -2254,6 +2304,7 @@ def build_classes(spell_lists: dict[str, dict[int, list[str]]]) -> None:
                     tag=f"class:{class_id}",
                     rank=rank,
                     picks=feature_choice_picks(name),
+                    **extra,
                 )
             )
             for level in levels:
@@ -2276,7 +2327,8 @@ def build_classes(spell_lists: dict[str, dict[int, list[str]]]) -> None:
         if CLASS_CANTRIPS[class_id][0]:
             counters["cantrip_picks"] = CLASS_CANTRIPS[class_id][0]
         if CLASS_SPELLS[class_id][0]:
-            counters["spell_picks"] = CLASS_SPELLS[class_id][0]
+            # 2024 wizards begin with six spells in their spellbook, two more per level.
+            counters["spell_picks"] = 6 if class_id == "wizard" else CLASS_SPELLS[class_id][0]
         if class_id == "rogue":
             counters["expertise_picks"] = 2
         template: dict[str, Any] = {
@@ -2287,8 +2339,18 @@ def build_classes(spell_lists: dict[str, dict[int, list[str]]]) -> None:
             "icon": CLASS_ICONS[class_id],
             "description": (
                 f"{CLASS_ROLES[class_id]} Hit Point Die: d{record['hit_dice'][1:]}. "
-                f"Saving Throw Proficiencies: "
-                f"{', '.join(save['name'] for save in record['saving_throws'])}."
+                "Saving Throw Proficiencies: "
+                + ", ".join(
+                    ABILITY_NAMES[ability]
+                    for ability in CLASS_SAVES.get(
+                        class_id,
+                        tuple(
+                            ABILITIES[save["name"].casefold()]
+                            for save in record["saving_throws"]
+                        ),
+                    )
+                )
+                + "."
             ),
             "stats": {"hp": int(record["hit_dice"][1:]) - 1, "attack_bonus": 1},
             "skill_picks": [
@@ -2342,7 +2404,12 @@ def build_classes(spell_lists: dict[str, dict[int, list[str]]]) -> None:
         definitions.append(template)
         progression_classes[class_id] = {
             "hit_die": int(record["hit_dice"][1:]),
-            "saves": [ABILITIES[save["name"].casefold()] for save in record["saving_throws"]],
+            "saves": list(
+                CLASS_SAVES.get(
+                    class_id,
+                    tuple(ABILITIES[save["name"].casefold()] for save in record["saving_throws"]),
+                )
+            ),
             "casting": (
                 "pact"
                 if class_id == "warlock"
@@ -2382,7 +2449,17 @@ def build_classes(spell_lists: dict[str, dict[int, list[str]]]) -> None:
             if name == "Ability Score Improvement":
                 continue
             feature_levels = class_feature_levels(entry, default=3)
+            if subclass_id == "draconic-sorcery" and name == "Dragon Companion":
+                feature_levels = [18]
             ident = f"subclass-{subclass_id}-{slug(key_id(entry['key']).split('_')[-1])}"
+            extra: dict[str, Any] = {}
+            if subclass_id == "draconic-sorcery" and name == "Draconic Resilience":
+                extra["defense_floor"] = {
+                    "base": 10,
+                    "modifiers": ["cha"],
+                    "requires_no_armor": True,
+                }
+                extra["level_hp_bonus"] = 1
             definitions.append(
                 feature(
                     ident,
@@ -2392,6 +2469,7 @@ def build_classes(spell_lists: dict[str, dict[int, list[str]]]) -> None:
                     tag=f"subclass:{subclass_id}",
                     rank=min(feature_levels),
                     picks=feature_choice_picks(name),
+                    **extra,
                 )
             )
             for level in feature_levels:
@@ -2580,19 +2658,39 @@ def monster_actions(record: dict[str, Any]) -> list[dict[str, Any]]:
     ]
 
 
+NUMBER_WORDS = {
+    "one": 1,
+    "two": 2,
+    "three": 3,
+    "four": 4,
+    "five": 5,
+    "six": 6,
+}
+
+
 def multiattack_count(record: dict[str, Any]) -> int:
+    """The number of attacks a Multiattack action makes. The first sentence lists the attacks;
+    later sentences are options such as replacing an attack, which do not add another."""
     for action in record.get("actions", []):
-        if action.get("name", "").casefold() == "multiattack":
-            text = action.get("desc", "")
-            match = re.search(
-                r"\b(one|two|three|four|five|six)\b[^.]*?\battacks?\b", text, re.IGNORECASE
+        if action.get("name", "").casefold() != "multiattack":
+            continue
+        text = action.get("desc", "")
+        first_sentence = re.split(r"\.\s", text, maxsplit=1)[0]
+        if "as many attacks as it has heads" in first_sentence.casefold():
+            return 5
+        counts = [
+            NUMBER_WORDS.get(word.casefold(), int(word) if word.isdigit() else 0)
+            for word in re.findall(
+                r"\b(one|two|three|four|five|six|\d+)\b[^.;]*?\battacks?\b",
+                first_sentence,
+                re.IGNORECASE,
             )
-            if match:
-                words = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6}
-                return words[match.group(1).casefold()]
-            match = re.search(r"\bmakes (\d+) attacks?\b", text, re.IGNORECASE)
-            if match:
-                return int(match.group(1))
+        ]
+        if counts:
+            return max(1, sum(counts))
+        match = re.search(r"\bmakes (\d+) attacks?\b", first_sentence, re.IGNORECASE)
+        if match:
+            return int(match.group(1))
     return 1
 
 
@@ -2600,7 +2698,7 @@ def monster_description(record: dict[str, Any]) -> str:
     size = (record.get("size") or {}).get("name", "Medium")
     kind = (record.get("type") or {}).get("name", "creature")
     alignment = record.get("alignment") or "unaligned"
-    speed = record.get("speed_all") or {}
+    speed = record.get("speed") or {}
     speeds = ", ".join(
         f"{name} {value} ft."
         for name, value in speed.items()
@@ -2758,6 +2856,10 @@ def build_monsters() -> None:
             "armor": max(0, int(record.get("armor_class") or 10)),
             "attacks": attacks,
             "attacks_per_action": multiattack_count(record),
+            "skills": dict(record.get("skill_bonuses") or {}),
+            "challenge_rating": float(record.get("challenge_rating") or 0),
+            "experience_points": int(record.get("experience_points") or 0),
+            "initiative_bonus": int(record.get("initiative_bonus") or 0),
             "abilities": abilities,
         }
         definitions.append(definition)
@@ -2870,13 +2972,13 @@ def build_prompts() -> None:
                 "type": "prompt",
                 "id": "combat_actions",
                 "step": "state",
-                "text": "D&D combat: an attack hits when d20 plus the attack bonus and ability modifier equals or exceeds the target's Armor Class. Use player_attack for a player character and attack for an NPC; the engine rolls the d20, adds the proficiency bonus and the weapon's ability modifier, and rolls the weapon's damage. A weapon's reach is 5 feet unless it has Reach (10 feet); a ranged weapon has a normal and a long band, and a shot beyond long range is refused. Pass roll_mode for advantage or disadvantage. On a hit, subtract the damage from hit points. At 0 hit points a player character falls unconscious and begins death saves; an NPC falls. A nonlethal strike with a fist, club, or staff leaves the target unconscious instead of dead. A character cannot take a second attack action unless a feature gives Extra Attack; the engine enforces the turn's attack budget.",
+                "text": "D&D combat: an attack hits when d20 plus the attack bonus and ability modifier equals or exceeds the target's Armor Class. Use player_attack for a player character and attack for an NPC; the engine rolls the d20, adds the proficiency bonus and the weapon's ability modifier, and rolls the weapon's damage. A natural 20 is a critical hit: the weapon dice are rolled twice and the flat modifier is added once. A weapon's reach is 5 feet unless it has Reach (10 feet); a ranged weapon has a normal and a long band, and a shot beyond long range is refused. Pass roll_mode for advantage or disadvantage. On a hit, subtract the damage from hit points. At 0 hit points a player character falls unconscious and begins death saves; an NPC falls. A nonlethal strike leaves the target unconscious instead of dead. Extra Attack raises the engine's attack-action budget; Action Surge can be narrated as an additional action when the resource is spent.",
             },
             {
                 "type": "prompt",
                 "id": "spellcasting",
                 "step": "state",
-                "text": "Spellcasters prepare leveled spells. After a long rest, call prepare_spells with the player's chosen list: a wizard chooses from the spellbook, a cleric, druid, paladin, or ranger chooses from the class list, and a bard, sorcerer, or warlock chooses from the spells they know. The Prepared Spells number for the class and level is the limit; cantrips are always available and do not count. Use cast_spell only for a spell that is known and, when leveled, prepared. A cantrip costs no slot; a leveled spell spends a slot of its level or higher. Pass slot_level when the player upcasts; the spell's higher-level text applies. A prepared spell with the Ritual tag can be cast with ritual true: it takes 10 minutes and spends no slot. A concentration spell sets concentration and ends the earlier concentration spell; a long rest clears it. The result gives the spell save DC and spell attack bonus, so roll NPC saves with roll_save or let the player roll with player_save, and use the spell's own damage and area from its description. A spellcaster learns new spells when the level-up page offers them, and a feature such as Magic Initiate may teach one with learn_spell. Never let a character cast a leveled spell they have not prepared. A Circle of the Land druid calls choose_land after each long rest; the chosen land's Circle spells become always prepared.",
+                "text": "Spellcasters prepare leveled spells. After a long rest, call prepare_spells with the player's chosen list: a wizard chooses from the spellbook, a cleric, druid, paladin, or ranger chooses from the class list, and a bard, sorcerer, or warlock chooses from the spells they know. The Prepared Spells number for the class and level is the limit; cantrips are always available and do not count. Use cast_spell only for a spell that is known and, when leveled, prepared. A cantrip costs no slot; a leveled spell spends a slot of its level or higher. Pass slot_level when the player upcasts; the spell's higher-level text applies. A prepared spell with the Ritual tag can be cast with ritual true: it takes 10 minutes and spends no slot; a wizard's Ritual Adept can cast an unprepared ritual from the spellbook. A concentration spell sets concentration and ends the earlier concentration spell; a long rest clears it, and end_concentration ends it when the player chooses. The result gives the spell save DC and spell attack bonus. For a spell attack call spell_attack; then apply the spell's damage with harm_character and its conditions with add_condition. Use roll_save or player_save for saving throws. A spellcaster learns new spells when the level-up page offers them, and a feature such as Magic Initiate may teach one with learn_spell. Never let a character cast a leveled spell they have not prepared. A Circle of the Land druid calls choose_land after each long rest; the chosen land's Circle spells become always prepared.",
             },
             {
                 "type": "prompt",
@@ -2888,7 +2990,7 @@ def build_prompts() -> None:
                 "type": "prompt",
                 "id": "death_and_dying",
                 "step": "state",
-                "text": "A player character at 0 hit points is unconscious and dying. At the start of each of their turns call death_save so the player rolls: 10 or more succeeds, 9 or less fails, a natural 1 is two failures, and a natural 20 restores 1 hit point and ends the dying state. Three successes stabilize the character; three failures kill them. A stabilized character remains unconscious until healed above 0 hit points; then call recover_character. An NPC at 0 hit points dies unless it is important, in which case it is unconscious.",
+                "text": "A player character at 0 hit points is unconscious and dying. At the start of each of their turns call death_save so the player rolls: 10 or more succeeds, 9 or less fails, a natural 1 is two failures, and a natural 20 restores 1 hit point and ends the dying state. Three successes stabilize the character; three failures kill them. A stabilized character remains unconscious until healing raises them above 0 hit points; healing then clears the defeated state automatically. The stabilize tool or a DC 10 Wisdom (Medicine) check can also stabilize a character at 0 hit points. An NPC at 0 hit points dies unless it is important, in which case it is unconscious.",
             },
             {
                 "type": "prompt",
@@ -2900,13 +3002,13 @@ def build_prompts() -> None:
                 "type": "prompt",
                 "id": "equipment_and_armor",
                 "step": "state",
-                "text": "Armor sets a base Armor Class and caps the Dexterity modifier it allows: light armor lets the full Dexterity through, medium armor caps it at 2, and heavy armor allows none. A shield adds 2. Equip armor and shields with equip_item so the engine records the change; never adjust Armor Class by narration alone. Buying and selling uses buy_item and the marketplace's silver prices.",
+                "text": "Armor sets a base Armor Class and caps the Dexterity modifier it allows: light armor lets the full Dexterity through, medium armor caps it at 2, and heavy armor allows none. A shield adds 2. Equip armor and shields with equip_armor and ready other gear with ready_item so the engine records the change; never adjust Armor Class by narration alone. Buying and selling uses buy_item and the marketplace's silver prices.",
             },
             {
                 "type": "prompt",
                 "id": "level_up_choices",
                 "step": "state",
-                "text": "When a character has enough experience, the player takes the level on the advancement page. Hit points, the proficiency bonus, spell slots, and class features arrive automatically; the page then offers the level's spells, Ability Score Improvement or feat, fighting style, subclass, and expertise. Never apply a level or choose a player's feat, spell, or subclass for them; the player makes those choices.",
+                "text": "Award experience with award_xp for a defeated encounter, a completed quest, or a milestone. When a character has enough experience, the player takes the level on the advancement page. Hit points, the proficiency bonus, spell slots, and class features arrive automatically; the page then offers the level's spells, Ability Score Improvement or feat, fighting style, subclass, and expertise. Never apply a level or choose a player's feat, spell, or subclass for them; the player makes those choices.",
             },
             {
                 "type": "prompt",
@@ -2922,7 +3024,7 @@ def build_prompts() -> None:
             {
                 "type": "prompt",
                 "id": "player_rolls",
-                "text": "The player rolls their own character's attacks, saves, and checks. Call player_attack for an attack, player_save for a save, and roll_check for an ability check, so the player presses the roll button; never roll their dice yourself. The player rolls only the d20; the engine adds the ability modifier, proficiency bonus, and any situational modifier. For an NPC, use attack and roll_save, which roll the dice themselves.",
+                "text": "The player rolls their own character's attacks, saves, checks, and spell attacks. Call player_attack for a weapon attack, spell_attack for a spell attack, player_save for a save, and roll_check for an ability check, so the player presses the roll button; never roll their dice yourself. The player rolls only the d20; the engine adds the ability modifier, proficiency bonus, and any situational modifier. For an NPC, use attack and roll_save, which roll the dice themselves.",
             },
             {
                 "type": "prompt",
@@ -3283,6 +3385,173 @@ def build_tool_calls() -> None:
                     "cause": {"type": "string", "description": "Why the character learns it."},
                 },
                 "required": ["name", "feature"],
+            },
+        },
+        {
+            "type": "tool_call",
+            "id": "roll_initiative",
+            "python_module": "dnd_srd_2024",
+            "function": "roll_initiative",
+            "description": "Roll initiative for every combatant once all participants have joined: 1d20 plus Dexterity, highest first. Call it before the first turn; the engine records the order and the rolls.",
+        },
+        {
+            "type": "tool_call",
+            "id": "award_xp",
+            "python_module": "dnd_srd_2024",
+            "function": "award_xp",
+            "description": "Award experience points for a defeated encounter, a completed quest, or a milestone. The player takes the level on the advancement page when the total reaches the next threshold.",
+            "parameters": {
+                "properties": {
+                    "character": {
+                        "type": "string",
+                        "description": "The player character gaining experience.",
+                    },
+                    "amount": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 1000000,
+                        "description": "How many experience points to award.",
+                    },
+                    "cause": {
+                        "type": "string",
+                        "description": "What earned the experience, in a few words.",
+                    },
+                },
+                "required": ["character", "amount"],
+            },
+        },
+        {
+            "type": "tool_call",
+            "id": "spell_attack",
+            "python_module": "dnd_srd_2024",
+            "function": "spell_attack",
+            "description": "Ask the player to make a spell attack against a target's Armor Class: d20 plus proficiency bonus and spellcasting ability. Use it for Fire Bolt, Guiding Bolt, Eldritch Blast, and any spell that says spell attack. Apply the spell's damage only after a hit.",
+            "parameters": {
+                "properties": {
+                    "prompt": {
+                        "type": "string",
+                        "description": "What the GM says to invite the spell attack.",
+                    },
+                    "name": {"type": "string", "description": "The caster."},
+                    "spell": {"type": "string", "description": "The spell's name or id."},
+                    "target": {"type": "string", "description": "The creature being attacked."},
+                    "roll_mode": {
+                        "type": "string",
+                        "enum": ["normal", "advantage", "disadvantage"],
+                        "default": "normal",
+                        "description": "Advantage or disadvantage on the attack roll.",
+                    },
+                },
+                "required": ["prompt", "name", "spell", "target"],
+            },
+            "player_input": {
+                "param": "roll",
+                "dice": "1d20",
+                "details": "The engine adds your spell attack bonus.",
+            },
+        },
+        {
+            "type": "tool_call",
+            "id": "resolve_hazard",
+            "python_module": "dnd_srd_2024",
+            "function": "resolve_hazard",
+            "description": "Resolve a D&D trap, breath weapon, fall, or area effect against NPCs: each rolls d20 plus its saving-throw bonus against the DC. Player characters roll their own save, so name only NPCs here. On a failure apply damage and the named condition; half_on_save halves damage on a success.",
+            "parameters": {
+                "properties": {
+                    "hazard": {"type": "string", "description": "What the hazard is."},
+                    "targets": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "The NPCs caught in the effect.",
+                    },
+                    "save": {
+                        "type": "string",
+                        "enum": ["str", "dex", "con", "int", "wis", "cha"],
+                        "description": "The ability save the effect calls for.",
+                    },
+                    "dc": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 40,
+                        "description": "The saving-throw DC.",
+                    },
+                    "damage": {
+                        "type": "string",
+                        "description": "Damage dice such as 4d6, or a fixed number.",
+                    },
+                    "half_on_save": {
+                        "type": "boolean",
+                        "default": False,
+                        "description": "True when a successful save halves the damage.",
+                    },
+                    "condition": {
+                        "type": "string",
+                        "description": "A condition a failed save applies.",
+                    },
+                    "stat": {
+                        "type": "string",
+                        "description": "Leave it out; D&D hazards take hit points.",
+                    },
+                    "cause": {"type": "string", "description": "What caused the hazard."},
+                    "save_modifier": {
+                        "type": "integer",
+                        "minimum": -20,
+                        "maximum": 20,
+                        "default": 0,
+                        "description": "A situational bonus or penalty to the save.",
+                    },
+                },
+                "required": ["hazard", "targets"],
+            },
+        },
+        {
+            "type": "tool_call",
+            "id": "end_concentration",
+            "python_module": "dnd_srd_2024",
+            "function": "end_concentration",
+            "description": "End the concentration spell a character is maintaining, such as when the player stops concentrating or fails a Constitution save against damage.",
+            "parameters": {
+                "properties": {
+                    "name": {"type": "string", "description": "The concentrating character."},
+                },
+                "required": ["name"],
+            },
+        },
+        {
+            "type": "tool_call",
+            "id": "ready_item",
+            "description": "Ready a carried item for use, or stow it. A readied weapon can attack. Readying armor or a shield does not equip it; use equip_armor to wear or wield it.",
+            "parameters": {
+                "properties": {
+                    "name": {"type": "string", "description": "The character carrying the item."},
+                    "item": {"type": "string", "description": "The carried item's name."},
+                    "ready": {
+                        "type": "boolean",
+                        "default": True,
+                        "description": "True to ready it, false to stow it.",
+                    },
+                },
+                "required": ["name", "item"],
+            },
+        },
+        {
+            "type": "tool_call",
+            "id": "equip_armor",
+            "description": "Wear or remove a carried, readied suit of armor, or wield or stop wielding a carried, readied shield. Only one suit and one shield can be equipped; equipping another replaces that slot. Armor Class updates automatically.",
+            "parameters": {
+                "properties": {
+                    "name": {"type": "string", "description": "The character carrying the item."},
+                    "item": {
+                        "type": "string",
+                        "description": "The carried armor or shield's catalogue name.",
+                    },
+                    "equipped": {
+                        "type": "boolean",
+                        "default": True,
+                        "description": "True to wear or wield it, false to remove it.",
+                    },
+                },
+                "required": ["name", "item"],
             },
         },
     ]

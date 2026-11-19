@@ -52,7 +52,11 @@ def stabilize(
         raise InvalidInput(f"{character.name} is not a player character")
     if character.dead:
         raise InvalidInput(f"{character.name} is dead and cannot be stabilized")
-    if character.dying_hours is None and character.dying_rounds is None:
+    if (
+        character.dying_hours is None
+        and character.dying_rounds is None
+        and not (combat.stabilize_without_clock and character.defeated)
+    ):
         raise InvalidInput(f"{character.name} is not dying")
     record(db, campaign_id, CharacterStabilized(name=character.name, by=by))
     db.commit()

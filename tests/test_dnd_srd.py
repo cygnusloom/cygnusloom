@@ -68,6 +68,10 @@ def test_the_srd_rule_set_loads_with_its_content() -> None:
     assert len(rules.monsters) > 300
     assert sum(1 for f in rules.character.features.values() if f.feature_type == "spell") == 339
     assert rules.level_ups["level"].max_level == 20
+    monk = rules.character.templates["monk"]
+    defense_id = next(grant.feature for grant in monk.features if "unarmored" in grant.feature)
+    floor = rules.character.features[defense_id].defense_floor
+    assert floor is not None and floor.requires_no_armor and floor.requires_no_shield
 
 
 def test_a_fighter_is_created_with_srd_hit_points_and_saves(
@@ -148,7 +152,7 @@ def test_a_wizard_starts_with_slots_and_spell_picks(
     assert pc.stats["hp"] == 8  # Wizard 5 + 1d1 + Constitution modifier 2
     assert pc.counters["slot_1"] == 2
     assert pc.counters["cantrip_picks"] == 3
-    assert pc.counters["spell_picks"] == 4
+    assert pc.counters["spell_picks"] == 6
 
 
 def test_the_advancement_page_teaches_the_wizards_first_spells(
@@ -161,7 +165,7 @@ def test_the_advancement_page_teaches_the_wizards_first_spells(
     assert page is not None and page.kind == level_up_service.PICKS
     picks = {pick["id"]: pick for pick in page.picks}
     assert picks["cantrips"]["available"] == 3
-    assert picks["spells"]["available"] == 4
+    assert picks["spells"]["available"] == 6
     form = {
         "pick-cantrips-0": "spell-fire-bolt",
         "pick-cantrips-1": "spell-light",
@@ -170,6 +174,8 @@ def test_the_advancement_page_teaches_the_wizards_first_spells(
         "pick-spells-1": "spell-shield",
         "pick-spells-2": "spell-sleep",
         "pick-spells-3": "spell-thunderwave",
+        "pick-spells-4": "spell-detect-magic",
+        "pick-spells-5": "spell-fog-cloud",
     }
     level_up_service.apply_page(client.app.state.engine, campaign_id, rules, world, form, "Wren")
     after = character_named(app, campaign_id, "Wren")
@@ -181,6 +187,8 @@ def test_the_advancement_page_teaches_the_wizards_first_spells(
         "spell-shield",
         "spell-sleep",
         "spell-thunderwave",
+        "spell-detect-magic",
+        "spell-fog-cloud",
     ):
         assert spell in after.features, spell
     assert after.counters["cantrip_picks"] == 0
@@ -234,6 +242,8 @@ def test_casting_spends_a_slot_and_cantrips_are_free(
             "pick-spells-1": "spell-shield",
             "pick-spells-2": "spell-sleep",
             "pick-spells-3": "spell-thunderwave",
+            "pick-spells-4": "spell-detect-magic",
+            "pick-spells-5": "spell-fog-cloud",
         },
         "Wren",
     )
@@ -264,6 +274,8 @@ def _prepared_wizard(
             "pick-spells-1": "spell-shield",
             "pick-spells-2": "spell-detect-magic",
             "pick-spells-3": "spell-fog-cloud",
+            "pick-spells-4": "spell-charm-person",
+            "pick-spells-5": "spell-mage-armor",
         },
         "Wren",
     )
@@ -328,9 +340,10 @@ def test_death_saves_and_hit_dice(app: FastAPI, client_factory: Callable[[], Tes
     first = dnd_srd_2024.death_save("Wren", ctx, roll=9)
     assert first["failures"] == 1 and first["outcome"] == "failure"
     assert dnd_srd_2024.death_save("Wren", ctx, roll=10)["successes"] == 1
-    tools.heal_character("Wren", 7)
-    tools.recover_character("Wren", "the test rescued them", "rescued")
+    healed_result = tools.heal_character("Wren", 7)
+    assert healed_result["recovered"] is True
     healed = character_named(app, campaign_id, "Wren")
+    assert not healed.defeated
     assert healed.counters["hit_dice"] == 1
     tools.harm_character("Wren", "hp", 3, "a test cut")
     spent = dnd_srd_2024.spend_hit_die("Wren", ctx)
@@ -428,6 +441,8 @@ def test_a_long_rest_restores_slots_and_hit_dice(
             "pick-spells-1": "spell-shield",
             "pick-spells-2": "spell-sleep",
             "pick-spells-3": "spell-thunderwave",
+            "pick-spells-4": "spell-detect-magic",
+            "pick-spells-5": "spell-fog-cloud",
         },
         "Wren",
     )

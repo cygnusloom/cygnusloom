@@ -152,6 +152,8 @@ class CharacterSheetView:
     # The character's current and maximum hit points, when the rule set has an HP stat.
     hp: int | None = None
     hp_max: int | None = None
+    # The character's armor class, when the rule set tracks defense as a target number.
+    defense: int | None = None
     abilities: tuple[FeatureLink, ...] = ()
     # The spells the character prepared for the day, when the rule set marks them.
     prepared: tuple[FeatureLink, ...] = ()
@@ -393,6 +395,17 @@ def _combat_lines(
             f"Worn armor: {character.equipped_armor or 'none'}; "
             f"wielded shield: {character.equipped_shield or 'none'}"
         )
+    if character.skills:
+        lines.append(
+            "Skills: "
+            + ", ".join(
+                f"{spec.skills[skill].name} {value:+d}"
+                if skill in spec.skills
+                else f"{skill} {value:+d}"
+                for skill, value in sorted(character.skills.items())
+            )
+        )
+    template = _monster_template(character, monsters)
     if character.large_group:
         if combat.groups is None:
             lines.append("Large group: a group that attacks with Blast")
@@ -407,9 +420,13 @@ def _combat_lines(
             for name, formula in character.attacks.items()
         )
         lines.append(f"Attacks: {attacks}")
-        template = _monster_template(character, monsters)
         if template is not None and template.attacks_per_action > 1:
             lines.append(f"Attacks per action: {template.attacks_per_action}")
+    if template is not None and template.abilities:
+        lines.append(
+            "Abilities: "
+            + "; ".join(f"{ability.name} — {ability.description}" for ability in template.abilities)
+        )
     if any(character.harm.values()):
         harm = ", ".join(
             f"{spec.stats[stat].name if stat in spec.stats else stat.upper()} {amount}"
@@ -857,6 +874,7 @@ def scene_view(
             sheet=sheet,
             hp=points[0] if points is not None else None,
             hp_max=points[1] if points is not None else None,
+            defense=pc.armor if pc.defense_tracked else None,
             abilities=abilities,
             prepared=_prepared_links(spec, pc, ability_entries),
             reactions=reactions,
@@ -1782,6 +1800,7 @@ def _hireling_sheets(
                 sheet=lines,
                 hp=points[0] if points is not None else None,
                 hp_max=points[1] if points is not None else None,
+                defense=character.armor if character.defense_tracked else None,
                 abilities=_feature_links(spec, character, ability_entries),
                 prepared=_prepared_links(spec, character, ability_entries),
                 reactions=_reaction_links(spec, character),

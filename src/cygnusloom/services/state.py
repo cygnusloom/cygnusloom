@@ -638,6 +638,8 @@ class Encounter:
     side_initiative: bool = False
     # True once the round one order has been set from the initiative rolls.
     settled: bool = False
+    # True when every participant rolled individually and that order lasts the whole fight.
+    fixed_order: bool = False
     # Initiative rolls that passed, by name_key. A player character missing here has not rolled.
     initiative: dict[str, bool] = field(default_factory=dict)
     # Morale checks each side has made, as tags: "first" at the first casualty, "half" at half.
@@ -997,6 +999,9 @@ def _next_round(encounter: Encounter, state: CampaignState) -> None:
         # A side-initiative rule set fixes the order of the sides for the whole fight; only the
         # members of each side are kept together.
         group_by_side(encounter, keep_turn=False, party_first=False)
+    elif encounter.fixed_order:
+        # A rule set that rolls every participant's initiative keeps that exact order each round.
+        return
     else:
         # Other rule sets begin every later round with the party, then its opponents.
         group_by_side(encounter, keep_turn=False, party=player_sides(encounter, state))

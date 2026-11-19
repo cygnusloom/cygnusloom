@@ -157,7 +157,14 @@
     "description": "While you aren't wearing any armor, your base Armor Class equals 10 plus your Dexterity and Constitution modifiers. You can use a Shield and still gain this benefit.",
     "tag": "class:barbarian",
     "rank": 1,
-    "picks": []
+    "picks": [],
+    "defense_floor": {
+      "base": 10,
+      "modifiers": [
+        "con"
+      ],
+      "requires_no_armor": true
+    }
   },
   {
     "type": "feature",
@@ -607,16 +614,6 @@
     "picks": []
   },
   {
-    "type": "feature",
-    "id": "class-druid-wild-shape-uses",
-    "name": "Cantrips Known",
-    "feature_type": "trait",
-    "description": "[Column data]",
-    "tag": "class:druid",
-    "rank": 1,
-    "picks": []
-  },
-  {
     "type": "template",
     "id": "druid",
     "kind": "class",
@@ -639,8 +636,7 @@
       "class-druid-druid-spell-list",
       "class-druid-druidic",
       "class-druid-primal-order",
-      "class-druid-spellcasting",
-      "class-druid-wild-shape-uses"
+      "class-druid-spellcasting"
     ],
     "grant": {
       "items": [
@@ -795,7 +791,7 @@
     "kind": "class",
     "name": "Fighter",
     "icon": "sword",
-    "description": "A disciplined master of weapons and armour. Hit Point Die: d10. Saving Throw Proficiencies: Dexterity, Strength.",
+    "description": "A disciplined master of weapons and armour. Hit Point Die: d10. Saving Throw Proficiencies: Strength, Constitution.",
     "stats": {
       "hp": 9,
       "attack_bonus": 1
@@ -875,7 +871,7 @@
     "feature_type": "trait",
     "description": "When an attack roll hits you and its damage includes Bludgeoning, Piercing, or Slashing damage, you can take a Reaction to reduce the attack's total damage against you. The reduction equals 1d10 plus your Dexterity modifier and Monk level.\n\nIf you reduce the damage to 0, you can expend 1 Focus Point to redirect some of the attack's force. If you do so, choose a creature you can see within 5 feet of yourself if the attack was a melee attack or a creature you can see within 60 feet of yourself that isn't behind Total Cover if the attack was a ranged attack. That creature must succeed on a Dexterity saving throw or take damage equal to two rolls of your Martial Arts die plus your Dexterity modifier. The damage is the same type dealt by the attack.",
     "tag": "class:monk",
-    "rank": 1,
+    "rank": 3,
     "picks": []
   },
   {
@@ -995,7 +991,7 @@
     "feature_type": "trait",
     "description": "Once per turn when you hit a creature with a Monk weapon or an Unarmed Strike, you can expend 1 Focus Point to attempt a stunning strike. The target must make a Constitution saving throw. On a failed save, the target has the Stunned condition until the start of your next turn. On a successful save, the target's Speed is halved until the start of your next turn, and the next attack roll made against the target before then has Advantage.",
     "tag": "class:monk",
-    "rank": 3,
+    "rank": 5,
     "picks": []
   },
   {
@@ -1016,7 +1012,15 @@
     "description": "While you aren't wearing armor or wielding a Shield, your base Armor Class equals 10 plus your Dexterity and Wisdom modifiers.",
     "tag": "class:monk",
     "rank": 1,
-    "picks": []
+    "picks": [],
+    "defense_floor": {
+      "base": 10,
+      "modifiers": [
+        "wis"
+      ],
+      "requires_no_armor": true,
+      "requires_no_shield": true
+    }
   },
   {
     "type": "feature",
@@ -1044,7 +1048,7 @@
     "kind": "class",
     "name": "Monk",
     "icon": "fist",
-    "description": "An unarmed warrior who turns inner focus into speed and power. Hit Point Die: d8. Saving Throw Proficiencies: Dexterity, Wisdom.",
+    "description": "An unarmed warrior who turns inner focus into speed and power. Hit Point Die: d8. Saving Throw Proficiencies: Dexterity, Strength.",
     "stats": {
       "hp": 7,
       "attack_bonus": 1
@@ -1058,7 +1062,6 @@
       }
     ],
     "features": [
-      "class-monk-deflect-attacks",
       "class-monk-martial-arts",
       "class-monk-unarmored-defense"
     ],
@@ -1812,7 +1815,7 @@
   {
     "type": "feature",
     "id": "class-warlock-magical-cunning",
-    "name": "Magic Cunning",
+    "name": "Magical Cunning",
     "feature_type": "trait",
     "description": "You can perform an esoteric rite for 1 minute. At the end of it, you regain expended Pact Magic spell slots but no more than a number equal to half your maximum (round up). Once you use this feature, you can't do so again until you finish a Long Rest.",
     "tag": "class:warlock",
@@ -2026,7 +2029,7 @@
       "arcane_recovery": 1,
       "slot_1": 2,
       "cantrip_picks": 3,
-      "spell_picks": 4
+      "spell_picks": 6
     }
   },
   {
@@ -2214,7 +2217,15 @@
     "description": "The magic in your body manifests physical traits of your draconic gift. Your Hit Point maximum increases by 3, and it increases by 1 whenever you gain another Sorcerer level.\n\nParts of you are also covered by dragon-like scales. While you aren't wearing armor, your base Armor Class equals 10 plus your Dexterity and Charisma modifiers.",
     "tag": "subclass:draconic-sorcery",
     "rank": 3,
-    "picks": []
+    "picks": [],
+    "defense_floor": {
+      "base": 10,
+      "modifiers": [
+        "cha"
+      ],
+      "requires_no_armor": true
+    },
+    "level_hp_bonus": 1
   },
   {
     "type": "feature",
@@ -2233,7 +2244,7 @@
     "feature_type": "trait",
     "description": "You can cast *Summon Dragon* without a Material component. You can also cast it once without a spell slot, and you regain the ability to cast it in this way when you finish a Long Rest.\n\nWhenever you start casting the spell, you can modify it so that it doesn't require Concentration. If you do so, the spell's duration becomes 1 minute for that casting.",
     "tag": "subclass:draconic-sorcery",
-    "rank": 19,
+    "rank": 18,
     "picks": []
   },
   {

@@ -995,6 +995,12 @@ class MonsterTemplate:
     attack_reach: Mapping[str, int] = field(default_factory=dict)
     attack_ranges: Mapping[str, Mapping[str, int]] = field(default_factory=dict)
     rule_text: Mapping[str, str] = field(default_factory=dict)
+    # The statblock's skill proficiencies, by skill id, with their printed bonuses.
+    skills: Mapping[str, int] = field(default_factory=dict)
+    # The printed challenge rating, experience value, and initiative bonus.
+    challenge_rating: float = 0.0
+    experience: int = 0
+    initiative_bonus: int = 0
     # The statblock's special abilities as structured rules instead of prose alone.
     abilities: tuple[MonsterAbility, ...] = ()
     # The creature icon the statblock shows, resolved from `icon` or `looks_like` at load time.
@@ -1539,8 +1545,24 @@ class CombatRules:
     surprise_turns: int = 0
     # How many attack actions a combatant may take in one turn. A statblock's multiattack is one
     # attack action, so its attacks per action all resolve inside this budget. Defaults to the
-    # common one-attack-per-turn rule.
+    # common one-attack-per-turn rule. A rule set module may vary it by character.
     attacks_per_turn: int = 1
+    # Whether a natural maximum on the attack die doubles the damage dice, as D&D's critical hit
+    # does. Flat modifiers are never doubled.
+    critical_dice: bool = False
+    # Whether healing above 0 hit points brings a defeated character back to consciousness.
+    heal_clears_defeat: bool = False
+    # Whether a character must have at least 1 hit point to begin a rest.
+    rest_requires_positive_hp: bool = False
+    # Whether a defeated character at 0 hit points can be stabilized without a dying clock.
+    stabilize_without_clock: bool = False
+
+    def attacks_per_turn_for(self, character: object) -> int:
+        """The attack-action budget for one character in this rule set."""
+        if self.module is not None and callable(getattr(self.module, "attacks_per_turn", None)):
+            return max(1, int(self.module.attacks_per_turn(character)))
+        return self.attacks_per_turn
+
     # The grid reach and sight limits for attacks, or None when the rule set does not limit an
     # attack by the distance between the attacker and its target.
     ranges: RangeRules | None = None
@@ -3810,6 +3832,7 @@ CHARACTER_DEFINITION_KEYS: Mapping[str, frozenset[str]] = {
             "effects",
             "reactions",
             "defense_floor",
+            "defense_bonus",
             "defense_dex_cap",
             "picks",
             "repeatable",
@@ -3891,6 +3914,7 @@ DEFENSE_FLOOR_KEYS = frozenset(
         "round_up",
         "requires_no_armor",
         "requires_no_shield",
+        "modifiers",
     }
 )
 CHOOSE_KEYS = frozenset({"count", "feature_type", "tag_field", "skip_tags"})
@@ -5295,6 +5319,10 @@ def _load_combat(
             "dual_wield_damage_bonus",
             "surprise_turns",
             "attacks_per_turn",
+            "critical_dice",
+            "heal_clears_defeat",
+            "rest_requires_positive_hp",
+            "stabilize_without_clock",
             "save",
             "initiative_mode",
             "groups",
@@ -5422,6 +5450,10 @@ def _load_combat(
         attacks_per_turn=(
             _whole(data, "attacks_per_turn", label, 1) if "attacks_per_turn" in data else 1
         ),
+        critical_dice=bool(data.get("critical_dice", False)),
+        heal_clears_defeat=bool(data.get("heal_clears_defeat", False)),
+        rest_requires_positive_hp=bool(data.get("rest_requires_positive_hp", False)),
+        stabilize_without_clock=bool(data.get("stabilize_without_clock", False)),
         ranges=_load_ranges(data, label),
     )
 
@@ -5800,6 +5832,10 @@ def _load_monster(
             "large_group",
             "rules",
             "abilities",
+            "skills",
+            "challenge_rating",
+            "experience_points",
+            "initiative_bonus",
         },
         label,
     )
@@ -5838,6 +5874,24 @@ def _load_monster(
         raise ContentError(f"{label}: 'large_group' must be true or false")
     rules, rule_text = _statblock_rules(data, label)
     abilities = _statblock_abilities(data.get("abilities", []), character, conditions or {}, label)
+    raw_skills = data.get("skills", {})
+    if not isinstance(raw_skills, Mapping):
+        raise ContentError(f"{label}: 'skills' must be an object of skill ids to bonuses")
+    skills: dict[str, int] = {}
+    for skill_id, bonus in raw_skills.items():
+        if skill_id not in character.skills:
+            raise ContentError(f"{label}: skill {skill_id!r} names no skill")
+        _check_whole(bonus, f"{label}: skill {skill_id!r}")
+        skills[str(skill_id)] = int(bonus)
+    challenge_rating = data.get("challenge_rating", 0.0)
+    if isinstance(challenge_rating, bool) or not isinstance(challenge_rating, (int, float)):
+        raise ContentError(f"{label}: 'challenge_rating' must be a number")
+    experience = data.get("experience_points", 0)
+    if isinstance(experience, bool) or not isinstance(experience, int) or experience < 0:
+        raise ContentError(f"{label}: 'experience_points' must be a whole number, 0 or more")
+    initiative_bonus = data.get("initiative_bonus", 0)
+    if isinstance(initiative_bonus, bool) or not isinstance(initiative_bonus, int):
+        raise ContentError(f"{label}: 'initiative_bonus' must be a whole number")
     icon, looks_like = _icon_fields(data, icon_entries or {}, FALLBACK_MONSTER, label)
     return MonsterTemplate(
         id=definition.id,
@@ -5854,6 +5908,10 @@ def _load_monster(
         attack_reach=attack_reach,
         attack_ranges=attack_ranges,
         rule_text=rule_text,
+        skills=skills,
+        challenge_rating=float(challenge_rating),
+        experience=experience,
+        initiative_bonus=initiative_bonus,
         abilities=abilities,
         icon=icon or FALLBACK_MONSTER,
         looks_like=looks_like,

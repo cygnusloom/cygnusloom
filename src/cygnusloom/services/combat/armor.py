@@ -55,9 +55,13 @@ def equipped_defense(character: Character, spec: CharacterSpec, base: int, modif
             bonus = min(bonus, armor.defense_dex_cap)
     unarmored = base + bonus
     floor = max(base, character.innate_defense)
+    flat_bonus = 0
     for feature_id, count in character.features.items():
         feature = spec.features.get(feature_id)
-        if count <= 0 or feature is None or feature.defense_floor is None:
+        if count <= 0 or feature is None:
+            continue
+        flat_bonus += feature.defense_bonus * count
+        if feature.defense_floor is None:
             continue
         rule = feature.defense_floor
         if rule.requires_no_armor and (character.equipped_armor or character.equipped_armor_value):
@@ -67,6 +71,7 @@ def equipped_defense(character: Character, spec: CharacterSpec, base: int, modif
         ):
             continue
         value = rule.base
+        value += sum(character.modifier(spec, name) for name in rule.modifiers)
         if rule.counter:
             counter = spec.counters.get(rule.counter)
             if counter is None:
@@ -74,7 +79,7 @@ def equipped_defense(character: Character, spec: CharacterSpec, base: int, modif
             amount = character.counters.get(rule.counter, counter.initial)
             value += -(-amount // rule.divisor) if rule.round_up else amount // rule.divisor
         floor = max(floor, value)
-    armor = max(unarmored + character.equipped_armor_value, floor + bonus)
+    armor = max(unarmored + character.equipped_armor_value, floor + bonus) + flat_bonus
     if character.equipped_shield_value and not character.shield_suspended:
         armor = _shield_value(
             armor,
@@ -157,9 +162,7 @@ def set_defense_equipment(
         raise InvalidInput("equipped armor values need item names")
     innate = character.innate_defense
     if not character.defense_tracked and character.armor and adjustment is None:
-        bonus = (
-            character.modifier(spec, rules.defense_modifier) if rules.defense_modifier else 0
-        )
+        bonus = character.modifier(spec, rules.defense_modifier) if rules.defense_modifier else 0
         innate = max(0, character.armor - bonus)
     without_shield = equipped_defense(
         replace(

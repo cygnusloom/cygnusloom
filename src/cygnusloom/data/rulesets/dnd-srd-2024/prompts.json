@@ -21,13 +21,13 @@
     "type": "prompt",
     "id": "combat_actions",
     "step": "state",
-    "text": "D&D combat: an attack hits when d20 plus the attack bonus and ability modifier equals or exceeds the target's Armor Class. Use player_attack for a player character and attack for an NPC; the engine rolls the d20, adds the proficiency bonus and the weapon's ability modifier, and rolls the weapon's damage. A weapon's reach is 5 feet unless it has Reach (10 feet); a ranged weapon has a normal and a long band, and a shot beyond long range is refused. Pass roll_mode for advantage or disadvantage. On a hit, subtract the damage from hit points. At 0 hit points a player character falls unconscious and begins death saves; an NPC falls. A nonlethal strike with a fist, club, or staff leaves the target unconscious instead of dead. A character cannot take a second attack action unless a feature gives Extra Attack; the engine enforces the turn's attack budget."
+    "text": "D&D combat: an attack hits when d20 plus the attack bonus and ability modifier equals or exceeds the target's Armor Class. Use player_attack for a player character and attack for an NPC; the engine rolls the d20, adds the proficiency bonus and the weapon's ability modifier, and rolls the weapon's damage. A natural 20 is a critical hit: the weapon dice are rolled twice and the flat modifier is added once. A weapon's reach is 5 feet unless it has Reach (10 feet); a ranged weapon has a normal and a long band, and a shot beyond long range is refused. Pass roll_mode for advantage or disadvantage. On a hit, subtract the damage from hit points. At 0 hit points a player character falls unconscious and begins death saves; an NPC falls. A nonlethal strike leaves the target unconscious instead of dead. Extra Attack raises the engine's attack-action budget; Action Surge can be narrated as an additional action when the resource is spent."
   },
   {
     "type": "prompt",
     "id": "spellcasting",
     "step": "state",
-    "text": "Spellcasters prepare leveled spells. After a long rest, call prepare_spells with the player's chosen list: a wizard chooses from the spellbook, a cleric, druid, paladin, or ranger chooses from the class list, and a bard, sorcerer, or warlock chooses from the spells they know. The Prepared Spells number for the class and level is the limit; cantrips are always available and do not count. Use cast_spell only for a spell that is known and, when leveled, prepared. A cantrip costs no slot; a leveled spell spends a slot of its level or higher. Pass slot_level when the player upcasts; the spell's higher-level text applies. A prepared spell with the Ritual tag can be cast with ritual true: it takes 10 minutes and spends no slot. A concentration spell sets concentration and ends the earlier concentration spell; a long rest clears it. The result gives the spell save DC and spell attack bonus, so roll NPC saves with roll_save or let the player roll with player_save, and use the spell's own damage and area from its description. A spellcaster learns new spells when the level-up page offers them, and a feature such as Magic Initiate may teach one with learn_spell. Never let a character cast a leveled spell they have not prepared. A Circle of the Land druid calls choose_land after each long rest; the chosen land's Circle spells become always prepared."
+    "text": "Spellcasters prepare leveled spells. After a long rest, call prepare_spells with the player's chosen list: a wizard chooses from the spellbook, a cleric, druid, paladin, or ranger chooses from the class list, and a bard, sorcerer, or warlock chooses from the spells they know. The Prepared Spells number for the class and level is the limit; cantrips are always available and do not count. Use cast_spell only for a spell that is known and, when leveled, prepared. A cantrip costs no slot; a leveled spell spends a slot of its level or higher. Pass slot_level when the player upcasts; the spell's higher-level text applies. A prepared spell with the Ritual tag can be cast with ritual true: it takes 10 minutes and spends no slot; a wizard's Ritual Adept can cast an unprepared ritual from the spellbook. A concentration spell sets concentration and ends the earlier concentration spell; a long rest clears it, and end_concentration ends it when the player chooses. The result gives the spell save DC and spell attack bonus. For a spell attack call spell_attack; then apply the spell's damage with harm_character and its conditions with add_condition. Use roll_save or player_save for saving throws. A spellcaster learns new spells when the level-up page offers them, and a feature such as Magic Initiate may teach one with learn_spell. Never let a character cast a leveled spell they have not prepared. A Circle of the Land druid calls choose_land after each long rest; the chosen land's Circle spells become always prepared."
   },
   {
     "type": "prompt",
@@ -39,7 +39,7 @@
     "type": "prompt",
     "id": "death_and_dying",
     "step": "state",
-    "text": "A player character at 0 hit points is unconscious and dying. At the start of each of their turns call death_save so the player rolls: 10 or more succeeds, 9 or less fails, a natural 1 is two failures, and a natural 20 restores 1 hit point and ends the dying state. Three successes stabilize the character; three failures kill them. A stabilized character remains unconscious until healed above 0 hit points; then call recover_character. An NPC at 0 hit points dies unless it is important, in which case it is unconscious."
+    "text": "A player character at 0 hit points is unconscious and dying. At the start of each of their turns call death_save so the player rolls: 10 or more succeeds, 9 or less fails, a natural 1 is two failures, and a natural 20 restores 1 hit point and ends the dying state. Three successes stabilize the character; three failures kill them. A stabilized character remains unconscious until healing raises them above 0 hit points; healing then clears the defeated state automatically. The stabilize tool or a DC 10 Wisdom (Medicine) check can also stabilize a character at 0 hit points. An NPC at 0 hit points dies unless it is important, in which case it is unconscious."
   },
   {
     "type": "prompt",
@@ -51,13 +51,13 @@
     "type": "prompt",
     "id": "equipment_and_armor",
     "step": "state",
-    "text": "Armor sets a base Armor Class and caps the Dexterity modifier it allows: light armor lets the full Dexterity through, medium armor caps it at 2, and heavy armor allows none. A shield adds 2. Equip armor and shields with equip_item so the engine records the change; never adjust Armor Class by narration alone. Buying and selling uses buy_item and the marketplace's silver prices."
+    "text": "Armor sets a base Armor Class and caps the Dexterity modifier it allows: light armor lets the full Dexterity through, medium armor caps it at 2, and heavy armor allows none. A shield adds 2. Equip armor and shields with equip_armor and ready other gear with ready_item so the engine records the change; never adjust Armor Class by narration alone. Buying and selling uses buy_item and the marketplace's silver prices."
   },
   {
     "type": "prompt",
     "id": "level_up_choices",
     "step": "state",
-    "text": "When a character has enough experience, the player takes the level on the advancement page. Hit points, the proficiency bonus, spell slots, and class features arrive automatically; the page then offers the level's spells, Ability Score Improvement or feat, fighting style, subclass, and expertise. Never apply a level or choose a player's feat, spell, or subclass for them; the player makes those choices."
+    "text": "Award experience with award_xp for a defeated encounter, a completed quest, or a milestone. When a character has enough experience, the player takes the level on the advancement page. Hit points, the proficiency bonus, spell slots, and class features arrive automatically; the page then offers the level's spells, Ability Score Improvement or feat, fighting style, subclass, and expertise. Never apply a level or choose a player's feat, spell, or subclass for them; the player makes those choices."
   },
   {
     "type": "prompt",
@@ -73,7 +73,7 @@
   {
     "type": "prompt",
     "id": "player_rolls",
-    "text": "The player rolls their own character's attacks, saves, and checks. Call player_attack for an attack, player_save for a save, and roll_check for an ability check, so the player presses the roll button; never roll their dice yourself. The player rolls only the d20; the engine adds the ability modifier, proficiency bonus, and any situational modifier. For an NPC, use attack and roll_save, which roll the dice themselves."
+    "text": "The player rolls their own character's attacks, saves, checks, and spell attacks. Call player_attack for a weapon attack, spell_attack for a spell attack, player_save for a save, and roll_check for an ability check, so the player presses the roll button; never roll their dice yourself. The player rolls only the d20; the engine adds the ability modifier, proficiency bonus, and any situational modifier. For an NPC, use attack and roll_save, which roll the dice themselves."
   },
   {
     "type": "prompt",

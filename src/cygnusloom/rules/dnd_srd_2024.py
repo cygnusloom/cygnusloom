@@ -20,17 +20,22 @@ from cygnusloom.content.character import CharacterSpec, Feature
 from cygnusloom.content.definitions import ContentError
 from cygnusloom.content.library import LevelGrants
 from cygnusloom.rules.context import ToolContext
-from cygnusloom.rules.dice import ROLL_MODES, roll_mode_values, roll_total
+from cygnusloom.rules.dice import ROLL_MODES, is_formula, roll_mode_values, roll_total
 from cygnusloom.services.common import InvalidInput, whole_number
 from cygnusloom.services.events import (
     PC_KIND,
     CharacterDied,
+    CharacterRecovered,
     CharacterSaved,
     CharacterStabilized,
     CounterChanged,
     EffectNoted,
+    EncounterAttacked,
     FeatureLearned,
+    InitiativeSettled,
+    SpellAttackMade,
     current,
+    name_key,
     record,
     same_item_name,
 )
@@ -567,7 +572,10 @@ def _project(character: str, ctx: ToolContext) -> LevelGrants:
     new_level = level + 1
     rules: DndClass = facts["rules"]
     pools = {
-        "spell_picks": max(0, rules.spells[new_level - 1] - rules.spells[level - 1]),
+        # A wizard's spellbook grows by two spells a level, separate from the prepared limit.
+        "spell_picks": 2
+        if rules.id == "wizard"
+        else max(0, rules.spells[new_level - 1] - rules.spells[level - 1]),
         "cantrip_picks": max(0, rules.cantrips[new_level - 1] - rules.cantrips[level - 1]),
         "asi_picks": 1 if new_level in rules.asi_levels else 0,
         "fighting_style_picks": 1 if new_level in rules.fighting_style_levels else 0,
@@ -806,19 +814,14 @@ def feat_options(
     found = _read_character(character, ctx)
     target_level = level or _stored_level(found)
     options = []
-    asi = spec.features.get("ability-score-improvement")
-    if asi is not None:
-        options.append(_option(asi))
     for feature in spec.features.values():
         if feature.feature_type != "feat":
-            continue
-        if feature.id == "ability-score-improvement":
             continue
         if feature.tag not in ("general", "epic-boon"):
             continue
         if target_level < feature.rank:
             continue
-        if feature.id in found.features:
+        if feature.id in found.features and not feature.repeatable:
             continue
         options.append(_option(feature))
     return sorted(options, key=lambda option: (option["rank"], option["name"]))
@@ -854,7 +857,7 @@ def _tagged_feat_options(
             if feature.feature_type == "feat"
             and feature.tag == tag
             and feature.rank <= target_level
-            and feature.id not in found.features
+            and (feature.id not in found.features or feature.repeatable)
         ),
         key=lambda option: (option["rank"], option["name"]),
     )
@@ -1102,6 +1105,7 @@ def death_save(name: str, ctx: ToolContext, roll: int = 0) -> dict[str, Any]:
         ctx.world.restore_stat(found.name, "hp", 1, cause="a natural 20 on a death save")
         _reset_death_saves(ctx, found.name)
         _record_stabilized(ctx, found.name, by="a natural 20 on a death save")
+        _record_recovered(ctx, found.name, "A natural 20 on a death save brings them around.")
         return {
             "character": found.name,
             "roll": rolled,
@@ -1152,6 +1156,19 @@ def death_save(name: str, ctx: ToolContext, roll: int = 0) -> dict[str, Any]:
         "failures": failures,
         "successes": successes,
     }
+
+
+def _record_recovered(ctx: ToolContext, name: str, explanation: str) -> None:
+    def action(hc: HookContext) -> None:
+        db, campaign_id = hc.session()
+        record(
+            db,
+            campaign_id,
+            CharacterRecovered(name=name, explanation=explanation, consequence=""),
+        )
+        db.commit()
+
+    ctx.world.with_hook_context(action)
 
 
 def _record_death_save(ctx: ToolContext, name: str, roll: int, passed: bool, cause: str) -> None:
@@ -1337,6 +1354,276 @@ def choose_land(character: str, land: str, ctx: ToolContext) -> dict[str, Any]:
     }
 
 
+def award_xp(character: str, amount: int, ctx: ToolContext, cause: str = "") -> dict[str, Any]:
+    """Award experience for a defeated encounter, a completed quest, or a milestone. Levels are
+    taken on the advancement page once the experience reaches the next threshold."""
+    found = _read_character(character, ctx)
+    gained = whole_number(amount, "amount", 1, 1_000_000)
+    result = ctx.world.adjust_counter(character, "xp", gained)
+    return {
+        "character": found.name,
+        "gained": gained,
+        "xp": result["value"],
+        "cause": cause or "experience awarded",
+    }
+
+
+def roll_initiative(ctx: ToolContext) -> dict[str, Any]:
+    """Roll initiative for every combatant: d20 plus Dexterity, highest total first. A bestiary
+    NPC keeps the initiative bonus printed in its statblock when one was stored. Records the
+    order before the first turn, so no player has to roll a separate initiative save."""
+
+    def action(hc: HookContext) -> dict[str, Any]:
+        state = hc.state()
+        encounter = state.encounter
+        if encounter is None:
+            raise InvalidInput("there is no encounter to roll initiative for")
+        if encounter.settled:
+            raise InvalidInput("initiative is already set for this encounter")
+        if encounter.round > 1:
+            raise InvalidInput("initiative is rolled only at the start of an encounter")
+        if encounter.acting is not None:
+            raise InvalidInput(f"{encounter.acting} is taking a turn; finish it first")
+        if not encounter.order:
+            raise InvalidInput("there is no one in the encounter to roll initiative for")
+        rolls: list[dict[str, Any]] = []
+        for name in encounter.order:
+            character = state.characters.get(name_key(name))
+            if character is None:
+                continue
+            bonus = _initiative_bonus(character, getattr(ctx.world, "monsters", {}))
+            roll = ctx.world.rng.randint(1, 20)
+            rolls.append(
+                {
+                    "name": character.name,
+                    "roll": roll,
+                    "bonus": bonus,
+                    "total": roll + bonus,
+                }
+            )
+        if not rolls:
+            raise InvalidInput("there is no one in the encounter to roll initiative for")
+        order = [
+            entry["name"]
+            for entry in sorted(
+                rolls,
+                key=lambda entry: (-int(entry["total"]), encounter.order.index(entry["name"])),
+            )
+        ]
+        db, campaign_id = hc.session()
+        record(db, campaign_id, InitiativeSettled(order=order, rolls=rolls, individual=True))
+        db.commit()
+        return {"order": order, "rolls": rolls}
+
+    return ctx.world.with_hook_context(action)
+
+
+def _initiative_bonus(character: Any, monsters: Any = None) -> int:
+    """Dexterity for a player character; a bestiary NPC's printed initiative bonus when known."""
+    if character.kind != PC_KIND and monsters:
+        template = next(
+            (
+                monster
+                for monster in monsters.values()
+                if monster.name.casefold() == str(character.creature).casefold()
+            ),
+            None,
+        )
+        if template is not None:
+            return int(template.initiative_bonus)
+    printed = character.stats.get("initiative_bonus")
+    if character.kind != PC_KIND and printed is not None:
+        return int(printed)
+    dex = int(character.stats.get("dex", 10))
+    return (dex - 10) // 2
+
+
+def attacks_per_turn(character: Any) -> int:
+    """The 2024 Extra Attack tiers. The feature ids carry the class and tier."""
+    features = character.features
+    if "class-fighter-three-extra-attacks" in features:
+        return 4
+    if "class-fighter-two-extra-attacks" in features:
+        return 3
+    if any(
+        feature in features
+        for feature in (
+            "class-barbarian-extra-attack",
+            "class-fighter-extra-attack",
+            "class-monk-extra-attack",
+            "class-paladin-extra-attack",
+            "class-ranger-extra-attack",
+        )
+    ):
+        return 2
+    return 1
+
+
+def end_concentration(name: str, ctx: ToolContext) -> dict[str, Any]:
+    """End the concentration spell a character is maintaining, such as when they choose to stop or
+    fail a Constitution save against damage."""
+
+    def action(hc: HookContext) -> dict[str, Any]:
+        found = hc.character(name)
+        current_spell = found.marks.get(CONCENTRATION_MARK)
+        if current_spell:
+            hc.set_mark(
+                found.name,
+                CONCENTRATION_MARK,
+                None,
+                f"{found.name} stops concentrating on a spell.",
+            )
+        return {"character": found.name, "ended": str(current_spell) if current_spell else None}
+
+    return ctx.world.with_hook_context(action)
+
+
+def resolve_hazard(
+    hazard: str,
+    targets: Sequence[str],
+    ctx: ToolContext,
+    save: str = "",
+    dc: int = 0,
+    damage: str = "",
+    half_on_save: bool = False,
+    condition: str = "",
+    stat: str = "",
+    cause: str = "",
+    save_modifier: int = 0,
+) -> dict[str, Any]:
+    """Resolve a D&D hazard against NPCs with d20 + save bonus against the listed DC. Player
+    characters roll their own save, so naming one is refused. Use this for a trap, breath
+    weapon, falling rocks, or any area effect; characters that fail take damage and the named
+    condition."""
+    progression = require_progression(ctx.world)
+    spec = ctx.world.character
+    difficulty = whole_number(dc, "dc", 1, 40) if save else 0
+    if save and not difficulty:
+        raise InvalidInput("a hazard save needs a DC")
+    if half_on_save and not (save and damage):
+        raise InvalidInput("half_on_save needs a save and damage")
+    if not save and not damage and not condition:
+        raise InvalidInput("a hazard needs a save, damage, or a condition")
+    stat_id = _ability_id(stat) if stat else "hp"
+    if stat_id != "hp":
+        raise InvalidInput("D&D hazards take hit points; leave stat out or give hp")
+    amount_formula = damage.strip()
+    if amount_formula and not (amount_formula.isdigit() or is_formula(amount_formula)):
+        raise InvalidInput("hazard damage must be dice such as 1d6, or a whole number")
+    names = [str(target).strip() for target in targets if str(target).strip()]
+    if not names:
+        raise InvalidInput("a hazard needs at least one target")
+    reason = cause.strip() or hazard
+    results: list[dict[str, Any]] = []
+    for target in names:
+        found = _read_character(target, ctx)
+        if found.kind == PC_KIND:
+            raise InvalidInput(
+                f"{found.name} is a player character; call player_save then apply the result"
+            )
+        result: dict[str, Any] = {"target": found.name}
+        passed = False
+        if save:
+            stat = _ability_id(save)
+            bonus = _save_bonus(found, spec, progression, stat) + save_modifier
+            natural = ctx.world.rng.randint(1, 20)
+            total = natural + bonus
+            passed = total >= difficulty
+            result["save"] = {
+                "stat": stat,
+                "roll": natural,
+                "bonus": bonus,
+                "total": total,
+                "dc": difficulty,
+                "passed": passed,
+            }
+        if (not save or not passed) and condition:
+            ctx.world.add_condition(found.name, condition, f"{reason}: {hazard}")
+            result["condition"] = condition
+        if damage and (not save or not passed or half_on_save):
+            rolled = (
+                int(amount_formula)
+                if amount_formula.isdigit()
+                else roll_total(amount_formula, ctx.world.rng, plus="sum")
+            )
+            taken = rolled // 2 if save and passed and half_on_save else rolled
+            if taken:
+                ctx.world.harm_character(found.name, "hp", taken, f"{reason}: {hazard}")
+            result["damage"] = taken
+        results.append(result)
+    return {"hazard": hazard, "results": results}
+
+
+def spell_attack(
+    name: str,
+    spell: str,
+    target: str,
+    ctx: ToolContext,
+    roll: int = 0,
+    roll_mode: str = "normal",
+) -> dict[str, Any]:
+    """Roll a spell attack: d20 plus proficiency bonus and the class's spellcasting ability
+    modifier against the target's Armor Class. Use this for Fire Bolt, Guiding Bolt, Eldritch
+    Blast, and any other spell that says “spell attack”; apply the spell's damage with
+    harm_character after a hit."""
+    progression = require_progression(ctx.world)
+    spec = ctx.world.character
+    found = _read_character(name, ctx)
+    feature = _find_spell(spec, spell)
+    rules = _class_rules(found, progression)
+    if rules.casting == "none":
+        raise InvalidInput(f"{found.name}'s class cannot cast spells")
+    if found.features.get(feature.id, 0) <= 0:
+        raise InvalidInput(f"{found.name} does not know {feature.name}")
+    if feature.rank > 0 and not _is_prepared(found, feature.id):
+        raise InvalidInput(f"{found.name} has not prepared {feature.name}")
+    struck = _read_character(target, ctx)
+    if struck.name == found.name:
+        raise InvalidInput("a spell attack needs a target other than the caster")
+    mode = _roll_mode(roll_mode)
+    if roll:
+        natural = whole_number(roll, "roll", 1, 20)
+    else:
+        _, natural = roll_mode_values("1d20", ctx.world.rng, mode=mode)
+    modifier = _modifier(found, spec, rules.ability or "int")
+    bonus = proficiency_bonus(_stored_level(found)) + modifier
+    total = natural + bonus
+    hit = total >= struck.armor
+    result = {
+        "character": found.name,
+        "spell": feature.name,
+        "target": struck.name,
+        "roll": natural,
+        "bonus": bonus,
+        "total": total,
+        "target_ac": struck.armor,
+        "hit": hit,
+        "roll_mode": mode,
+    }
+
+    def action(hc: HookContext) -> dict[str, Any]:
+        db, campaign_id = hc.session()
+        record(
+            db,
+            campaign_id,
+            SpellAttackMade(
+                name=found.name,
+                spell=feature.name,
+                target=struck.name,
+                roll=natural,
+                bonus=bonus,
+                total=total,
+                target_ac=struck.armor,
+                hit=hit,
+            ),
+        )
+        record(db, campaign_id, EncounterAttacked(name=found.name))
+        db.commit()
+        return result
+
+    return ctx.world.with_hook_context(action)
+
+
 def use_class_resource(
     character: str, resource: str, ctx: ToolContext, amount: int = 1, cause: str = ""
 ) -> dict[str, Any]:
@@ -1382,7 +1669,9 @@ def cast_spell(
         if ritual:
             raise InvalidInput(f"{feature.name} is a cantrip, not a ritual")
         return _cast_result(found, feature, 0, ctx, spec, rules)
-    if not _is_prepared(found, feature.id):
+    # A wizard's Ritual Adept casts an unprepared ritual straight from the spellbook.
+    adept_ritual = ritual and rules.id == "wizard" and is_ritual
+    if not adept_ritual and not _is_prepared(found, feature.id):
         raise InvalidInput(f"{found.name} has not prepared {feature.name}")
     if ritual:
         if not is_ritual:
@@ -1467,7 +1756,7 @@ def prepare_spells(character: str, spells: Sequence[str], ctx: ToolContext) -> d
         hc.set_mark(
             found.name,
             PREPARED_MARK,
-            chosen or None,
+            chosen,
             f"{found.name} prepares {names}.",
         )
         return {
@@ -1751,7 +2040,7 @@ def _learn(ctx: ToolContext, character: str, feature_id: str, *, cause: str) -> 
 
     def action(hc: HookContext) -> bool:
         found = hc.character(character)
-        if found.features.get(feature.id, 0):
+        if found.features.get(feature.id, 0) and not feature.repeatable:
             return False
         db, campaign_id = hc.session()
         record(

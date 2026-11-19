@@ -453,5 +453,231 @@
         "feature"
       ]
     }
+  },
+  {
+    "type": "tool_call",
+    "id": "roll_initiative",
+    "python_module": "dnd_srd_2024",
+    "function": "roll_initiative",
+    "description": "Roll initiative for every combatant once all participants have joined: 1d20 plus Dexterity, highest first. Call it before the first turn; the engine records the order and the rolls."
+  },
+  {
+    "type": "tool_call",
+    "id": "award_xp",
+    "python_module": "dnd_srd_2024",
+    "function": "award_xp",
+    "description": "Award experience points for a defeated encounter, a completed quest, or a milestone. The player takes the level on the advancement page when the total reaches the next threshold.",
+    "parameters": {
+      "properties": {
+        "character": {
+          "type": "string",
+          "description": "The player character gaining experience."
+        },
+        "amount": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000,
+          "description": "How many experience points to award."
+        },
+        "cause": {
+          "type": "string",
+          "description": "What earned the experience, in a few words."
+        }
+      },
+      "required": [
+        "character",
+        "amount"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "spell_attack",
+    "python_module": "dnd_srd_2024",
+    "function": "spell_attack",
+    "description": "Ask the player to make a spell attack against a target's Armor Class: d20 plus proficiency bonus and spellcasting ability. Use it for Fire Bolt, Guiding Bolt, Eldritch Blast, and any spell that says spell attack. Apply the spell's damage only after a hit.",
+    "parameters": {
+      "properties": {
+        "prompt": {
+          "type": "string",
+          "description": "What the GM says to invite the spell attack."
+        },
+        "name": {
+          "type": "string",
+          "description": "The caster."
+        },
+        "spell": {
+          "type": "string",
+          "description": "The spell's name or id."
+        },
+        "target": {
+          "type": "string",
+          "description": "The creature being attacked."
+        },
+        "roll_mode": {
+          "type": "string",
+          "enum": [
+            "normal",
+            "advantage",
+            "disadvantage"
+          ],
+          "default": "normal",
+          "description": "Advantage or disadvantage on the attack roll."
+        }
+      },
+      "required": [
+        "prompt",
+        "name",
+        "spell",
+        "target"
+      ]
+    },
+    "player_input": {
+      "param": "roll",
+      "dice": "1d20",
+      "details": "The engine adds your spell attack bonus."
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "resolve_hazard",
+    "python_module": "dnd_srd_2024",
+    "function": "resolve_hazard",
+    "description": "Resolve a D&D trap, breath weapon, fall, or area effect against NPCs: each rolls d20 plus its saving-throw bonus against the DC. Player characters roll their own save, so name only NPCs here. On a failure apply damage and the named condition; half_on_save halves damage on a success.",
+    "parameters": {
+      "properties": {
+        "hazard": {
+          "type": "string",
+          "description": "What the hazard is."
+        },
+        "targets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The NPCs caught in the effect."
+        },
+        "save": {
+          "type": "string",
+          "enum": [
+            "str",
+            "dex",
+            "con",
+            "int",
+            "wis",
+            "cha"
+          ],
+          "description": "The ability save the effect calls for."
+        },
+        "dc": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 40,
+          "description": "The saving-throw DC."
+        },
+        "damage": {
+          "type": "string",
+          "description": "Damage dice such as 4d6, or a fixed number."
+        },
+        "half_on_save": {
+          "type": "boolean",
+          "default": false,
+          "description": "True when a successful save halves the damage."
+        },
+        "condition": {
+          "type": "string",
+          "description": "A condition a failed save applies."
+        },
+        "stat": {
+          "type": "string",
+          "description": "Leave it out; D&D hazards take hit points."
+        },
+        "cause": {
+          "type": "string",
+          "description": "What caused the hazard."
+        },
+        "save_modifier": {
+          "type": "integer",
+          "minimum": -20,
+          "maximum": 20,
+          "default": 0,
+          "description": "A situational bonus or penalty to the save."
+        }
+      },
+      "required": [
+        "hazard",
+        "targets"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "end_concentration",
+    "python_module": "dnd_srd_2024",
+    "function": "end_concentration",
+    "description": "End the concentration spell a character is maintaining, such as when the player stops concentrating or fails a Constitution save against damage.",
+    "parameters": {
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The concentrating character."
+        }
+      },
+      "required": [
+        "name"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "ready_item",
+    "description": "Ready a carried item for use, or stow it. A readied weapon can attack. Readying armor or a shield does not equip it; use equip_armor to wear or wield it.",
+    "parameters": {
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The character carrying the item."
+        },
+        "item": {
+          "type": "string",
+          "description": "The carried item's name."
+        },
+        "ready": {
+          "type": "boolean",
+          "default": true,
+          "description": "True to ready it, false to stow it."
+        }
+      },
+      "required": [
+        "name",
+        "item"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "equip_armor",
+    "description": "Wear or remove a carried, readied suit of armor, or wield or stop wielding a carried, readied shield. Only one suit and one shield can be equipped; equipping another replaces that slot. Armor Class updates automatically.",
+    "parameters": {
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The character carrying the item."
+        },
+        "item": {
+          "type": "string",
+          "description": "The carried armor or shield's catalogue name."
+        },
+        "equipped": {
+          "type": "boolean",
+          "default": true,
+          "description": "True to wear or wield it, false to remove it."
+        }
+      },
+      "required": [
+        "name",
+        "item"
+      ]
+    }
   }
 ]

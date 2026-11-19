@@ -1318,6 +1318,7 @@ def create_monster(
         attack_ranges=ranges_map,
         creature=base.name if base else "",
         rules=list(rules) if rules is not None else (list(base.rules) if base else []),
+        skills=dict(base.skills) if base else {},
         large_group=(detachment if detachment is not None else bool(base and base.large_group)),
     )
     record(db, campaign_id, event)

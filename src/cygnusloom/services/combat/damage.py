@@ -265,10 +265,12 @@ def heal_character(
     stat: str,
     amount: int,
     cause: str,
+    combat: CombatRules | None = None,
 ) -> dict[str, Any]:
     """Restore harm in one stat, never below zero. Healing is separate from recovering a
     mortally wounded character: it reduces harm, while `recover_character` clears the dying
-    state."""
+    state. A rule set with `heal_clears_defeat` wakes a defeated character once the healing
+    leaves it with positive hit points."""
     state = load_state(db, campaign_id)
     character = state.characters.get(name_key(name))
     if character is None:
@@ -278,18 +280,38 @@ def heal_character(
         raise InvalidInput(f"{character.name} has no stat {stat!r}; the stats are: {options}")
     if isinstance(amount, bool) or not isinstance(amount, int) or amount < 1:
         raise InvalidInput("healing must restore a whole number of points, 1 or more")
+    was_defeated = character.defeated
     restored = recover(character, stat, amount)
     record(
         db,
         campaign_id,
         Recovered(name=character.name, stat=stat, amount=restored, cause=cause),
     )
+    recovered = False
+    if (
+        combat is not None
+        and combat.heal_clears_defeat
+        and was_defeated
+        and not character.dead
+        and current(character, "hp") > 0
+    ):
+        record(
+            db,
+            campaign_id,
+            CharacterRecovered(
+                name=character.name,
+                explanation=f"{character.name} regains consciousness from {cause}.",
+                consequence="",
+            ),
+        )
+        recovered = True
     db.commit()
     return {
         "character": character.name,
         "stat": stat,
         "restored": restored,
         "harm": character.harm.get(stat, 0),
+        "recovered": recovered,
     }
 
 
@@ -361,7 +383,10 @@ def harm_character(
             record(
                 db,
                 campaign_id,
-                CharacterDied(name=character.name, cause=f"from a hazard rather than an attack, with {stat} at 0"),
+                CharacterDied(
+                    name=character.name,
+                    cause=f"from a hazard rather than an attack, with {stat} at 0",
+                ),
             )
     db.commit()
     return {

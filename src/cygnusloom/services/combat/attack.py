@@ -265,6 +265,7 @@ def _strike(
     damage_breakdown: dict[str, Any] | None = None,
     shock_breakdown: dict[str, Any] | None = None,
     roll_mode: str = "normal",
+    critical: bool = False,
 ) -> dict[str, Any]:
     """Apply a hit through the rule set's damage steps. A target that owes a save takes no more
     hits. An NPC saves at once; a player character saves when the player rolls. A hit on an NPC
@@ -280,7 +281,9 @@ def _strike(
     less than their shock (`minimum_shock_damage`) raises the damage to `shock` when it applies.
     Harm that takes a stat in `defeat_at_zero` to 0 defeats the target, with the rule set's status."""
     if roll_mode not in ROLL_MODES:
-        raise InvalidInput(f"roll mode must be normal, advantage, or disadvantage, not {roll_mode!r}")
+        raise InvalidInput(
+            f"roll mode must be normal, advantage, or disadvantage, not {roll_mode!r}"
+        )
     if target.save_due is not None:
         raise InvalidInput(f"{target.name} must make their {target.save_due} save first")
     defense = 0 if ignores_armor else target.armor
@@ -358,6 +361,7 @@ def _strike(
                     status=status,
                     hit_breakdown=hit_breakdown,
                     shock_breakdown=shock_breakdown,
+                    critical=critical,
                 ),
             )
             _record_shield_bash(db, campaign_id, attacker, weapon)
@@ -402,6 +406,7 @@ def _strike(
             status=status,
             hit_breakdown=hit_breakdown,
             damage_breakdown=damage_breakdown,
+            critical=critical,
         ),
     )
     _record_shield_bash(db, campaign_id, attacker, weapon)
@@ -415,6 +420,8 @@ def _strike(
         "harm": damage.harm,
         "save_due": damage.save,
     }
+    if critical:
+        result["critical"] = True
     injury = _injury_from_hit(
         db, campaign_id, combat, rng, target.name, damage, plus=plus, spec=spec
     )
@@ -617,9 +624,7 @@ def attack(
     natural: int | None = None
     hit_breakdown: dict[str, Any] | None = None
     if combat.hit_mode == "roll_vs_defense":
-        hit_dice, natural = roll_mode_values(
-            combat.check_die, rng, plus=plus, mode=roll_mode
-        )
+        hit_dice, natural = roll_mode_values(combat.check_die, rng, plus=plus, mode=roll_mode)
         to_hit = natural + hit_bonus
         hit_breakdown = roll_breakdown(
             combat.check_die,
@@ -628,6 +633,14 @@ def attack(
             to_hit,
             target=struck.armor,
             target_label="AC",
+        )
+    critical = bool(combat.critical_dice and natural == combat.check_sides)
+    if critical:
+        extra_values, _ = roll_values(dice, rng, plus=plus)
+        raw += sum(extra_values)
+        damage_rolls += extra_values
+        damage_breakdown = roll_breakdown(
+            dice, damage_rolls, damage_parts, raw, note="critical hit"
         )
     result = _strike(
         db,
@@ -653,6 +666,7 @@ def attack(
         damage_breakdown=damage_breakdown,
         shock_breakdown=shock_breakdown,
         roll_mode=roll_mode,
+        critical=critical,
     )
     if state.encounter is not None:
         _mark_attack(db, campaign_id, source.name)
@@ -1172,9 +1186,7 @@ def player_attack(
             natural = attack_roll
             hit_dice = [natural]
         else:
-            hit_dice, natural = roll_mode_values(
-                combat.check_die, rng, plus=plus, mode=roll_mode
-            )
+            hit_dice, natural = roll_mode_values(combat.check_die, rng, plus=plus, mode=roll_mode)
         if spec is not None and reactions.has_trigger(pc, spec, None, "attack"):
             natural = max(natural, roll_total(combat.check_die, rng, plus=plus))
         hit_parts = list(prepared.bonuses.to_hit_parts)
@@ -1195,6 +1207,14 @@ def player_attack(
             to_hit,
             target=struck.armor,
             target_label="AC",
+        )
+    critical = bool(combat.critical_dice and natural == combat.check_sides)
+    if critical:
+        extra_values, _ = roll_values(prepared.dice, rng, plus=plus)
+        raw += sum(extra_values)
+        damage_rolls += extra_values
+        damage_breakdown = roll_breakdown(
+            prepared.dice, damage_rolls, damage_parts, raw, note="critical hit"
         )
     result = _strike(
         db,
@@ -1217,6 +1237,7 @@ def player_attack(
         damage_breakdown=damage_breakdown,
         shock_breakdown=shock_breakdown,
         roll_mode=roll_mode,
+        critical=critical,
     )
     if state.encounter is not None:
         _mark_attack(db, campaign_id, pc.name)
@@ -1435,9 +1456,9 @@ def _require_attack(
     if force:
         return
     encounter = state.encounter
-    if encounter is None or encounter.attacked < combat.attacks_per_turn:
+    limit = combat.attacks_per_turn_for(actor)
+    if encounter is None or encounter.attacked < limit:
         return
-    limit = combat.attacks_per_turn
     if limit == 1:
         spent = f"{actor.name} has already attacked this turn"
     else:
