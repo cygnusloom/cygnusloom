@@ -28,7 +28,7 @@ PYTHONPATH=$PWD/src /workspaces/cygnusloom/.venv/bin/python scripts/test.py \
 PYTHONPATH=$PWD/src /workspaces/cygnusloom/.venv/bin/python scripts/test.py -q
 ```
 
-The current full suite is **3793 passed**; the two D&D files are **30 passed**; content
+The current full suite is **3816 passed**; the two D&D files are **53 passed**; content
 validation reports **0 warnings**; `ruff check` is clean on the changed source and test
 files.
 
@@ -75,33 +75,35 @@ These were previously listed as gaps and now have data, engine support, and test
 - Species: Human Skillful/Versatile, Dwarf toughness and poison resistance, Dragonborn
   ancestry and damage resistance, Tiefling legacy and resistance, and the Elf, Gnome,
   and Goliath lineage choices are structured creation choices.
-- Versatile weapons use their larger die in a two-handed grip.
+- Species spell lineages now learn their cantrips at creation and their level-3 and
+  level-5 spells at the right character levels. They are always prepared and can be
+  cast once without a slot per long rest. Goliath ancestries spend their
+  Proficiency-Bonus-scaled Giant Ancestry resource through `use_feature`.
+- Versatile weapons use their larger die in a two-handed grip; Heavy weapons impose
+  disadvantage when the wielder's Strength or Dexterity is below 13.
 - Conditions apply their roll modes and numeric modifiers, including poisoned and
   exhaustion.
 - Armor categories and class armor training are enforced, including shields.
 - Turn resources expose Actions, Bonus Actions, and Reactions; attacks consume the
-  action budget, and spells spend their Action, Bonus Action, or Reaction while the
-  caster is taking a turn. A generic turn-resource tool covers other declared actions.
+  action budget, spells spend their Action, Bonus Action, or Reaction while the caster
+  is taking a turn, and class/species features declare and spend their own resource and
+  turn costs through `use_feature`.
 - Class always-prepared spells appear as learned features and do not count against the
   prepared limit; Circle of the Land spells are limited to the chosen land.
 - New class-feature choices at level-up are shown on the Advancement page and recorded
   with the level, instead of being silently auto-filled.
+- Weapon Mastery is a real weapon choice: the SRD weapon properties are generated, the
+  chosen kinds unlock their mastery, Graze resolves damage on a miss, Sap and Slow apply
+  their conditions, Topple rolls its Constitution save, Vex grants advantage on the next
+  attack, and Improved Critical lowers the critical range to 19.
+- Rage spends its resource and Bonus Action, sets the raging mark, adds its level-scaled
+  damage, and grants physical resistance while the mark is active.
 
-## Known limits / next work
+## Remaining limits
 
-These remaining items are deliberate limits of the current model:
-
-- Weapon Mastery properties are recorded as class choices but do not yet change attack
-  resolution automatically.
-- Multiclassing is not supported.
-- Species lineage spells at levels 3 and 5 (Elf, Gnome, Tiefling) are described and the
-  level-1 resistance/choice is mechanical, but the later always-prepared spells are not
-  auto-learned. Goliath ancestry boons are recorded choices rather than automated
-  reactions.
-- Class features other than spells still spend turn resources through the generic
-  `use_turn_resource` tool rather than each feature declaring its own cost.
-- Some subclass level-3 choices beyond the generated Hunter/Evoker/Lore options remain
-  narrative.
+Multiclassing is deliberately out of scope. Everything else in the SRD character
+options, spells, equipment, conditions, bestiary, and advancement paths is represented
+by the rule set and uses the generic engine tools.
 
 None of these block the core play loop: create a character, explore, start a fight,
 roll attacks and saves, cast spells, take damage, heal, rest, and level up.

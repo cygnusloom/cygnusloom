@@ -60,7 +60,9 @@
     "feature_type": "feat",
     "description": "You gain a +2 bonus to attack rolls you make with Ranged weapons.",
     "tag": "fighting-style",
-    "rank": 1
+    "rank": 1,
+    "attack_bonus": 2,
+    "weapon_kind": "ranged"
   },
   {
     "type": "feature",

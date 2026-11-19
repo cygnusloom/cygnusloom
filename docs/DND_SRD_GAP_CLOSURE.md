@@ -5,11 +5,13 @@
 Closed: feature choices, pattern modes, class-feature level-up choices, named A/B/C
 template kits, background equipment packages, turn resources, condition roll modes and
 modifiers, background ASI modes, Alert/Savage Attacker, Magic Initiate spells and free
-cast, Dragonborn/Tiefling/Human/Dwarf species mechanics, lineage choice records, armor
-training and categories, versatile damage, class always-prepared spells, Circle of the
-Land land restriction, and level-2/3 class feature choices. Remaining limits are listed
-in `DND_PLAYTEST.md`: weapon-mastery automation, multiclassing, later lineage spells,
-and per-feature turn costs.
+cast, Dragonborn/Tiefling/Human/Dwarf species mechanics, lineage choices, armor training
+and categories, versatile damage, class always-prepared spells, Circle of the Land,
+level-2/3 class feature choices, lineage cantrips and level-3/5 spells, Goliath ancestry
+resource use, weapon mastery data and choices (Graze, Sap, Slow, Topple, Push, Vex),
+Heavy weapon disadvantage, Rage's resource/action/mark/damage/resistance, Improved
+Critical, Sneak Attack dice, and per-feature resource/turn costs through `use_feature`.
+Multiclassing is the one deliberate limit.
 
 
 This plan covers every mismatch recorded in `docs/DND_PLAYTEST.md` plus the action-economy

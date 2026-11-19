@@ -61,6 +61,8 @@ ALWAYS_PREPARED_MARK = "always_prepared"
 CONCENTRATION_MARK = "concentration"
 # The Magic Initiate spell cast for free since the last long rest.
 MAGIC_INITIATE_MARK = "magic_initiate_free"
+# Lineage and similar spells cast without a slot since the last long rest.
+FREE_CAST_MARK = "free_cast"
 # The magic items a character is attuned to, at most three.
 ATTUNED_MARK = "attuned"
 # The land a Circle of the Land druid chose for the current set of Circle spells.
@@ -83,6 +85,7 @@ RESOURCE_COUNTERS = frozenset(
         "tireless",
         "mystic_arcanum",
         "dark_ones_luck",
+        "giant_ancestry",
     }
 )
 
@@ -706,7 +709,11 @@ def apply_level_up(character: str, ctx: ToolContext) -> dict[str, Any]:
         if template is not None:
             for granted in template.features:
                 feature = spec.features.get(granted.feature)
-                if feature is not None and feature.rank == new_level:
+                if (
+                    feature is not None
+                    and feature.min_level == new_level
+                    and (not feature.requires_feature or feature.requires_feature in found.features)
+                ):
                     _learn(ctx, character, feature.id, cause=f"species level {new_level}")
                     newly_learned.append(feature.id)
     # A feature gained at this level may add a one-time hit-point bonus.
@@ -729,6 +736,11 @@ def apply_level_up(character: str, ctx: ToolContext) -> dict[str, Any]:
         count = rules.metamagic_counts[index] if index < len(rules.metamagic_counts) else 0
         if count:
             ctx.world.adjust_counter(character, "metamagic_picks", count)
+    if "giant_ancestry" in found.counters:
+        current = int(found.counters.get("giant_ancestry", 0))
+        target = proficiency_bonus(new_level)
+        if target != current:
+            ctx.world.adjust_counter(character, "giant_ancestry", target - current)
     if rules.invocations:
         gained = rules.invocations[new_level - 1] - rules.invocations[old_level - 1]
         if gained > 0:
@@ -1634,9 +1646,9 @@ def spell_attack(
     rules = _class_rules(found, progression)
     if rules.casting == "none":
         raise InvalidInput(f"{found.name}'s class cannot cast spells")
-    if not _knows_spell(found, feature, progression):
+    if not _knows_spell(found, feature, progression, spec):
         raise InvalidInput(f"{found.name} does not know {feature.name}")
-    if feature.rank > 0 and not _is_prepared(found, feature.id, progression):
+    if feature.rank > 0 and not _is_prepared(found, feature.id, progression, spec):
         raise InvalidInput(f"{found.name} has not prepared {feature.name}")
     struck = _read_character(target, ctx)
     if struck.name == found.name:
@@ -1708,6 +1720,55 @@ def use_class_resource(
     }
 
 
+def use_feature(character: str, feature: str, ctx: ToolContext, cause: str = "") -> dict[str, Any]:
+    """Use a class or species feature, spending its resource counter and turn resource."""
+    spec = ctx.world.character
+    found = _read_character(character, ctx)
+    wanted = feature.strip().casefold()
+    matches = [
+        source
+        for source in spec.features.values()
+        if source.id.casefold() == wanted or source.name.casefold() == wanted
+    ]
+    if not matches:
+        raise InvalidInput(f"there is no feature named {feature!r}")
+    if len(matches) > 1:
+        raise InvalidInput(f"{feature!r} is ambiguous; give the feature id")
+    source = matches[0]
+    if source.id not in found.features:
+        raise InvalidInput(f"{found.name} does not have {source.name}")
+    remaining: int | None = None
+    if source.resource_counter:
+        current = int(found.counters.get(source.resource_counter, 0))
+        if current < 1:
+            raise InvalidInput(
+                f"{found.name} has no {source.resource_counter.replace('_', ' ')} left"
+            )
+        changed = ctx.world.adjust_counter(character, source.resource_counter, -1)
+        remaining = int(changed["value"])
+    _spend_turn_resource(found, source, ctx, cause=cause or f"using {source.name}")
+    if source.active_mark:
+
+        def mark(hc: HookContext) -> None:
+            hc.set_mark(
+                found.name,
+                source.active_mark,
+                True,
+                f"{found.name} is using {source.name}.",
+            )
+
+        ctx.world.with_hook_context(mark)
+    return {
+        "character": found.name,
+        "feature": source.id,
+        "feature_name": source.name,
+        "resource": source.resource_counter,
+        "remaining": remaining,
+        "turn_resource": source.turn_resource,
+        "active_mark": source.active_mark,
+    }
+
+
 def cast_spell(
     name: str,
     spell: str,
@@ -1756,6 +1817,22 @@ def cast_spell(
         if candidates:
             used = max(candidates)
     if not used:
+        # A lineage spell or similar feature can be cast once without a slot between long rests.
+        free_feature = _free_cast_feature(found, spec, feature.id)
+        free_used = [str(item) for item in found.marks.get(FREE_CAST_MARK) or []]
+        if free_feature is not None and feature.id not in free_used:
+            _spend_cast_resource(found, feature, ctx)
+
+            def mark_free(hc: HookContext) -> None:
+                hc.set_mark(
+                    found.name,
+                    FREE_CAST_MARK,
+                    [*free_used, feature.id],
+                    f"{found.name} casts {feature.name} without a spell slot.",
+                )
+
+            ctx.world.with_hook_context(mark_free)
+            return _cast_result(found, feature, 0, ctx, spec, rules)
         # Magic Initiate's level 1 spell can be cast once without a slot between long rests.
         magic_spells = found.feature_choices.get("feat-magic-initiate:spell", [])
         if feature.id in magic_spells and found.marks.get(MAGIC_INITIATE_MARK) != feature.id:
@@ -1847,17 +1924,32 @@ def prepare_spells(character: str, spells: Sequence[str], ctx: ToolContext) -> d
     return ctx.world.with_hook_context(write)
 
 
-def _knows_spell(found: Any, feature: Feature, progression: DndProgression | None = None) -> bool:
+def _knows_spell(
+    found: Any,
+    feature: Feature,
+    progression: DndProgression | None = None,
+    spec: CharacterSpec | None = None,
+) -> bool:
     """Whether a character knows a spell, including a class spell that is always prepared."""
     if found.features.get(feature.id, 0) > 0:
         return True
-    return progression is not None and _is_prepared(found, feature.id, progression)
+    return progression is not None and _is_prepared(found, feature.id, progression, spec)
 
 
-def _is_prepared(found: Any, spell_id: str, progression: DndProgression | None = None) -> bool:
+def _is_prepared(
+    found: Any,
+    spell_id: str,
+    progression: DndProgression | None = None,
+    spec: CharacterSpec | None = None,
+) -> bool:
     """Whether a leveled spell is prepared. A sheet recorded before preparation existed has no
     mark, so its known spells stay castable until the player prepares a list. Class and
     subclass always-prepared spells are always castable."""
+    if spec is not None:
+        for feature_id in found.features:
+            feature = spec.features.get(feature_id)
+            if feature is not None and feature.always_prepared and spell_id in feature.learn_spells:
+                return True
     always = [str(item) for item in found.marks.get(ALWAYS_PREPARED_MARK) or []]
     if spell_id in always:
         return True
@@ -1913,10 +2005,10 @@ def _set_concentration(ctx: ToolContext, found: Any, feature: Feature, spec: Cha
     ctx.world.with_hook_context(action)
 
 
-def _spend_cast_resource(found: Any, feature: Feature, ctx: ToolContext) -> None:
-    """Spend a spell's Action, Bonus Action, or Reaction when the caster is taking a turn.
-    Casting outside an encounter, or a Reaction on someone else's turn, does not consume the
-    tracked budget; the player spends that with the turn-resource tool."""
+def _spend_turn_resource(
+    found: Any, feature: Feature, ctx: ToolContext, *, cause: str = ""
+) -> None:
+    """Spend a feature's turn resource when the character is taking a turn."""
     if not feature.turn_resource:
         return
 
@@ -1927,8 +2019,22 @@ def _spend_cast_resource(found: Any, feature: Feature, ctx: ToolContext) -> None
     acting = ctx.world.with_hook_context(read)
     if acting is not None and name_key(str(acting)) == name_key(found.name):
         ctx.world.use_turn_resource(  # type: ignore[attr-defined]
-            found.name, feature.turn_resource, cause=f"casting {feature.name}"
+            found.name, feature.turn_resource, cause=cause or f"using {feature.name}"
         )
+
+
+def _spend_cast_resource(found: Any, feature: Feature, ctx: ToolContext) -> None:
+    """Spend a spell's Action, Bonus Action, or Reaction when the caster is taking a turn."""
+    _spend_turn_resource(found, feature, ctx, cause=f"casting {feature.name}")
+
+
+def _free_cast_feature(found: Any, spec: CharacterSpec, spell_id: str) -> Feature | None:
+    """The held feature that lets this spell be cast once without a slot."""
+    for feature_id in found.features:
+        source = spec.features.get(feature_id)
+        if source is not None and source.free_cast and spell_id in source.learn_spells:
+            return source
+    return None
 
 
 def _spellcasting_ability(
@@ -1944,6 +2050,25 @@ def _spellcasting_ability(
         chosen = found.feature_choices.get("feat-magic-initiate:ability", [])
         if chosen and chosen[0] in ABILITY_ORDER:
             return str(chosen[0])
+    for feature_id in found.features:
+        source = spec.features.get(feature_id)
+        if source is None or feature.id not in source.learn_spells:
+            continue
+        chosen = found.feature_choices.get(f"{source.id}:ability", [])
+        if chosen and chosen[0] in ABILITY_ORDER:
+            return str(chosen[0])
+    # A lineage's later spell features inherit the ability chosen for that lineage.
+    for key, values in found.feature_choices.items():
+        source_id = key.split(":", 1)[0]
+        source = spec.features.get(source_id)
+        if (
+            key.endswith(":ability")
+            and values
+            and values[0] in ABILITY_ORDER
+            and source is not None
+            and source.tag.startswith("lineage-")
+        ):
+            return str(values[0])
     return rules.ability or "int"
 
 
@@ -2118,6 +2243,20 @@ def after_rest(
             None,
             f"{character.name}'s Magic Initiate spell is ready again.",
         )
+    if character.marks.get(FREE_CAST_MARK):
+        hc.set_mark(
+            character.name,
+            FREE_CAST_MARK,
+            None,
+            f"{character.name}'s free lineage spells are ready again.",
+        )
+    if character.marks.get("raging"):
+        hc.set_mark(
+            character.name,
+            "raging",
+            None,
+            f"{character.name}'s Rage ends over the long rest.",
+        )
     if character.marks.get(CONCENTRATION_MARK):
         hc.set_mark(
             character.name,
@@ -2137,6 +2276,13 @@ def after_rest(
     _fill_counter(hc, character, "hit_dice", level, maximum=20)
     for counter in ("death_saves", "death_successes"):
         _fill_counter(hc, character, counter, 0, maximum=3)
+    _fill_counter(
+        hc,
+        character,
+        "giant_ancestry",
+        proficiency_bonus(level) if "giant_ancestry" in character.counters else 0,
+        maximum=6,
+    )
     for counter, target in resources.items():
         _fill_counter(hc, character, counter, target, maximum=100)
     db.commit()
@@ -2205,6 +2351,9 @@ def _learn(ctx: ToolContext, character: str, feature_id: str, *, cause: str) -> 
         return True
 
     learned = ctx.world.with_hook_context(action)
+    for spell_id in feature.learn_spells:
+        if spell_id != feature.id and spell_id in spec.features:
+            _learn(ctx, character, spell_id, cause=f"{cause} ({feature.name})")
     return {
         "character": character,
         "feature": feature.id,

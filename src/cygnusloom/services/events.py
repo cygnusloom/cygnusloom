@@ -3317,6 +3317,9 @@ class Struck(GameEvent):
     to_hit: int | None = None
     # The shock a miss still did, which is part of `harm` above.
     shock: int = 0
+    # The weapon mastery property that applied, and the harm its Graze did on a miss.
+    mastery: str = ""
+    graze: int = 0
     # The encounter round in which a shield turned this blow's Shock aside.
     shield_round: int = 0
     defeats: bool = False
@@ -3361,6 +3364,8 @@ class Struck(GameEvent):
                 if stats:
                     text += f" to {stats}"
                 text += "."
+            elif self.graze:
+                text += f" Graze still deals {self.graze} harm."
             if self.defeats:
                 text += f" {self.name} is {self.status}."
             return text

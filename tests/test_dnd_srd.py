@@ -90,6 +90,13 @@ def test_class_starting_kits_offer_the_srd_lettered_packages() -> None:
     assert acolyte[1].silver == 500
 
 
+def test_monster_and_subclass_features_carry_their_passives() -> None:
+    rules = _dnd_rules()
+    assert rules.character.features["subclass-champion-improved-critical"].critical_min == 19
+    assert rules.character.features["class-barbarian-rage"].active_mark == "raging"
+    assert rules.character.features["class-barbarian-rage"].damage_bonus_levels[1] == 2
+
+
 def test_a_fighter_is_created_with_srd_hit_points_and_saves(
     app: FastAPI, client_factory: Callable[[], TestClient]
 ) -> None:
@@ -182,6 +189,63 @@ def test_alert_adds_proficiency_and_savage_attacker_rerolls_weapon_dice(
     assert dnd_srd_2024._initiative_bonus(pc, {}) == 4  # Dexterity +2 and PB +2
     rules = _dnd_rules()
     assert rules.character.features["feat-savage-attacker"].weapon_damage_reroll is True
+
+
+def test_a_drow_learns_lineage_cantrips_and_later_spells(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    client = signed_in_client(client_factory)
+    other = create_campaign_direct(client, world_template="testhollow", rule_set="dnd-srd-2024")
+    fields = {
+        **_wizard_fields(),
+        "pick-feature-elf-lineage-0": "lineage-elf-drow",
+        "feature-choice-lineage-elf-drow-ability-0": "cha",
+    }
+    create_character_direct(client, other, name="Drow", fields=fields)
+    pc = character_named(app, other, "Drow")
+    assert "spell-dancing-lights" in pc.features
+    assert pc.feature_choices["lineage-elf-drow:ability"] == ["cha"]
+    tools = tools_for(client.app, other, rule_set="dnd-srd-2024")
+    tools.adjust_counter("Drow", "xp", 6500)
+    rules = _dnd_rules()
+    world = client.app.state.content.world_content("testhollow", "dnd-srd-2024")
+    other_ctx = level_up_service.tool_context(client.app.state.engine, other, rules, world)
+    for _level in range(4):
+        dnd_srd_2024.apply_level_up("Drow", other_ctx)
+    levelled = character_named(app, other, "Drow")
+    assert "spell-faerie-fire" in levelled.features
+    assert "spell-darkness" in levelled.features
+    assert "lineage-elf-drow-spell-3-spell-faerie-fire" in levelled.features
+    assert "lineage-elf-drow-spell-5-spell-darkness" in levelled.features
+    slots = int(levelled.counters.get("slot_1", 0))
+    tools.adjust_counter("Drow", "slot_1", -slots)
+    cast = dnd_srd_2024.cast_spell("Drow", "faerie-fire", other_ctx)
+    assert cast["slot_level"] is None
+    assert "spell-faerie-fire" in character_named(app, other, "Drow").marks["free_cast"]
+
+
+def test_a_goliath_ancestry_boon_spends_its_resource(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    client = signed_in_client(client_factory)
+    campaign_id = create_campaign_direct(
+        client, world_template="testhollow", rule_set="dnd-srd-2024"
+    )
+    fields = {
+        **_fields(),
+        "template-species": "goliath",
+        "pick-feature-goliath-lineage-0": "lineage-goliath-cloud",
+    }
+    create_character_direct(client, campaign_id, name="Rook", fields=fields)
+    pc = character_named(app, campaign_id, "Rook")
+    assert pc.counters["giant_ancestry"] == 2
+    rules = _dnd_rules()
+    world = client.app.state.content.world_content("testhollow", "dnd-srd-2024")
+    ctx = level_up_service.tool_context(client.app.state.engine, campaign_id, rules, world)
+    used = dnd_srd_2024.use_feature("Rook", "lineage-goliath-cloud", ctx)
+    assert used["feature"] == "lineage-goliath-cloud"
+    assert used["remaining"] == 1
+    assert character_named(app, campaign_id, "Rook").counters["giant_ancestry"] == 1
 
 
 def test_levelling_a_fighter_grants_hit_points_and_features(

@@ -69,7 +69,7 @@
     "name": "Battleaxe",
     "feature_type": "item",
     "description": "Martial weapon. Damage 1d8 Slashing.\n\nTopple. If you hit a creature with this weapon, you can force the creature to make a Constitution saving throw (DC 8 plus the ability modifier used to make the attack roll and your Proficiency Bonus). On a failed save, the creature has the Prone condition.\n\nVersatile (1d10). A Versatile weapon can be used with one or two hands. A damage value in parentheses appears with the property. The weapon deals that damage when used with two hands to make a melee attack.",
-    "tag": "",
+    "tag": "weapon",
     "rank": 0,
     "damage": "1d8",
     "damage_type": "slashing",
@@ -77,6 +77,7 @@
       "str"
     ],
     "size": "normal",
+    "mastery": "topple",
     "versatile_damage": "1d10"
   },
   {
@@ -85,7 +86,7 @@
     "name": "Blowgun",
     "feature_type": "item",
     "description": "Martial weapon. Damage 1d1 Piercing.\n\nAmmunition (Range 25/100; Needle). You can use a weapon that has the Ammunition property to make a ranged attack only if you have ammunition to fire from it. The type of ammunition required is specified with the weapon's range. Each attack expends one piece of ammunition. Drawing the ammunition is part of the attack (you need a free hand to load a one-handed weapon). After a fight, you can spend 1 minute to recover half the ammunition (round down) you used in the fight; the rest is lost.\n\nLoading. You can fire only one piece of ammunition from a Loading weapon when you use an action, a Bonus Action, or a Reaction to fire it, regardless of the number of attacks you can normally make.\n\nVex. If you hit a creature with this weapon and deal damage to the creature, you have Advantage on your next attack roll against that creature before the end of your next turn.",
-    "tag": "",
+    "tag": "weapon",
     "rank": 0,
     "damage": "1d1",
     "damage_type": "piercing",
@@ -93,6 +94,10 @@
       "dex"
     ],
     "size": "normal",
+    "mastery": "vex",
+    "flags": [
+      "loading"
+    ],
     "ranges": {
       "normal": 25,
       "long": 100
@@ -104,14 +109,18 @@
     "name": "Club",
     "feature_type": "item",
     "description": "Simple weapon. Damage 1d4 Bludgeoning.\n\nLight. When you take the Attack action on your turn and attack with a Light weapon, you can make one extra attack as a Bonus Action later on the same turn. That extra attack must be made with a different Light weapon, and you don't add your ability modifier to the extra attack's damage unless that modifier is negative.\n\nSlow. If you hit a creature with this weapon and deal damage to it, you can reduce its Speed by 10 feet until the start of your next turn. If the creature is hit more than once by weapons that have this property, the Speed reduction doesn't exceed 10 feet.",
-    "tag": "",
+    "tag": "weapon",
     "rank": 0,
     "damage": "1d4",
     "damage_type": "bludgeoning",
     "attributes": [
       "str"
     ],
-    "size": "normal"
+    "size": "normal",
+    "mastery": "slow",
+    "flags": [
+      "light"
+    ]
   },
   {
     "type": "feature",
@@ -119,7 +128,7 @@
     "name": "Dagger",
     "feature_type": "item",
     "description": "Simple weapon. Damage 1d4 Piercing.\n\nFinesse. When making an attack with a Finesse weapon, use your choice of your Strength or Dexterity modifier for the attack and damage rolls. You must use the same modifier for both rolls.\n\nLight. When you take the Attack action on your turn and attack with a Light weapon, you can make one extra attack as a Bonus Action later on the same turn. That extra attack must be made with a different Light weapon, and you don't add your ability modifier to the extra attack's damage unless that modifier is negative.\n\nNick. When you make the extra attack of the Light property, you can make it as part of the Attack action instead of as a Bonus Action. You can make this extra attack only once per turn.\n\nThrown (Range 20/60). If a weapon has the Thrown property, you can throw the weapon to make a ranged attack, and you can draw that weapon as part of the attack. If the weapon is a Melee weapon, use the same ability modifier for the attack and damage rolls that you use for a melee attack with that weapon.",
-    "tag": "",
+    "tag": "weapon",
     "rank": 0,
     "damage": "1d4",
     "damage_type": "piercing",
@@ -128,6 +137,10 @@
       "dex"
     ],
     "size": "normal",
+    "mastery": "nick",
+    "flags": [
+      "light"
+    ],
     "ranges": {
       "normal": 20,
       "long": 60
@@ -139,7 +152,7 @@
     "name": "Dart",
     "feature_type": "item",
     "description": "Simple weapon. Damage 1d4 Piercing.\n\nFinesse. When making an attack with a Finesse weapon, use your choice of your Strength or Dexterity modifier for the attack and damage rolls. You must use the same modifier for both rolls.\n\nThrown (Range 20/60). If a weapon has the Thrown property, you can throw the weapon to make a ranged attack, and you can draw that weapon as part of the attack. If the weapon is a Melee weapon, use the same ability modifier for the attack and damage rolls that you use for a melee attack with that weapon.\n\nVex. If you hit a creature with this weapon and deal damage to the creature, you have Advantage on your next attack roll against that creature before the end of your next turn.",
-    "tag": "",
+    "tag": "weapon",
     "rank": 0,
     "damage": "1d4",
     "damage_type": "piercing",
@@ -148,6 +161,7 @@
       "dex"
     ],
     "size": "normal",
+    "mastery": "vex",
     "ranges": {
       "normal": 20,
       "long": 60
@@ -159,14 +173,15 @@
     "name": "Flail",
     "feature_type": "item",
     "description": "Martial weapon. Damage 1d8 Bludgeoning.\n\nSap. If you hit a creature with this weapon, that creature has Disadvantage on its next attack roll before the start of your next turn.",
-    "tag": "",
+    "tag": "weapon",
     "rank": 0,
     "damage": "1d8",
     "damage_type": "bludgeoning",
     "attributes": [
       "str"
     ],
-    "size": "normal"
+    "size": "normal",
+    "mastery": "sap"
   },
   {
     "type": "feature",
@@ -174,7 +189,7 @@
     "name": "Glaive",
     "feature_type": "item",
     "description": "Martial weapon. Damage 1d10 Slashing.\n\nGraze. If your attack roll with this weapon misses a creature, you can deal damage to that creature equal to the ability modifier you used to make the attack roll. This damage is the same type dealt by the weapon, and the damage can be increased only by increasing the ability modifier.\n\nHeavy. You have Disadvantage on attack rolls with a Heavy weapon if it's a Melee weapon and your Strength score isn't at least 13 or if it's a Ranged weapon and your Dexterity score isn't at least 13.\n\nReach. A Reach weapon adds 5 feet to your reach when you attack with it, as well as when determining your reach for Opportunity Attacks with it.\n\nTwo-Handed. A Two-Handed weapon requires two hands when you attack with it.",
-    "tag": "",
+    "tag": "weapon",
     "rank": 0,
     "damage": "1d10",
     "damage_type": "slashing",
@@ -182,6 +197,11 @@
       "str"
     ],
     "size": "large",
+    "mastery": "graze",
+    "flags": [
+      "heavy",
+      "two-handed"
+    ],
     "reach": 10
   },
   {
@@ -190,14 +210,19 @@
     "name": "Greataxe",
     "feature_type": "item",
     "description": "Martial weapon. Damage 1d12 Slashing.\n\nCleave. If you hit a creature with a melee attack roll using this weapon, you can make a melee attack roll with the weapon against a second creature within 5 feet of the first that is also within your reach. On a hit, the second creature takes the weapon's damage, but don't add your ability modifier to that damage unless that modifier is negative. You can make this extra attack only once per turn.\n\nHeavy. You have Disadvantage on attack rolls with a Heavy weapon if it's a Melee weapon and your Strength score isn't at least 13 or if it's a Ranged weapon and your Dexterity score isn't at least 13.\n\nTwo-Handed. A Two-Handed weapon requires two hands when you attack with it.",
-    "tag": "",
+    "tag": "weapon",
     "rank": 0,
     "damage": "1d12",
     "damage_type": "slashing",
     "attributes": [
       "str"
     ],
-    "size": "large"
+    "size": "large",
+    "mastery": "cleave",
+    "flags": [
+      "heavy",
+      "two-handed"
+    ]
   },
   {
     "type": "feature",
@@ -205,14 +230,18 @@
     "name": "Greatclub",
     "feature_type": "item",
     "description": "Simple weapon. Damage 1d8 Bludgeoning.\n\nPush. If you hit a creature with this weapon, you can push the creature up to 10 feet straight away from yourself if it is Large or smaller.\n\nTwo-Handed. A Two-Handed weapon requires two hands when you attack with it.",
-    "tag": "",
+    "tag": "weapon",
     "rank": 0,
     "damage": "1d8",
     "damage_type": "bludgeoning",
     "attributes": [
       "str"
     ],
-    "size": "large"
+    "size": "large",
+    "mastery": "push",
+    "flags": [
+      "two-handed"
+    ]
   },
   {
     "type": "feature",
@@ -220,14 +249,19 @@
     "name": "Greatsword",
     "feature_type": "item",
     "description": "Martial weapon. Damage 2d6 Slashing.\n\nGraze. If your attack roll with this weapon misses a creature, you can deal damage to that creature equal to the ability modifier you used to make the attack roll. This damage is the same type dealt by the weapon, and the damage can be increased only by increasing the ability modifier.\n\nHeavy. You have Disadvantage on attack rolls with a Heavy weapon if it's a Melee weapon and your Strength score isn't at least 13 or if it's a Ranged weapon and your Dexterity score isn't at least 13.\n\nTwo-Handed. A Two-Handed weapon requires two hands when you attack with it.",
-    "tag": "",
+    "tag": "weapon",
     "rank": 0,
     "damage": "2d6",
     "damage_type": "slashing",
     "attributes": [
       "str"
     ],
-    "size": "large"
+    "size": "large",
+    "mastery": "graze",
+    "flags": [
+      "heavy",
+      "two-handed"
+    ]
   },
   {
     "type": "feature",
@@ -235,7 +269,7 @@
     "name": "Halberd",
     "feature_type": "item",
     "description": "Martial weapon. Damage 1d10 Slashing.\n\nCleave. If you hit a creature with a melee attack roll using this weapon, you can make a melee attack roll with the weapon against a second creature within 5 feet of the first that is also within your reach. On a hit, the second creature takes the weapon's damage, but don't add your ability modifier to that damage unless that modifier is negative. You can make this extra attack only once per turn.\n\nHeavy. You have Disadvantage on attack rolls with a Heavy weapon if it's a Melee weapon and your Strength score isn't at least 13 or if it's a Ranged weapon and your Dexterity score isn't at least 13.\n\nReach. A Reach weapon adds 5 feet to your reach when you attack with it, as well as when determining your reach for Opportunity Attacks with it.\n\nTwo-Handed. A Two-Handed weapon requires two hands when you attack with it.",
-    "tag": "",
+    "tag": "weapon",
     "rank": 0,
     "damage": "1d10",
     "damage_type": "slashing",
@@ -243,6 +277,11 @@
       "str"
     ],
     "size": "large",
+    "mastery": "cleave",
+    "flags": [
+      "heavy",
+      "two-handed"
+    ],
     "reach": 10
   },
   {
@@ -251,7 +290,7 @@
     "name": "Hand Crossbow",
     "feature_type": "item",
     "description": "Martial weapon. Damage 1d6 Piercing.\n\nAmmunition (Range 30/120; Bolt). You can use a weapon that has the Ammunition property to make a ranged attack only if you have ammunition to fire from it. The type of ammunition required is specified with the weapon's range. Each attack expends one piece of ammunition. Drawing the ammunition is part of the attack (you need a free hand to load a one-handed weapon). After a fight, you can spend 1 minute to recover half the ammunition (round down) you used in the fight; the rest is lost.\n\nLight. When you take the Attack action on your turn and attack with a Light weapon, you can make one extra attack as a Bonus Action later on the same turn. That extra attack must be made with a different Light weapon, and you don't add your ability modifier to the extra attack's damage unless that modifier is negative.\n\nLoading. You can fire only one piece of ammunition from a Loading weapon when you use an action, a Bonus Action, or a Reaction to fire it, regardless of the number of attacks you can normally make.\n\nVex. If you hit a creature with this weapon and deal damage to the creature, you have Advantage on your next attack roll against that creature before the end of your next turn.",
-    "tag": "",
+    "tag": "weapon",
     "rank": 0,
     "damage": "1d6",
     "damage_type": "piercing",
@@ -259,6 +298,11 @@
       "dex"
     ],
     "size": "normal",
+    "mastery": "vex",
+    "flags": [
+      "light",
+      "loading"
+    ],
     "ranges": {
       "normal": 30,
       "long": 120
@@ -270,7 +314,7 @@
     "name": "Handaxe",
     "feature_type": "item",
     "description": "Simple weapon. Damage 1d6 Slashing.\n\nLight. When you take the Attack action on your turn and attack with a Light weapon, you can make one extra attack as a Bonus Action later on the same turn. That extra attack must be made with a different Light weapon, and you don't add your ability modifier to the extra attack's damage unless that modifier is negative.\n\nThrown (Range 20/60). If a weapon has the Thrown property, you can throw the weapon to make a ranged attack, and you can draw that weapon as part of the attack. If the weapon is a Melee weapon, use the same ability modifier for the attack and damage rolls that you use for a melee attack with that weapon.\n\nVex. If you hit a creature with this weapon and deal damage to the creature, you have Advantage on your next attack roll against that creature before the end of your next turn.",
-    "tag": "",
+    "tag": "weapon",
     "rank": 0,
     "damage": "1d6",
     "damage_type": "slashing",
@@ -279,6 +323,10 @@
       "dex"
     ],
     "size": "normal",
+    "mastery": "vex",
+    "flags": [
+      "light"
+    ],
     "ranges": {
       "normal": 20,
       "long": 60
@@ -290,7 +338,7 @@
     "name": "Heavy Crossbow",
     "feature_type": "item",
     "description": "Martial weapon. Damage 1d10 Piercing.\n\nAmmunition (Range 100/400; Bolt). You can use a weapon that has the Ammunition property to make a ranged attack only if you have ammunition to fire from it. The type of ammunition required is specified with the weapon's range. Each attack expends one piece of ammunition. Drawing the ammunition is part of the attack (you need a free hand to load a one-handed weapon). After a fight, you can spend 1 minute to recover half the ammunition (round down) you used in the fight; the rest is lost.\n\nHeavy. You have Disadvantage on attack rolls with a Heavy weapon if it's a Melee weapon and your Strength score isn't at least 13 or if it's a Ranged weapon and your Dexterity score isn't at least 13.\n\nLoading. You can fire only one piece of ammunition from a Loading weapon when you use an action, a Bonus Action, or a Reaction to fire it, regardless of the number of attacks you can normally make.\n\nPush. If you hit a creature with this weapon, you can push the creature up to 10 feet straight away from yourself if it is Large or smaller.\n\nTwo-Handed. A Two-Handed weapon requires two hands when you attack with it.",
-    "tag": "",
+    "tag": "weapon",
     "rank": 0,
     "damage": "1d10",
     "damage_type": "piercing",
@@ -298,6 +346,12 @@
       "dex"
     ],
     "size": "large",
+    "mastery": "push",
+    "flags": [
+      "heavy",
+      "loading",
+      "two-handed"
+    ],
     "ranges": {
       "normal": 100,
       "long": 400
@@ -309,7 +363,7 @@
     "name": "Javelin",
     "feature_type": "item",
     "description": "Simple weapon. Damage 1d6 Piercing.\n\nSlow. If you hit a creature with this weapon and deal damage to it, you can reduce its Speed by 10 feet until the start of your next turn. If the creature is hit more than once by weapons that have this property, the Speed reduction doesn't exceed 10 feet.\n\nThrown (Range 30/120). If a weapon has the Thrown property, you can throw the weapon to make a ranged attack, and you can draw that weapon as part of the attack. If the weapon is a Melee weapon, use the same ability modifier for the attack and damage rolls that you use for a melee attack with that weapon.",
-    "tag": "",
+    "tag": "weapon",
     "rank": 0,
     "damage": "1d6",
     "damage_type": "piercing",
@@ -318,6 +372,7 @@
       "dex"
     ],
     "size": "normal",
+    "mastery": "slow",
     "ranges": {
       "normal": 30,
       "long": 120
@@ -329,7 +384,7 @@
     "name": "Lance",
     "feature_type": "item",
     "description": "Martial weapon. Damage 1d10 Piercing.\n\nHeavy. You have Disadvantage on attack rolls with a Heavy weapon if it's a Melee weapon and your Strength score isn't at least 13 or if it's a Ranged weapon and your Dexterity score isn't at least 13.\n\nReach. A Reach weapon adds 5 feet to your reach when you attack with it, as well as when determining your reach for Opportunity Attacks with it.\n\nTopple. If you hit a creature with this weapon, you can force the creature to make a Constitution saving throw (DC 8 plus the ability modifier used to make the attack roll and your Proficiency Bonus). On a failed save, the creature has the Prone condition.\n\nTwo-Handed (unless mounted). A Two-Handed weapon requires two hands when you attack with it.",
-    "tag": "",
+    "tag": "weapon",
     "rank": 0,
     "damage": "1d10",
     "damage_type": "piercing",
@@ -337,6 +392,11 @@
       "str"
     ],
     "size": "large",
+    "mastery": "topple",
+    "flags": [
+      "heavy",
+      "two-handed"
+    ],
     "reach": 10
   },
   {
@@ -345,7 +405,7 @@
     "name": "Light Crossbow",
     "feature_type": "item",
     "description": "Simple weapon. Damage 1d8 Piercing.\n\nAmmunition (Range 80/320; Bolt). You can use a weapon that has the Ammunition property to make a ranged attack only if you have ammunition to fire from it. The type of ammunition required is specified with the weapon's range. Each attack expends one piece of ammunition. Drawing the ammunition is part of the attack (you need a free hand to load a one-handed weapon). After a fight, you can spend 1 minute to recover half the ammunition (round down) you used in the fight; the rest is lost.\n\nLoading. You can fire only one piece of ammunition from a Loading weapon when you use an action, a Bonus Action, or a Reaction to fire it, regardless of the number of attacks you can normally make.\n\nSlow. If you hit a creature with this weapon and deal damage to it, you can reduce its Speed by 10 feet until the start of your next turn. If the creature is hit more than once by weapons that have this property, the Speed reduction doesn't exceed 10 feet.\n\nTwo-Handed. A Two-Handed weapon requires two hands when you attack with it.",
-    "tag": "",
+    "tag": "weapon",
     "rank": 0,
     "damage": "1d8",
     "damage_type": "piercing",
@@ -353,6 +413,11 @@
       "dex"
     ],
     "size": "large",
+    "mastery": "slow",
+    "flags": [
+      "loading",
+      "two-handed"
+    ],
     "ranges": {
       "normal": 80,
       "long": 320
@@ -364,7 +429,7 @@
     "name": "Light Hammer",
     "feature_type": "item",
     "description": "Simple weapon. Damage 1d4 Bludgeoning.\n\nLight. When you take the Attack action on your turn and attack with a Light weapon, you can make one extra attack as a Bonus Action later on the same turn. That extra attack must be made with a different Light weapon, and you don't add your ability modifier to the extra attack's damage unless that modifier is negative.\n\nNick. When you make the extra attack of the Light property, you can make it as part of the Attack action instead of as a Bonus Action. You can make this extra attack only once per turn.\n\nThrown (Range 20/60). If a weapon has the Thrown property, you can throw the weapon to make a ranged attack, and you can draw that weapon as part of the attack. If the weapon is a Melee weapon, use the same ability modifier for the attack and damage rolls that you use for a melee attack with that weapon.",
-    "tag": "",
+    "tag": "weapon",
     "rank": 0,
     "damage": "1d4",
     "damage_type": "bludgeoning",
@@ -373,6 +438,10 @@
       "dex"
     ],
     "size": "normal",
+    "mastery": "nick",
+    "flags": [
+      "light"
+    ],
     "ranges": {
       "normal": 20,
       "long": 60
@@ -384,7 +453,7 @@
     "name": "Longbow",
     "feature_type": "item",
     "description": "Martial weapon. Damage 1d8 Piercing.\n\nAmmunition (Range 150/600; Arrow). You can use a weapon that has the Ammunition property to make a ranged attack only if you have ammunition to fire from it. The type of ammunition required is specified with the weapon's range. Each attack expends one piece of ammunition. Drawing the ammunition is part of the attack (you need a free hand to load a one-handed weapon). After a fight, you can spend 1 minute to recover half the ammunition (round down) you used in the fight; the rest is lost.\n\nHeavy. You have Disadvantage on attack rolls with a Heavy weapon if it's a Melee weapon and your Strength score isn't at least 13 or if it's a Ranged weapon and your Dexterity score isn't at least 13.\n\nSlow. If you hit a creature with this weapon and deal damage to it, you can reduce its Speed by 10 feet until the start of your next turn. If the creature is hit more than once by weapons that have this property, the Speed reduction doesn't exceed 10 feet.\n\nTwo-Handed. A Two-Handed weapon requires two hands when you attack with it.",
-    "tag": "",
+    "tag": "weapon",
     "rank": 0,
     "damage": "1d8",
     "damage_type": "piercing",
@@ -392,6 +461,11 @@
       "dex"
     ],
     "size": "large",
+    "mastery": "slow",
+    "flags": [
+      "heavy",
+      "two-handed"
+    ],
     "ranges": {
       "normal": 150,
       "long": 600
@@ -403,7 +477,7 @@
     "name": "Longsword",
     "feature_type": "item",
     "description": "Martial weapon. Damage 1d8 Slashing.\n\nSap. If you hit a creature with this weapon, that creature has Disadvantage on its next attack roll before the start of your next turn.\n\nVersatile (1d10). A Versatile weapon can be used with one or two hands. A damage value in parentheses appears with the property. The weapon deals that damage when used with two hands to make a melee attack.",
-    "tag": "",
+    "tag": "weapon",
     "rank": 0,
     "damage": "1d8",
     "damage_type": "slashing",
@@ -411,6 +485,7 @@
       "str"
     ],
     "size": "normal",
+    "mastery": "sap",
     "versatile_damage": "1d10"
   },
   {
@@ -419,14 +494,15 @@
     "name": "Mace",
     "feature_type": "item",
     "description": "Simple weapon. Damage 1d6 Bludgeoning.\n\nSap. If you hit a creature with this weapon, that creature has Disadvantage on its next attack roll before the start of your next turn.",
-    "tag": "",
+    "tag": "weapon",
     "rank": 0,
     "damage": "1d6",
     "damage_type": "bludgeoning",
     "attributes": [
       "str"
     ],
-    "size": "normal"
+    "size": "normal",
+    "mastery": "sap"
   },
   {
     "type": "feature",
@@ -434,14 +510,19 @@
     "name": "Maul",
     "feature_type": "item",
     "description": "Martial weapon. Damage 2d6 Bludgeoning.\n\nHeavy. You have Disadvantage on attack rolls with a Heavy weapon if it's a Melee weapon and your Strength score isn't at least 13 or if it's a Ranged weapon and your Dexterity score isn't at least 13.\n\nTopple. If you hit a creature with this weapon, you can force the creature to make a Constitution saving throw (DC 8 plus the ability modifier used to make the attack roll and your Proficiency Bonus). On a failed save, the creature has the Prone condition.\n\nTwo-Handed. A Two-Handed weapon requires two hands when you attack with it.",
-    "tag": "",
+    "tag": "weapon",
     "rank": 0,
     "damage": "2d6",
     "damage_type": "bludgeoning",
     "attributes": [
       "str"
     ],
-    "size": "large"
+    "size": "large",
+    "mastery": "topple",
+    "flags": [
+      "heavy",
+      "two-handed"
+    ]
   },
   {
     "type": "feature",
@@ -449,14 +530,15 @@
     "name": "Morningstar",
     "feature_type": "item",
     "description": "Martial weapon. Damage 1d8 Piercing.\n\nSap. If you hit a creature with this weapon, that creature has Disadvantage on its next attack roll before the start of your next turn.",
-    "tag": "",
+    "tag": "weapon",
     "rank": 0,
     "damage": "1d8",
     "damage_type": "piercing",
     "attributes": [
       "str"
     ],
-    "size": "normal"
+    "size": "normal",
+    "mastery": "sap"
   },
   {
     "type": "feature",
@@ -464,7 +546,7 @@
     "name": "Musket",
     "feature_type": "item",
     "description": "Martial weapon. Damage 1d12 Piercing.\n\nAmmunition (Range 40/120; Bullet). You can use a weapon that has the Ammunition property to make a ranged attack only if you have ammunition to fire from it. The type of ammunition required is specified with the weapon's range. Each attack expends one piece of ammunition. Drawing the ammunition is part of the attack (you need a free hand to load a one-handed weapon). After a fight, you can spend 1 minute to recover half the ammunition (round down) you used in the fight; the rest is lost.\n\nLoading. You can fire only one piece of ammunition from a Loading weapon when you use an action, a Bonus Action, or a Reaction to fire it, regardless of the number of attacks you can normally make.\n\nSlow. If you hit a creature with this weapon and deal damage to it, you can reduce its Speed by 10 feet until the start of your next turn. If the creature is hit more than once by weapons that have this property, the Speed reduction doesn't exceed 10 feet.\n\nTwo-Handed. A Two-Handed weapon requires two hands when you attack with it.",
-    "tag": "",
+    "tag": "weapon",
     "rank": 0,
     "damage": "1d12",
     "damage_type": "piercing",
@@ -472,6 +554,11 @@
       "dex"
     ],
     "size": "large",
+    "mastery": "slow",
+    "flags": [
+      "loading",
+      "two-handed"
+    ],
     "ranges": {
       "normal": 40,
       "long": 120
@@ -483,7 +570,7 @@
     "name": "Pike",
     "feature_type": "item",
     "description": "Martial weapon. Damage 1d10 Piercing.\n\nHeavy. You have Disadvantage on attack rolls with a Heavy weapon if it's a Melee weapon and your Strength score isn't at least 13 or if it's a Ranged weapon and your Dexterity score isn't at least 13.\n\nPush. If you hit a creature with this weapon, you can push the creature up to 10 feet straight away from yourself if it is Large or smaller.\n\nReach. A Reach weapon adds 5 feet to your reach when you attack with it, as well as when determining your reach for Opportunity Attacks with it.\n\nTwo-Handed. A Two-Handed weapon requires two hands when you attack with it.",
-    "tag": "",
+    "tag": "weapon",
     "rank": 0,
     "damage": "1d10",
     "damage_type": "piercing",
@@ -491,6 +578,11 @@
       "str"
     ],
     "size": "large",
+    "mastery": "push",
+    "flags": [
+      "heavy",
+      "two-handed"
+    ],
     "reach": 10
   },
   {
@@ -499,7 +591,7 @@
     "name": "Pistol",
     "feature_type": "item",
     "description": "Martial weapon. Damage 1d10 Piercing.\n\nAmmunition (Range 30/90; Bullet). You can use a weapon that has the Ammunition property to make a ranged attack only if you have ammunition to fire from it. The type of ammunition required is specified with the weapon's range. Each attack expends one piece of ammunition. Drawing the ammunition is part of the attack (you need a free hand to load a one-handed weapon). After a fight, you can spend 1 minute to recover half the ammunition (round down) you used in the fight; the rest is lost.\n\nLoading. You can fire only one piece of ammunition from a Loading weapon when you use an action, a Bonus Action, or a Reaction to fire it, regardless of the number of attacks you can normally make.\n\nVex. If you hit a creature with this weapon and deal damage to the creature, you have Advantage on your next attack roll against that creature before the end of your next turn.",
-    "tag": "",
+    "tag": "weapon",
     "rank": 0,
     "damage": "1d10",
     "damage_type": "piercing",
@@ -507,6 +599,10 @@
       "dex"
     ],
     "size": "normal",
+    "mastery": "vex",
+    "flags": [
+      "loading"
+    ],
     "ranges": {
       "normal": 30,
       "long": 90
@@ -518,7 +614,7 @@
     "name": "Quarterstaff",
     "feature_type": "item",
     "description": "Simple weapon. Damage 1d6 Bludgeoning.\n\nTopple. If you hit a creature with this weapon, you can force the creature to make a Constitution saving throw (DC 8 plus the ability modifier used to make the attack roll and your Proficiency Bonus). On a failed save, the creature has the Prone condition.\n\nVersatile (1d8). A Versatile weapon can be used with one or two hands. A damage value in parentheses appears with the property. The weapon deals that damage when used with two hands to make a melee attack.",
-    "tag": "",
+    "tag": "weapon",
     "rank": 0,
     "damage": "1d6",
     "damage_type": "bludgeoning",
@@ -526,6 +622,7 @@
       "str"
     ],
     "size": "normal",
+    "mastery": "topple",
     "versatile_damage": "1d8"
   },
   {
@@ -534,7 +631,7 @@
     "name": "Rapier",
     "feature_type": "item",
     "description": "Martial weapon. Damage 1d8 Piercing.\n\nFinesse. When making an attack with a Finesse weapon, use your choice of your Strength or Dexterity modifier for the attack and damage rolls. You must use the same modifier for both rolls.\n\nVex. If you hit a creature with this weapon and deal damage to the creature, you have Advantage on your next attack roll against that creature before the end of your next turn.",
-    "tag": "",
+    "tag": "weapon",
     "rank": 0,
     "damage": "1d8",
     "damage_type": "piercing",
@@ -542,7 +639,8 @@
       "str",
       "dex"
     ],
-    "size": "normal"
+    "size": "normal",
+    "mastery": "vex"
   },
   {
     "type": "feature",
@@ -550,7 +648,7 @@
     "name": "Scimitar",
     "feature_type": "item",
     "description": "Martial weapon. Damage 1d6 Slashing.\n\nFinesse. When making an attack with a Finesse weapon, use your choice of your Strength or Dexterity modifier for the attack and damage rolls. You must use the same modifier for both rolls.\n\nLight. When you take the Attack action on your turn and attack with a Light weapon, you can make one extra attack as a Bonus Action later on the same turn. That extra attack must be made with a different Light weapon, and you don't add your ability modifier to the extra attack's damage unless that modifier is negative.\n\nNick. When you make the extra attack of the Light property, you can make it as part of the Attack action instead of as a Bonus Action. You can make this extra attack only once per turn.",
-    "tag": "",
+    "tag": "weapon",
     "rank": 0,
     "damage": "1d6",
     "damage_type": "slashing",
@@ -558,7 +656,11 @@
       "str",
       "dex"
     ],
-    "size": "normal"
+    "size": "normal",
+    "mastery": "nick",
+    "flags": [
+      "light"
+    ]
   },
   {
     "type": "feature",
@@ -566,7 +668,7 @@
     "name": "Shortbow",
     "feature_type": "item",
     "description": "Simple weapon. Damage 1d6 Piercing.\n\nAmmunition (Range 80/320; Arrow). You can use a weapon that has the Ammunition property to make a ranged attack only if you have ammunition to fire from it. The type of ammunition required is specified with the weapon's range. Each attack expends one piece of ammunition. Drawing the ammunition is part of the attack (you need a free hand to load a one-handed weapon). After a fight, you can spend 1 minute to recover half the ammunition (round down) you used in the fight; the rest is lost.\n\nTwo-Handed. A Two-Handed weapon requires two hands when you attack with it.\n\nVex. If you hit a creature with this weapon and deal damage to the creature, you have Advantage on your next attack roll against that creature before the end of your next turn.",
-    "tag": "",
+    "tag": "weapon",
     "rank": 0,
     "damage": "1d6",
     "damage_type": "piercing",
@@ -574,6 +676,10 @@
       "dex"
     ],
     "size": "large",
+    "mastery": "vex",
+    "flags": [
+      "two-handed"
+    ],
     "ranges": {
       "normal": 80,
       "long": 320
@@ -585,7 +691,7 @@
     "name": "Shortsword",
     "feature_type": "item",
     "description": "Martial weapon. Damage 1d6 Piercing.\n\nFinesse. When making an attack with a Finesse weapon, use your choice of your Strength or Dexterity modifier for the attack and damage rolls. You must use the same modifier for both rolls.\n\nLight. When you take the Attack action on your turn and attack with a Light weapon, you can make one extra attack as a Bonus Action later on the same turn. That extra attack must be made with a different Light weapon, and you don't add your ability modifier to the extra attack's damage unless that modifier is negative.\n\nVex. If you hit a creature with this weapon and deal damage to the creature, you have Advantage on your next attack roll against that creature before the end of your next turn.",
-    "tag": "",
+    "tag": "weapon",
     "rank": 0,
     "damage": "1d6",
     "damage_type": "piercing",
@@ -593,7 +699,11 @@
       "str",
       "dex"
     ],
-    "size": "normal"
+    "size": "normal",
+    "mastery": "vex",
+    "flags": [
+      "light"
+    ]
   },
   {
     "type": "feature",
@@ -601,14 +711,18 @@
     "name": "Sickle",
     "feature_type": "item",
     "description": "Simple weapon. Damage 1d4 Slashing.\n\nLight. When you take the Attack action on your turn and attack with a Light weapon, you can make one extra attack as a Bonus Action later on the same turn. That extra attack must be made with a different Light weapon, and you don't add your ability modifier to the extra attack's damage unless that modifier is negative.\n\nNick. When you make the extra attack of the Light property, you can make it as part of the Attack action instead of as a Bonus Action. You can make this extra attack only once per turn.",
-    "tag": "",
+    "tag": "weapon",
     "rank": 0,
     "damage": "1d4",
     "damage_type": "slashing",
     "attributes": [
       "str"
     ],
-    "size": "normal"
+    "size": "normal",
+    "mastery": "nick",
+    "flags": [
+      "light"
+    ]
   },
   {
     "type": "feature",
@@ -616,7 +730,7 @@
     "name": "Sling",
     "feature_type": "item",
     "description": "Simple weapon. Damage 1d4 Bludgeoning.\n\nAmmunition (Range 30/120; Bullet). You can use a weapon that has the Ammunition property to make a ranged attack only if you have ammunition to fire from it. The type of ammunition required is specified with the weapon's range. Each attack expends one piece of ammunition. Drawing the ammunition is part of the attack (you need a free hand to load a one-handed weapon). After a fight, you can spend 1 minute to recover half the ammunition (round down) you used in the fight; the rest is lost.\n\nSlow. If you hit a creature with this weapon and deal damage to it, you can reduce its Speed by 10 feet until the start of your next turn. If the creature is hit more than once by weapons that have this property, the Speed reduction doesn't exceed 10 feet.",
-    "tag": "",
+    "tag": "weapon",
     "rank": 0,
     "damage": "1d4",
     "damage_type": "bludgeoning",
@@ -624,6 +738,7 @@
       "dex"
     ],
     "size": "normal",
+    "mastery": "slow",
     "ranges": {
       "normal": 30,
       "long": 120
@@ -635,7 +750,7 @@
     "name": "Spear",
     "feature_type": "item",
     "description": "Simple weapon. Damage 1d6 Piercing.\n\nSap. If you hit a creature with this weapon, that creature has Disadvantage on its next attack roll before the start of your next turn.\n\nThrown (Range 20/60). If a weapon has the Thrown property, you can throw the weapon to make a ranged attack, and you can draw that weapon as part of the attack. If the weapon is a Melee weapon, use the same ability modifier for the attack and damage rolls that you use for a melee attack with that weapon.\n\nVersatile (1d8). A Versatile weapon can be used with one or two hands. A damage value in parentheses appears with the property. The weapon deals that damage when used with two hands to make a melee attack.",
-    "tag": "",
+    "tag": "weapon",
     "rank": 0,
     "damage": "1d6",
     "damage_type": "piercing",
@@ -644,6 +759,7 @@
       "dex"
     ],
     "size": "normal",
+    "mastery": "sap",
     "versatile_damage": "1d8",
     "ranges": {
       "normal": 20,
@@ -656,7 +772,7 @@
     "name": "Trident",
     "feature_type": "item",
     "description": "Martial weapon. Damage 1d8 Piercing.\n\nThrown (Range 20/60). If a weapon has the Thrown property, you can throw the weapon to make a ranged attack, and you can draw that weapon as part of the attack. If the weapon is a Melee weapon, use the same ability modifier for the attack and damage rolls that you use for a melee attack with that weapon.\n\nTopple. If you hit a creature with this weapon, you can force the creature to make a Constitution saving throw (DC 8 plus the ability modifier used to make the attack roll and your Proficiency Bonus). On a failed save, the creature has the Prone condition.\n\nVersatile (1d10). A Versatile weapon can be used with one or two hands. A damage value in parentheses appears with the property. The weapon deals that damage when used with two hands to make a melee attack.",
-    "tag": "",
+    "tag": "weapon",
     "rank": 0,
     "damage": "1d8",
     "damage_type": "piercing",
@@ -665,6 +781,7 @@
       "dex"
     ],
     "size": "normal",
+    "mastery": "topple",
     "versatile_damage": "1d10",
     "ranges": {
       "normal": 20,
@@ -677,7 +794,7 @@
     "name": "War Pick",
     "feature_type": "item",
     "description": "Martial weapon. Damage 1d8 Piercing.\n\nSap. If you hit a creature with this weapon, that creature has Disadvantage on its next attack roll before the start of your next turn.\n\nVersatile (1d10). A Versatile weapon can be used with one or two hands. A damage value in parentheses appears with the property. The weapon deals that damage when used with two hands to make a melee attack.",
-    "tag": "",
+    "tag": "weapon",
     "rank": 0,
     "damage": "1d8",
     "damage_type": "piercing",
@@ -685,6 +802,7 @@
       "str"
     ],
     "size": "normal",
+    "mastery": "sap",
     "versatile_damage": "1d10"
   },
   {
@@ -693,7 +811,7 @@
     "name": "Warhammer",
     "feature_type": "item",
     "description": "Martial weapon. Damage 1d8 Bludgeoning.\n\nPush. If you hit a creature with this weapon, you can push the creature up to 10 feet straight away from yourself if it is Large or smaller.\n\nVersatile (1d10). A Versatile weapon can be used with one or two hands. A damage value in parentheses appears with the property. The weapon deals that damage when used with two hands to make a melee attack.",
-    "tag": "",
+    "tag": "weapon",
     "rank": 0,
     "damage": "1d8",
     "damage_type": "bludgeoning",
@@ -701,6 +819,7 @@
       "str"
     ],
     "size": "normal",
+    "mastery": "push",
     "versatile_damage": "1d10"
   },
   {
@@ -709,7 +828,7 @@
     "name": "Whip",
     "feature_type": "item",
     "description": "Martial weapon. Damage 1d4 Slashing.\n\nFinesse. When making an attack with a Finesse weapon, use your choice of your Strength or Dexterity modifier for the attack and damage rolls. You must use the same modifier for both rolls.\n\nReach. A Reach weapon adds 5 feet to your reach when you attack with it, as well as when determining your reach for Opportunity Attacks with it.\n\nSlow. If you hit a creature with this weapon and deal damage to it, you can reduce its Speed by 10 feet until the start of your next turn. If the creature is hit more than once by weapons that have this property, the Speed reduction doesn't exceed 10 feet.",
-    "tag": "",
+    "tag": "weapon",
     "rank": 0,
     "damage": "1d4",
     "damage_type": "slashing",
@@ -718,6 +837,7 @@
       "dex"
     ],
     "size": "normal",
+    "mastery": "slow",
     "reach": 10
   },
   {

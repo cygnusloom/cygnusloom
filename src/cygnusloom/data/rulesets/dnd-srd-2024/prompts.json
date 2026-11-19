@@ -83,7 +83,7 @@
   {
     "type": "prompt",
     "id": "class_resources",
-    "text": "Class resources are tracked as counters: Rage, Bardic Inspiration, Channel Divinity, Wild Shape, Second Wind, Action Surge, Indomitable, Focus Points, the Lay On Hands pool, Sorcery Points, Arcane Recovery, Favored Enemy, Tireless, Mystic Arcanum, and Dark One's Luck. When a player spends one, call use_class_resource and narrate the result; never spend a use by narration alone. A short rest returns one use of Rage, Channel Divinity, Wild Shape, and Second Wind and all Action Surge and Focus Points; a long rest refills every pool. The character sheet shows what is left."
+    "text": "Class and species resources are tracked as counters: Rage, Bardic Inspiration, Channel Divinity, Wild Shape, Second Wind, Action Surge, Indomitable, Focus Points, the Lay On Hands pool, Sorcery Points, Arcane Recovery, Favored Enemy, Tireless, Mystic Arcanum, Dark One's Luck, and Giant Ancestry. When a character uses a feature that spends one, call use_feature with the feature name; it spends the resource and the feature's Action, Bonus Action, or Reaction automatically. Use use_class_resource only for a pool amount with no single feature, such as a Lay On Hands point total or sorcery points. Never spend a use by narration alone. A short rest returns one use of Rage, Channel Divinity, Wild Shape, and Second Wind and all Action Surge and Focus Points; a long rest refills every pool and Giant Ancestry. The character sheet shows what is left."
   },
   {
     "type": "prompt",

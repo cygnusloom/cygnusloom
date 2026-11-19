@@ -202,5 +202,26 @@
     "roll_modes": {
       "attack_against": "advantage"
     }
+  },
+  {
+    "type": "condition",
+    "id": "sapped",
+    "label": "Sapped",
+    "description": "Disadvantage on the next attack roll before the start of the attacker's next turn.",
+    "ends": [
+      "rest"
+    ],
+    "roll_modes": {
+      "attack": "disadvantage"
+    }
+  },
+  {
+    "type": "condition",
+    "id": "slowed",
+    "label": "Slowed",
+    "description": "Speed reduced by 10 feet until the start of the attacker's next turn.",
+    "ends": [
+      "rest"
+    ]
   }
 ]

@@ -155,6 +155,9 @@
           "3": [
             "class-barbarian-primal-knowledge"
           ],
+          "4": [
+            "class-barbarian-weapon-mastery-4"
+          ],
           "5": [
             "class-barbarian-extra-attack",
             "class-barbarian-fast-movement"
@@ -165,6 +168,9 @@
           ],
           "9": [
             "class-barbarian-brutal-strike"
+          ],
+          "10": [
+            "class-barbarian-weapon-mastery-10"
           ],
           "11": [
             "class-barbarian-relentless-rage"
@@ -783,6 +789,9 @@
             "class-fighter-action-surge",
             "class-fighter-tactical-mind"
           ],
+          "4": [
+            "class-fighter-weapon-mastery-4"
+          ],
           "5": [
             "class-fighter-extra-attack",
             "class-fighter-tactical-shift"
@@ -791,12 +800,18 @@
             "class-fighter-indomitable",
             "class-fighter-tactical-master"
           ],
+          "10": [
+            "class-fighter-weapon-mastery-10"
+          ],
           "11": [
             "class-fighter-two-extra-attacks"
           ],
           "13": [
             "class-fighter-indomitable",
             "class-fighter-studied-attacks"
+          ],
+          "16": [
+            "class-fighter-weapon-mastery-16"
           ],
           "17": [
             "class-fighter-action-surge",

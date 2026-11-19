@@ -278,6 +278,54 @@ def test_dnd_turn_resources_include_actions_bonus_actions_and_reactions(
     assert _state(app, campaign_id).encounter.reactions_used == 1
 
 
+def test_rage_spends_a_use_and_sets_the_raging_mark(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    client, campaign_id, ctx = _campaign(client_factory, fields=BARBARIAN_FIELDS)
+    tools, _ = _fight(client, campaign_id)
+    dnd_srd_2024.roll_initiative(ctx)
+    tools.adjust_encounter_order(["Rook", "Foe"], current="Rook")
+    result = dnd_srd_2024.use_feature("Rook", "class-barbarian-rage", ctx)
+    assert result["remaining"] == 1
+    pc = character_named(app, campaign_id, "Rook")
+    assert pc.marks["raging"] is True
+    assert _state(app, campaign_id).encounter.bonus_actions_used == 1
+
+
+def test_using_a_class_feature_spends_its_resource_and_turn_action(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    client, campaign_id, ctx = _campaign(client_factory)
+    tools, _ = _fight(client, campaign_id)
+    dnd_srd_2024.roll_initiative(ctx)
+    tools.adjust_encounter_order(["Rook", "Foe"], current="Rook")
+    before = character_named(app, campaign_id, "Rook")
+    result = dnd_srd_2024.use_feature("Rook", "class-fighter-second-wind", ctx)
+    assert result["resource"] == "second_wind"
+    assert result["remaining"] == before.counters["second_wind"] - 1
+    encounter = _state(app, campaign_id).encounter
+    assert encounter is not None and encounter.bonus_actions_used == 1
+
+
+def test_weapon_mastery_unlocks_graze_on_a_miss(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    fields = {
+        **FIGHTER_FIELDS,
+        "feature-choice-class-fighter-weapon-mastery-weapons-0": "weapon-greatsword",
+        "feature-choice-class-fighter-weapon-mastery-weapons-1": "weapon-longsword",
+        "feature-choice-class-fighter-weapon-mastery-weapons-2": "weapon-dagger",
+    }
+    client, campaign_id, ctx = _campaign(client_factory, fields=fields)
+    tools, _ = _fight(client, campaign_id)
+    dnd_srd_2024.roll_initiative(ctx)
+    tools.adjust_encounter_order(["Rook", "Foe"], current="Rook")
+    result = tools.player_attack("Foe", "Greatsword", attack_roll=1)
+    assert result["hit"] is False
+    assert result["graze"] == 3  # Strength 16
+    assert result["harm"]["hp"] == 3
+
+
 def test_casting_a_spell_spends_the_casters_action(
     app: FastAPI, client_factory: Callable[[], TestClient]
 ) -> None:

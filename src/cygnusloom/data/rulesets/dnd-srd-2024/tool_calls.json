@@ -406,6 +406,33 @@
   },
   {
     "type": "tool_call",
+    "id": "use_feature",
+    "python_module": "dnd_srd_2024",
+    "function": "use_feature",
+    "description": "Use a class or species feature such as Rage, Second Wind, Channel Divinity, Wild Shape, Bardic Inspiration, Lay On Hands, Flurry of Blows, or a Goliath ancestry boon. This spends the feature's resource and its Action, Bonus Action, or Reaction automatically.",
+    "parameters": {
+      "properties": {
+        "character": {
+          "type": "string",
+          "description": "The character using the feature."
+        },
+        "feature": {
+          "type": "string",
+          "description": "The feature's name or id, such as Rage or class-barbarian-rage."
+        },
+        "cause": {
+          "type": "string",
+          "description": "What the feature is being used for."
+        }
+      },
+      "required": [
+        "character",
+        "feature"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
     "id": "learn_spell",
     "python_module": "dnd_srd_2024",
     "function": "learn_spell",

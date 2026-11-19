@@ -47,7 +47,10 @@ from cygnusloom.services.events import (
     PC_KIND,
     CampaignState,
     Character,
+    ConditionAdded,
     EncounterAttacked,
+    MarkSet,
+    ParticipantPlaced,
     ShieldBashed,
     Struck,
     current,
@@ -118,6 +121,37 @@ def _weapon_skill(combat: CombatRules, weapon: str, feature: Feature | None) -> 
     return ""
 
 
+def _critical_threshold(
+    spec: CharacterSpec | None, character: Character, combat: CombatRules
+) -> int:
+    """The lowest natural roll that crits, lowered by features such as Improved Critical."""
+    threshold = combat.check_sides
+    if spec is None:
+        return threshold
+    for feature_id in character.features:
+        feature = spec.features.get(feature_id)
+        if feature is None or feature.critical_min >= threshold:
+            continue
+        if feature.active_mark and not character.marks.get(feature.active_mark):
+            continue
+        threshold = feature.critical_min
+    return threshold
+
+
+def _mastered_property(
+    spec: CharacterSpec | None, character: Character, feature: Feature | None
+) -> str:
+    """The weapon's mastery property when the character's Weapon Mastery choices unlock it."""
+    if spec is None or feature is None or not feature.mastery:
+        return ""
+    for key, values in character.feature_choices.items():
+        if "weapon-mastery" not in key.split(":", 1)[0]:
+            continue
+        if feature.id in values:
+            return feature.mastery
+    return ""
+
+
 def _player_bonuses(
     combat: CombatRules,
     character: Character,
@@ -185,6 +219,8 @@ def _player_bonuses(
         held = spec.features.get(feature_id)
         if held is None:
             continue
+        if held.active_mark and not character.marks.get(held.active_mark):
+            continue
         for bonus in held.weapon_bonuses:
             if bonus.skill and bonus.skill != skill:
                 continue
@@ -200,11 +236,28 @@ def _player_bonuses(
                 damage_parts.append((label, level))
             if bonus.shock and feature is not None and feature.shock:
                 shock_parts.append((label, level))
+        ranged = bool(feature is not None and feature.ranges)
+        kind = "ranged" if ranged else "melee"
+        if held.weapon_kind and held.weapon_kind != kind:
+            continue
+        if held.attack_bonus:
+            to_hit_parts.append((held.name, held.attack_bonus))
+        if held.damage_bonus:
+            damage_parts.append((held.name, held.damage_bonus))
+        if held.damage_bonus_levels:
+            level = int(character.counters.get("level", 1))
+            bonus = max(
+                (value for at, value in held.damage_bonus_levels.items() if at <= level),
+                default=0,
+            )
+            if bonus:
+                damage_parts.append((held.name, bonus))
     return WeaponBonuses(
         to_hit=sum(value for _, value in to_hit_parts),
         damage=sum(value for _, value in damage_parts),
         shock=sum(value for _, value in shock_parts),
         shock_ac=feature.shock_ac if feature is not None and feature.shock else 0,
+        attribute=attribute or 0,
         to_hit_parts=tuple(to_hit_parts),
         damage_parts=tuple(damage_parts),
         shock_parts=tuple(shock_parts),
@@ -267,6 +320,9 @@ def _strike(
     shock_breakdown: dict[str, Any] | None = None,
     roll_mode: str = "normal",
     critical: bool = False,
+    mastery: str = "",
+    graze_ability: int = 0,
+    mastery_dc: int = 0,
 ) -> dict[str, Any]:
     """Apply a hit through the rule set's damage steps. A target that owes a save takes no more
     hits. An NPC saves at once; a player character saves when the player rolls. A hit on an NPC
@@ -290,6 +346,7 @@ def _strike(
     if damage_type and spec is not None:
         resisted = any(
             damage_type.casefold() in (feature.resistances or ())
+            and (not feature.active_mark or target.marks.get(feature.active_mark))
             for feature_id in target.features
             if (feature := spec.features.get(feature_id)) is not None
         )
@@ -350,6 +407,14 @@ def _strike(
                             target=shock_ac,
                             target_label="Shock AC",
                         )
+            graze_taken = 0
+            if mastery == "graze" and graze_ability and not target.invincible:
+                graze_damage = apply_damage(
+                    combat.damage, 0, lambda stat: current(target, stat), graze_ability
+                )
+                for stat, amount in graze_damage.harm.items():
+                    harm[stat] = harm.get(stat, 0) + amount
+                graze_taken = sum(graze_damage.harm.values())
             defeats, status = _defeat_after_harm(combat, target, harm, nonlethal=nonlethal)
             record(
                 db,
@@ -370,6 +435,8 @@ def _strike(
                     status=status,
                     hit_breakdown=hit_breakdown,
                     shock_breakdown=shock_breakdown,
+                    mastery=mastery,
+                    graze=graze_taken,
                     critical=critical,
                 ),
             )
@@ -386,6 +453,7 @@ def _strike(
                 "harm": harm,
                 "save_due": None,
                 "hit": False,
+                "graze": graze_taken,
                 "to_hit": to_hit,
                 "defeated": load_state(db, campaign_id).characters[name_key(target.name)].defeated,
             }
@@ -416,8 +484,63 @@ def _strike(
             hit_breakdown=hit_breakdown,
             damage_breakdown=damage_breakdown,
             critical=critical,
+            mastery=mastery,
         ),
     )
+    mastery_condition = {"sap": "sapped", "slow": "slowed"}.get(mastery)
+    if mastery_condition and not target.invincible:
+        record(
+            db,
+            campaign_id,
+            ConditionAdded(
+                name=target.name,
+                condition=mastery_condition,
+                cause=f"{mastery} mastery",
+            ),
+        )
+    if mastery == "topple" and mastery_dc and not target.invincible:
+        save = roll_total(combat.check_die, rng, plus=plus)
+        con = int(target.stats.get("con", 10))
+        save_bonus = int(target.stats.get("save_con", (con - 10) // 2))
+        if save + save_bonus < mastery_dc:
+            record(
+                db,
+                campaign_id,
+                ConditionAdded(
+                    name=target.name,
+                    condition="prone",
+                    cause=f"topple mastery (DC {mastery_dc})",
+                ),
+            )
+    if mastery == "vex" and not target.invincible:
+        record(
+            db,
+            campaign_id,
+            MarkSet(
+                name=attacker,
+                key=f"vex:{target.name}",
+                value=True,
+                text=f"{attacker} has advantage against {target.name} from Vex.",
+            ),
+        )
+    if mastery == "push" and not target.invincible:
+        pushed = load_state(db, campaign_id)
+        encounter = pushed.encounter
+        if encounter is not None:
+            source_cell = encounter.cells.get(name_key(attacker))
+            target_cell = encounter.cells.get(name_key(target.name))
+            if source_cell is not None and target_cell is not None:
+                dx = target_cell[0] - source_cell[0]
+                dy = target_cell[1] - source_cell[1]
+                step_x = 1 if dx > 0 else -1 if dx < 0 else 0
+                step_y = 1 if dy > 0 else -1 if dy < 0 else 0
+                column = max(0, min(target_cell[0] + step_x * 2, 1000))
+                row = max(0, min(target_cell[1] + step_y * 2, 1000))
+                record(
+                    db,
+                    campaign_id,
+                    ParticipantPlaced(name=target.name, column=column, row=row),
+                )
     _record_shield_bash(db, campaign_id, attacker, weapon)
     db.commit()
     if defeats and not nonlethal and (target.kind == PC_KIND or target.important):
@@ -653,7 +776,11 @@ def attack(
             target=struck.armor,
             target_label="AC",
         )
-    critical = bool(combat.critical_dice and natural == combat.check_sides)
+    critical = bool(
+        combat.critical_dice
+        and natural is not None
+        and natural >= _critical_threshold(spec, source, combat)
+    )
     if critical:
         extra_values, _ = roll_values(dice, rng, plus=plus)
         raw += sum(extra_values)
@@ -1168,16 +1295,34 @@ def player_attack(
         two_handed=two_handed,
     )
     state, pc, struck = prepared.state, prepared.pc, prepared.struck
+    mastery = _mastered_property(spec, pc, weapon_feature)
+    if "heavy" in (weapon_feature.flags if weapon_feature is not None else ()):
+        stat = "dex" if weapon_feature is not None and weapon_feature.ranges else "str"
+        if int(pc.stats.get(stat, 10)) < 13:
+            roll_mode = "normal" if roll_mode == "advantage" else "disadvantage"
     roll_mode = _attack_roll_mode(pc, struck, conditions, roll_mode)
+    attack_dice = prepared.dice
+    if roll_mode == "advantage" and spec is not None:
+        level = int(pc.counters.get("level", 1))
+        for feature_id in pc.features:
+            held = spec.features.get(feature_id)
+            if held is None or not held.damage_dice_levels:
+                continue
+            extra = max(
+                (formula for at, formula in held.damage_dice_levels.items() if at <= level),
+                default="",
+            )
+            if extra:
+                attack_dice = f"{attack_dice}+{extra}"
     damage_note = ""
     damage_rolls: list[int] = []
     if damage_roll is not None:
         raw = damage_roll
         damage_note = "the player's roll"
     else:
-        damage_rolls, raw = roll_values(prepared.dice, rng, plus=plus)
+        damage_rolls, raw = roll_values(attack_dice, rng, plus=plus)
     if spec is not None and reactions.has_trigger(pc, spec, None, "damage"):
-        second_rolls, second = roll_values(prepared.dice, rng, plus=plus)
+        second_rolls, second = roll_values(attack_dice, rng, plus=plus)
         if second > raw:
             raw, damage_rolls = second, second_rolls
             damage_note = ""
@@ -1188,7 +1333,7 @@ def player_attack(
         damage_parts.append(("situational", damage_modifier))
     raw = max(0, raw + prepared.bonuses.damage + prepared.dual_damage + damage_modifier)
     damage_breakdown = roll_breakdown(
-        prepared.dice, damage_rolls, damage_parts, raw, note=damage_note
+        attack_dice, damage_rolls, damage_parts, raw, note=damage_note
     )
     # A thrown or ranged weapon never inflicts Shock, even on a miss, so only a melee attack
     # carries the weapon's Shock and any bonus that reaches it.
@@ -1244,13 +1389,17 @@ def player_attack(
             target=struck.armor,
             target_label="AC",
         )
-    critical = bool(combat.critical_dice and natural == combat.check_sides)
+    critical = bool(
+        combat.critical_dice
+        and natural is not None
+        and natural >= _critical_threshold(spec, pc, combat)
+    )
     if critical:
-        extra_values, _ = roll_values(prepared.dice, rng, plus=plus)
+        extra_values, _ = roll_values(attack_dice, rng, plus=plus)
         raw += sum(extra_values)
         damage_rolls += extra_values
         damage_breakdown = roll_breakdown(
-            prepared.dice, damage_rolls, damage_parts, raw, note="critical hit"
+            attack_dice, damage_rolls, damage_parts, raw, note="critical hit"
         )
     result = _strike(
         db,
@@ -1275,6 +1424,9 @@ def player_attack(
         shock_breakdown=shock_breakdown,
         roll_mode=roll_mode,
         critical=critical,
+        mastery=mastery,
+        graze_ability=prepared.bonuses.attribute,
+        mastery_dc=8 + int(pc.stats.get("attack_bonus", 2)) + prepared.bonuses.attribute,
     )
     if state.encounter is not None:
         _mark_attack(db, campaign_id, pc.name)
@@ -1375,6 +1527,16 @@ def _prepare_player_attack(
     _living(struck, combat)
     name = _weapon_name(weapon)
     dice = _attack_dice(pc, name, modifier, combat, two_handed=two_handed, spec=spec)
+    if spec is not None and weapon_feature is not None:
+        ranged = bool(weapon_feature.ranges)
+        kind = "ranged" if ranged else "melee"
+        for feature_id in pc.features:
+            held = spec.features.get(feature_id)
+            if held is None or not held.damage_dice:
+                continue
+            if held.weapon_kind and held.weapon_kind != kind:
+                continue
+            dice = f"{dice}+{held.damage_dice}"
     _require_impaired(struck, modifier_name(modifier), combat)
     bonuses = _player_bonuses(combat, pc, name, spec, weapon_feature)
     distance = ranges.check_attack(
@@ -1430,6 +1592,8 @@ def _attack_roll_mode(
         condition_roll_mode(source, conditions, "attack"),
         condition_roll_mode(target, conditions, "attack_against"),
     ]
+    if source.marks.get(f"vex:{target.name}"):
+        modes.append("advantage")
     if "advantage" in modes and "disadvantage" in modes:
         return "normal"
     return (

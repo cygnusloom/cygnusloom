@@ -6,7 +6,9 @@
     "feature_type": "trait",
     "description": "Medium (about 5\u20137 feet tall)",
     "tag": "species",
-    "rank": 0
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
   },
   {
     "type": "feature",
@@ -15,7 +17,9 @@
     "feature_type": "trait",
     "description": "30 feet",
     "tag": "species",
-    "rank": 0
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
   },
   {
     "type": "feature",
@@ -24,7 +28,9 @@
     "feature_type": "trait",
     "description": "Your lineage stems from a dragon progenitor. Choose the kind of dragon from the Draconic Ancestors table. Your choice affects your Breath Weapon and Damage Resistance traits as well as your appearance.\n\nTable: Draconic Ancestors\n\n| Dragon | Damage Type |\n|---|---|\n| Black | Acid |\n| Blue | Lightning |\n| Brass |Fire |\n| Bronze | Lightning |\n| Copper | Acid|\n|Gold|Fire|\n|Green|Poison|\n|Red|Fire|\n|Silver|Cold|\n|White|Cold|",
     "tag": "species",
-    "rank": 0
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
   },
   {
     "type": "feature",
@@ -33,7 +39,9 @@
     "feature_type": "trait",
     "description": "When you take the Attack action on your turn, you can replace one of your attacks with an exhalation of magical energy in either a 15-foot Cone or a 30-foot Line that is 5 feet wide (choose the shape each time). Each creature in that area must make a Dexterity saving throw (DC 8 plus your Constitution modifier and Proficiency Bonus). On a failed save, a creature takes 1d10 damage of the type determined by your Draconic Ancestry trait. On a successful save, a creature takes half as much damage. This damage increases by 1d10 when you reach character levels 5 (2d10), 11 (3d10), and 17 (4d10).\n\nYou can use this Breath Weapon a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest.",
     "tag": "species",
-    "rank": 0
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
   },
   {
     "type": "feature",
@@ -42,7 +50,9 @@
     "feature_type": "trait",
     "description": "You have Resistance to the damage type determined by your Draconic Ancestry trait.",
     "tag": "species",
-    "rank": 0
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
   },
   {
     "type": "feature",
@@ -51,7 +61,9 @@
     "feature_type": "trait",
     "description": "You have Darkvision with a range of 60 feet",
     "tag": "species",
-    "rank": 0
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
   },
   {
     "type": "feature",
@@ -60,7 +72,9 @@
     "feature_type": "trait",
     "description": "When you reach character level 5, you can channel draconic magic to give yourself temporary flight. As a Bonus Action, you sprout spectral wings on your back that last for 10 minutes or until you retract the wings (no action required) or have the Incapacitated condition. During that time, you have a Fly Speed equal to your Speed. Your wings appear to be made of the same energy as your Breath Weapon. Once you use this trait, you can't use it again until you finish a Long Rest.",
     "tag": "species",
-    "rank": 5
+    "rank": 0,
+    "min_level": 5,
+    "turn_resource": "bonus_action"
   },
   {
     "type": "feature",
@@ -225,7 +239,9 @@
     "feature_type": "trait",
     "description": "Medium (about 4\u20135 feet tall) ",
     "tag": "species",
-    "rank": 0
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
   },
   {
     "type": "feature",
@@ -234,7 +250,9 @@
     "feature_type": "trait",
     "description": "30 feet",
     "tag": "species",
-    "rank": 0
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
   },
   {
     "type": "feature",
@@ -243,7 +261,9 @@
     "feature_type": "trait",
     "description": "You have Darkvision with a range of 120 feet.",
     "tag": "species",
-    "rank": 0
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
   },
   {
     "type": "feature",
@@ -253,9 +273,11 @@
     "description": "You have Resistance to Poison damage. You also have Advantage on saving throws you make to avoid or end the Poisoned condition.",
     "tag": "species",
     "rank": 0,
+    "min_level": 0,
     "resistances": [
       "poison"
-    ]
+    ],
+    "turn_resource": ""
   },
   {
     "type": "feature",
@@ -265,7 +287,9 @@
     "description": "Your Hit Point maximum increases by 1, and it increases by 1 again whenever you gain a level.",
     "tag": "species",
     "rank": 0,
-    "level_hp_bonus": 1
+    "min_level": 0,
+    "level_hp_bonus": 1,
+    "turn_resource": ""
   },
   {
     "type": "feature",
@@ -274,7 +298,9 @@
     "feature_type": "trait",
     "description": "As a Bonus Action, you gain Tremorsense with a range of 60 feet for 10 minutes. You must be on a stone surface or touching a stone surface to use this Tremorsense. The stone can be natural or worked.\n\nYou can use this Bonus Action a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest.",
     "tag": "species",
-    "rank": 0
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": "bonus_action"
   },
   {
     "type": "template",
@@ -302,7 +328,9 @@
     "feature_type": "trait",
     "description": "Medium (about 5\u20136 feet tall)",
     "tag": "species",
-    "rank": 0
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
   },
   {
     "type": "feature",
@@ -311,7 +339,9 @@
     "feature_type": "trait",
     "description": "30 feet",
     "tag": "species",
-    "rank": 0
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
   },
   {
     "type": "feature",
@@ -320,7 +350,9 @@
     "feature_type": "trait",
     "description": "You have Darkvision with a range of 60 feet.",
     "tag": "species",
-    "rank": 0
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
   },
   {
     "type": "feature",
@@ -329,7 +361,9 @@
     "feature_type": "trait",
     "description": "You are part of a lineage that grants you supernatural abilities. Choose a lineage from the Elven Lineages table. You gain the level 1 benefit of that lineage.\n\nWhen you reach character levels 3 and 5, you learn a higher-level spell, as shown on the table. You always have that spell prepared. You can cast it once without a spell slot, and you regain the ability to cast it in that way when you finish a Long Rest. You can also cast the spell using any spell slots you have of the appropriate level.\n\nTable: Elven Lineages\n\n|Lineage|Level 1|Level 3|Level 5|\n|---|---|---|---|\n|Drow|The range of your Darkvision increases to 120 feet. You also know the Dancing Lights cantrip.|Faerie Fire|Darkness|\n|High Elf|You know the Prestidigitation cantrip. Whenever you finish a Long Rest, you can replace that cantrip with a different cantrip from the Wizard spell list.|Detect Magic|Misty Step|\n|Wood Elf|Your Speed increases to 35 feet. You also know the Druidcraft cantrip.|Longstrider|Pass without Trace|\n\nIntelligence, Wisdom, or Charisma is your spellcasting ability for the spells you cast with this trait (choose the ability when you select the lineage).",
     "tag": "species",
-    "rank": 0
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
   },
   {
     "type": "feature",
@@ -338,7 +372,9 @@
     "feature_type": "trait",
     "description": "You have Advantage on saving throws you make to avoid or end the Charmed condition.",
     "tag": "species",
-    "rank": 0
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
   },
   {
     "type": "feature",
@@ -348,6 +384,7 @@
     "description": "You have proficiency in the Insight, Perception, or Survival skill.",
     "tag": "species",
     "rank": 0,
+    "min_level": 0,
     "picks": [
       {
         "id": "skill",
@@ -360,7 +397,8 @@
         ],
         "grant": "proficiency"
       }
-    ]
+    ],
+    "turn_resource": ""
   },
   {
     "type": "feature",
@@ -369,7 +407,9 @@
     "feature_type": "trait",
     "description": "You don't need to sleep, and magic can't put you to sleep. You can finish a Long Rest in 4 hours if you spend those hours in a trancelike meditation, during which you retain consciousness.",
     "tag": "species",
-    "rank": 0
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
   },
   {
     "type": "feature",
@@ -378,7 +418,24 @@
     "feature_type": "trait",
     "description": "The range of your Darkvision increases to 120 feet. You know the Dancing Lights cantrip. At level 3 you learn Faerie Fire, and at level 5 you learn Darkness; each is always prepared and can be cast once without a spell slot per Long Rest.",
     "tag": "lineage-elf",
-    "rank": 0
+    "rank": 0,
+    "picks": [
+      {
+        "id": "ability",
+        "kind": "stat",
+        "label": "Spellcasting ability",
+        "choices": [
+          "int",
+          "wis",
+          "cha"
+        ]
+      }
+    ],
+    "learn_spells": [
+      "spell-dancing-lights"
+    ],
+    "always_prepared": true,
+    "free_cast": true
   },
   {
     "type": "feature",
@@ -387,7 +444,24 @@
     "feature_type": "trait",
     "description": "You know the Prestidigitation cantrip, and you can replace it with another Wizard cantrip whenever you finish a Long Rest. At level 3 you learn Detect Magic, and at level 5 you learn Misty Step; each is always prepared and can be cast once without a spell slot per Long Rest.",
     "tag": "lineage-elf",
-    "rank": 0
+    "rank": 0,
+    "picks": [
+      {
+        "id": "ability",
+        "kind": "stat",
+        "label": "Spellcasting ability",
+        "choices": [
+          "int",
+          "wis",
+          "cha"
+        ]
+      }
+    ],
+    "learn_spells": [
+      "spell-prestidigitation"
+    ],
+    "always_prepared": true,
+    "free_cast": true
   },
   {
     "type": "feature",
@@ -396,7 +470,120 @@
     "feature_type": "trait",
     "description": "Your Speed increases to 35 feet. You know the Druidcraft cantrip. At level 3 you learn Longstrider, and at level 5 you learn Pass without Trace; each is always prepared and can be cast once without a spell slot per Long Rest.",
     "tag": "lineage-elf",
-    "rank": 0
+    "rank": 0,
+    "picks": [
+      {
+        "id": "ability",
+        "kind": "stat",
+        "label": "Spellcasting ability",
+        "choices": [
+          "int",
+          "wis",
+          "cha"
+        ]
+      }
+    ],
+    "learn_spells": [
+      "spell-druidcraft"
+    ],
+    "always_prepared": true,
+    "free_cast": true
+  },
+  {
+    "type": "feature",
+    "id": "lineage-elf-drow-spell-3-spell-faerie-fire",
+    "name": "Elf: Drow Lineage - Faerie Fire",
+    "feature_type": "trait",
+    "description": "You always have Faerie Fire prepared. You can cast it once without a spell slot, regaining that use on a Long Rest.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 3,
+    "requires_feature": "lineage-elf-drow",
+    "learn_spells": [
+      "spell-faerie-fire"
+    ],
+    "always_prepared": true,
+    "free_cast": true
+  },
+  {
+    "type": "feature",
+    "id": "lineage-elf-drow-spell-5-spell-darkness",
+    "name": "Elf: Drow Lineage - Darkness",
+    "feature_type": "trait",
+    "description": "You always have Darkness prepared. You can cast it once without a spell slot, regaining that use on a Long Rest.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 5,
+    "requires_feature": "lineage-elf-drow",
+    "learn_spells": [
+      "spell-darkness"
+    ],
+    "always_prepared": true,
+    "free_cast": true
+  },
+  {
+    "type": "feature",
+    "id": "lineage-elf-high-elf-spell-3-spell-detect-magic",
+    "name": "Elf: High Elf Lineage - Detect Magic",
+    "feature_type": "trait",
+    "description": "You always have Detect Magic prepared. You can cast it once without a spell slot, regaining that use on a Long Rest.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 3,
+    "requires_feature": "lineage-elf-high-elf",
+    "learn_spells": [
+      "spell-detect-magic"
+    ],
+    "always_prepared": true,
+    "free_cast": true
+  },
+  {
+    "type": "feature",
+    "id": "lineage-elf-high-elf-spell-5-spell-misty-step",
+    "name": "Elf: High Elf Lineage - Misty Step",
+    "feature_type": "trait",
+    "description": "You always have Misty Step prepared. You can cast it once without a spell slot, regaining that use on a Long Rest.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 5,
+    "requires_feature": "lineage-elf-high-elf",
+    "learn_spells": [
+      "spell-misty-step"
+    ],
+    "always_prepared": true,
+    "free_cast": true
+  },
+  {
+    "type": "feature",
+    "id": "lineage-elf-wood-elf-spell-3-spell-longstrider",
+    "name": "Elf: Wood Elf Lineage - Longstrider",
+    "feature_type": "trait",
+    "description": "You always have Longstrider prepared. You can cast it once without a spell slot, regaining that use on a Long Rest.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 3,
+    "requires_feature": "lineage-elf-wood-elf",
+    "learn_spells": [
+      "spell-longstrider"
+    ],
+    "always_prepared": true,
+    "free_cast": true
+  },
+  {
+    "type": "feature",
+    "id": "lineage-elf-wood-elf-spell-5-spell-pass-without-trace",
+    "name": "Elf: Wood Elf Lineage - Pass without Trace",
+    "feature_type": "trait",
+    "description": "You always have Pass without Trace prepared. You can cast it once without a spell slot, regaining that use on a Long Rest.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 5,
+    "requires_feature": "lineage-elf-wood-elf",
+    "learn_spells": [
+      "spell-pass-without-trace"
+    ],
+    "always_prepared": true,
+    "free_cast": true
   },
   {
     "type": "template",
@@ -412,7 +599,13 @@
       "species-elf-elven-lineage",
       "species-elf-fey-ancestry",
       "species-elf-keen-senses",
-      "species-elf-trance"
+      "species-elf-trance",
+      "lineage-elf-drow-spell-3-spell-faerie-fire",
+      "lineage-elf-drow-spell-5-spell-darkness",
+      "lineage-elf-high-elf-spell-3-spell-detect-magic",
+      "lineage-elf-high-elf-spell-5-spell-misty-step",
+      "lineage-elf-wood-elf-spell-3-spell-longstrider",
+      "lineage-elf-wood-elf-spell-5-spell-pass-without-trace"
     ],
     "feat_picks": [
       {
@@ -431,7 +624,9 @@
     "feature_type": "trait",
     "description": "Small (about 3\u20134 feet tall)",
     "tag": "species",
-    "rank": 0
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
   },
   {
     "type": "feature",
@@ -440,7 +635,9 @@
     "feature_type": "trait",
     "description": "30 feet",
     "tag": "species",
-    "rank": 0
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
   },
   {
     "type": "feature",
@@ -449,7 +646,9 @@
     "feature_type": "trait",
     "description": "You have Darkvision with a range of 60 feet.",
     "tag": "species",
-    "rank": 0
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
   },
   {
     "type": "feature",
@@ -458,7 +657,9 @@
     "feature_type": "trait",
     "description": "You have Advantage on Intelligence, Wisdom, and Charisma saving throws.",
     "tag": "species",
-    "rank": 0
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
   },
   {
     "type": "feature",
@@ -467,7 +668,9 @@
     "feature_type": "trait",
     "description": "You are part of a lineage that grants you supernatural abilities. Choose one of the following options; whichever one you choose, Intelligence, Wisdom, or Charisma is your spellcasting ability for the spells you cast with this trait (choose the ability when you select the lineage):\n\n**Forest Gnome.** You know the *Minor Illusion* cantrip. You also always have the *Speak with Animals* spell prepared. You can cast it without a spell slot a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest. You can also use any spell slots you have to cast the spell.\n\n**Rock Gnome.** You know the *Mending* and *Prestidigitation* cantrips. In addition, you can spend 10 minutes casting *Prestidigitation* to create a Tiny clockwork device (AC 5, 1 HP), such as a toy, fire starter, or music box. When you create the device, you determine its function by choosing one effect from *Prestidigitation*; the device produces that effect whenever you or another creature takes a Bonus Action to activate it with a touch. If the chosen effect has options within it, you choose one of those options for the device when you create it. For example, if you choose the spell's ignite-extinguish effect, you determine whether the device ignites or extinguishes fire; the device doesn't do both. You can have three such devices in existence at a time, and each falls apart 8 hours after its creation or when you dismantle it with a touch as a Utilize action.",
     "tag": "species",
-    "rank": 0
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
   },
   {
     "type": "feature",
@@ -476,7 +679,25 @@
     "feature_type": "trait",
     "description": "You know the Minor Illusion cantrip and always have Speak with Animals prepared. You can cast Speak with Animals without a spell slot a number of times equal to your Proficiency Bonus, regaining the uses on a Long Rest.",
     "tag": "lineage-gnome",
-    "rank": 0
+    "rank": 0,
+    "picks": [
+      {
+        "id": "ability",
+        "kind": "stat",
+        "label": "Spellcasting ability",
+        "choices": [
+          "int",
+          "wis",
+          "cha"
+        ]
+      }
+    ],
+    "learn_spells": [
+      "spell-minor-illusion",
+      "spell-speak-with-animals"
+    ],
+    "always_prepared": true,
+    "free_cast": true
   },
   {
     "type": "feature",
@@ -485,7 +706,25 @@
     "feature_type": "trait",
     "description": "You know the Mending and Prestidigitation cantrips. You can spend 10 minutes casting Prestidigitation to create a Tiny clockwork device, with up to three devices existing at once.",
     "tag": "lineage-gnome",
-    "rank": 0
+    "rank": 0,
+    "picks": [
+      {
+        "id": "ability",
+        "kind": "stat",
+        "label": "Spellcasting ability",
+        "choices": [
+          "int",
+          "wis",
+          "cha"
+        ]
+      }
+    ],
+    "learn_spells": [
+      "spell-mending",
+      "spell-prestidigitation"
+    ],
+    "always_prepared": true,
+    "free_cast": true
   },
   {
     "type": "template",
@@ -518,7 +757,9 @@
     "feature_type": "trait",
     "description": "Medium (about 7\u20138 feet tall)",
     "tag": "species",
-    "rank": 0
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
   },
   {
     "type": "feature",
@@ -527,7 +768,9 @@
     "feature_type": "trait",
     "description": "35 feet",
     "tag": "species",
-    "rank": 0
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
   },
   {
     "type": "feature",
@@ -536,7 +779,9 @@
     "feature_type": "trait",
     "description": "You are descended from Giants. Choose one of the following benefits\u2014a supernatural boon from your ancestry; you can use the chosen benefit a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest:\n\n- **Cloud's Jaunt (Cloud Giant)**. As a Bonus Action, you magically teleport up to 30 feet to an unoccupied space you can see.\n- **Fire's Burn (Fire Giant)**. When you hit a target with an attack roll and deal damage to it, you can also deal 1d10 Fire damage to that target.\n- **Frost's Chill (Frost Giant)**. When you hit a target with an attack roll and deal damage to it, you can also deal 1d6 Cold damage to that target and reduce its Speed by 10 feet until the start of your next turn.\n- **Hill's Tumble (Hill Giant)**. When you hit a Large or smaller creature with an attack roll and deal damage to it, you can give that target the Prone condition.\n- **Stone's Endurance (Stone Giant)**. When you take damage, you can take a Reaction to roll 1d12. Add your Constitution modifier to the number rolled and reduce the damage by that total.\n- **Storm's Thunder (Storm Giant)**. When you take damage from a creature within 60 feet of you, you can take a Reaction to deal 1d8 Thunder damage to that creature.",
     "tag": "species",
-    "rank": 0
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": "bonus_action"
   },
   {
     "type": "feature",
@@ -545,7 +790,9 @@
     "feature_type": "trait",
     "description": "Starting at character level 5, you can change your size to Large as a Bonus Action if you're in a big enough space. This transformation lasts for 10 minutes or until you end it (no action required). For that duration, you have Advantage on Strength checks, and your Speed increases by 10 feet. Once you use this trait, you can't use it again until you finish a Long Rest.",
     "tag": "species",
-    "rank": 5
+    "rank": 0,
+    "min_level": 5,
+    "turn_resource": "bonus_action"
   },
   {
     "type": "feature",
@@ -554,7 +801,9 @@
     "feature_type": "trait",
     "description": "You have Advantage on any ability check you make to end the Grappled condition. You also count as one size larger when determining your carrying capacity.",
     "tag": "species",
-    "rank": 0
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
   },
   {
     "type": "feature",
@@ -563,7 +812,9 @@
     "feature_type": "trait",
     "description": "As a Bonus Action, you can magically teleport up to 30 feet to an unoccupied space you can see. You can use this a number of times equal to your Proficiency Bonus, regaining all uses on a Long Rest.",
     "tag": "lineage-goliath",
-    "rank": 0
+    "rank": 0,
+    "resource_counter": "giant_ancestry",
+    "turn_resource": "bonus_action"
   },
   {
     "type": "feature",
@@ -572,7 +823,8 @@
     "feature_type": "trait",
     "description": "When you hit a target with an attack roll and deal damage, you can deal an extra 1d10 Fire damage. You can use this a number of times equal to your Proficiency Bonus, regaining all uses on a Long Rest.",
     "tag": "lineage-goliath",
-    "rank": 0
+    "rank": 0,
+    "resource_counter": "giant_ancestry"
   },
   {
     "type": "feature",
@@ -581,7 +833,8 @@
     "feature_type": "trait",
     "description": "When you hit a target with an attack roll and deal damage, you can deal an extra 1d6 Cold damage and reduce its Speed by 10 feet until the start of your next turn. You can use this a number of times equal to your Proficiency Bonus, regaining all uses on a Long Rest.",
     "tag": "lineage-goliath",
-    "rank": 0
+    "rank": 0,
+    "resource_counter": "giant_ancestry"
   },
   {
     "type": "feature",
@@ -590,7 +843,8 @@
     "feature_type": "trait",
     "description": "When you hit a Large or smaller creature with an attack roll and deal damage, you can give it the Prone condition. You can use this a number of times equal to your Proficiency Bonus, regaining all uses on a Long Rest.",
     "tag": "lineage-goliath",
-    "rank": 0
+    "rank": 0,
+    "resource_counter": "giant_ancestry"
   },
   {
     "type": "feature",
@@ -599,7 +853,9 @@
     "feature_type": "trait",
     "description": "When you take damage, you can take a Reaction to roll 1d12, add your Constitution modifier, and reduce the damage by that total. You can use this a number of times equal to your Proficiency Bonus, regaining all uses on a Long Rest.",
     "tag": "lineage-goliath",
-    "rank": 0
+    "rank": 0,
+    "resource_counter": "giant_ancestry",
+    "turn_resource": "reaction"
   },
   {
     "type": "feature",
@@ -608,7 +864,9 @@
     "feature_type": "trait",
     "description": "When you take damage from a creature within 60 feet, you can take a Reaction to deal 1d8 Thunder damage to it. You can use this a number of times equal to your Proficiency Bonus, regaining all uses on a Long Rest.",
     "tag": "lineage-goliath",
-    "rank": 0
+    "rank": 0,
+    "resource_counter": "giant_ancestry",
+    "turn_resource": "reaction"
   },
   {
     "type": "template",
@@ -624,6 +882,9 @@
       "species-goliath-large-form",
       "species-goliath-powerful-build"
     ],
+    "counters": {
+      "giant_ancestry": 2
+    },
     "feat_picks": [
       {
         "id": "lineage",
@@ -641,7 +902,9 @@
     "feature_type": "trait",
     "description": "Small (about 2\u20133 feet tall) ",
     "tag": "species",
-    "rank": 0
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
   },
   {
     "type": "feature",
@@ -650,7 +913,9 @@
     "feature_type": "trait",
     "description": "30 feet",
     "tag": "species",
-    "rank": 0
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
   },
   {
     "type": "feature",
@@ -659,7 +924,9 @@
     "feature_type": "trait",
     "description": "You have Advantage on saving throws you make to avoid or end the Frightened condition.",
     "tag": "species",
-    "rank": 0
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
   },
   {
     "type": "feature",
@@ -668,7 +935,9 @@
     "feature_type": "trait",
     "description": "You can move through the space of any creature that is a size larger than you, but you can't stop in the same space.",
     "tag": "species",
-    "rank": 0
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
   },
   {
     "type": "feature",
@@ -677,7 +946,9 @@
     "feature_type": "trait",
     "description": "When you roll a 1 on the d20 of a D20 Test, you can reroll the die, and you must use the new roll.",
     "tag": "species",
-    "rank": 0
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
   },
   {
     "type": "feature",
@@ -686,7 +957,9 @@
     "feature_type": "trait",
     "description": "You can take the Hide action even when you are obscured only by a creature that is at least one size larger than you.",
     "tag": "species",
-    "rank": 0
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
   },
   {
     "type": "template",
@@ -711,7 +984,9 @@
     "feature_type": "trait",
     "description": "Medium (about 4\u20137 feet tall) or Small (about 2\u20134 feet tall), chosen when you select this species",
     "tag": "species",
-    "rank": 0
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
   },
   {
     "type": "feature",
@@ -720,7 +995,9 @@
     "feature_type": "trait",
     "description": "30 feet",
     "tag": "species",
-    "rank": 0
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
   },
   {
     "type": "feature",
@@ -729,7 +1006,9 @@
     "feature_type": "trait",
     "description": "You gain Heroic Inspiration whenever you finish a Long Rest.",
     "tag": "species",
-    "rank": 0
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
   },
   {
     "type": "feature",
@@ -738,7 +1017,9 @@
     "feature_type": "trait",
     "description": "You gain proficiency in one skill of your choice.",
     "tag": "species",
-    "rank": 0
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
   },
   {
     "type": "feature",
@@ -747,7 +1028,9 @@
     "feature_type": "trait",
     "description": "You gain an Origin feat of your choice (see \"Feats\"). Skilled is recommended.",
     "tag": "species",
-    "rank": 0
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
   },
   {
     "type": "template",
@@ -788,7 +1071,9 @@
     "feature_type": "trait",
     "description": "Medium (about 6\u20137 feet tall)",
     "tag": "species",
-    "rank": 0
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
   },
   {
     "type": "feature",
@@ -797,7 +1082,9 @@
     "feature_type": "trait",
     "description": "30 feet",
     "tag": "species",
-    "rank": 0
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
   },
   {
     "type": "feature",
@@ -806,7 +1093,9 @@
     "feature_type": "trait",
     "description": "You can take the Dash action as a Bonus Action. When you do so, you gain a number of Temporary Hit Points equal to your Proficiency Bonus.\n\nYou can use this trait a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Short or Long Rest.",
     "tag": "species",
-    "rank": 0
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": "bonus_action"
   },
   {
     "type": "feature",
@@ -815,7 +1104,9 @@
     "feature_type": "trait",
     "description": "You have Darkvision with a range of 120 feet.",
     "tag": "species",
-    "rank": 0
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
   },
   {
     "type": "feature",
@@ -824,7 +1115,9 @@
     "feature_type": "trait",
     "description": "When you are reduced to 0 Hit Points but not killed outright, you can drop to 1 Hit Point instead. Once you use this trait, you can't do so again until you finish a Long Rest.",
     "tag": "species",
-    "rank": 0
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
   },
   {
     "type": "template",
@@ -848,7 +1141,9 @@
     "feature_type": "trait",
     "description": "Medium (about 4\u20137 feet tall) or Small (about 3\u20134 feet tall), chosen when you select this species",
     "tag": "species",
-    "rank": 0
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
   },
   {
     "type": "feature",
@@ -857,7 +1152,9 @@
     "feature_type": "trait",
     "description": "30 feet",
     "tag": "species",
-    "rank": 0
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
   },
   {
     "type": "feature",
@@ -866,7 +1163,9 @@
     "feature_type": "trait",
     "description": "You have Darkvision with a range of 60 feet.",
     "tag": "species",
-    "rank": 0
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
   },
   {
     "type": "feature",
@@ -875,7 +1174,9 @@
     "feature_type": "trait",
     "description": "You are the recipient of a legacy that grants you supernatural abilities. Choose a legacy from the Fiendish Legacies table. You gain the level 1 benefit of the chosen legacy.\n\nWhen you reach character levels 3 and 5, you learn a higher-level spell, as shown on the table. You always have that spell prepared. You can cast it once without a spell slot, and you regain the ability to cast it in that way when you finish a Long Rest. You can also cast the spell using any spell slots you have of the appropriate level.\n\nIntelligence, Wisdom, or Charisma is your spellcasting ability for the spells you cast with this trait (choose the ability when you select the legacy).\n\n**Table: Fiendish Legacies**\n\n|Legacy|Level 1|Level 3|Level 5|\n|---|---|---|---|\n|Abyssal|You have Resistance to Poison damage. You also know the Poison Spray cantrip.|Ray of Sickness|Hold Person|\n|Chthonic|You have Resistance to Necrotic damage. You also know the Chill Touch cantrip.|False Life|Ray of Enfeeblement|\n|Infernal|You have Resistance to Fire damage. You also know the Fire Bolt cantrip.|Hellish Rebuke|Darkness|",
     "tag": "species",
-    "rank": 0
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
   },
   {
     "type": "feature",
@@ -884,7 +1185,9 @@
     "feature_type": "trait",
     "description": "You know the *Thaumaturgy* cantrip. When you cast it with this trait, the spell uses the same spellcasting ability you use for your Fiendish Legacy trait.",
     "tag": "species",
-    "rank": 0
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
   },
   {
     "type": "feature",
@@ -896,7 +1199,24 @@
     "rank": 0,
     "resistances": [
       "poison"
-    ]
+    ],
+    "picks": [
+      {
+        "id": "ability",
+        "kind": "stat",
+        "label": "Spellcasting ability",
+        "choices": [
+          "int",
+          "wis",
+          "cha"
+        ]
+      }
+    ],
+    "learn_spells": [
+      "spell-poison-spray"
+    ],
+    "always_prepared": true,
+    "free_cast": true
   },
   {
     "type": "feature",
@@ -908,7 +1228,24 @@
     "rank": 0,
     "resistances": [
       "necrotic"
-    ]
+    ],
+    "picks": [
+      {
+        "id": "ability",
+        "kind": "stat",
+        "label": "Spellcasting ability",
+        "choices": [
+          "int",
+          "wis",
+          "cha"
+        ]
+      }
+    ],
+    "learn_spells": [
+      "spell-chill-touch"
+    ],
+    "always_prepared": true,
+    "free_cast": true
   },
   {
     "type": "feature",
@@ -920,7 +1257,120 @@
     "rank": 0,
     "resistances": [
       "fire"
-    ]
+    ],
+    "picks": [
+      {
+        "id": "ability",
+        "kind": "stat",
+        "label": "Spellcasting ability",
+        "choices": [
+          "int",
+          "wis",
+          "cha"
+        ]
+      }
+    ],
+    "learn_spells": [
+      "spell-fire-bolt"
+    ],
+    "always_prepared": true,
+    "free_cast": true
+  },
+  {
+    "type": "feature",
+    "id": "lineage-tiefling-abyssal-spell-3-spell-ray-of-sickness",
+    "name": "Tiefling: Abyssal Legacy - Ray of Sickness",
+    "feature_type": "trait",
+    "description": "You always have Ray of Sickness prepared. You can cast it once without a spell slot, regaining that use on a Long Rest.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 3,
+    "requires_feature": "lineage-tiefling-abyssal",
+    "learn_spells": [
+      "spell-ray-of-sickness"
+    ],
+    "always_prepared": true,
+    "free_cast": true
+  },
+  {
+    "type": "feature",
+    "id": "lineage-tiefling-abyssal-spell-5-spell-hold-person",
+    "name": "Tiefling: Abyssal Legacy - Hold Person",
+    "feature_type": "trait",
+    "description": "You always have Hold Person prepared. You can cast it once without a spell slot, regaining that use on a Long Rest.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 5,
+    "requires_feature": "lineage-tiefling-abyssal",
+    "learn_spells": [
+      "spell-hold-person"
+    ],
+    "always_prepared": true,
+    "free_cast": true
+  },
+  {
+    "type": "feature",
+    "id": "lineage-tiefling-chthonic-spell-3-spell-false-life",
+    "name": "Tiefling: Chthonic Legacy - False Life",
+    "feature_type": "trait",
+    "description": "You always have False Life prepared. You can cast it once without a spell slot, regaining that use on a Long Rest.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 3,
+    "requires_feature": "lineage-tiefling-chthonic",
+    "learn_spells": [
+      "spell-false-life"
+    ],
+    "always_prepared": true,
+    "free_cast": true
+  },
+  {
+    "type": "feature",
+    "id": "lineage-tiefling-chthonic-spell-5-spell-ray-of-enfeeblement",
+    "name": "Tiefling: Chthonic Legacy - Ray of Enfeeblement",
+    "feature_type": "trait",
+    "description": "You always have Ray of Enfeeblement prepared. You can cast it once without a spell slot, regaining that use on a Long Rest.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 5,
+    "requires_feature": "lineage-tiefling-chthonic",
+    "learn_spells": [
+      "spell-ray-of-enfeeblement"
+    ],
+    "always_prepared": true,
+    "free_cast": true
+  },
+  {
+    "type": "feature",
+    "id": "lineage-tiefling-infernal-spell-3-spell-hellish-rebuke",
+    "name": "Tiefling: Infernal Legacy - Hellish Rebuke",
+    "feature_type": "trait",
+    "description": "You always have Hellish Rebuke prepared. You can cast it once without a spell slot, regaining that use on a Long Rest.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 3,
+    "requires_feature": "lineage-tiefling-infernal",
+    "learn_spells": [
+      "spell-hellish-rebuke"
+    ],
+    "always_prepared": true,
+    "free_cast": true
+  },
+  {
+    "type": "feature",
+    "id": "lineage-tiefling-infernal-spell-5-spell-darkness",
+    "name": "Tiefling: Infernal Legacy - Darkness",
+    "feature_type": "trait",
+    "description": "You always have Darkness prepared. You can cast it once without a spell slot, regaining that use on a Long Rest.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 5,
+    "requires_feature": "lineage-tiefling-infernal",
+    "learn_spells": [
+      "spell-darkness"
+    ],
+    "always_prepared": true,
+    "free_cast": true
   },
   {
     "type": "template",
@@ -934,7 +1384,13 @@
       "species-tiefling-speed",
       "species-tiefling-darkvision",
       "species-tiefling-fiendish-legacy",
-      "species-tiefling-otherworldly-presence"
+      "species-tiefling-otherworldly-presence",
+      "lineage-tiefling-abyssal-spell-3-spell-ray-of-sickness",
+      "lineage-tiefling-abyssal-spell-5-spell-hold-person",
+      "lineage-tiefling-chthonic-spell-3-spell-false-life",
+      "lineage-tiefling-chthonic-spell-5-spell-ray-of-enfeeblement",
+      "lineage-tiefling-infernal-spell-3-spell-hellish-rebuke",
+      "lineage-tiefling-infernal-spell-5-spell-darkness"
     ],
     "feat_picks": [
       {

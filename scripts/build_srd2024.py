@@ -818,6 +818,25 @@ def build_conditions() -> None:
         }
         entry.update(effects.get(condition["key"], {}))
         out.append(entry)
+    out.extend(
+        [
+            {
+                "type": "condition",
+                "id": "sapped",
+                "label": "Sapped",
+                "description": "Disadvantage on the next attack roll before the start of the attacker's next turn.",
+                "ends": ["rest"],
+                "roll_modes": {"attack": "disadvantage"},
+            },
+            {
+                "type": "condition",
+                "id": "slowed",
+                "label": "Slowed",
+                "description": "Speed reduced by 10 feet until the start of the attacker's next turn.",
+                "ends": ["rest"],
+            },
+        ]
+    )
     write("conditions.json", out)
 
 
@@ -930,6 +949,15 @@ def build_counters() -> None:
             "min": 0,
             "initial": 0,
             "description": "Eldritch Invocations the character may learn.",
+        },
+        {
+            "type": "counter",
+            "id": "giant_ancestry",
+            "label": "Giant Ancestry",
+            "min": 0,
+            "max": 6,
+            "initial": 0,
+            "description": "Goliath Giant Ancestry uses left; all return on a long rest.",
         },
         {
             "type": "counter",
@@ -1487,6 +1515,15 @@ def item_description(record: dict[str, Any]) -> str:
     return "\n\n".join(piece for piece in pieces if piece).strip() or record["name"]
 
 
+def weapon_mastery(record: dict[str, Any]) -> str:
+    """The weapon's mastery property from its source properties, such as "sap"."""
+    for entry in record.get("properties", []):
+        prop = entry.get("property") or {}
+        if prop.get("type") == "Mastery":
+            return str(prop.get("name", "")).strip().casefold()
+    return ""
+
+
 def build_equipment() -> None:
     weapons = load("weapons")
     armor = load("armor")
@@ -1590,6 +1627,14 @@ def build_equipment() -> None:
             "attributes": weapon_attributes(record),
             "size": weapon_size(record),
         }
+        mastery = weapon_mastery(record)
+        if mastery:
+            extra["mastery"] = mastery
+        flags = sorted(
+            prop for prop in props if prop in {"heavy", "light", "loading", "two-handed"}
+        )
+        if flags:
+            extra["flags"] = flags
         versatile = weapon_versatile_damage(record)
         if versatile:
             extra["versatile_damage"] = versatile
@@ -1604,6 +1649,7 @@ def build_equipment() -> None:
                 record["name"],
                 weapon_description(record),
                 feature_type="item",
+                tag="weapon",
                 **extra,
             )
         )
@@ -1833,6 +1879,9 @@ def build_feats() -> list[dict[str, Any]]:
             extra["initiative_proficient"] = True
         if ident == "feat-savage-attacker":
             extra["weapon_damage_reroll"] = True
+        if ident == "feat-archery":
+            extra["attack_bonus"] = 2
+            extra["weapon_kind"] = "ranged"
         if ident == "feat-magic-initiate":
             extra["picks"] = [
                 {
@@ -1912,6 +1961,46 @@ DRAGON_ANCESTRIES = {
     "Red": "fire",
     "Silver": "cold",
     "White": "cold",
+}
+
+
+LINEAGE_SPELLS = {
+    "lineage-elf-drow": {
+        0: ["Dancing Lights"],
+        3: ["Faerie Fire"],
+        5: ["Darkness"],
+    },
+    "lineage-elf-high-elf": {
+        0: ["Prestidigitation"],
+        3: ["Detect Magic"],
+        5: ["Misty Step"],
+    },
+    "lineage-elf-wood-elf": {
+        0: ["Druidcraft"],
+        3: ["Longstrider"],
+        5: ["Pass without Trace"],
+    },
+    "lineage-gnome-forest": {
+        0: ["Minor Illusion", "Speak with Animals"],
+    },
+    "lineage-gnome-rock": {
+        0: ["Mending", "Prestidigitation"],
+    },
+    "lineage-tiefling-abyssal": {
+        0: ["Poison Spray"],
+        3: ["Ray of Sickness"],
+        5: ["Hold Person"],
+    },
+    "lineage-tiefling-chthonic": {
+        0: ["Chill Touch"],
+        3: ["False Life"],
+        5: ["Ray of Enfeeblement"],
+    },
+    "lineage-tiefling-infernal": {
+        0: ["Fire Bolt"],
+        3: ["Hellish Rebuke"],
+        5: ["Darkness"],
+    },
 }
 
 
@@ -2067,6 +2156,21 @@ def species_lineage_features() -> list[dict[str, Any]]:
             extra: dict[str, Any] = {}
             if resistance:
                 extra["resistances"] = resistance[0]
+            if species_id == "goliath":
+                extra["resource_counter"] = "giant_ancestry"
+                if slug_id == "cloud":
+                    extra["turn_resource"] = "bonus_action"
+                elif slug_id in ("stone", "storm"):
+                    extra["turn_resource"] = "reaction"
+            if species_id in ("elf", "gnome", "tiefling"):
+                extra["picks"] = [
+                    {
+                        "id": "ability",
+                        "kind": "stat",
+                        "label": "Spellcasting ability",
+                        "choices": ["int", "wis", "cha"],
+                    }
+                ]
             features.append(
                 feature(
                     f"lineage-{species_id}-{slug_id}",
@@ -2083,6 +2187,10 @@ def species_lineage_features() -> list[dict[str, Any]]:
 
 def build_species() -> None:
     species = load("species")
+    spell_definitions = json.loads((OUT / "spells.json").read_text(encoding="utf-8"))
+    spells_by_name = {
+        str(entry["name"]).casefold(): str(entry["id"]) for entry in spell_definitions
+    }
     definitions: list[dict[str, Any]] = []
     for record in species:
         species_id = key_id(record["key"])
@@ -2107,7 +2215,9 @@ def build_species() -> None:
                 extra["level_hp_bonus"] = 1
             elif name == "Dwarven Resilience":
                 extra["resistances"] = ["poison"]
-            rank = 5 if name in ("Draconic Flight", "Large Form") else 0
+            rank = 0
+            min_level = 5 if name in ("Draconic Flight", "Large Form") else 0
+            extra.setdefault("turn_resource", inferred_turn_resource(trait["desc"]))
             definitions.append(
                 feature(
                     ident,
@@ -2116,6 +2226,7 @@ def build_species() -> None:
                     feature_type="trait",
                     tag="species",
                     rank=rank,
+                    min_level=min_level,
                     **extra,
                 )
             )
@@ -2136,11 +2247,23 @@ def build_species() -> None:
                     )
                 )
         if species_id in SPECIES_LINEAGE_FEATURES:
-            definitions.extend(
+            lineage_features = [
                 item
                 for item in species_lineage_features()
                 if item["tag"] == f"lineage-{species_id}"
-            )
+            ]
+            for item in lineage_features:
+                spells = LINEAGE_SPELLS.get(item["id"], {})
+                base_spells = [
+                    spells_by_name[name.casefold()]
+                    for name in spells.get(0, [])
+                    if name.casefold() in spells_by_name
+                ]
+                if base_spells:
+                    item["learn_spells"] = base_spells
+                    item["always_prepared"] = True
+                    item["free_cast"] = True
+            definitions.extend(lineage_features)
         size = next((t["desc"] for t in record["traits"] if t["name"] == "Size"), "Medium")
         speed = next((t["desc"] for t in record["traits"] if t["name"] == "Speed"), "30 feet")
         template: dict[str, Any] = {
@@ -2170,6 +2293,8 @@ def build_species() -> None:
             ]
         if species_id == "dwarf":
             template["stats"] = {"hp": 1}
+        if species_id == "goliath":
+            template["counters"] = {"giant_ancestry": 2}
         if species_id == "dragonborn":
             template["feat_picks"] = [
                 {
@@ -2190,6 +2315,37 @@ def build_species() -> None:
                     "max_rank": 0,
                 }
             ]
+            for item in definitions:
+                if item.get("tag") != f"lineage-{species_id}":
+                    continue
+                spells = LINEAGE_SPELLS.get(item["id"], {})
+                for level, names in spells.items():
+                    if level == 0:
+                        continue
+                    for name in names:
+                        spell_id = spells_by_name.get(name.casefold())
+                        if spell_id is None:
+                            continue
+                        spell_name = next(
+                            entry["name"] for entry in spell_definitions if entry["id"] == spell_id
+                        )
+                        feature_id = f"{item['id']}-spell-{level}-{spell_id}"
+                        definitions.append(
+                            feature(
+                                feature_id,
+                                f"{record['name']}: {item['name'].split(': ', 1)[-1]} - {spell_name}",
+                                f"You always have {spell_name} prepared. You can cast it once "
+                                "without a spell slot, regaining that use on a Long Rest.",
+                                feature_type="trait",
+                                tag="species",
+                                min_level=level,
+                                requires_feature=item["id"],
+                                learn_spells=[spell_id],
+                                always_prepared=True,
+                                free_cast=True,
+                            )
+                        )
+                        template["features"].append(feature_id)
         definitions.append(template)
     write("species.json", definitions)
 
@@ -2381,6 +2537,36 @@ CLASS_ALWAYS_PREPARED = {
     "ranger": {1: ["Hunter's Mark"]},
 }
 
+CLASS_FEATURE_USE = {
+    "Rage": ("rage", "bonus_action"),
+    "Second Wind": ("second_wind", "bonus_action"),
+    "Bardic Inspiration": ("bardic_inspiration", "bonus_action"),
+    "Channel Divinity": ("channel_divinity", "action"),
+    "Wild Shape": ("wild_shape", "action"),
+    "Lay On Hands": ("lay_on_hands", "action"),
+    "Flurry of Blows": ("focus_points", "bonus_action"),
+    "Patient Defense": ("focus_points", "bonus_action"),
+    "Step of the Wind": ("focus_points", "bonus_action"),
+    "Monk's Focus": ("focus_points", "bonus_action"),
+    "Stunning Strike": ("focus_points", ""),
+    "Deflect Attacks": ("", "reaction"),
+    "Deflect Energy": ("", "reaction"),
+    "Preserve Life": ("channel_divinity", "action"),
+    "Sacred Weapon": ("channel_divinity", ""),
+    "Abjure Foes": ("channel_divinity", "action"),
+    "Cutting Words": ("bardic_inspiration", "reaction"),
+    "Land's Aid": ("wild_shape", "action"),
+}
+
+
+CLASS_MASTERY_COUNTS = {
+    "barbarian": {1: 2, 4: 3, 10: 4},
+    "fighter": {1: 3, 4: 4, 10: 5, 16: 6},
+    "paladin": {1: 2},
+    "ranger": {1: 2},
+    "rogue": {1: 2},
+}
+
 CLASS_SKIP_FEATURES = {
     "Ability Score Improvement",
     "Epic Boon",
@@ -2485,8 +2671,32 @@ def subclass_land_spells(
     return lands
 
 
-def feature_choice_picks(name: str) -> list[dict[str, Any]]:
-    if name in ("Weapon Mastery", "Pact Magic"):
+def inferred_turn_resource(text: str) -> str:
+    """The turn resource a feature's text says it takes, when it says so plainly."""
+    lower = text.casefold()
+    if "as a bonus action" in lower or "take a bonus action" in lower:
+        return "bonus_action"
+    if "as a reaction" in lower or "take a reaction" in lower:
+        return "reaction"
+    if "as an action" in lower or "take the magic action" in lower:
+        return "action"
+    return ""
+
+
+def feature_choice_picks(name: str, class_id: str = "") -> list[dict[str, Any]]:
+    if name == "Weapon Mastery":
+        count = CLASS_MASTERY_COUNTS.get(class_id, {}).get(1, 2)
+        return [
+            {
+                "id": "weapons",
+                "kind": "feature",
+                "label": "Weapon kinds",
+                "feature_type": "item",
+                "tags": ["weapon"],
+                "count": count,
+            }
+        ]
+    if name == "Pact Magic":
         return [{"id": "choice", "kind": "text", "label": name}]
     if name == "Deft Explorer":
         return [
@@ -2791,9 +3001,34 @@ def build_classes(spell_lists: dict[str, dict[int, list[str]]]) -> None:
             if details:
                 text = f"{text}\n\n{details}".strip()
             extra: dict[str, Any] = {}
+            use = CLASS_FEATURE_USE.get(name)
+            if use is not None:
+                extra["resource_counter"], extra["turn_resource"] = use
             defense = FEATURE_DEFENSE.get((class_id, name))
             if defense is not None:
                 extra["defense_floor"] = defense
+            if not extra.get("turn_resource"):
+                extra["turn_resource"] = inferred_turn_resource(text)
+            if ident == "class-barbarian-rage":
+                extra["active_mark"] = "raging"
+                extra["damage_bonus_levels"] = {1: 2, 9: 3, 16: 4}
+                extra["weapon_kind"] = "melee"
+                extra["resistances"] = ["bludgeoning", "piercing", "slashing"]
+            if ident == "subclass-champion-improved-critical":
+                extra["critical_min"] = 19
+            if ident == "class-rogue-sneak-attack":
+                extra["damage_dice_levels"] = {
+                    1: "1d6",
+                    3: "2d6",
+                    5: "3d6",
+                    7: "4d6",
+                    9: "5d6",
+                    11: "6d6",
+                    13: "7d6",
+                    15: "8d6",
+                    17: "9d6",
+                    19: "10d6",
+                }
             definitions.append(
                 feature(
                     ident,
@@ -2802,7 +3037,7 @@ def build_classes(spell_lists: dict[str, dict[int, list[str]]]) -> None:
                     feature_type="trait",
                     tag=f"class:{class_id}",
                     rank=rank,
-                    picks=feature_choice_picks(name),
+                    picks=feature_choice_picks(name, class_id),
                     **extra,
                 )
             )
@@ -2815,6 +3050,24 @@ def build_classes(spell_lists: dict[str, dict[int, list[str]]]) -> None:
                 spell_id = spells_by_name.get(spell_name.casefold())
                 if spell_id is not None:
                     level_features[level].append(spell_id)
+        # Weapon Mastery grants more weapon kinds at later class levels.
+        for level, count in CLASS_MASTERY_COUNTS.get(class_id, {}).items():
+            if level == 1:
+                continue
+            mastery_id = f"class-{class_id}-weapon-mastery-{level}"
+            definitions.append(
+                feature(
+                    mastery_id,
+                    "Weapon Mastery: Additional Kind",
+                    f"Your training lets you use the mastery property of one more weapon kind "
+                    f"(chosen at level {level}).",
+                    feature_type="trait",
+                    tag=f"class:{class_id}",
+                    rank=level,
+                    picks=[{**feature_choice_picks("Weapon Mastery", class_id)[0], "count": 1}],
+                )
+            )
+            level_features[level].append(mastery_id)
         if epic_levels:
             asi_levels.update(epic_levels)
         if class_id == "rogue":
@@ -2999,6 +3252,12 @@ def build_classes(spell_lists: dict[str, dict[int, list[str]]]) -> None:
                 }
                 extra["level_hp_bonus"] = 1
                 extra["flat_hp_bonus"] = 3
+            use = CLASS_FEATURE_USE.get(name)
+            if use is not None:
+                extra["resource_counter"], extra["turn_resource"] = use
+            extra.setdefault("turn_resource", inferred_turn_resource(entry.get("desc", "") or name))
+            if ident == "subclass-champion-improved-critical":
+                extra["critical_min"] = 19
             definitions.append(
                 feature(
                     ident,
@@ -3587,7 +3846,7 @@ def build_prompts() -> None:
             {
                 "type": "prompt",
                 "id": "class_resources",
-                "text": "Class resources are tracked as counters: Rage, Bardic Inspiration, Channel Divinity, Wild Shape, Second Wind, Action Surge, Indomitable, Focus Points, the Lay On Hands pool, Sorcery Points, Arcane Recovery, Favored Enemy, Tireless, Mystic Arcanum, and Dark One's Luck. When a player spends one, call use_class_resource and narrate the result; never spend a use by narration alone. A short rest returns one use of Rage, Channel Divinity, Wild Shape, and Second Wind and all Action Surge and Focus Points; a long rest refills every pool. The character sheet shows what is left.",
+                "text": "Class and species resources are tracked as counters: Rage, Bardic Inspiration, Channel Divinity, Wild Shape, Second Wind, Action Surge, Indomitable, Focus Points, the Lay On Hands pool, Sorcery Points, Arcane Recovery, Favored Enemy, Tireless, Mystic Arcanum, Dark One's Luck, and Giant Ancestry. When a character uses a feature that spends one, call use_feature with the feature name; it spends the resource and the feature's Action, Bonus Action, or Reaction automatically. Use use_class_resource only for a pool amount with no single feature, such as a Lay On Hands point total or sorcery points. Never spend a use by narration alone. A short rest returns one use of Rage, Channel Divinity, Wild Shape, and Second Wind and all Action Surge and Focus Points; a long rest refills every pool and Giant Ancestry. The character sheet shows what is left.",
             },
             {
                 "type": "prompt",
@@ -3906,6 +4165,30 @@ def build_tool_calls() -> None:
                     },
                 },
                 "required": ["character", "resource"],
+            },
+        },
+        {
+            "type": "tool_call",
+            "id": "use_feature",
+            "python_module": "dnd_srd_2024",
+            "function": "use_feature",
+            "description": "Use a class or species feature such as Rage, Second Wind, Channel Divinity, Wild Shape, Bardic Inspiration, Lay On Hands, Flurry of Blows, or a Goliath ancestry boon. This spends the feature's resource and its Action, Bonus Action, or Reaction automatically.",
+            "parameters": {
+                "properties": {
+                    "character": {
+                        "type": "string",
+                        "description": "The character using the feature.",
+                    },
+                    "feature": {
+                        "type": "string",
+                        "description": "The feature's name or id, such as Rage or class-barbarian-rage.",
+                    },
+                    "cause": {
+                        "type": "string",
+                        "description": "What the feature is being used for.",
+                    },
+                },
+                "required": ["character", "feature"],
             },
         },
         {

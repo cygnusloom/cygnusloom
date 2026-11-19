@@ -109,6 +109,15 @@
   },
   {
     "type": "counter",
+    "id": "giant_ancestry",
+    "label": "Giant Ancestry",
+    "min": 0,
+    "max": 6,
+    "initial": 0,
+    "description": "Goliath Giant Ancestry uses left; all return on a long rest."
+  },
+  {
+    "type": "counter",
     "id": "rage",
     "label": "Rages",
     "min": 0,

@@ -50,6 +50,8 @@ class WeaponBonuses:
     damage: int = 0
     shock: int = 0
     shock_ac: int = 0
+    # The ability modifier the attack uses, which Graze applies on a miss.
+    attribute: int = 0
     to_hit_parts: tuple[tuple[str, int], ...] = ()
     damage_parts: tuple[tuple[str, int], ...] = ()
     shock_parts: tuple[tuple[str, int], ...] = ()

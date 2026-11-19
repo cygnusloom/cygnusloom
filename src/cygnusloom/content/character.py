@@ -345,6 +345,33 @@ class Feature:
     weapon_damage_reroll: bool = False
     # The turn resource this feature spends, such as a spell's "action" or "reaction".
     turn_resource: str = ""
+    # Flat attack and damage bonuses this feature gives, optionally only with one weapon kind.
+    attack_bonus: int = 0
+    damage_bonus: int = 0
+    damage_dice: str = ""
+    weapon_kind: str = ""
+    # Damage bonuses that change by character level, such as Rage Damage.
+    damage_bonus_levels: Mapping[int, int] = field(default_factory=dict)
+    # Extra damage dice that change by character level, such as Sneak Attack.
+    damage_dice_levels: Mapping[int, str] = field(default_factory=dict)
+    # The earliest natural roll that scores a critical hit with this feature.
+    critical_min: int = 20
+    # A mark that must be active for this feature's passive bonuses to apply.
+    active_mark: str = ""
+    # Spells this feature teaches immediately, such as a lineage cantrip.
+    learn_spells: tuple[str, ...] = ()
+    # Whether a spell this feature teaches is always prepared.
+    always_prepared: bool = False
+    # Whether this feature's spell may be cast once without a slot per long rest.
+    free_cast: bool = False
+    # A feature that is only gained when the character already has this feature.
+    requires_feature: str = ""
+    # The character level at which a species feature is gained.
+    min_level: int = 0
+    # A weapon's mastery property, such as "sap" or "graze".
+    mastery: str = ""
+    # The counter this feature spends when it is used, such as rage or wild_shape.
+    resource_counter: str = ""
     # Armor categories this feature trains, such as "light", "medium", "heavy", or "shield".
     armor_training: tuple[str, ...] = ()
     # The armor category of an armor item, or "" when it is not armor.
@@ -1281,6 +1308,79 @@ def load_feature(
         raise ContentError(
             f"{label}: 'turn_resource' must be action, bonus_action, reaction, or empty"
         )
+    learn_spells = _text_list(data.get("learn_spells", []), "learn_spells", label)
+    always_prepared = data.get("always_prepared", False)
+    if not isinstance(always_prepared, bool):
+        raise ContentError(f"{label}: 'always_prepared' must be a boolean")
+    free_cast = data.get("free_cast", False)
+    if not isinstance(free_cast, bool):
+        raise ContentError(f"{label}: 'free_cast' must be a boolean")
+    requires_feature = data.get("requires_feature", "")
+    if not isinstance(requires_feature, str):
+        raise ContentError(f"{label}: 'requires_feature' must be a feature id")
+    min_level = data.get("min_level", 0)
+    if isinstance(min_level, bool) or not isinstance(min_level, int) or min_level < 0:
+        raise ContentError(f"{label}: 'min_level' must be 0 or more")
+    mastery = data.get("mastery", "")
+    if mastery and mastery not in (
+        "cleave",
+        "graze",
+        "nick",
+        "push",
+        "sap",
+        "slow",
+        "topple",
+        "vex",
+    ):
+        raise ContentError(f"{label}: 'mastery' is not a weapon mastery property")
+    resource_counter = data.get("resource_counter", "")
+    if not isinstance(resource_counter, str):
+        raise ContentError(f"{label}: 'resource_counter' must be a counter id")
+    attack_bonus = data.get("attack_bonus", 0)
+    damage_bonus = data.get("damage_bonus", 0)
+    for key, value in (("attack_bonus", attack_bonus), ("damage_bonus", damage_bonus)):
+        if isinstance(value, bool) or not isinstance(value, int):
+            raise ContentError(f"{label}: '{key}' must be a whole number")
+    damage_dice = data.get("damage_dice", "")
+    if damage_dice and not is_formula(damage_dice):
+        raise ContentError(f"{label}: 'damage_dice' must be a dice formula")
+    weapon_kind = data.get("weapon_kind", "")
+    if weapon_kind not in ("", "melee", "ranged"):
+        raise ContentError(f"{label}: 'weapon_kind' must be melee, ranged, or empty")
+    damage_bonus_levels: dict[int, int] = {}
+    raw_levels = data.get("damage_bonus_levels", {})
+    if not isinstance(raw_levels, Mapping):
+        raise ContentError(f"{label}: 'damage_bonus_levels' must be an object")
+    for raw_level, raw_bonus in raw_levels.items():
+        try:
+            level = int(raw_level)
+        except (TypeError, ValueError):
+            raise ContentError(f"{label}: 'damage_bonus_levels' keys must be levels") from None
+        if isinstance(raw_bonus, bool) or not isinstance(raw_bonus, int):
+            raise ContentError(f"{label}: 'damage_bonus_levels' values must be whole numbers")
+        damage_bonus_levels[level] = raw_bonus
+    damage_dice_levels: dict[int, str] = {}
+    raw_dice = data.get("damage_dice_levels", {})
+    if not isinstance(raw_dice, Mapping):
+        raise ContentError(f"{label}: 'damage_dice_levels' must be an object")
+    for raw_level, raw_formula in raw_dice.items():
+        try:
+            level = int(raw_level)
+        except (TypeError, ValueError):
+            raise ContentError(f"{label}: 'damage_dice_levels' keys must be levels") from None
+        if not isinstance(raw_formula, str) or not is_formula(raw_formula):
+            raise ContentError(f"{label}: 'damage_dice_levels' values must be dice formulas")
+        damage_dice_levels[level] = raw_formula
+    critical_min = data.get("critical_min", 20)
+    if (
+        isinstance(critical_min, bool)
+        or not isinstance(critical_min, int)
+        or not 1 <= critical_min <= 20
+    ):
+        raise ContentError(f"{label}: 'critical_min' must be 1 to 20")
+    active_mark = data.get("active_mark", "")
+    if not isinstance(active_mark, str):
+        raise ContentError(f"{label}: 'active_mark' must be a mark name")
     armor_training = _text_list(data.get("armor_training", []), "armor_training", label)
     armor_category = data.get("armor_category", "")
     if not isinstance(armor_category, str):
@@ -1361,6 +1461,21 @@ def load_feature(
         initiative_proficient=initiative_proficient,
         weapon_damage_reroll=weapon_damage_reroll,
         turn_resource=turn_resource,
+        learn_spells=learn_spells,
+        always_prepared=always_prepared,
+        free_cast=free_cast,
+        requires_feature=requires_feature,
+        min_level=min_level,
+        mastery=mastery,
+        resource_counter=resource_counter,
+        attack_bonus=attack_bonus,
+        damage_bonus=damage_bonus,
+        damage_dice=damage_dice,
+        weapon_kind=weapon_kind,
+        damage_bonus_levels=damage_bonus_levels,
+        damage_dice_levels=damage_dice_levels,
+        critical_min=critical_min,
+        active_mark=active_mark,
         armor_training=armor_training,
         armor_category=armor_category,
         rules=rule_ids(data, label),
@@ -3481,9 +3596,9 @@ def resolve(
             increments[skill_id] = increments.get(skill_id, 0) + amount
         for granted in template.features:
             feature = spec.features.get(granted.feature)
-            # A species trait with a level rank is gained later; the level-up rules add it
+            # A species trait with a minimum level is gained later; the level-up rules add it
             # when the character reaches that level.
-            if template.kind == "species" and feature is not None and feature.rank > 1:
+            if template.kind == "species" and feature is not None and feature.min_level > 1:
                 continue
             count = (
                 int(granted.quantity)
@@ -3759,6 +3874,9 @@ def _feature_choice_values(
             elif pick.grant == "learn":
                 for value in values:
                     features[value] = features.get(value, 0) + 1
+        for spell_id in feature.learn_spells:
+            if spell_id in spec.features:
+                features.setdefault(spell_id, 1)
     return choices
 
 
