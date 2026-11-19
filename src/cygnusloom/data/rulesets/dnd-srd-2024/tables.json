@@ -25,6 +25,24 @@
   },
   {
     "type": "table",
+    "id": "spell_lists",
+    "options": [
+      {
+        "name": "cleric",
+        "description": "Cleric spells. Divine magic of healing, protection, and judgment; the spellcasting ability is Wisdom."
+      },
+      {
+        "name": "druid",
+        "description": "Druid spells. Nature magic of plants, beasts, and weather; the spellcasting ability is Wisdom."
+      },
+      {
+        "name": "wizard",
+        "description": "Wizard spells. Arcane magic recorded in spellbooks; the spellcasting ability is Intelligence."
+      }
+    ]
+  },
+  {
+    "type": "table",
     "id": "names",
     "options": [
       "Aelric",

@@ -39,6 +39,16 @@ ABILITY_NAMES = {
     "wis": "Wisdom",
     "cha": "Charisma",
 }
+# What each ability score is used for, shown beside its name when a feature asks the player to
+# choose one (a background's ability increases or a feat's casting ability).
+ABILITY_DESCRIPTIONS = {
+    "str": "Melee attack and damage rolls, carrying capacity, and Strength saves.",
+    "dex": "Ranged attack rolls, Armor Class, initiative, and Dexterity saves.",
+    "con": "Hit points, Constitution saves, and endurance.",
+    "int": "Arcana, History, Investigation, and Nature checks, and Intelligence saves.",
+    "wis": "Animal Handling, Insight, Medicine, Perception, and Survival, and Wisdom saves.",
+    "cha": "Deception, Intimidation, Performance, and Persuasion, and Charisma saves.",
+}
 SKILLS = {
     "acrobatics": ("Acrobatics", "dex"),
     "animal_handling": ("Animal Handling", "wis"),
@@ -1022,6 +1032,7 @@ def build_stats() -> None:
             "preset": "abilities",
             "standard": standard[ident],
             "modifier": bands,
+            "description": ABILITY_DESCRIPTIONS[ident],
         }
         for ident in ABILITY_NAMES
     ]
@@ -1577,6 +1588,33 @@ def build_tables() -> None:
         },
         {
             "type": "table",
+            "id": "spell_lists",
+            "options": [
+                {
+                    "name": "cleric",
+                    "description": (
+                        "Cleric spells. Divine magic of healing, protection, and judgment; the "
+                        "spellcasting ability is Wisdom."
+                    ),
+                },
+                {
+                    "name": "druid",
+                    "description": (
+                        "Druid spells. Nature magic of plants, beasts, and weather; the "
+                        "spellcasting ability is Wisdom."
+                    ),
+                },
+                {
+                    "name": "wizard",
+                    "description": (
+                        "Wizard spells. Arcane magic recorded in spellbooks; the spellcasting "
+                        "ability is Intelligence."
+                    ),
+                },
+            ],
+        },
+        {
+            "type": "table",
             "id": "names",
             "options": [
                 "Aelric",
@@ -1987,6 +2025,15 @@ def build_equipment() -> None:
             "size": weapon_size(record),
             "weapon_category": "simple" if record.get("is_simple") else "martial",
             "weapon_properties": sorted(props),
+            # Groups a feature pick can offer, such as a Barbarian's melee-only Weapon Mastery or
+            # a Rogue's simple, finesse, and light weapons.
+            "groups": sorted(
+                {
+                    "simple" if record.get("is_simple") else "martial",
+                    "ranged" if "ammunition" in props else "melee",
+                    *props,
+                }
+            ),
             "icon": weapon_icon(record),
         }
         mastery = weapon_mastery(record)
@@ -2164,6 +2211,11 @@ def build_spells() -> dict[str, dict[int, list[str]]]:
     cast_resources = {"action": "action", "bonus-action": "bonus_action", "reaction": "reaction"}
     for spell in spells:
         ident = f"spell-{key_id(spell['key'])}"
+        spell_classes = sorted(
+            key_id(class_ref["key"])
+            for class_ref in spell.get("classes", [])
+            if key_id(class_ref["key"]) in class_ids
+        )
         definitions.append(
             feature(
                 ident,
@@ -2173,6 +2225,7 @@ def build_spells() -> dict[str, dict[int, list[str]]]:
                 tag=(spell.get("school") or {}).get("key", ""),
                 rank=int(spell.get("level") or 0),
                 turn_resource=cast_resources.get(str(spell.get("casting_time") or ""), ""),
+                groups=spell_classes,
             )
         )
         for class_ref in spell.get("classes", []):
@@ -2259,12 +2312,19 @@ def build_feats() -> list[dict[str, Any]]:
         if ident == "feat-magic-initiate":
             extra["picks"] = [
                 {
+                    "id": "list",
+                    "kind": "option",
+                    "label": "Spell list",
+                    "table": "spell_lists",
+                },
+                {
                     "id": "cantrips",
                     "kind": "spell",
                     "label": "Cantrips",
                     "grant": "learn",
                     "count": 2,
                     "max_rank": 0,
+                    "groups_from": "list",
                 },
                 {
                     "id": "spell",
@@ -2272,7 +2332,9 @@ def build_feats() -> list[dict[str, Any]]:
                     "label": "Level 1 spell",
                     "grant": "learn",
                     "count": 1,
+                    "min_rank": 1,
                     "max_rank": 1,
+                    "groups_from": "list",
                 },
                 {
                     "id": "ability",
@@ -2946,6 +3008,14 @@ CLASS_MASTERY_COUNTS = {
     "ranger": {1: 2},
     "rogue": {1: 2},
 }
+# The weapon groups each class's Weapon Mastery feature may choose from. A Barbarian chooses
+# Simple or Martial Melee weapons; a Rogue chooses weapons with which the class is proficient
+# (simple weapons and martial weapons with the finesse or light property). Paladins, Rangers,
+# and Fighters are proficient with every simple and martial weapon, so they need no filter.
+CLASS_MASTERY_GROUPS = {
+    "barbarian": ["melee"],
+    "rogue": ["simple", "finesse", "light"],
+}
 
 CLASS_SKIP_FEATURES = {
     "Ability Score Improvement",
@@ -3065,18 +3135,22 @@ def inferred_turn_resource(text: str) -> str:
 def feature_choice_picks(name: str, class_id: str = "") -> list[dict[str, Any]]:
     if name == "Weapon Mastery":
         count = CLASS_MASTERY_COUNTS.get(class_id, {}).get(1, 2)
-        return [
-            {
-                "id": "weapons",
-                "kind": "feature",
-                "label": "Weapon kinds",
-                "feature_type": "item",
-                "tags": ["weapon"],
-                "count": count,
-            }
-        ]
+        pick: dict[str, Any] = {
+            "id": "weapons",
+            "kind": "feature",
+            "label": "Weapon kinds",
+            "feature_type": "item",
+            "tags": ["weapon"],
+            "count": count,
+        }
+        groups = CLASS_MASTERY_GROUPS.get(class_id)
+        if groups:
+            pick["groups"] = groups
+        return [pick]
     if name == "Pact Magic":
-        return [{"id": "choice", "kind": "text", "label": name}]
+        # The class's cantrips and prepared spells are chosen on the level-up page; there is no
+        # free-text choice to make here.
+        return []
     if name == "Deft Explorer":
         return [
             {
@@ -3116,8 +3190,10 @@ def feature_choice_picks(name: str, class_id: str = "") -> list[dict[str, Any]]:
                 "label": "Evocation spells",
                 "grant": "learn",
                 "count": 2,
+                "min_rank": 1,
                 "max_rank": 2,
                 "tags": ["evocation"],
+                "groups": ["wizard"],
             }
         ]
     if name == "Hunter's Prey":

@@ -87,6 +87,12 @@
       "topple",
       "versatile"
     ],
+    "groups": [
+      "martial",
+      "melee",
+      "topple",
+      "versatile"
+    ],
     "icon": "axe",
     "mastery": "topple",
     "versatile_damage": "1d10"
@@ -109,6 +115,13 @@
     "weapon_properties": [
       "ammunition",
       "loading",
+      "vex"
+    ],
+    "groups": [
+      "ammunition",
+      "loading",
+      "martial",
+      "ranged",
       "vex"
     ],
     "icon": "blowgun",
@@ -140,6 +153,12 @@
       "light",
       "slow"
     ],
+    "groups": [
+      "light",
+      "melee",
+      "simple",
+      "slow"
+    ],
     "icon": "club",
     "mastery": "slow",
     "flags": [
@@ -166,6 +185,14 @@
       "finesse",
       "light",
       "nick",
+      "thrown"
+    ],
+    "groups": [
+      "finesse",
+      "light",
+      "melee",
+      "nick",
+      "simple",
       "thrown"
     ],
     "icon": "dagger",
@@ -199,6 +226,13 @@
       "thrown",
       "vex"
     ],
+    "groups": [
+      "finesse",
+      "melee",
+      "simple",
+      "thrown",
+      "vex"
+    ],
     "icon": "dart",
     "mastery": "vex",
     "ranges": {
@@ -224,6 +258,11 @@
     "weapon_properties": [
       "sap"
     ],
+    "groups": [
+      "martial",
+      "melee",
+      "sap"
+    ],
     "icon": "flail",
     "mastery": "sap"
   },
@@ -245,6 +284,14 @@
     "weapon_properties": [
       "graze",
       "heavy",
+      "reach",
+      "two-handed"
+    ],
+    "groups": [
+      "graze",
+      "heavy",
+      "martial",
+      "melee",
       "reach",
       "two-handed"
     ],
@@ -276,6 +323,13 @@
       "heavy",
       "two-handed"
     ],
+    "groups": [
+      "cleave",
+      "heavy",
+      "martial",
+      "melee",
+      "two-handed"
+    ],
     "icon": "axe",
     "mastery": "cleave",
     "flags": [
@@ -300,6 +354,12 @@
     "weapon_category": "simple",
     "weapon_properties": [
       "push",
+      "two-handed"
+    ],
+    "groups": [
+      "melee",
+      "push",
+      "simple",
       "two-handed"
     ],
     "icon": "club",
@@ -328,6 +388,13 @@
       "heavy",
       "two-handed"
     ],
+    "groups": [
+      "graze",
+      "heavy",
+      "martial",
+      "melee",
+      "two-handed"
+    ],
     "icon": "greatsword",
     "mastery": "graze",
     "flags": [
@@ -353,6 +420,14 @@
     "weapon_properties": [
       "cleave",
       "heavy",
+      "reach",
+      "two-handed"
+    ],
+    "groups": [
+      "cleave",
+      "heavy",
+      "martial",
+      "melee",
       "reach",
       "two-handed"
     ],
@@ -385,6 +460,14 @@
       "loading",
       "vex"
     ],
+    "groups": [
+      "ammunition",
+      "light",
+      "loading",
+      "martial",
+      "ranged",
+      "vex"
+    ],
     "icon": "crossbow",
     "mastery": "vex",
     "flags": [
@@ -414,6 +497,13 @@
     "weapon_category": "simple",
     "weapon_properties": [
       "light",
+      "thrown",
+      "vex"
+    ],
+    "groups": [
+      "light",
+      "melee",
+      "simple",
       "thrown",
       "vex"
     ],
@@ -449,6 +539,15 @@
       "push",
       "two-handed"
     ],
+    "groups": [
+      "ammunition",
+      "heavy",
+      "loading",
+      "martial",
+      "push",
+      "ranged",
+      "two-handed"
+    ],
     "icon": "crossbow",
     "mastery": "push",
     "flags": [
@@ -481,6 +580,12 @@
       "slow",
       "thrown"
     ],
+    "groups": [
+      "melee",
+      "simple",
+      "slow",
+      "thrown"
+    ],
     "icon": "javelin",
     "mastery": "slow",
     "ranges": {
@@ -505,6 +610,14 @@
     "weapon_category": "martial",
     "weapon_properties": [
       "heavy",
+      "reach",
+      "topple",
+      "two-handed"
+    ],
+    "groups": [
+      "heavy",
+      "martial",
+      "melee",
       "reach",
       "topple",
       "two-handed"
@@ -535,6 +648,14 @@
     "weapon_properties": [
       "ammunition",
       "loading",
+      "slow",
+      "two-handed"
+    ],
+    "groups": [
+      "ammunition",
+      "loading",
+      "ranged",
+      "simple",
       "slow",
       "two-handed"
     ],
@@ -570,6 +691,13 @@
       "nick",
       "thrown"
     ],
+    "groups": [
+      "light",
+      "melee",
+      "nick",
+      "simple",
+      "thrown"
+    ],
     "icon": "warhammer",
     "mastery": "nick",
     "flags": [
@@ -598,6 +726,14 @@
     "weapon_properties": [
       "ammunition",
       "heavy",
+      "slow",
+      "two-handed"
+    ],
+    "groups": [
+      "ammunition",
+      "heavy",
+      "martial",
+      "ranged",
       "slow",
       "two-handed"
     ],
@@ -631,6 +767,12 @@
       "sap",
       "versatile"
     ],
+    "groups": [
+      "martial",
+      "melee",
+      "sap",
+      "versatile"
+    ],
     "icon": "sword",
     "mastery": "sap",
     "versatile_damage": "1d10"
@@ -653,6 +795,11 @@
     "weapon_properties": [
       "sap"
     ],
+    "groups": [
+      "melee",
+      "sap",
+      "simple"
+    ],
     "icon": "mace",
     "mastery": "sap"
   },
@@ -673,6 +820,13 @@
     "weapon_category": "martial",
     "weapon_properties": [
       "heavy",
+      "topple",
+      "two-handed"
+    ],
+    "groups": [
+      "heavy",
+      "martial",
+      "melee",
       "topple",
       "two-handed"
     ],
@@ -701,6 +855,11 @@
     "weapon_properties": [
       "sap"
     ],
+    "groups": [
+      "martial",
+      "melee",
+      "sap"
+    ],
     "icon": "mace",
     "mastery": "sap"
   },
@@ -722,6 +881,14 @@
     "weapon_properties": [
       "ammunition",
       "loading",
+      "slow",
+      "two-handed"
+    ],
+    "groups": [
+      "ammunition",
+      "loading",
+      "martial",
+      "ranged",
       "slow",
       "two-handed"
     ],
@@ -757,6 +924,14 @@
       "reach",
       "two-handed"
     ],
+    "groups": [
+      "heavy",
+      "martial",
+      "melee",
+      "push",
+      "reach",
+      "two-handed"
+    ],
     "icon": "pike",
     "mastery": "push",
     "flags": [
@@ -783,6 +958,13 @@
     "weapon_properties": [
       "ammunition",
       "loading",
+      "vex"
+    ],
+    "groups": [
+      "ammunition",
+      "loading",
+      "martial",
+      "ranged",
       "vex"
     ],
     "icon": "crossbow",
@@ -814,6 +996,12 @@
       "topple",
       "versatile"
     ],
+    "groups": [
+      "melee",
+      "simple",
+      "topple",
+      "versatile"
+    ],
     "icon": "staff",
     "mastery": "topple",
     "versatile_damage": "1d8"
@@ -836,6 +1024,12 @@
     "weapon_category": "martial",
     "weapon_properties": [
       "finesse",
+      "vex"
+    ],
+    "groups": [
+      "finesse",
+      "martial",
+      "melee",
       "vex"
     ],
     "icon": "rapier",
@@ -862,6 +1056,13 @@
       "light",
       "nick"
     ],
+    "groups": [
+      "finesse",
+      "light",
+      "martial",
+      "melee",
+      "nick"
+    ],
     "icon": "scimitar",
     "mastery": "nick",
     "flags": [
@@ -885,6 +1086,13 @@
     "weapon_category": "simple",
     "weapon_properties": [
       "ammunition",
+      "two-handed",
+      "vex"
+    ],
+    "groups": [
+      "ammunition",
+      "ranged",
+      "simple",
       "two-handed",
       "vex"
     ],
@@ -919,6 +1127,13 @@
       "light",
       "vex"
     ],
+    "groups": [
+      "finesse",
+      "light",
+      "martial",
+      "melee",
+      "vex"
+    ],
     "icon": "sword",
     "mastery": "vex",
     "flags": [
@@ -944,6 +1159,12 @@
       "light",
       "nick"
     ],
+    "groups": [
+      "light",
+      "melee",
+      "nick",
+      "simple"
+    ],
     "icon": "dagger",
     "mastery": "nick",
     "flags": [
@@ -967,6 +1188,12 @@
     "weapon_category": "simple",
     "weapon_properties": [
       "ammunition",
+      "slow"
+    ],
+    "groups": [
+      "ammunition",
+      "ranged",
+      "simple",
       "slow"
     ],
     "icon": "sling",
@@ -994,6 +1221,13 @@
     "weapon_category": "simple",
     "weapon_properties": [
       "sap",
+      "thrown",
+      "versatile"
+    ],
+    "groups": [
+      "melee",
+      "sap",
+      "simple",
       "thrown",
       "versatile"
     ],
@@ -1026,6 +1260,13 @@
       "topple",
       "versatile"
     ],
+    "groups": [
+      "martial",
+      "melee",
+      "thrown",
+      "topple",
+      "versatile"
+    ],
     "icon": "trident",
     "mastery": "topple",
     "versatile_damage": "1d10",
@@ -1053,6 +1294,12 @@
       "sap",
       "versatile"
     ],
+    "groups": [
+      "martial",
+      "melee",
+      "sap",
+      "versatile"
+    ],
     "icon": "warhammer",
     "mastery": "sap",
     "versatile_damage": "1d10"
@@ -1073,6 +1320,12 @@
     "size": "normal",
     "weapon_category": "martial",
     "weapon_properties": [
+      "push",
+      "versatile"
+    ],
+    "groups": [
+      "martial",
+      "melee",
       "push",
       "versatile"
     ],
@@ -1098,6 +1351,13 @@
     "weapon_category": "martial",
     "weapon_properties": [
       "finesse",
+      "reach",
+      "slow"
+    ],
+    "groups": [
+      "finesse",
+      "martial",
+      "melee",
       "reach",
       "slow"
     ],

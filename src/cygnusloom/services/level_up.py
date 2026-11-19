@@ -18,7 +18,11 @@ from typing import Any
 from sqlalchemy import Engine
 from sqlmodel import Session
 
-from cygnusloom.content.character import feature_choice_options, feature_choice_views
+from cygnusloom.content.character import (
+    check_feature_choice_groups,
+    feature_choice_options,
+    feature_choice_views,
+)
 from cygnusloom.content.library import (
     LevelUpPick,
     LevelUpRules,
@@ -426,7 +430,12 @@ def pick_views(
                     "available": available,
                     "options": options,
                     "feature_choices": [
-                        {"id": option["id"], "name": option["name"], "picks": option["picks"]}
+                        {
+                            "id": option["id"],
+                            "name": option["name"],
+                            "description": option.get("description", ""),
+                            "picks": option["picks"],
+                        }
                         for option in options
                         if option.get("picks")
                     ],
@@ -597,7 +606,12 @@ def option_views(
                 "stats": stats,
                 "features": features,
                 "feature_choices": [
-                    {"id": feature["id"], "name": feature["name"], "picks": feature["picks"]}
+                    {
+                        "id": feature["id"],
+                        "name": feature["name"],
+                        "description": feature.get("description", ""),
+                        "picks": feature["picks"],
+                    }
                     for feature in features
                     if feature["picks"]
                 ],
@@ -623,6 +637,7 @@ def _new_feature_choice_views(
             {
                 "id": feature.id,
                 "name": feature.name,
+                "description": feature.description,
                 "picks": [dict(choice) for choice in feature_choice_views(spec, feature)],
             }
         )
@@ -987,6 +1002,10 @@ def _check_feature_choices(spec: Any, feature_id: str, form: Mapping[str, Any]) 
     feature = spec.features.get(feature_id)
     if feature is None:
         return
+    given = {
+        f"{feature.id}:{pick.id}": _submitted_feature_choices(feature, pick, form)
+        for pick in feature.picks
+    }
     for pick in feature.picks:
         values = _submitted_feature_choices(feature, pick, form)
         if len(values) > pick.count:
@@ -1002,28 +1021,68 @@ def _check_feature_choices(spec: Any, feature_id: str, form: Mapping[str, Any]) 
                 )
         if pick.kind != "text" and len(set(values)) != len(values):
             raise InvalidInput(f"{feature.name} chooses the same {pick.label.lower()} twice")
+        if pick.kind != "text":
+            check_feature_choice_groups(spec, feature, pick, values, given)
+        if pick.patterns:
+            pattern = _submitted_pattern(feature, pick, form)
+            try:
+                mode = int(pattern) if pattern else -1
+            except ValueError:
+                mode = -1
+            if mode < 0:
+                matching = [
+                    index
+                    for index, amounts in enumerate(pick.patterns)
+                    if len(amounts) == len(values)
+                ]
+                mode = matching[0] if matching else 0
+            if not 0 <= mode < len(pick.patterns):
+                raise InvalidInput(f"{feature.name} has no ability-score pattern {pattern!r}")
+            expected = len(pick.patterns[mode])
+            if values and len(values) != expected:
+                raise InvalidInput(
+                    f"{feature.name} takes {expected} {pick.label.lower()} for that pattern"
+                )
 
 
 def _apply_feature_choices(
     character: str, feature_id: str, ctx: ToolContext, form: Mapping[str, Any]
 ) -> None:
-    """Record a learned feature's choices, filling a blank skill or stat with its first option."""
+    """Record a learned feature's choices, filling blank picks with the first legal options."""
     spec = ctx.world.character
     feature = spec.features.get(feature_id)
     if feature is None:
         return
+    chosen = {
+        f"{feature.id}:{pick.id}": _submitted_feature_choices(feature, pick, form)
+        for pick in feature.picks
+    }
     for pick in feature.picks:
         values = _submitted_feature_choices(feature, pick, form)
-        if not values and pick.kind != "text":
-            options = feature_choice_options(spec, pick)
-            values = [options[0]] if options else []
         pattern = _submitted_pattern(feature, pick, form)
+        if not values and pick.kind != "text":
+            options = list(feature_choice_options(spec, pick))
+            source = next((item for item in feature.picks if item.id == pick.groups_from), None)
+            if source is not None:
+                allowed = set(chosen.get(f"{feature.id}:{source.id}", ()))
+                options = [
+                    option
+                    for option in options
+                    if not allowed or set(spec.features[option].groups) & allowed
+                ]
+            count = pick.count
+            if pick.patterns:
+                mode = int(pattern) if pattern.isdigit() else 0
+                mode = mode if 0 <= mode < len(pick.patterns) else 0
+                count = len(pick.patterns[mode])
+            values = options[:count]
         if pattern:
             ctx.world.choose_feature_choice(  # type: ignore[attr-defined]
                 character, feature_id, f"{pick.id}:pattern", pattern
             )
         for value in values:
             ctx.world.choose_feature_choice(character, feature_id, pick.id, value)  # type: ignore[attr-defined]
+        chosen[f"{feature.id}:{pick.id}"] = values
 
 
 def _apply_option(view: AdvancementPage, ctx: ToolContext, form: Mapping[str, Any]) -> None:

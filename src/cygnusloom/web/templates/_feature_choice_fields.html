@@ -1,8 +1,22 @@
 {# Choice panels for features with structured picks. Expects `feature_choices`.
-   creation.js shows a panel while one of the feature selects names its feature. #}
+   creation.js shows a panel while one of the feature selects names its feature. Each pick is a
+   rich picker so the player reads what every option does; a pattern pick hides the slots a
+   shorter ability-score pattern does not use, and a pick that takes another pick's groups (such
+   as Magic Initiate's spells and its spell list) offers only the options that fit. #}
+{% from "macros.html" import pick_control %}
 {% for feature in feature_choices %}
-<fieldset class="creation-panel feature-choice" data-feature-choice-for="{{ feature.id }}" hidden>
+<fieldset class="creation-panel feature-choice" data-feature-choice-for="{{ feature.id }}"{% if granted %} data-granted-choice{% else %} hidden{% endif %}>
   <legend>{{ feature.name }}</legend>
+  {% if feature.description %}
+  {% if feature.description|length <= 220 %}
+  <p class="muted panel-hint feature-choice-hint">{{ feature.description|replace("**", "") }}</p>
+  {% else %}
+  <details class="feature-choice-about">
+    <summary>What {{ feature.name }} does</summary>
+    <p class="muted panel-hint feature-choice-hint">{{ feature.description|replace("**", "") }}</p>
+  </details>
+  {% endif %}
+  {% endif %}
   {% for pick in feature.picks %}
   {% if pick.kind == "text" %}
   {% for index in range(pick.count) %}
@@ -13,28 +27,24 @@
   {% endfor %}
   {% else %}
   {% if pick.patterns %}
-  <label>
-    {{ pick.label }} pattern
-    <select name="feature-choice-{{ feature.id }}-{{ pick.id }}-mode">
+  <div class="pick-field" data-pick-field data-pattern-source data-pick-group="{{ feature.id }}-{{ pick.id }}" data-slot="-1">
+    {% call pick_control("feature-choice-" ~ feature.id ~ "-" ~ pick.id ~ "-mode", pick.label ~ " pattern", pick.hint, "", empty="", roll=false, clear=false) %}
       {% for pattern in pick.patterns %}
-      <option value="{{ loop.index0 }}">{{ pattern | join(' / ') }}</option>
+      <option value="{{ pattern.value }}" data-title="{{ pattern.title }}" data-detail="{{ pattern.detail }}" data-count="{{ pattern.count }}"{% if loop.first %} selected{% endif %}>{{ pattern.title }}</option>
       {% endfor %}
-    </select>
-  </label>
+    {% endcall %}
+  </div>
   {% endif %}
-  {% set pick_label = pick.label|lower %}
-  {% set pick_plural = pick_label.endswith("s") and not (pick_label.endswith("us") or pick_label.endswith("ss") or pick_label.endswith("is")) %}
-  {% set pick_article = "" if pick_plural else ("an " if pick_label[0] in "aeiou" else "a ") %}
   {% for index in range(pick.count) %}
-  <label>
-    {{ pick.label }}{% if pick.count > 1 %} {{ index + 1 }}{% endif %}
-    <select name="feature-choice-{{ feature.id }}-{{ pick.id }}-{{ index }}">
-      <option value="">Choose {{ pick_article }}{{ pick_label }}</option>
+  <div class="pick-field" data-pick-field data-pick-group="{{ feature.id }}-{{ pick.id }}" data-slot="{{ index }}"{% if pick.groups_from %} data-groups-from="{{ pick.groups_from }}"{% endif %}>
+    {% call pick_control("feature-choice-" ~ feature.id ~ "-" ~ pick.id ~ "-" ~ index, pick.label ~ (" " ~ (index + 1) if pick.count > 1 else ""), pick.hint, "", empty=pick.empty, roll=true, clear=true) %}
+      <option value="">{{ pick.empty }}</option>
       {% for option in pick.options %}
-      <option value="{{ option.value }}">{{ option.title }}</option>
+      <option value="{{ option.value }}" data-title="{{ option.title }}"{% if option.detail %} data-detail="{{ option.detail }}"{% endif %}{% if option.icon %} data-icon="{{ icon_path(option.icon) }}"{% endif %}{% if option.rank %} data-rank="{{ option.rank }}"{% endif %}{% if option.groups %} data-groups="{{ option.groups|join(',') }}"{% endif %}>{{ option.title }}</option>
       {% endfor %}
-    </select>
-  </label>
+    {% endcall %}
+    {% if pick.source_hint %}<p class="muted panel-hint" data-source-hint>{{ pick.source_hint }}</p>{% endif %}
+  </div>
   {% endfor %}
   {% endif %}
   {% endfor %}

@@ -9,7 +9,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from cygnusloom.content.character import check_swaps
+from cygnusloom.content.character import check_swaps, feature_choice_views
 from cygnusloom.rules import dnd_srd_2024
 from cygnusloom.services import level_up as level_up_service
 from cygnusloom.services.common import InvalidInput
@@ -534,6 +534,8 @@ def test_a_level_up_shows_and_records_new_class_feature_choices(
     )
     page = client.get(f"/campaigns/{campaign_id}/advancement").text
     assert "feature-choice-class-ranger-deft-explorer-expertise-0" in page
+    # The level grants Deft Explorer, so its choice panel is shown without a feature pick.
+    assert "data-granted-choice" in page
     level_up_service.apply_page(
         client.app.state.engine,
         campaign_id,
@@ -546,6 +548,134 @@ def test_a_level_up_shows_and_records_new_class_feature_choices(
     assert pc.feature_choices["class-ranger-deft-explorer:expertise"] == ["stealth"]
 
 
+def test_magic_initiate_offers_a_described_spell_list_and_only_legal_ranks():
+    spec = _dnd_rules().character
+    feature = spec.features["feat-magic-initiate"]
+    picks = {pick["id"]: pick for pick in feature_choice_views(spec, feature)}
+
+    assert [option["value"] for option in picks["list"]["options"]] == [
+        "cleric",
+        "druid",
+        "wizard",
+    ]
+    wizard = next(option for option in picks["list"]["options"] if option["value"] == "wizard")
+    assert "Intelligence" in wizard["detail"]
+    cantrips = {option["value"] for option in picks["cantrips"]["options"]}
+    level_one = {option["value"] for option in picks["spell"]["options"]}
+    assert cantrips == {
+        spell.id
+        for spell in spec.features.values()
+        if spell.feature_type == "spell" and spell.rank == 0
+    }
+    assert level_one == {
+        spell.id
+        for spell in spec.features.values()
+        if spell.feature_type == "spell" and spell.rank == 1
+    }
+    assert picks["cantrips"]["groups_from"] == "list"
+    assert picks["spell"]["groups_from"] == "list"
+
+
+def test_magic_initiate_refuses_a_spell_from_another_list(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    client = signed_in_client(client_factory)
+    campaign_id = create_campaign_direct(
+        client, world_template="testhollow", rule_set="dnd-srd-2024"
+    )
+    fields = {
+        **_fields(),
+        "template-species": "human",
+        "pick-feature-versatile-0": "feat-magic-initiate",
+        "feature-choice-feat-magic-initiate-list-0": "wizard",
+        "feature-choice-feat-magic-initiate-cantrips-0": "spell-guidance",
+        "feature-choice-feat-magic-initiate-cantrips-1": "spell-light",
+        "feature-choice-feat-magic-initiate-spell-0": "spell-detect-magic",
+        "feature-choice-feat-magic-initiate-ability-0": "int",
+    }
+
+    with pytest.raises(InvalidInput, match="not on the chosen spell list"):
+        create_character_direct(client, campaign_id, name="Rook", fields=fields)
+
+
+def test_acolyte_ability_patterns_are_named_and_describe_each_ability():
+    spec = _dnd_rules().character
+    pick = feature_choice_views(spec, spec.features["background-asi-acolyte"])[0]
+
+    assert [pattern["title"] for pattern in pick["patterns"]] == [
+        "Each ability +1",
+        "One ability +2, another +1",
+    ]
+    assert [pattern["count"] for pattern in pick["patterns"]] == [3, 2]
+    intelligence = next(option for option in pick["options"] if option["value"] == "int")
+    assert "Intelligence saves" in intelligence["detail"]
+
+
+def test_weapon_mastery_offers_only_the_weapons_its_class_can_use():
+    spec = _dnd_rules().character
+    barbarian = feature_choice_views(spec, spec.features["class-barbarian-weapon-mastery"])[0][
+        "options"
+    ]
+    barbarian_ids = {option["value"] for option in barbarian}
+    assert "weapon-longbow" not in barbarian_ids
+    assert "weapon-greataxe" in barbarian_ids
+    assert all("melee" in spec.features[value].groups for value in barbarian_ids)
+
+    rogue = feature_choice_views(spec, spec.features["class-rogue-weapon-mastery"])[0]["options"]
+    rogue_ids = {option["value"] for option in rogue}
+    assert "weapon-longbow" not in rogue_ids  # martial ranged is not a Rogue weapon
+    assert "weapon-dagger" in rogue_ids
+    assert all(
+        set(spec.features[value].groups) & {"simple", "finesse", "light"} for value in rogue_ids
+    )
+
+
+def test_evocation_savant_offers_only_wizard_evocation_spells_of_levels_one_and_two():
+    spec = _dnd_rules().character
+    options = feature_choice_views(spec, spec.features["subclass-evoker-evocation-savant"])[0][
+        "options"
+    ]
+
+    assert options
+    for option in options:
+        spell = spec.features[option["value"]]
+        assert spell.feature_type == "spell"
+        assert spell.tag == "evocation"
+        assert 1 <= spell.rank <= 2
+        assert "wizard" in spell.groups
+
+
+def test_pact_magic_has_no_free_text_choice():
+    spec = _dnd_rules().character
+    assert not spec.features["class-warlock-pact-magic"].picks
+
+
+def test_every_spell_names_the_class_lists_that_offer_it():
+    rules = _dnd_rules()
+    expected: dict[str, set[str]] = {}
+    for class_id, ranks in rules.rule_data["progression"].spell_lists.items():
+        for spell_ids in ranks.values():
+            for spell_id in spell_ids:
+                expected.setdefault(spell_id, set()).add(class_id)
+    spells = [f for f in rules.character.features.values() if f.feature_type == "spell"]
+    assert spells
+    for spell in spells:
+        assert set(spell.groups) == expected.get(spell.id, set()), spell.id
+
+
+def test_every_weapon_names_a_category_and_a_melee_or_ranged_group():
+    rules = _dnd_rules()
+    weapons = [
+        feature
+        for feature in rules.character.features.values()
+        if feature.tag == "weapon" and feature.feature_type == "item"
+    ]
+    assert len(weapons) == 38
+    for weapon in weapons:
+        assert {"simple", "martial"} & set(weapon.groups), weapon.id
+        assert {"melee", "ranged"} & set(weapon.groups), weapon.id
+
+
 def test_magic_initiate_casts_its_spell_once_without_a_slot(
     app: FastAPI, client_factory: Callable[[], TestClient]
 ) -> None:
@@ -556,6 +686,7 @@ def test_magic_initiate_casts_its_spell_once_without_a_slot(
     fields = {
         **_fields(),
         "pick-feature-versatile-0": "feat-magic-initiate",
+        "feature-choice-feat-magic-initiate-list-0": "wizard",
         "feature-choice-feat-magic-initiate-cantrips-0": "spell-fire-bolt",
         "feature-choice-feat-magic-initiate-cantrips-1": "spell-light",
         "feature-choice-feat-magic-initiate-spell-0": "spell-detect-magic",
@@ -834,10 +965,11 @@ def test_human_skillful_and_versatile_grant_a_skill_and_an_origin_feat(
         **_fields(),
         "pick-skill-skillful-0": "arcana",
         "pick-feature-versatile-0": "feat-magic-initiate",
-        "feature-choice-feat-magic-initiate-cantrips-0": "spell-fire-bolt",
-        "feature-choice-feat-magic-initiate-cantrips-1": "spell-guidance",
+        "feature-choice-feat-magic-initiate-list-0": "cleric",
+        "feature-choice-feat-magic-initiate-cantrips-0": "spell-guidance",
+        "feature-choice-feat-magic-initiate-cantrips-1": "spell-resistance",
         "feature-choice-feat-magic-initiate-spell-0": "spell-bless",
-        "feature-choice-feat-magic-initiate-ability-0": "int",
+        "feature-choice-feat-magic-initiate-ability-0": "wis",
     }
     client = signed_in_client(client_factory)
     campaign_id = create_campaign_direct(
@@ -847,8 +979,8 @@ def test_human_skillful_and_versatile_grant_a_skill_and_an_origin_feat(
     fighter = character_named(app, campaign_id, "Rook")
     assert fighter.skills["arcana"] == 2  # Human Skillful
     assert fighter.features["feat-magic-initiate"] == 1
-    assert fighter.features["spell-fire-bolt"] == 1
     assert fighter.features["spell-guidance"] == 1
+    assert fighter.features["spell-resistance"] == 1
     assert fighter.features["spell-bless"] == 1
 
 

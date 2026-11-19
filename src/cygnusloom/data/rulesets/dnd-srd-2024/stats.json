@@ -70,7 +70,8 @@
         30,
         10
       ]
-    ]
+    ],
+    "description": "Melee attack and damage rolls, carrying capacity, and Strength saves."
   },
   {
     "type": "stat",
@@ -143,7 +144,8 @@
         30,
         10
       ]
-    ]
+    ],
+    "description": "Ranged attack rolls, Armor Class, initiative, and Dexterity saves."
   },
   {
     "type": "stat",
@@ -216,7 +218,8 @@
         30,
         10
       ]
-    ]
+    ],
+    "description": "Hit points, Constitution saves, and endurance."
   },
   {
     "type": "stat",
@@ -289,7 +292,8 @@
         30,
         10
       ]
-    ]
+    ],
+    "description": "Arcana, History, Investigation, and Nature checks, and Intelligence saves."
   },
   {
     "type": "stat",
@@ -362,7 +366,8 @@
         30,
         10
       ]
-    ]
+    ],
+    "description": "Animal Handling, Insight, Medicine, Perception, and Survival, and Wisdom saves."
   },
   {
     "type": "stat",
@@ -435,7 +440,8 @@
         30,
         10
       ]
-    ]
+    ],
+    "description": "Deception, Intimidation, Performance, and Persuasion, and Charisma saves."
   },
   {
     "type": "stat",

@@ -104,13 +104,14 @@
       return section;
     };
     const addOption = (option) => {
-      if (!option.value || option.hidden || !group) return;
+      if (!option.value || !group) return;
       const button = document.createElement("button");
       button.type = "button";
       button.className = "choice pick-option";
       button.dataset.value = option.value;
       button.dataset.title = option.dataset.title || option.textContent;
       button.dataset.detail = pickDetail(option);
+      button.hidden = option.hidden;
       const iconPath = option.dataset.icon;
       if (iconPath) {
         const icon = document.createElement("img");
@@ -158,7 +159,7 @@
       let offered = false;
       for (const button of group.querySelectorAll(".pick-option")) {
         const matches = !query || button.textContent.toLowerCase().includes(query);
-        button.hidden = !matches;
+        button.hidden = !matches || button.dataset.unavailable === "1";
         if (matches && !button.disabled) offered = true;
       }
       group.hidden = !offered;
@@ -199,7 +200,9 @@
     if (!dialog) return;
     for (const button of dialog.querySelectorAll(".pick-option")) {
       const source = [...select.options].find((item) => item.value === button.dataset.value);
+      button.dataset.unavailable = !source || source.hidden ? "1" : "";
       button.disabled = !source || source.disabled;
+      button.hidden = button.dataset.unavailable === "1";
       button.classList.toggle("is-selected", button.dataset.value === select.value);
     }
     filterPickOptions(dialog);
@@ -417,13 +420,89 @@
       for (const feature of granted) chosen.add(feature);
     }
     for (const panel of document.querySelectorAll("[data-feature-choice-for]")) {
+      if (panel.hasAttribute("data-granted-choice")) {
+        // A level can grant a feature that asks for a choice; its panel is shown on the
+        // advancement page even though no pick selected the feature.
+        panel.hidden = false;
+        for (const control of panel.querySelectorAll("select, input")) control.disabled = false;
+        continue;
+      }
       const shown = chosen.has(panel.dataset.featureChoiceFor);
       panel.hidden = !shown;
       for (const control of panel.querySelectorAll("select, input")) {
         control.disabled = !shown;
       }
     }
+    refreshFeatureChoices();
   }
+
+  // An ability-score pattern uses only as many slots as its amounts: a +2/+1 pattern uses two
+  // of the three ability picks. A hidden slot is cleared and disabled, so it is not submitted.
+  const featureChoiceFieldSelect = (field) => field.querySelector("select[data-pick-source]");
+  const featureChoiceFields = (panel, group) => [
+    ...panel.querySelectorAll(`[data-pick-field][data-pick-group="${group}"]`),
+  ];
+  const refreshFeatureChoicePatterns = (panel) => {
+    for (const patternField of panel.querySelectorAll("[data-pick-field][data-pattern-source]")) {
+      const pattern = featureChoiceFieldSelect(patternField);
+      const count = Number(pattern?.selectedOptions[0]?.dataset.count || 0);
+      for (const field of featureChoiceFields(panel, patternField.dataset.pickGroup)) {
+        if (field.dataset.slot === "-1") continue;
+        const select = featureChoiceFieldSelect(field);
+        if (!select) continue;
+        const hidden = Number(field.dataset.slot) >= count;
+        field.hidden = hidden;
+        if (hidden) select.value = "";
+        select.disabled = hidden || Boolean(panel.hidden);
+      }
+    }
+  };
+
+  // A pick may offer only the options in the groups another pick chose, such as spells from the
+  // spell list a Magic Initiate chose. Two picks of one group cannot take the same option.
+  const refreshFeatureChoiceOptions = (panel) => {
+    const featureId = panel.dataset.featureChoiceFor;
+    for (const field of panel.querySelectorAll("[data-pick-field][data-pick-group]")) {
+      if (field.hasAttribute("data-pattern-source")) continue;
+      const select = featureChoiceFieldSelect(field);
+      if (!select) continue;
+      const sourceId = field.dataset.groupsFrom;
+      let allowed = null;
+      if (sourceId) {
+        allowed = new Set();
+        for (const source of featureChoiceFields(panel, `${featureId}-${sourceId}`)) {
+          const value = featureChoiceFieldSelect(source)?.value;
+          if (value) allowed.add(value);
+        }
+        const hint = field.querySelector("[data-source-hint]");
+        if (hint) hint.hidden = allowed.size > 0;
+      }
+      const taken = new Set();
+      for (const other of featureChoiceFields(panel, field.dataset.pickGroup)) {
+        if (other !== field) {
+          const value = featureChoiceFieldSelect(other)?.value;
+          if (value) taken.add(value);
+        }
+      }
+      for (const option of select.options) {
+        if (!option.value) continue;
+        const groups = (option.dataset.groups || "").split(",").filter(Boolean);
+        const fits = !allowed || groups.some((value) => allowed.has(value));
+        option.hidden = !fits;
+        option.disabled = !fits || taken.has(option.value);
+      }
+      if (select.selectedOptions[0]?.disabled) select.value = "";
+    }
+    syncPickControls();
+  };
+
+  const refreshFeatureChoices = () => {
+    for (const panel of document.querySelectorAll("[data-feature-choice-for]")) {
+      refreshFeatureChoicePatterns(panel);
+      refreshFeatureChoiceOptions(panel);
+    }
+    syncPickControls();
+  };
 
   const clearTemplateChoice = (radio) => {
     radio.checked = false;
@@ -742,6 +821,11 @@
       if (target.closest('[data-pick-kind="feature"]')) refreshFeaturePickOptions();
       if (target.matches("[data-pick-source]")) syncPickControls();
       if (target.matches("[data-feature-choice]")) syncFeatureChoicePanels();
+      const choicePanel = target.closest("[data-feature-choice-for]");
+      if (choicePanel) {
+        refreshFeatureChoicePatterns(choicePanel);
+        refreshFeatureChoiceOptions(choicePanel);
+      }
       if (target.closest("[data-replacement-row]")) syncReplacementDetails();
       return;
     }
@@ -1126,30 +1210,42 @@
   };
 
   // Choices a feature asks for (ability scores, skills, spells) live in panels that the chosen
-  // feature reveals. They are plain selects rather than dice-controlled radios, so roll them here
-  // instead of leaving required choices blank for the server to reject.
+  // feature reveals. A pattern pick decides how many slots are used, and a pick may offer only
+  // the groups an earlier pick chose, so the values are rolled in the order they appear.
   const randomizeFeatureChoices = (onlyUnchosen) => {
     for (const panel of document.querySelectorAll("[data-feature-choice-for]")) {
       if (panel.hidden || panel.closest("[hidden]")) continue;
-      const selects = [...panel.querySelectorAll("select")].filter(
-        (select) => !select.name.endsWith("-mode") && !select.disabled,
-      );
-      const taken = new Set(onlyUnchosen ? selects.map((select) => select.value).filter(Boolean) : []);
+      for (const patternField of panel.querySelectorAll("[data-pick-field][data-pattern-source]")) {
+        if (onlyUnchosen) continue;
+        const pattern = featureChoiceFieldSelect(patternField);
+        if (!pattern) continue;
+        const offered = [...pattern.options].filter((option) => option.value !== "" && !option.disabled);
+        if (offered.length > 0) {
+          pattern.value = offered[Math.floor(Math.random() * offered.length)].value;
+        }
+      }
+      refreshFeatureChoicePatterns(panel);
+      refreshFeatureChoiceOptions(panel);
+      const selects = [...panel.querySelectorAll("[data-pick-field][data-pick-group]")]
+        .filter((field) => !field.hasAttribute("data-pattern-source") && field.dataset.slot !== "-1")
+        .map((field) => featureChoiceFieldSelect(field))
+        .filter((select) => select && !select.disabled);
       for (const select of selects) {
         if (onlyUnchosen && select.value !== "") continue;
+        refreshFeatureChoiceOptions(panel);
         const offered = [...select.options]
-          .filter((option) => option.value !== "" && !option.disabled && !taken.has(option.value))
+          .filter((option) => option.value !== "" && !option.disabled)
           .map((option) => option.value);
         select.value = offered.length > 0 ? offered[Math.floor(Math.random() * offered.length)] : "";
-        if (select.value !== "") taken.add(select.value);
+        refreshFeatureChoiceOptions(panel);
       }
+      syncPickControls();
     }
   };
 
   // Tagged feature picks follow their fields; the name is rolled after all choices.
   const randomizeAll = (onlyUnchosen) => {
     randomizeChoices(onlyUnchosen);
-    randomizeFeatureChoices(onlyUnchosen);
     if (!onlyUnchosen) randomizeStats();
     for (const fieldset of document.querySelectorAll("[data-tagged-picks]")) {
       if (!fieldset.closest("[hidden]")) randomizeTaggedPicks(fieldset, onlyUnchosen);
@@ -1157,6 +1253,10 @@
     for (const fieldset of document.querySelectorAll("[data-pick-selects]")) {
       if (!fieldset.closest("[hidden]")) randomizePicks(fieldset, onlyUnchosen);
     }
+    // A chosen feature pick reveals its choice panel, so the choices come last: otherwise a
+    // lineage or feat a random pick just chose would keep its panel hidden and blank.
+    syncFeatureChoicePanels();
+    randomizeFeatureChoices(onlyUnchosen);
     syncPickControls();
     syncReplacementDetails();
     const input = form?.querySelector('input[name="name"]');
