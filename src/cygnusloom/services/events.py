@@ -2908,14 +2908,18 @@ class EncounterResourceUsed(GameEvent):
         encounter = state.encounter
         if encounter is None:
             return
+        if self.resource == "reaction":
+            # A reaction is spent on any creature's turn, including someone else's, so it is
+            # counted against the reacting creature rather than the acting one.
+            key = name_key(self.name)
+            encounter.reactions_used[key] = encounter.reactions_used.get(key, 0) + 1
+            return
         if encounter.acting is not None and name_key(encounter.acting) != name_key(self.name):
             return
         if self.resource == "action":
             encounter.actions_used += 1
         elif self.resource == "bonus_action":
             encounter.bonus_actions_used += 1
-        elif self.resource == "reaction":
-            encounter.reactions_used += 1
 
     def render(self) -> str:
         return f"{self.name} spends a {self.resource.replace('_', ' ')}."

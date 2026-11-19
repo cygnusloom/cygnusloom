@@ -751,10 +751,9 @@ def attack(
     )
     hit_parts: list[tuple[str, int]] = []
     if combat.hit_bonus_stat:
-        label = _stat_label(spec, combat.hit_bonus_stat) if spec is not None else ""
-        hit_parts.append(
-            (label or combat.hit_bonus_stat, _stat_bonus(combat, source, combat.hit_bonus_stat))
-        )
+        # A statblock prints the creature's whole attack bonus, so naming the attack reads
+        # correctly where the stat's own name, such as Proficiency Bonus, would not.
+        hit_parts.append((name, _stat_bonus(combat, source, combat.hit_bonus_stat)))
     if hit_modifier:
         hit_parts.append(("situational", hit_modifier))
     if distance.penalty:

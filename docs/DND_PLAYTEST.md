@@ -28,7 +28,7 @@ PYTHONPATH=$PWD/src /workspaces/cygnusloom/.venv/bin/python scripts/test.py \
 PYTHONPATH=$PWD/src /workspaces/cygnusloom/.venv/bin/python scripts/test.py -q
 ```
 
-The current full suite is **3816 passed**; the two D&D files are **53 passed**; content
+The current full suite is **3821 passed**; the two D&D files are **58 passed**; content
 validation reports **0 warnings**; `ruff check` is clean on the changed source and test
 files.
 
@@ -85,9 +85,11 @@ These were previously listed as gaps and now have data, engine support, and test
   exhaustion.
 - Armor categories and class armor training are enforced, including shields.
 - Turn resources expose Actions, Bonus Actions, and Reactions; attacks consume the
-  action budget, spells spend their Action, Bonus Action, or Reaction while the caster
-  is taking a turn, and class/species features declare and spend their own resource and
-  turn costs through `use_feature`.
+  action budget, actions and Bonus Actions are spent on the creature's own turn, and a
+  Reaction is spent on any creature's turn, counted once per creature each round, and
+  reset when the round ends. Class/species features declare and spend their own
+  resource and turn costs through `use_feature`, and a refused reaction leaves the
+  feature's use unspent.
 - Class always-prepared spells appear as learned features and do not count against the
   prepared limit; Circle of the Land spells are limited to the chosen land.
 - New class-feature choices at level-up are shown on the Advancement page and recorded
@@ -98,6 +100,13 @@ These were previously listed as gaps and now have data, engine support, and test
   attack, and Improved Critical lowers the critical range to 19.
 - Rage spends its resource and Bonus Action, sets the raging mark, adds its level-scaled
   damage, and grants physical resistance while the mark is active.
+- Reactions are tracked per creature and per round: a Goliath's Stone's Endurance, a
+  Bard's Cutting Words, or an opportunity attack can be spent on another creature's
+  turn, and each creature gets its own reaction back when the round turns over.
+- Monster attack logs name the attack beside its printed bonus (`+6 Greatclub`) rather
+  than labeling the statblock's whole attack bonus as a proficiency bonus.
+- An unconscious or dead character cannot use features, class resources, or cast spells
+  through the GM tools until healing revives it.
 
 ## Remaining limits
 

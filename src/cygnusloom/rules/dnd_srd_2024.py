@@ -1703,6 +1703,7 @@ def use_class_resource(
     """Spend uses from a class resource pool, such as Rages, Focus Points, or Sorcery Points."""
     spec = ctx.world.character
     found = _read_character(character, ctx)
+    _require_conscious(found)
     if resource not in RESOURCE_COUNTERS:
         raise InvalidInput("resource must be one of: " + ", ".join(sorted(RESOURCE_COUNTERS)))
     if resource not in spec.counters or resource not in found.counters:
@@ -1724,6 +1725,7 @@ def use_feature(character: str, feature: str, ctx: ToolContext, cause: str = "")
     """Use a class or species feature, spending its resource counter and turn resource."""
     spec = ctx.world.character
     found = _read_character(character, ctx)
+    _require_conscious(found)
     wanted = feature.strip().casefold()
     matches = [
         source
@@ -1738,15 +1740,14 @@ def use_feature(character: str, feature: str, ctx: ToolContext, cause: str = "")
     if source.id not in found.features:
         raise InvalidInput(f"{found.name} does not have {source.name}")
     remaining: int | None = None
+    if source.resource_counter and int(found.counters.get(source.resource_counter, 0)) < 1:
+        raise InvalidInput(
+            f"{found.name} has no {source.resource_counter.replace('_', ' ')} left"
+        )
+    _spend_turn_resource(found, source, ctx, cause=cause or f"using {source.name}")
     if source.resource_counter:
-        current = int(found.counters.get(source.resource_counter, 0))
-        if current < 1:
-            raise InvalidInput(
-                f"{found.name} has no {source.resource_counter.replace('_', ' ')} left"
-            )
         changed = ctx.world.adjust_counter(character, source.resource_counter, -1)
         remaining = int(changed["value"])
-    _spend_turn_resource(found, source, ctx, cause=cause or f"using {source.name}")
     if source.active_mark:
 
         def mark(hc: HookContext) -> None:
@@ -1781,6 +1782,7 @@ def cast_spell(
     progression = require_progression(ctx.world)
     spec = ctx.world.character
     found = _read_character(name, ctx)
+    _require_conscious(found)
     feature = _find_spell(spec, spell)
     if not _knows_spell(found, feature, progression):
         raise InvalidInput(f"{found.name} does not know {feature.name}")
@@ -2008,15 +2010,25 @@ def _set_concentration(ctx: ToolContext, found: Any, feature: Feature, spec: Cha
 def _spend_turn_resource(
     found: Any, feature: Feature, ctx: ToolContext, *, cause: str = ""
 ) -> None:
-    """Spend a feature's turn resource when the character is taking a turn."""
+    """Spend a feature's turn resource when the character can spend it. An action or bonus
+    action is spent on the character's own turn; a reaction is spent on any creature's turn,
+    including another creature's."""
     if not feature.turn_resource:
         return
 
-    def read(hc: HookContext) -> str | None:
+    def read(hc: HookContext) -> tuple[str | None, bool]:
         encounter = hc.state().encounter
-        return None if encounter is None else encounter.acting
+        if encounter is None:
+            return None, False
+        return encounter.acting, found.name in encounter.order
 
-    acting = ctx.world.with_hook_context(read)
+    acting, participant = ctx.world.with_hook_context(read)
+    if feature.turn_resource == "reaction":
+        if participant:
+            ctx.world.use_turn_resource(  # type: ignore[attr-defined]
+                found.name, "reaction", cause=cause or f"using {feature.name}"
+            )
+        return
     if acting is not None and name_key(str(acting)) == name_key(found.name):
         ctx.world.use_turn_resource(  # type: ignore[attr-defined]
             found.name, feature.turn_resource, cause=cause or f"using {feature.name}"
@@ -2323,6 +2335,15 @@ def _read_character(name: str, ctx: ToolContext) -> Any:
 
     ctx.world.with_hook_context(read)
     return holder["character"]
+
+
+def _require_conscious(found: Any) -> None:
+    """A defeated D&D character is unconscious or dead, and cannot take actions, Bonus
+    Actions, or Reactions until healing revives it."""
+    if found.dead:
+        raise InvalidInput(f"{found.name} is dead and cannot act")
+    if found.defeated:
+        raise InvalidInput(f"{found.name} is unconscious and cannot act")
 
 
 def _learn(ctx: ToolContext, character: str, feature_id: str, *, cause: str) -> dict[str, Any]:

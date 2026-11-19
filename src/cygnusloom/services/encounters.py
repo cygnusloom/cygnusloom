@@ -204,9 +204,15 @@ def _attacks_left(
     return max(0, limit - encounter.attacked)
 
 
-def _resource_left(encounter: Encounter, combat: CombatRules | None, resource: str) -> int | None:
+def _resource_left(
+    encounter: Encounter,
+    combat: CombatRules | None,
+    resource: str,
+    acting: Character | None = None,
+) -> int | None:
     """How many of one turn resource the acting participant has left, or None when the rule
-    set does not track it or no turn is running."""
+    set does not track it or no turn is running. A reaction belongs to the creature that spends
+    it, so it is read from `acting` rather than shared with the encounter."""
     if combat is None or encounter.acting is None:
         return None
     if resource == "action":
@@ -218,11 +224,11 @@ def _resource_left(encounter: Encounter, combat: CombatRules | None, resource: s
             else None
         )
     if resource == "reaction":
-        return (
-            max(0, combat.reactions_per_round - encounter.reactions_used)
-            if combat.reactions_per_round
-            else None
-        )
+        if not combat.reactions_per_round:
+            return None
+        name = acting.name if acting is not None else encounter.acting
+        used = encounter.reactions_used.get(name_key(name), 0)
+        return max(0, combat.reactions_per_round - used)
     return None
 
 
@@ -1831,11 +1837,11 @@ def encounter_view(
             if combat is not None
             else None
         ),
-        "actions_left": _resource_left(encounter, combat, "action"),
+        "actions_left": _resource_left(encounter, combat, "action", acting_character),
         "actions_per_turn": combat.actions_per_turn if combat is not None else None,
-        "bonus_actions_left": _resource_left(encounter, combat, "bonus_action"),
+        "bonus_actions_left": _resource_left(encounter, combat, "bonus_action", acting_character),
         "bonus_actions_per_turn": combat.bonus_actions_per_turn if combat is not None else None,
-        "reactions_left": _resource_left(encounter, combat, "reaction"),
+        "reactions_left": _resource_left(encounter, combat, "reaction", acting_character),
         "reactions_per_round": combat.reactions_per_round if combat is not None else None,
         "moves_left": _moves_left(encounter, grid),
         "move_cells": grid.move_cells if grid is not None else None,

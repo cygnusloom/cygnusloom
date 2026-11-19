@@ -2554,7 +2554,14 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
             encounter = state.encounter
             if encounter is None:
                 raise InvalidInput("turn resources are only spent in an encounter")
-            if encounter.acting is None or name_key(encounter.acting) != name_key(character.name):
+            if resource == "reaction":
+                # A reaction may be spent on any creature's turn, including someone else's, so
+                # there is no acting check; only a participant of the encounter may spend one.
+                if character.name not in encounter.order:
+                    raise InvalidInput(f"{character.name} is not in the encounter")
+            elif encounter.acting is None or name_key(encounter.acting) != name_key(
+                character.name
+            ):
                 raise InvalidInput(f"it is not {character.name}'s turn")
             limit = (
                 rules.actions_per_turn
@@ -2568,7 +2575,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 if resource == "action"
                 else encounter.bonus_actions_used
                 if resource == "bonus_action"
-                else encounter.reactions_used
+                else encounter.reactions_used.get(name_key(character.name), 0)
             )
             if limit <= 0:
                 raise InvalidInput(f"this rule set does not track {resource.replace('_', ' ')}s")

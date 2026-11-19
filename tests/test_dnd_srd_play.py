@@ -275,7 +275,104 @@ def test_dnd_turn_resources_include_actions_bonus_actions_and_reactions(
     tools.use_turn_resource("Rook", "bonus_action", "Second Wind")
     assert _state(app, campaign_id).encounter.bonus_actions_used == 1
     tools.use_turn_resource("Rook", "reaction", "an opportunity attack")
-    assert _state(app, campaign_id).encounter.reactions_used == 1
+    assert _state(app, campaign_id).encounter.reactions_used == {"rook": 1}
+
+
+def test_a_reaction_is_spent_on_another_creatures_turn(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    fields = {
+        **FIGHTER_FIELDS,
+        "template-species": "goliath",
+        "pick-feature-goliath-lineage-0": "lineage-goliath-stone",
+    }
+    client, campaign_id, ctx = _campaign(client_factory, fields=fields)
+    tools, _ = _fight(client, campaign_id)
+    dnd_srd_2024.roll_initiative(ctx)
+    tools.adjust_encounter_order(["Rook", "Foe"], current="Foe")
+    before = character_named(app, campaign_id, "Rook")
+    used = dnd_srd_2024.use_feature("Rook", "lineage-goliath-stone", ctx)
+    assert used["turn_resource"] == "reaction"
+    assert used["remaining"] == before.counters["giant_ancestry"] - 1
+    encounter = _state(app, campaign_id).encounter
+    assert encounter is not None and encounter.reactions_used == {"rook": 1}
+    # A second reaction in the same round is refused without spending an ancestry use.
+    with pytest.raises(InvalidInput, match="no reaction left"):
+        dnd_srd_2024.use_feature("Rook", "lineage-goliath-stone", ctx)
+    after = character_named(app, campaign_id, "Rook")
+    assert after.counters["giant_ancestry"] == used["remaining"]
+
+
+def test_each_creature_has_its_own_reaction_each_round(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    client, campaign_id, ctx = _campaign(client_factory)
+    tools, _ = _fight(client, campaign_id)
+    dnd_srd_2024.roll_initiative(ctx)
+    tools.adjust_encounter_order(["Rook", "Foe"], current="Foe")
+    tools.use_turn_resource("Rook", "reaction", "Stone's Endurance")
+    tools.use_turn_resource("Foe", "reaction", "an opportunity attack")
+    state = _state(app, campaign_id)
+    assert state.encounter is not None
+    assert state.encounter.reactions_used == {"rook": 1, "foe": 1}
+    with pytest.raises(InvalidInput, match="no reaction left"):
+        tools.use_turn_resource("Rook", "reaction", "a second reaction")
+    with Session(app.state.engine) as db:
+        for name in ("Rook", "Foe"):
+            record(db, campaign_id, EncounterTurnEnded(name=name))
+        db.commit()
+    new_round = _state(app, campaign_id).encounter
+    assert new_round is not None and new_round.round == 2
+    assert new_round.reactions_used == {}
+    tools.use_turn_resource("Rook", "reaction", "a new round's reaction")
+    assert _state(app, campaign_id).encounter.reactions_used == {"rook": 1}
+
+
+def test_a_monster_attack_log_names_its_printed_attack_bonus(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    from cygnusloom.services.events import _decode_event
+
+    client, campaign_id, ctx = _campaign(client_factory)
+    tools, _ = _fight(client, campaign_id)
+    dnd_srd_2024.roll_initiative(ctx)
+    tools.adjust_encounter_order(["Rook", "Foe"], current="Rook")
+    tools.attack("Foe", "Greatclub", "Rook", count=1, force=True)
+    with Session(app.state.engine) as db:
+        row = db.exec(
+            select(Event)
+            .where(Event.campaign_id == campaign_id, Event.kind == "combat.struck")
+            .order_by(Event.id.desc())
+        ).first()
+    assert row is not None
+    text = _decode_event(row.kind, row.payload).render()
+    assert "+6 Greatclub" in text
+    assert "Proficiency Bonus" not in text
+
+
+def test_an_unconscious_character_cannot_use_features_or_resources(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    client, campaign_id, ctx = _campaign(client_factory)
+    tools = tools_for(client.app, campaign_id, rule_set="dnd-srd-2024")
+    tools.harm_character("Rook", "hp", 99, "a test fall")
+    assert character_named(app, campaign_id, "Rook").defeated
+    with pytest.raises(InvalidInput, match="unconscious"):
+        dnd_srd_2024.use_feature("Rook", "class-fighter-second-wind", ctx)
+    with pytest.raises(InvalidInput, match="unconscious"):
+        dnd_srd_2024.use_class_resource("Rook", "second_wind", ctx)
+
+
+def test_an_unconscious_caster_cannot_cast_a_spell(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    from .test_dnd_srd import _prepared_wizard
+
+    client, campaign_id, ctx = _prepared_wizard(app, client_factory)
+    tools = tools_for(client.app, campaign_id, rule_set="dnd-srd-2024")
+    tools.harm_character("Wren", "hp", 99, "a test fall")
+    with pytest.raises(InvalidInput, match="unconscious"):
+        dnd_srd_2024.cast_spell("Wren", "magic-missile", ctx)
 
 
 def test_rage_spends_a_use_and_sets_the_raging_mark(
