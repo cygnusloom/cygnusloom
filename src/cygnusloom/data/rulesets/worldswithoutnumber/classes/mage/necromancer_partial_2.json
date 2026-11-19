@@ -1,0 +1,36 @@
+[
+  {
+    "type": "template",
+    "id": "necromancer_partial_2",
+    "icon": "bones",
+    "kind": "tradition2",
+    "choice_key": "necromancer",
+    "name": "Second Tradition: Necromancer, Partial",
+    "description": "The second partial tradition of a Mage/Mage Adventurer. It grants one art and two first-level spells, and one more art at levels 3, 6, and 9.",
+    "compatible_with": {
+      "class": [
+        "adventurer_mage_mage"
+      ]
+    },
+    "feat_picks": [
+      {
+        "id": "tradition2_art_necromancer",
+        "count": 1,
+        "tag": "necromancer",
+        "max_rank": 0
+      },
+      {
+        "id": "tradition2_spells_necromancer",
+        "count": 2,
+        "tags": [
+          "high",
+          "necromancer"
+        ],
+        "feature_type": "spell",
+        "max_rank": 1
+      }
+    ],
+    "names": "names",
+    "order": 1
+  }
+]

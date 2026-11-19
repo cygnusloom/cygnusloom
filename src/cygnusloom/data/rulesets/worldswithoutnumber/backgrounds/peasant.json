@@ -1,0 +1,35 @@
+[
+  {
+    "type": "template",
+    "id": "peasant",
+    "icon": "hay",
+    "kind": "background",
+    "name": "Peasant",
+    "description": "You worked land that was never quite yours, in a village where everyone knew your business. You know hard labour, thin seasons, and how to get by unseen.",
+    "skills": {
+      "exert": 1
+    },
+    "skill_picks": [
+      {
+        "id": "background_learning",
+        "count": 2,
+        "table": "learning_peasant",
+        "exclude": [
+          "any_skill"
+        ]
+      }
+    ],
+    "learning": [
+      "survive",
+      "notice",
+      "ride",
+      "craft",
+      "work",
+      "exert",
+      "sneak",
+      "connect"
+    ],
+    "names": "names",
+    "order": 10
+  }
+]

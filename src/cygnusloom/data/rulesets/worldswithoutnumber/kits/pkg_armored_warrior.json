@@ -1,0 +1,29 @@
+[
+  {
+    "type": "template",
+    "id": "pkg_armored_warrior",
+    "icon": "kit-shieldwall",
+    "kind": "kit",
+    "name": "Shieldwall Veteran",
+    "description": "A line fighter's loadout: pieced armor and a large shield, a short sword for the press and a dagger for the gaps, with a pack, a night's food, and fire for the camp.",
+    "grant": {
+      "items": [
+        "Pieced Armor",
+        "Large Shield",
+        "Short Sword",
+        "Dagger",
+        "Backpack",
+        "Rations, One Week",
+        "Tinder Box",
+        "Torch",
+        "Torch"
+      ],
+      "equip": [
+        "Pieced Armor",
+        "Large Shield"
+      ]
+    },
+    "names": "names",
+    "order": 0
+  }
+]

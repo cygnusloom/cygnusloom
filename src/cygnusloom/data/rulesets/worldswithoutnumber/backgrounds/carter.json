@@ -1,0 +1,35 @@
+[
+  {
+    "type": "template",
+    "id": "carter",
+    "icon": "cart",
+    "kind": "background",
+    "name": "Carter",
+    "description": "You moved goods along the roads with a cart, a team, and a healthy respect for broken axles and bandits. You know inns, tolls, and the people who work the routes.",
+    "skills": {
+      "ride": 1
+    },
+    "skill_picks": [
+      {
+        "id": "background_learning",
+        "count": 2,
+        "table": "learning_carter",
+        "exclude": [
+          "any_skill"
+        ]
+      }
+    ],
+    "learning": [
+      "notice",
+      "ride",
+      "survive",
+      "exert",
+      "sneak",
+      "connect",
+      "craft",
+      "administer"
+    ],
+    "names": "names",
+    "order": 2
+  }
+]

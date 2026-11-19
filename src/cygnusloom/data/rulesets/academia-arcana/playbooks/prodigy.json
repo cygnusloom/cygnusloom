@@ -1,0 +1,19 @@
+[
+  {
+    "type": "template",
+    "id": "prodigy",
+    "icon": "rune-circle",
+    "kind": "playbook",
+    "names": "student-names",
+    "name": "Prodigy",
+    "description": "Magic comes easily to you, which is not the same as coming safely. You are the student the teachers watch and the other students whisper about.",
+    "stats": {
+      "practice": 1
+    },
+    "features": [
+      "talent-prodigy",
+      "signature-spell"
+    ],
+    "order": 0
+  }
+]

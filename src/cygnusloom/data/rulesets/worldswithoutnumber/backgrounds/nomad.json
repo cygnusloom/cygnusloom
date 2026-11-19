@@ -1,0 +1,35 @@
+[
+  {
+    "type": "template",
+    "id": "nomad",
+    "icon": "tent",
+    "kind": "background",
+    "name": "Nomad",
+    "description": "You followed the herds and the seasons, living out of the saddle and moving on before trouble settled. You know open country and the customs of people who share it.",
+    "skills": {
+      "ride": 1
+    },
+    "skill_picks": [
+      {
+        "id": "background_learning",
+        "count": 2,
+        "table": "learning_nomad",
+        "exclude": [
+          "any_skill"
+        ]
+      }
+    ],
+    "learning": [
+      "shoot",
+      "survive",
+      "ride",
+      "craft",
+      "sneak",
+      "connect",
+      "exert",
+      "notice"
+    ],
+    "names": "names",
+    "order": 9
+  }
+]

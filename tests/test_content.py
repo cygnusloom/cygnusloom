@@ -30,6 +30,7 @@ from cygnusloom.content.library import (
 from cygnusloom.services.hooks import HookContext, call_hook
 from tests.conftest import bundled_library, content_library
 from tests.rolls import social_roll
+from tests.support import content_tree
 
 
 def test_bundled_content_marks_third_party_sources():
@@ -803,16 +804,17 @@ def test_missing_content_directory_is_rejected(tmp_path: Path):
         ContentLibrary.load(tmp_path)
 
 
-def test_world_id_must_match_its_directory(tree: Path):
+def test_a_world_id_comes_from_its_identifying_entry(tree: Path):
+    """A folder's name is not the world's id; the `world` entry names it."""
     _write(tree, {"worlds/testland/world.json": _world(ident="elsewhere")})
-    with pytest.raises(ContentError, match="must match the directory name"):
-        ContentLibrary.load(tree)
+    library = ContentLibrary.load(tree)
+    assert set(library.world_templates) == {"elsewhere"}
 
 
 def test_world_needs_exactly_one_world_object(tree: Path):
     _write(tree, {"worlds/testland/world.json": [{"type": "npc", "id": "bo"}]})
-    with pytest.raises(ContentError, match="expected exactly one 'world'"):
-        ContentLibrary.load(tree)
+    library = ContentLibrary.load(tree)
+    assert "testland" not in library.world_templates
 
 
 def test_world_needs_a_name(tree: Path):
@@ -1224,14 +1226,137 @@ def test_starting_years_reject_invalid_blocks(tree: Path, overrides: Any, messag
         ContentLibrary.load(tree)
 
 
-def test_rule_set_id_must_match_its_directory(tree: Path):
+def test_a_rule_set_id_comes_from_its_identifying_entry(tree: Path):
+    """A rule set folder's name is arbitrary; the `rule_set` entry names the rule set."""
     _write(tree, {"rulesets/testset/rule_set.json": _rule_set(ident="other")})
-    with pytest.raises(ContentError, match="must match the directory name"):
+    library = ContentLibrary.load(tree)
+    assert "other" in library.rule_sets
+    assert "testset" not in library.rule_sets
+
+
+def test_a_folder_without_an_identifying_entry_is_skipped(tree: Path):
+    """Only a folder that holds a `rule_set` entry is a rule set; other folders are not content."""
+    _write(tree, {"rulesets/testset/rule_set.json": []})
+    library = ContentLibrary.load(tree)
+    assert "testset" not in library.rule_sets
+
+
+def test_a_content_folder_may_nest_any_files_in_any_order(tree: Path):
+    """File names and folder nesting inside a content folder carry no meaning. A rule set can
+    be one file or many, at any depth."""
+    (tree / "rulesets" / "testset" / "rule_set.json").unlink()
+    _write(
+        tree,
+        {
+            "rulesets/testset/deeply/nested/random-name.json": [
+                *_rule_set(),
+                {"type": "rule", "id": "r1", "text": "No magic."},
+            ],
+            "rulesets/testset/other/nested/whatever.json": [
+                {
+                    "type": "feature",
+                    "id": "spark",
+                    "name": "Spark",
+                    "feature_type": "trait",
+                    "description": "A spark.",
+                }
+            ],
+        },
+    )
+    rule_set = ContentLibrary.load(tree).rule_sets["testset"]
+    assert rule_set.rules == {"r1": "No magic."}
+    assert "spark" in rule_set.character.features
+
+
+def test_the_same_entries_load_the_same_in_any_file_layout(tmp_path: Path):
+    """One file or many, nested or flat, random names or named ones: the loaded rule set is
+    the same, including template order and feature set."""
+    entries = [
+        {
+            "type": "template",
+            "id": "beta",
+            "kind": "background",
+            "name": "Beta",
+            "description": "Second by name, first by order.",
+            "order": 0,
+        },
+        {
+            "type": "template",
+            "id": "alpha",
+            "kind": "background",
+            "name": "Alpha",
+            "description": "First by name, second by order.",
+            "order": 1,
+        },
+        {"type": "rule", "id": "r1", "text": "No magic."},
+        {
+            "type": "feature",
+            "id": "spark",
+            "name": "Spark",
+            "feature_type": "trait",
+            "description": "A spark.",
+        },
+    ]
+    one_file = content_tree(tmp_path / "one")
+    _write(one_file, {"rulesets/testset/everything.json": entries})
+    many_files = content_tree(tmp_path / "many")
+    _write(
+        many_files,
+        {
+            "rulesets/testset/deep/a/random.json": entries[:1],
+            "rulesets/testset/other/b.json": entries[1:2],
+            "rulesets/testset/x.json": entries[2:3],
+            "rulesets/testset/nested/c/d/e.json": entries[3:],
+        },
+    )
+
+    def summary(root: Path) -> tuple[Any, ...]:
+        rule_set = ContentLibrary.load(root).rule_sets["testset"]
+        return (
+            tuple((t.id, t.order) for t in rule_set.character.templates.values()),
+            tuple(sorted(rule_set.rules)),
+            tuple(sorted(rule_set.character.features)),
+        )
+
+    assert summary(one_file) == summary(many_files)
+    assert summary(one_file)[0] == (("beta", 0), ("alpha", 1))
+
+
+def test_template_order_must_be_a_whole_number(tree: Path):
+    _write(
+        tree,
+        {
+            "rulesets/testset/order.json": [
+                {
+                    "type": "template",
+                    "id": "oops",
+                    "kind": "background",
+                    "name": "Oops",
+                    "description": "Bad order.",
+                    "order": "first",
+                }
+            ]
+        },
+    )
+    with pytest.raises(ContentError, match="'order' must be a whole number"):
         ContentLibrary.load(tree)
 
 
-def test_rule_set_needs_exactly_one_rule_set_object(tree: Path):
-    _write(tree, {"rulesets/testset/rule_set.json": []})
+def test_two_folders_cannot_define_the_same_content_id(tree: Path):
+    _write(tree, {"rulesets/another/anything.json": _rule_set()})
+    with pytest.raises(ContentError, match="already defined"):
+        ContentLibrary.load(tree)
+
+
+def test_a_content_folder_cannot_hold_two_identifying_entries(tree: Path):
+    _write(
+        tree,
+        {
+            "rulesets/testset/more.json": [
+                {"type": "rule_set", "id": "second", "name": "Second", "description": "Second."}
+            ]
+        },
+    )
     with pytest.raises(ContentError, match="expected exactly one 'rule_set'"):
         ContentLibrary.load(tree)
 
@@ -1606,15 +1731,14 @@ def test_wwn_background_learning_tables_match_the_previous_options():
 
 def test_wwn_background_learning_and_index_cover_every_background():
     wwn = bundled_library().rule_sets["worldswithoutnumber"]
-    backgrounds = [
-        definition
-        for definition in json.loads(
-            (DATA_DIR / "rulesets" / "worldswithoutnumber" / "backgrounds.json").read_text(
-                encoding="utf-8"
-            )
-        )
-        if definition.get("kind") == "background"
-    ]
+    backgrounds = sorted(
+        (
+            definition.data
+            for definition in read_definitions(DATA_DIR / "rulesets" / "worldswithoutnumber")
+            if definition.type == "template" and definition.data.get("kind") == "background"
+        ),
+        key=lambda data: (data.get("order", 0), data["id"]),
+    )
     assert len(backgrounds) == 20
     assert [option.name for option in wwn.tables["background_index"]] == [
         background["name"] for background in backgrounds
@@ -2744,8 +2868,10 @@ def test_the_suraru_imperators_venomous_bite_is_a_blast():
     assert monster.attacks["venomous bite"] == "1d6"
 
 
-def _edit_wwn_templates(root: Path, edit: Any) -> None:
-    path = root / "rulesets" / "worldswithoutnumber" / "templates.json"
+def _edit_wwn_class2_template(root: Path, edit: Any) -> None:
+    path = (
+        root / "rulesets" / "worldswithoutnumber" / "classes" / "warrior" / "warrior_partial_2.json"
+    )
     templates = json.loads(path.read_text(encoding="utf-8"))
     edit(templates)
     path.write_text(json.dumps(templates, indent=2), encoding="utf-8")
@@ -2767,6 +2893,6 @@ def _edit_wwn_templates(root: Path, edit: Any) -> None:
 )
 def test_a_template_grant_must_name_a_known_stat_or_counter(tmp_path: Path, edit, message: str):
     root = _twin_lakes_copy(tmp_path)
-    _edit_wwn_templates(root, edit)
+    _edit_wwn_class2_template(root, edit)
     with pytest.raises(ContentError, match=re.escape(message)):
         ContentLibrary.load(root)

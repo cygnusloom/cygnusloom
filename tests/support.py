@@ -73,32 +73,16 @@ def content_tree(
     ``rule_set`` replaces keys of the rule set definition itself, such as ``condition_ends``.
     ``definitions`` stand beside it, such as a ``rest``, ``dice_table``, or ``creative_table``.
     ``core`` adds definitions to the core rule set that every rule set is built on, and
-    ``world`` replaces the default world definitions. Creative tables are split into each
-    rule set's ``creative.json``, as the loader requires.
+    ``world`` replaces the default world definitions. Everything lives in one file per bundle,
+    which proves the loader reads definitions rather than a file layout.
     """
-    core_definitions_all = [*core_definitions(), *core]
-    rule_set_definitions_all = [rule_set_definition(**dict(rule_set or {})), *definitions]
     files: dict[str, object] = {
         "worlds/testland/world.json": list(world or world_definitions()),
-        "rulesets/core/rule_set.json": [
-            definition
-            for definition in core_definitions_all
-            if definition.get("type") != "creative_table"
-        ],
+        "rulesets/core/rule_set.json": [*core_definitions(), *core],
         "rulesets/testset/rule_set.json": [
-            definition
-            for definition in rule_set_definitions_all
-            if definition.get("type") != "creative_table"
+            rule_set_definition(**dict(rule_set or {})),
+            *definitions,
         ],
     }
-    for rule_set_id, entries in (
-        ("core", core_definitions_all),
-        ("testset", rule_set_definitions_all),
-    ):
-        creative = [
-            definition for definition in entries if definition.get("type") == "creative_table"
-        ]
-        if creative:
-            files[f"rulesets/{rule_set_id}/creative.json"] = creative
     write_files(root, files)
     return root

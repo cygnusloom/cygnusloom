@@ -1,0 +1,23 @@
+[
+  {
+    "type": "template",
+    "id": "barber-surgeon",
+    "icon": "tool",
+    "kind": "background",
+    "name": "Barber-Surgeon",
+    "description": "You walk the line between healer and harrower, knowing the frailty of the flesh but also the secrets that lie within. With the right tools, life and death are merely words.",
+    "features": [
+      "torch",
+      "bonesaw",
+      "bandages",
+      "leech",
+      "stained-medical-finery"
+    ],
+    "tables": [
+      "barber-surgeon-how-have-you-improved-yourself",
+      "barber-surgeon-what-rare-tool-is-essential-to-your-work"
+    ],
+    "names": "barber-surgeon-names",
+    "order": 1
+  }
+]

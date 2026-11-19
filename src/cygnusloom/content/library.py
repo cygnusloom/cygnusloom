@@ -2554,21 +2554,30 @@ class ContentLibrary:
 
     @classmethod
     def load(cls, data_dir: Path = DATA_DIR, *, validate_worlds: bool = True) -> ContentLibrary:
-        """Load every world template and rule set. Each subdirectory is one of either.
+        """Load every world template, module, and rule set from `data_dir`.
 
-        The `core` rule set is loaded on its own first, then merged under every other rule
-        set. A definition in a rule set replaces the core definition with the same type and id.
-        A world that names a rule set is checked against that rule set before it is returned."""
-        worlds = {d.name: _load_world(d) for d in _subdirectories(data_dir / "worlds")}
+        Each is discovered by its identifying entry (`world`, `module`, or `rule_set`) in an
+        immediate subfolder; the folder's name and the files inside it do not matter. The `core`
+        rule set is loaded on its own first, then merged under every other rule set. A definition
+        in a rule set replaces the core definition with the same type and id. A world that names
+        a rule set is checked against that rule set before it is returned."""
+        world_bundles = _bundles(data_dir / "worlds", "world")
+        worlds = {
+            bundle.id: _load_world(bundle.directory, definitions=bundle.definitions)
+            for bundle in world_bundles
+        }
         modules_dir = data_dir / "modules"
-        module_dirs = _subdirectories(modules_dir) if modules_dir.is_dir() else []
-        modules = {d.name: _load_module(d) for d in module_dirs if _has_definitions(d)}
-        rule_set_dirs = _subdirectories(data_dir / "rulesets")
-        core_dir = next((d for d in rule_set_dirs if d.name == CORE_RULE_SET), None)
-        if core_dir is None:
+        module_bundles = _bundles(modules_dir, "module") if modules_dir.is_dir() else []
+        modules = {
+            bundle.id: _load_module(bundle.directory, definitions=bundle.definitions)
+            for bundle in module_bundles
+        }
+        rule_set_bundles = _bundles(data_dir / "rulesets", "rule_set")
+        core_bundle = next((b for b in rule_set_bundles if b.id == CORE_RULE_SET), None)
+        if core_bundle is None:
             raise ContentError(f"missing the {CORE_RULE_SET!r} rule set")
         defaults = _load_defaults(data_dir)
-        core_own, core_removed = _resolve_definitions(read_definitions(core_dir), {}, CORE_RULE_SET)
+        core_own, core_removed = _resolve_definitions(core_bundle.definitions, {}, CORE_RULE_SET)
         core_capabilities = _infer_capabilities(core_own, permissive=True)
         core_definitions = _merge_defaults(
             core_own,
@@ -2580,9 +2589,14 @@ class ContentLibrary:
         )
         core = _build_rule_set(core_definitions, CORE_RULE_SET, capabilities=core_capabilities)
         rule_sets = {
-            d.name: _load_rule_set(d, core_definitions, defaults)
-            for d in rule_set_dirs
-            if d.name != CORE_RULE_SET and _has_definitions(d)
+            bundle.id: _load_rule_set(
+                bundle.directory,
+                core_definitions,
+                defaults,
+                definitions=bundle.definitions,
+            )
+            for bundle in rule_set_bundles
+            if bundle.id != CORE_RULE_SET
         }
         configured = core.default_campaign
         if configured is not None:
@@ -2687,13 +2701,60 @@ def _load_defaults(data_dir: Path) -> list[Definition]:
     return read_definitions(directory)
 
 
+@dataclass(frozen=True)
+class _Bundle:
+    """One content folder: the identifying entry that names it and every definition under it."""
+
+    id: str
+    directory: Path
+    definitions: list[Definition]
+
+
 def _has_definitions(directory: Path) -> bool:
-    """A rule set directory with no JSON yet, such as one holding only its source PDF, is skipped
-    with a warning. Once it has JSON, it loads like any other."""
+    """A content directory with no JSON, such as one holding only its source PDF, is not a
+    bundle. It is skipped with a warning instead of failing the whole library."""
     if any(directory.rglob("*.json")):
         return True
-    logger.warning("skipping rule set %s: no JSON files yet", directory.name)
+    logger.warning("skipping content folder %s: no JSON files yet", directory.name)
     return False
+
+
+def _bundles(root: Path, identifying: str) -> list[_Bundle]:
+    """Every immediate subfolder of `root` that holds one `identifying` definition.
+
+    The identifying entry (such as a `rule_set`, `world`, or `module`) names the bundle, so the
+    folder's name, the file names, and the nesting inside the folder never matter. A folder
+    with no identifying entry is not content and is skipped with a warning; a folder with more
+    than one is ambiguous and is refused.
+    """
+    bundles: list[_Bundle] = []
+    seen: dict[str, Path] = {}
+    for directory in _subdirectories(root):
+        if not _has_definitions(directory):
+            continue
+        definitions = read_definitions(directory)
+        matches = [definition for definition in definitions if definition.type == identifying]
+        if not matches:
+            logger.warning(
+                "skipping content folder %s: no %r identifying entry",
+                directory.name,
+                identifying,
+            )
+            continue
+        if len(matches) > 1:
+            raise ContentError(
+                f"{directory.name}: expected exactly one {identifying!r} object, "
+                f"found {len(matches)}"
+            )
+        ident = matches[0].id
+        if ident in seen:
+            raise ContentError(
+                f"{directory.name}: {identifying} id {ident!r} is already defined in "
+                f"{seen[ident].name!r}"
+            )
+        seen[ident] = directory
+        bundles.append(_Bundle(id=ident, directory=directory, definitions=definitions))
+    return bundles
 
 
 def _subdirectories(path: Path) -> list[Path]:
@@ -2709,11 +2770,6 @@ def _single(definitions: list[Definition], kind: str, template: str) -> Definiti
             f"{template}: expected exactly one {kind!r} object, found {len(matches)}"
         )
     return matches[0]
-
-
-def _check_directory_id(template: str, ident: str) -> None:
-    if ident != template:
-        raise ContentError(f"{template}: id must match the directory name, got {ident!r}")
 
 
 WORLD_TYPES = ("monster", "table", "dice_table", "creative_table", "feature", "rule")
@@ -3011,19 +3067,16 @@ def _assert_consumed(
         raise ContentError(f"{template}: unknown definition type(s) {', '.join(unknown)}")
 
 
-def _load_world(directory: Path) -> WorldTemplate:
+def _load_world(directory: Path, *, definitions: list[Definition] | None = None) -> WorldTemplate:
     template = directory.name
-    definitions = read_definitions(directory)
+    if definitions is None:
+        definitions = read_definitions(directory)
     _assert_consumed(definitions, WORLD_DEFINITION_TYPES, template)
     return _build_world_template(template, definitions)
 
 
-def _build_world_template(
-    template: str, definitions: list[Definition], *, check_directory_id: bool = True
-) -> WorldTemplate:
+def _build_world_template(template: str, definitions: list[Definition]) -> WorldTemplate:
     world = _single(definitions, "world", template)
-    if check_directory_id:
-        _check_directory_id(template, world.id)
     label = f"{template}: world"
     check_keys(
         world.data,
@@ -3159,18 +3212,18 @@ def _load_world_start(
     )
 
 
-def _load_module(directory: Path) -> ModuleTemplate:
+def _load_module(directory: Path, *, definitions: list[Definition] | None = None) -> ModuleTemplate:
     """A module is one manifest plus its own ordinary world content.
 
     A campaign module is the adventure and the setting in one object. Its locations, NPCs,
-    rules, and tables are files beside `module.json`; there is no separate `world.json` or
-    world template to keep in sync. A mini module has no setting and uses `body` only.
+    rules, and tables are files anywhere in the module's folder; there is no separate `world.json`
+    or world template to keep in sync. A mini module has no setting and uses `body` only.
     """
     template = directory.name
-    definitions = read_definitions(directory)
+    if definitions is None:
+        definitions = read_definitions(directory)
     _assert_consumed(definitions, WORLD_DEFINITION_TYPES | MODULE_DEFINITION_TYPES, template)
     module_def = _single(definitions, "module", template)
-    _check_directory_id(template, module_def.id)
     label = f"{template}: module"
     check_keys(
         module_def.data,
@@ -3234,9 +3287,7 @@ def _load_module(directory: Path) -> ModuleTemplate:
             if key in module_def.data:
                 head[key] = module_def.data[key]
         synthetic = Definition(type="world", id=module_def.id, data=head)
-        world_template = _build_world_template(
-            template, [synthetic, *world_definitions], check_directory_id=False
-        )
+        world_template = _build_world_template(template, [synthetic, *world_definitions])
         if not world_template.has_setting:
             raise ContentError(f"{label}: a campaign module needs its own setting")
         body = _optional_text(module_def.data, "body", label) or ""
@@ -3958,6 +4009,7 @@ CHARACTER_DEFINITION_KEYS: Mapping[str, frozenset[str]] = {
             "learning",
             "icon",
             "looks_like",
+            "order",
         }
     ),
 }
@@ -4482,11 +4534,15 @@ def _load_rule_set(
     directory: Path,
     core_definitions: list[Definition],
     defaults: Sequence[Definition] = (),
+    *,
+    definitions: list[Definition] | None = None,
 ) -> RuleSet:
     """A rule set is its own definitions plus every core definition it does not replace. A core
     dice or creative table joins it only when its genres fit the rule set's own selection; the
     core library keeps every table, so the sourcebook stays complete."""
     template = directory.name
+    if definitions is None:
+        definitions = read_definitions(directory)
     base_by_key: dict[tuple[str, str], Definition] = {}
     for definition in (*core_definitions, *defaults):
         base_by_key[(definition.type, definition.id)] = Definition(
@@ -4494,7 +4550,7 @@ def _load_rule_set(
             id=definition.id,
             data=_strip_meta(definition.data, definition.type),
         )
-    own, removed = _resolve_definitions(read_definitions(directory), base_by_key, template)
+    own, removed = _resolve_definitions(definitions, base_by_key, template)
     declared = _declared_capabilities(own, template)
     capabilities = declared or _infer_capabilities([*own, *core_definitions])
     own = _merge_defaults(
@@ -4539,7 +4595,6 @@ def _build_rule_set(
     capabilities: Capabilities | None = None,
 ) -> RuleSet:
     head = _single(definitions, "rule_set", template)
-    _check_directory_id(template, head.id)
     if capabilities is None:
         capabilities = _declared_capabilities(definitions, template) or _infer_capabilities(
             definitions, permissive=True

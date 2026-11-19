@@ -1,0 +1,33 @@
+[
+  {
+    "type": "template",
+    "id": "pkg_ranger_archer",
+    "icon": "kit-scout",
+    "kind": "kit",
+    "name": "Greenwood Scout",
+    "description": "A woodsman's loadout: a buff coat, a large bow and a score of arrows, a dagger and a hand axe for close work, cooking gear and field rations, with 20 silver kept for the road.",
+    "grant": {
+      "items": [
+        "Buff Coat",
+        "Bow, Large",
+        "Arrows, 20",
+        "Dagger",
+        "Hand Axe",
+        "Backpack",
+        "Cooking Utensils",
+        "Rations, One Week",
+        "Waterskin",
+        "Tinder Box",
+        "Torch",
+        "Torch",
+        "Rope, 50 ft"
+      ],
+      "silver": 20,
+      "equip": [
+        "Buff Coat"
+      ]
+    },
+    "names": "names",
+    "order": 2
+  }
+]

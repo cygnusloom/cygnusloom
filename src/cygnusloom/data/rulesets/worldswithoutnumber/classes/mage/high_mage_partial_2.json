@@ -1,0 +1,35 @@
+[
+  {
+    "type": "template",
+    "id": "high_mage_partial_2",
+    "icon": "rune-circle",
+    "kind": "tradition2",
+    "choice_key": "high_mage",
+    "name": "Second Tradition: High Mage, Partial",
+    "description": "The second partial tradition of a Mage/Mage Adventurer. It grants one art and two first-level spells, and one more art at levels 2, 3, 6, and 9.",
+    "compatible_with": {
+      "class": [
+        "adventurer_mage_mage"
+      ]
+    },
+    "feat_picks": [
+      {
+        "id": "tradition2_art_high",
+        "count": 1,
+        "tag": "high",
+        "max_rank": 0
+      },
+      {
+        "id": "tradition2_spells_high",
+        "count": 2,
+        "tags": [
+          "high"
+        ],
+        "feature_type": "spell",
+        "max_rank": 1
+      }
+    ],
+    "names": "names",
+    "order": 0
+  }
+]

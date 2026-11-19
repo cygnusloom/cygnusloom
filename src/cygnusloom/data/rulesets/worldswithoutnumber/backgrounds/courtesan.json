@@ -1,0 +1,35 @@
+[
+  {
+    "type": "template",
+    "id": "courtesan",
+    "icon": "ring",
+    "kind": "background",
+    "name": "Courtesan",
+    "description": "You made your way by charm, performance, and careful attention to powerful people. You hear what is said in fine rooms and know how to be remembered for the right reasons.",
+    "skills": {
+      "perform": 1
+    },
+    "skill_picks": [
+      {
+        "id": "background_learning",
+        "count": 2,
+        "table": "learning_courtesan",
+        "exclude": [
+          "any_skill"
+        ]
+      }
+    ],
+    "learning": [
+      "perform",
+      "notice",
+      "administer",
+      "sneak",
+      "connect",
+      "know",
+      "convince",
+      "lead"
+    ],
+    "names": "names",
+    "order": 3
+  }
+]

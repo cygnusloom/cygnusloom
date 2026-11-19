@@ -1,0 +1,35 @@
+[
+  {
+    "type": "template",
+    "id": "noble",
+    "icon": "throne",
+    "kind": "background",
+    "name": "Noble",
+    "description": "You were raised to command, or at least to look as if you should. You know the courtesies of rank and how to turn a room of reluctant people into a following.",
+    "skills": {
+      "lead": 1
+    },
+    "skill_picks": [
+      {
+        "id": "background_learning",
+        "count": 2,
+        "table": "learning_noble",
+        "exclude": [
+          "any_skill"
+        ]
+      }
+    ],
+    "learning": [
+      "perform",
+      "connect",
+      "ride",
+      "administer",
+      "convince",
+      "notice",
+      "know",
+      "lead"
+    ],
+    "names": "names",
+    "order": 8
+  }
+]

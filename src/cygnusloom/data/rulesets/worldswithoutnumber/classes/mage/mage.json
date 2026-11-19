@@ -1,0 +1,38 @@
+[
+  {
+    "type": "template",
+    "id": "mage",
+    "icon": "wand",
+    "kind": "class",
+    "name": "Mage",
+    "description": "A spellcaster bound to one magical tradition. You roll a d6 for hit points with a -1 class penalty at first level, gain one free Focus of any kind, and learn the arts and spells of your tradition.",
+    "stats": {
+      "hp": -1,
+      "attack_bonus": -1
+    },
+    "skill_picks": [
+      {
+        "id": "class_free_skill",
+        "count": 1,
+        "table": "all_skills",
+        "max_level": 1
+      }
+    ],
+    "feat_picks": [
+      {
+        "id": "class_focus_any",
+        "count": 1,
+        "tag": "focus",
+        "max_rank": 1,
+        "exclude": [
+          "focus_special_origin",
+          "focus_developed_attribute",
+          "focus_nullifier",
+          "focus_polymath"
+        ]
+      }
+    ],
+    "names": "names",
+    "order": 4
+  }
+]

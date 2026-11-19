@@ -1,0 +1,271 @@
+[
+  {
+    "type": "feature",
+    "id": "species-tiefling-size",
+    "name": "Tiefling: Size",
+    "feature_type": "trait",
+    "description": "Medium (about 4\u20137 feet tall) or Small (about 3\u20134 feet tall), chosen when you select this species",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "species-tiefling-speed",
+    "name": "Tiefling: Speed",
+    "feature_type": "trait",
+    "description": "30 feet",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "species-tiefling-darkvision",
+    "name": "Tiefling: Darkvision",
+    "feature_type": "trait",
+    "description": "You have Darkvision with a range of 60 feet.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "species-tiefling-fiendish-legacy",
+    "name": "Tiefling: Fiendish Legacy",
+    "feature_type": "trait",
+    "description": "You are the recipient of a legacy that grants you supernatural abilities. Choose a legacy from the Fiendish Legacies table. You gain the level 1 benefit of the chosen legacy.\n\nWhen you reach character levels 3 and 5, you learn a higher-level spell, as shown on the table. You always have that spell prepared. You can cast it once without a spell slot, and you regain the ability to cast it in that way when you finish a Long Rest. You can also cast the spell using any spell slots you have of the appropriate level.\n\nIntelligence, Wisdom, or Charisma is your spellcasting ability for the spells you cast with this trait (choose the ability when you select the legacy).\n\n**Table: Fiendish Legacies**\n\n|Legacy|Level 1|Level 3|Level 5|\n|---|---|---|---|\n|Abyssal|You have Resistance to Poison damage. You also know the Poison Spray cantrip.|Ray of Sickness|Hold Person|\n|Chthonic|You have Resistance to Necrotic damage. You also know the Chill Touch cantrip.|False Life|Ray of Enfeeblement|\n|Infernal|You have Resistance to Fire damage. You also know the Fire Bolt cantrip.|Hellish Rebuke|Darkness|",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "species-tiefling-otherworldly-presence",
+    "name": "Tiefling: Otherworldly Presence",
+    "feature_type": "trait",
+    "description": "You know the *Thaumaturgy* cantrip. When you cast it with this trait, the spell uses the same spellcasting ability you use for your Fiendish Legacy trait.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "lineage-tiefling-abyssal",
+    "name": "Tiefling: Abyssal Legacy",
+    "feature_type": "trait",
+    "description": "You have Resistance to Poison damage and know the Poison Spray cantrip. At level 3 you learn Ray of Sickness, and at level 5 you learn Hold Person; each is always prepared and can be cast once without a spell slot per Long Rest.",
+    "tag": "lineage-tiefling",
+    "rank": 0,
+    "resistances": [
+      "poison"
+    ],
+    "picks": [
+      {
+        "id": "ability",
+        "kind": "stat",
+        "label": "Spellcasting ability",
+        "choices": [
+          "int",
+          "wis",
+          "cha"
+        ]
+      }
+    ],
+    "learn_spells": [
+      "spell-poison-spray"
+    ],
+    "always_prepared": true,
+    "free_cast": true
+  },
+  {
+    "type": "feature",
+    "id": "lineage-tiefling-chthonic",
+    "name": "Tiefling: Chthonic Legacy",
+    "feature_type": "trait",
+    "description": "You have Resistance to Necrotic damage and know the Chill Touch cantrip. At level 3 you learn False Life, and at level 5 you learn Ray of Enfeeblement; each is always prepared and can be cast once without a spell slot per Long Rest.",
+    "tag": "lineage-tiefling",
+    "rank": 0,
+    "resistances": [
+      "necrotic"
+    ],
+    "picks": [
+      {
+        "id": "ability",
+        "kind": "stat",
+        "label": "Spellcasting ability",
+        "choices": [
+          "int",
+          "wis",
+          "cha"
+        ]
+      }
+    ],
+    "learn_spells": [
+      "spell-chill-touch"
+    ],
+    "always_prepared": true,
+    "free_cast": true
+  },
+  {
+    "type": "feature",
+    "id": "lineage-tiefling-infernal",
+    "name": "Tiefling: Infernal Legacy",
+    "feature_type": "trait",
+    "description": "You have Resistance to Fire damage and know the Fire Bolt cantrip. At level 3 you learn Hellish Rebuke, and at level 5 you learn Darkness; each is always prepared and can be cast once without a spell slot per Long Rest.",
+    "tag": "lineage-tiefling",
+    "rank": 0,
+    "resistances": [
+      "fire"
+    ],
+    "picks": [
+      {
+        "id": "ability",
+        "kind": "stat",
+        "label": "Spellcasting ability",
+        "choices": [
+          "int",
+          "wis",
+          "cha"
+        ]
+      }
+    ],
+    "learn_spells": [
+      "spell-fire-bolt"
+    ],
+    "always_prepared": true,
+    "free_cast": true
+  },
+  {
+    "type": "feature",
+    "id": "lineage-tiefling-abyssal-spell-3-spell-ray-of-sickness",
+    "name": "Tiefling: Abyssal Legacy - Ray of Sickness",
+    "feature_type": "trait",
+    "description": "You always have Ray of Sickness prepared. You can cast it once without a spell slot, regaining that use on a Long Rest.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 3,
+    "requires_feature": "lineage-tiefling-abyssal",
+    "learn_spells": [
+      "spell-ray-of-sickness"
+    ],
+    "always_prepared": true,
+    "free_cast": true
+  },
+  {
+    "type": "feature",
+    "id": "lineage-tiefling-abyssal-spell-5-spell-hold-person",
+    "name": "Tiefling: Abyssal Legacy - Hold Person",
+    "feature_type": "trait",
+    "description": "You always have Hold Person prepared. You can cast it once without a spell slot, regaining that use on a Long Rest.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 5,
+    "requires_feature": "lineage-tiefling-abyssal",
+    "learn_spells": [
+      "spell-hold-person"
+    ],
+    "always_prepared": true,
+    "free_cast": true
+  },
+  {
+    "type": "feature",
+    "id": "lineage-tiefling-chthonic-spell-3-spell-false-life",
+    "name": "Tiefling: Chthonic Legacy - False Life",
+    "feature_type": "trait",
+    "description": "You always have False Life prepared. You can cast it once without a spell slot, regaining that use on a Long Rest.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 3,
+    "requires_feature": "lineage-tiefling-chthonic",
+    "learn_spells": [
+      "spell-false-life"
+    ],
+    "always_prepared": true,
+    "free_cast": true
+  },
+  {
+    "type": "feature",
+    "id": "lineage-tiefling-chthonic-spell-5-spell-ray-of-enfeeblement",
+    "name": "Tiefling: Chthonic Legacy - Ray of Enfeeblement",
+    "feature_type": "trait",
+    "description": "You always have Ray of Enfeeblement prepared. You can cast it once without a spell slot, regaining that use on a Long Rest.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 5,
+    "requires_feature": "lineage-tiefling-chthonic",
+    "learn_spells": [
+      "spell-ray-of-enfeeblement"
+    ],
+    "always_prepared": true,
+    "free_cast": true
+  },
+  {
+    "type": "feature",
+    "id": "lineage-tiefling-infernal-spell-3-spell-hellish-rebuke",
+    "name": "Tiefling: Infernal Legacy - Hellish Rebuke",
+    "feature_type": "trait",
+    "description": "You always have Hellish Rebuke prepared. You can cast it once without a spell slot, regaining that use on a Long Rest.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 3,
+    "requires_feature": "lineage-tiefling-infernal",
+    "learn_spells": [
+      "spell-hellish-rebuke"
+    ],
+    "always_prepared": true,
+    "free_cast": true
+  },
+  {
+    "type": "feature",
+    "id": "lineage-tiefling-infernal-spell-5-spell-darkness",
+    "name": "Tiefling: Infernal Legacy - Darkness",
+    "feature_type": "trait",
+    "description": "You always have Darkness prepared. You can cast it once without a spell slot, regaining that use on a Long Rest.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 5,
+    "requires_feature": "lineage-tiefling-infernal",
+    "learn_spells": [
+      "spell-darkness"
+    ],
+    "always_prepared": true,
+    "free_cast": true
+  },
+  {
+    "type": "template",
+    "id": "tiefling",
+    "kind": "species",
+    "name": "Tiefling",
+    "icon": "spirit",
+    "order": 8,
+    "description": "Tiefling. Medium (about 4\u20137 feet tall) or Small (about 3\u20134 feet tall), chosen when you select this species. Speed 30 feet. Size. Speed. Darkvision. Fiendish Legacy. Otherworldly Presence.",
+    "features": [
+      "species-tiefling-size",
+      "species-tiefling-speed",
+      "species-tiefling-darkvision",
+      "species-tiefling-fiendish-legacy",
+      "species-tiefling-otherworldly-presence",
+      "lineage-tiefling-abyssal-spell-3-spell-ray-of-sickness",
+      "lineage-tiefling-abyssal-spell-5-spell-hold-person",
+      "lineage-tiefling-chthonic-spell-3-spell-false-life",
+      "lineage-tiefling-chthonic-spell-5-spell-ray-of-enfeeblement",
+      "lineage-tiefling-infernal-spell-3-spell-hellish-rebuke",
+      "lineage-tiefling-infernal-spell-5-spell-darkness"
+    ],
+    "feat_picks": [
+      {
+        "id": "lineage",
+        "count": 1,
+        "tag": "lineage-tiefling",
+        "feature_type": "trait",
+        "max_rank": 0
+      }
+    ]
+  }
+]

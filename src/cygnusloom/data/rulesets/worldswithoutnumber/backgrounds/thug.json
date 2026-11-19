@@ -1,0 +1,35 @@
+[
+  {
+    "type": "template",
+    "id": "thug",
+    "icon": "fist",
+    "kind": "background",
+    "name": "Thug",
+    "description": "You made a living by intimidation and violence, or by standing close to people who did. You know how to start a fight, how to finish one, and when to walk away.",
+    "skills": {
+      "punch": 1
+    },
+    "skill_picks": [
+      {
+        "id": "background_learning",
+        "count": 2,
+        "table": "learning_thug",
+        "exclude": [
+          "any_skill"
+        ]
+      }
+    ],
+    "learning": [
+      "sneak",
+      "survive",
+      "notice",
+      "punch",
+      "connect",
+      "stab",
+      "exert",
+      "convince"
+    ],
+    "names": "names",
+    "order": 18
+  }
+]

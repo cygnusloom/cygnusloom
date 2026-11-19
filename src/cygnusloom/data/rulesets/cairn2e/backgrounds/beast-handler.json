@@ -1,0 +1,23 @@
+[
+  {
+    "type": "template",
+    "id": "beast-handler",
+    "icon": "rope",
+    "kind": "background",
+    "name": "Beast Handler",
+    "description": "You alone can walk among the creatures of the wild, fearless and in control. You share a connection with animals that others can only dream of\u2026 so long as you don\u2019t become their snack.",
+    "features": [
+      "torch",
+      "leather-whip",
+      "soporific-darts",
+      "lure",
+      "rope"
+    ],
+    "tables": [
+      "beast-handler-what-creature-is-your-specialty",
+      "beast-handler-what-have-you-learned-from-the-creatures-of-the-wild"
+    ],
+    "names": "beast-handler-names",
+    "order": 2
+  }
+]

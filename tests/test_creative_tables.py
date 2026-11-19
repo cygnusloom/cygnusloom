@@ -299,19 +299,18 @@ def test_a_world_may_define_its_own_creative_table(tree: Path):
     assert [row.result for row in tables["heist"].rows] == ["vault", "vent"]
 
 
-def test_a_creative_table_must_live_in_creative_json(tree: Path):
+def test_a_creative_table_may_live_in_any_file_name(tree: Path):
+    """File layout never matters, so a creative table loads from a nested file with any name."""
     _write(
         tree,
         {
-            "worlds/testland/tables.json": [
+            "worlds/testland/deep/nested/anything.json": [
                 {"type": "creative_table", "id": "heist", "entries": ["vault", "vent"]}
             ]
         },
     )
-    with pytest.raises(
-        ContentError, match="creative tables must live in a file named 'creative.json'"
-    ):
-        ContentLibrary.load(tree)
+    tables = ContentLibrary.load(tree).world_content("testland", "testset").dice_tables
+    assert [row.result for row in tables["heist"].rows] == ["vault", "vent"]
 
 
 def test_a_world_cannot_add_to_or_remove_from_a_core_table(tree: Path):

@@ -838,6 +838,17 @@ def write(name: str, data: Any) -> None:
     print(f"wrote {name} ({len(data)} definitions)")
 
 
+def write_files(files: dict[str, list[dict[str, Any]]]) -> None:
+    """Write one file per template, so adding a class, subclass, species, or background is a
+    single new file. The loader reads every file under the rule set, so these names are only a
+    convenience for authors."""
+    for relative, definitions in sorted(files.items()):
+        path = OUT / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(definitions, indent=2) + "\n", encoding="utf-8")
+        print(f"wrote {relative} ({len(definitions)} definitions)")
+
+
 def gp_to_sp(value: str | float | None) -> int:
     if value in (None, ""):
         return 0
@@ -2628,7 +2639,9 @@ def build_species() -> None:
         str(entry["name"]).casefold(): str(entry["id"]) for entry in spell_definitions
     }
     definitions: list[dict[str, Any]] = []
-    for record in species:
+    files: dict[str, list[dict[str, Any]]] = {}
+    for species_order, record in enumerate(species):
+        start = len(definitions)
         species_id = key_id(record["key"])
         trait_ids = []
         for trait in record.get("traits", []):
@@ -2708,6 +2721,7 @@ def build_species() -> None:
             "kind": "species",
             "name": record["name"],
             "icon": SPECIES_ICONS.get(species_id, "humanoid"),
+            "order": species_order,
             "description": (
                 f"{record['name']}. {size}. Speed {speed}. "
                 + " ".join(t["name"] + "." for t in record["traits"])
@@ -2783,7 +2797,8 @@ def build_species() -> None:
                         )
                         template["features"].append(feature_id)
         definitions.append(template)
-    write("species.json", definitions)
+        files[f"species/{species_id}.json"] = definitions[start:]
+    write_files(files)
 
 
 def background_abilities(record: dict[str, Any]) -> list[str]:
@@ -2889,13 +2904,14 @@ def background_equipment_grant(equipment: str) -> dict[str, Any]:
 
 def build_backgrounds() -> None:
     records = load("backgrounds")
-    definitions: list[dict[str, Any]] = []
-    for record in records:
+    files: dict[str, list[dict[str, Any]]] = {}
+    for background_order, record in enumerate(records):
         ident = key_id(record["key"])
         abilities = background_abilities(record)
         skills = background_skills(record)
         feat_id = background_feat(record)
         asi_id = f"background-asi-{ident}"
+        entries: list[dict[str, Any]] = []
         tool = next(
             (
                 benefit.get("desc", "")
@@ -2906,7 +2922,7 @@ def build_backgrounds() -> None:
         )
         if tool.casefold().startswith("choose one kind of "):
             tool = tool[len("choose one kind of ") :]
-        definitions.append(
+        entries.append(
             feature(
                 asi_id,
                 f"{record['name']}: Ability Scores",
@@ -2949,7 +2965,7 @@ def build_backgrounds() -> None:
             description += f" Tool proficiency: {tool}."
         if equipment:
             description += f" Equipment: {equipment}"
-        definitions.append(
+        entries.append(
             {
                 "type": "template",
                 "id": ident,
@@ -2961,13 +2977,15 @@ def build_backgrounds() -> None:
                     "sage": "book",
                     "soldier": "sword",
                 }.get(ident, "scroll"),
+                "order": background_order,
                 "description": description,
                 "skills": {skill: 1 for skill in skills},
                 "features": features,
                 "grant": background_equipment_grant(equipment),
             }
         )
-    write("backgrounds.json", definitions)
+        files[f"backgrounds/{ident}.json"] = entries
+    write_files(files)
 
 
 CLASS_ALWAYS_PREPARED = {
@@ -3227,9 +3245,10 @@ def markdown_options(text: str) -> list[tuple[str, str]]:
     return options
 
 
-def option_features(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Metamagic and Eldritch Invocation options, plus the Divine and Primal Orders."""
-    definitions: list[dict[str, Any]] = []
+def option_features(records: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
+    """Metamagic and Eldritch Invocation options, plus the Divine and Primal Orders. Each
+    definition goes in the file of the class or subclass that offers it."""
+    definitions: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for record in records:
         for entry in record.get("features", []):
             if entry.get("feature_type") != "CLASS_FEATURE_OPTION_LIST":
@@ -3238,10 +3257,12 @@ def option_features(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 tag = "metamagic"
                 prefix = "metamagic"
                 rank = 0
+                path = "classes/sorcerer/sorcerer.json"
             elif record["name"] == "Warlock":
                 tag = "invocation"
                 prefix = "invocation"
                 rank = 0
+                path = "classes/warlock/warlock.json"
             else:
                 continue
             for name, body in markdown_options(entry.get("desc", "")):
@@ -3249,7 +3270,7 @@ def option_features(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 match = re.search(r"Prerequisite:.*?Level (\d+)\+", body)
                 if match:
                     level = int(match.group(1))
-                definitions.append(
+                definitions[path].append(
                     feature(
                         f"{prefix}-{slug(name)}",
                         name,
@@ -3260,7 +3281,7 @@ def option_features(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
                         repeatable="**Repeatable.**" in body,
                     )
                 )
-    definitions += [
+    definitions["classes/cleric/cleric.json"] += [
         feature(
             "divine-order-protector",
             "Divine Order: Protector",
@@ -3282,6 +3303,8 @@ def option_features(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
             tag="divine-order",
             rank=1,
         ),
+    ]
+    definitions["classes/druid/druid.json"] += [
         feature(
             "primal-order-magician",
             "Primal Order: Magician",
@@ -3303,6 +3326,8 @@ def option_features(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
             armor_training=["medium"],
             weapon_training=["martial"],
         ),
+    ]
+    definitions["classes/ranger/hunter.json"] += [
         feature(
             "hunter-prey-colossus-slayer",
             "Colossus Slayer",
@@ -3324,7 +3349,7 @@ def option_features(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
             rank=1,
         ),
     ]
-    return definitions
+    return dict(definitions)
 
 
 def class_table_values(record: dict[str, Any], name: str, default: int = 0) -> list[int]:
@@ -3405,8 +3430,10 @@ def build_classes(spell_lists: dict[str, dict[int, list[str]]]) -> None:
     base = {key_id(record["key"]): record for record in records if not record.get("subclass_of")}
     subclass_records = [record for record in records if record.get("subclass_of")]
     definitions: list[dict[str, Any]] = []
+    files: dict[str, list[dict[str, Any]]] = {}
     progression_classes: dict[str, Any] = {}
-    for class_id, record in base.items():
+    for class_order, (class_id, record) in enumerate(base.items()):
+        start = len(definitions)
         level_features: dict[int, list[str]] = defaultdict(list)
         asi_levels: set[int] = set()
         epic_levels: set[int] = set()
@@ -3615,6 +3642,7 @@ def build_classes(spell_lists: dict[str, dict[int, list[str]]]) -> None:
             "kind": "class",
             "name": record["name"],
             "icon": CLASS_ICONS[class_id],
+            "order": class_order,
             "description": (
                 f"{CLASS_ROLES[class_id]} Hit Point Die: d{record['hit_dice'][1:]}. "
                 "Saving Throw Proficiencies: "
@@ -3689,6 +3717,7 @@ def build_classes(spell_lists: dict[str, dict[int, list[str]]]) -> None:
         if counters:
             template["counters"] = counters
         definitions.append(template)
+        files[f"classes/{class_id}/{class_id}.json"] = definitions[start:]
         progression_classes[class_id] = {
             "hit_die": int(record["hit_dice"][1:]),
             "saves": list(
@@ -3739,6 +3768,7 @@ def build_classes(spell_lists: dict[str, dict[int, list[str]]]) -> None:
         }
     progression_subclasses: dict[str, Any] = {}
     for record in subclass_records:
+        start = len(definitions)
         subclass_id = key_id(record["key"])
         parent = key_id(record["subclass_of"]["key"])
         levels: dict[int, list[str]] = defaultdict(list)
@@ -3796,6 +3826,7 @@ def build_classes(spell_lists: dict[str, dict[int, list[str]]]) -> None:
             )
         )
         subclass_spells, always_prepared = subclass_spell_list(record, spells_by_name)
+        files[f"classes/{parent}/{subclass_id}.json"] = definitions[start:]
         progression_subclasses[subclass_id] = {
             "class": parent,
             "features": {str(level): ids for level, ids in sorted(levels.items())},
@@ -3806,8 +3837,9 @@ def build_classes(spell_lists: dict[str, dict[int, list[str]]]) -> None:
             "always_prepared": always_prepared,
             "land_spells": subclass_land_spells(record, spells_by_name),
         }
-    definitions.extend(option_features(records))
-    write("classes.json", definitions)
+    for relative, entries in option_features(records).items():
+        files[relative] = [*files.get(relative, []), *entries]
+    write_files(files)
     progression = {
         "type": "rule_data",
         "id": "progression",
@@ -4437,6 +4469,7 @@ def build_tool_calls() -> None:
                 "dice": "1d20",
                 "dice_values_param": "dice_values",
                 "details": "The engine adds your ability modifier and proficiency bonus.",
+                "character_param": "character",
             },
         },
         {
@@ -4477,6 +4510,7 @@ def build_tool_calls() -> None:
                 "param": "roll",
                 "dice": "1d20",
                 "details": "The engine adds your save bonus.",
+                "character_param": "name",
             },
         },
         {
@@ -4530,6 +4564,7 @@ def build_tool_calls() -> None:
                 "param": "roll",
                 "dice": "1d20",
                 "details": "Roll a death save: 10 or more succeeds.",
+                "character_param": "name",
             },
         },
         {
@@ -4813,6 +4848,7 @@ def build_tool_calls() -> None:
                 "param": "roll",
                 "dice": "1d20",
                 "details": "The engine adds your spell attack bonus.",
+                "character_param": "name",
             },
         },
         {

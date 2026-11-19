@@ -1,0 +1,37 @@
+[
+  {
+    "type": "template",
+    "id": "high_mage",
+    "icon": "rune-circle",
+    "kind": "tradition",
+    "name": "High Mage",
+    "description": "The classical tradition of formal spells, sigils, and disciplined study. A full High Mage picks two arts and four first-level spells, and learns two more spells each level.",
+    "compatible_with": {
+      "class": [
+        "mage"
+      ]
+    },
+    "skills": {
+      "magic": 1
+    },
+    "feat_picks": [
+      {
+        "id": "tradition_art_high",
+        "count": 2,
+        "tag": "high",
+        "max_rank": 0
+      },
+      {
+        "id": "tradition_spells_high",
+        "count": 4,
+        "tags": [
+          "high"
+        ],
+        "feature_type": "spell",
+        "max_rank": 1
+      }
+    ],
+    "names": "names",
+    "order": 1
+  }
+]

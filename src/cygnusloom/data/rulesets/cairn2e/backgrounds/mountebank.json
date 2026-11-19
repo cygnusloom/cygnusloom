@@ -1,0 +1,23 @@
+[
+  {
+    "type": "template",
+    "id": "mountebank",
+    "icon": "ring",
+    "kind": "background",
+    "name": "Mountebank",
+    "description": "Wits are your sharpest weapon, a facade your strongest shield. But when you do lose, you lose badly.",
+    "features": [
+      "torch",
+      "cart",
+      "trick-playing-cards",
+      "fancy-hat",
+      "cane-sword"
+    ],
+    "tables": [
+      "mountebank-how-was-your-fraud-exposed",
+      "mountebank-what-keepsake-could-always-identify-you"
+    ],
+    "names": "mountebank-names",
+    "order": 15
+  }
+]

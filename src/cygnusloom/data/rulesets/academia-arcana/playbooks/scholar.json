@@ -1,0 +1,19 @@
+[
+  {
+    "type": "template",
+    "id": "scholar",
+    "icon": "book",
+    "kind": "playbook",
+    "names": "student-names",
+    "name": "Scholar",
+    "description": "You would rather understand a spell than cast it. Footnotes, contradictions, and the book nobody else has read are your natural habitat.",
+    "stats": {
+      "theory": 1
+    },
+    "features": [
+      "talent-scholar",
+      "signature-spell"
+    ],
+    "order": 1
+  }
+]

@@ -1,0 +1,36 @@
+[
+  {
+    "type": "template",
+    "id": "barbarian",
+    "icon": "axe",
+    "kind": "background",
+    "name": "Barbarian",
+    "description": "You grew up beyond the settled lands, where weather and wild beasts set the terms of life. You can read a trail, find food, and fight when you must.",
+    "skills": {
+      "survive": 1
+    },
+    "skill_picks": [
+      {
+        "id": "background_learning",
+        "count": 2,
+        "table": "learning_barbarian",
+        "exclude": [
+          "any_skill"
+        ]
+      }
+    ],
+    "learning": [
+      "stab",
+      "shoot",
+      "punch",
+      "connect",
+      "exert",
+      "lead",
+      "notice",
+      "sneak",
+      "survive"
+    ],
+    "names": "names",
+    "order": 1
+  }
+]

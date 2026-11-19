@@ -1,0 +1,148 @@
+[
+  {
+    "type": "feature",
+    "id": "species-goliath-size",
+    "name": "Goliath: Size",
+    "feature_type": "trait",
+    "description": "Medium (about 7\u20138 feet tall)",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "species-goliath-speed",
+    "name": "Goliath: Speed",
+    "feature_type": "trait",
+    "description": "35 feet",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "species-goliath-giant-ancestry",
+    "name": "Goliath: Giant Ancestry",
+    "feature_type": "trait",
+    "description": "You are descended from Giants. Choose one of the following benefits\u2014a supernatural boon from your ancestry; you can use the chosen benefit a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest:\n\n- **Cloud's Jaunt (Cloud Giant)**. As a Bonus Action, you magically teleport up to 30 feet to an unoccupied space you can see.\n- **Fire's Burn (Fire Giant)**. When you hit a target with an attack roll and deal damage to it, you can also deal 1d10 Fire damage to that target.\n- **Frost's Chill (Frost Giant)**. When you hit a target with an attack roll and deal damage to it, you can also deal 1d6 Cold damage to that target and reduce its Speed by 10 feet until the start of your next turn.\n- **Hill's Tumble (Hill Giant)**. When you hit a Large or smaller creature with an attack roll and deal damage to it, you can give that target the Prone condition.\n- **Stone's Endurance (Stone Giant)**. When you take damage, you can take a Reaction to roll 1d12. Add your Constitution modifier to the number rolled and reduce the damage by that total.\n- **Storm's Thunder (Storm Giant)**. When you take damage from a creature within 60 feet of you, you can take a Reaction to deal 1d8 Thunder damage to that creature.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": "bonus_action"
+  },
+  {
+    "type": "feature",
+    "id": "species-goliath-large-form",
+    "name": "Goliath: Large Form",
+    "feature_type": "trait",
+    "description": "Starting at character level 5, you can change your size to Large as a Bonus Action if you're in a big enough space. This transformation lasts for 10 minutes or until you end it (no action required). For that duration, you have Advantage on Strength checks, and your Speed increases by 10 feet. Once you use this trait, you can't use it again until you finish a Long Rest.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 5,
+    "turn_resource": "bonus_action"
+  },
+  {
+    "type": "feature",
+    "id": "species-goliath-powerful-build",
+    "name": "Goliath: Powerful Build",
+    "feature_type": "trait",
+    "description": "You have Advantage on any ability check you make to end the Grappled condition. You also count as one size larger when determining your carrying capacity.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "lineage-goliath-cloud",
+    "name": "Goliath: Cloud Giant Ancestry",
+    "feature_type": "trait",
+    "description": "As a Bonus Action, you can magically teleport up to 30 feet to an unoccupied space you can see. You can use this a number of times equal to your Proficiency Bonus, regaining all uses on a Long Rest.",
+    "tag": "lineage-goliath",
+    "rank": 0,
+    "resource_counter": "giant_ancestry",
+    "turn_resource": "bonus_action"
+  },
+  {
+    "type": "feature",
+    "id": "lineage-goliath-fire",
+    "name": "Goliath: Fire Giant Ancestry",
+    "feature_type": "trait",
+    "description": "When you hit a target with an attack roll and deal damage, you can deal an extra 1d10 Fire damage. You can use this a number of times equal to your Proficiency Bonus, regaining all uses on a Long Rest.",
+    "tag": "lineage-goliath",
+    "rank": 0,
+    "resource_counter": "giant_ancestry"
+  },
+  {
+    "type": "feature",
+    "id": "lineage-goliath-frost",
+    "name": "Goliath: Frost Giant Ancestry",
+    "feature_type": "trait",
+    "description": "When you hit a target with an attack roll and deal damage, you can deal an extra 1d6 Cold damage and reduce its Speed by 10 feet until the start of your next turn. You can use this a number of times equal to your Proficiency Bonus, regaining all uses on a Long Rest.",
+    "tag": "lineage-goliath",
+    "rank": 0,
+    "resource_counter": "giant_ancestry"
+  },
+  {
+    "type": "feature",
+    "id": "lineage-goliath-hill",
+    "name": "Goliath: Hill Giant Ancestry",
+    "feature_type": "trait",
+    "description": "When you hit a Large or smaller creature with an attack roll and deal damage, you can give it the Prone condition. You can use this a number of times equal to your Proficiency Bonus, regaining all uses on a Long Rest.",
+    "tag": "lineage-goliath",
+    "rank": 0,
+    "resource_counter": "giant_ancestry"
+  },
+  {
+    "type": "feature",
+    "id": "lineage-goliath-stone",
+    "name": "Goliath: Stone Giant Ancestry",
+    "feature_type": "trait",
+    "description": "When you take damage, you can take a Reaction to roll 1d12, add your Constitution modifier, and reduce the damage by that total. You can use this a number of times equal to your Proficiency Bonus, regaining all uses on a Long Rest.",
+    "tag": "lineage-goliath",
+    "rank": 0,
+    "resource_counter": "giant_ancestry",
+    "turn_resource": "reaction"
+  },
+  {
+    "type": "feature",
+    "id": "lineage-goliath-storm",
+    "name": "Goliath: Storm Giant Ancestry",
+    "feature_type": "trait",
+    "description": "When you take damage from a creature within 60 feet, you can take a Reaction to deal 1d8 Thunder damage to it. You can use this a number of times equal to your Proficiency Bonus, regaining all uses on a Long Rest.",
+    "tag": "lineage-goliath",
+    "rank": 0,
+    "resource_counter": "giant_ancestry",
+    "turn_resource": "reaction"
+  },
+  {
+    "type": "template",
+    "id": "goliath",
+    "kind": "species",
+    "name": "Goliath",
+    "icon": "mountain",
+    "order": 4,
+    "description": "Goliath. Medium (about 7\u20138 feet tall). Speed 35 feet. Size. Speed. Giant Ancestry. Large Form. Powerful Build.",
+    "features": [
+      "species-goliath-size",
+      "species-goliath-speed",
+      "species-goliath-giant-ancestry",
+      "species-goliath-large-form",
+      "species-goliath-powerful-build"
+    ],
+    "counters": {
+      "giant_ancestry": 2
+    },
+    "feat_picks": [
+      {
+        "id": "lineage",
+        "count": 1,
+        "tag": "lineage-goliath",
+        "feature_type": "trait",
+        "max_rank": 0
+      }
+    ]
+  }
+]

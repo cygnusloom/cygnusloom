@@ -1,0 +1,35 @@
+[
+  {
+    "type": "template",
+    "id": "slave",
+    "icon": "rope",
+    "kind": "background",
+    "name": "Slave",
+    "description": "You lived under another person's control, with little to call your own and every reason to be careful. You learned to move quietly, endure, and wait for a chance.",
+    "skills": {
+      "sneak": 1
+    },
+    "skill_picks": [
+      {
+        "id": "background_learning",
+        "count": 2,
+        "table": "learning_slave",
+        "exclude": [
+          "any_skill"
+        ]
+      }
+    ],
+    "learning": [
+      "work",
+      "notice",
+      "sneak",
+      "survive",
+      "connect",
+      "perform",
+      "craft",
+      "exert"
+    ],
+    "names": "names",
+    "order": 16
+  }
+]

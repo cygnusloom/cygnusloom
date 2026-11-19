@@ -1,0 +1,87 @@
+[
+  {
+    "type": "feature",
+    "id": "background-asi-sage",
+    "name": "Sage: Ability Scores",
+    "feature_type": "trait",
+    "description": "Increase one of these abilities by 2 and another by 1, or each of them by 1: Constitution, Intelligence, Wisdom.",
+    "tag": "background",
+    "rank": 0,
+    "tool_training": [
+      "Calligrapher's Supplies"
+    ],
+    "picks": [
+      {
+        "id": "scores",
+        "kind": "stat",
+        "label": "Abilities",
+        "grant": "score",
+        "amount": 1,
+        "count": 3,
+        "max_value": 20,
+        "choices": [
+          "con",
+          "int",
+          "wis"
+        ],
+        "patterns": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            1
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "type": "template",
+    "id": "sage",
+    "kind": "background",
+    "name": "Sage",
+    "icon": "book",
+    "order": 2,
+    "description": "Sage. Tool proficiency: Calligrapher's Supplies. Equipment: *Choose A or B:* (A) Quarterstaff, Calligrapher's Supplies, Book (history), Parchment (8 sheets), Robe, 8 GP; or (B) 50 GP",
+    "skills": {
+      "arcana": 1,
+      "history": 1
+    },
+    "features": [
+      "background-asi-sage",
+      "feat-magic-initiate"
+    ],
+    "grant": {
+      "items": [
+        "Quarterstaff",
+        "Calligrapher's Supplies (10 GP)",
+        "Book",
+        "Parchment",
+        "Robe"
+      ],
+      "silver": 80,
+      "options": [
+        {
+          "id": "a",
+          "label": "A: background kit",
+          "items": [
+            "Quarterstaff",
+            "Calligrapher's Supplies (10 GP)",
+            "Book",
+            "Parchment",
+            "Robe"
+          ],
+          "silver": 80
+        },
+        {
+          "id": "b",
+          "label": "B: 50 GP",
+          "silver": 500
+        }
+      ]
+    }
+  }
+]

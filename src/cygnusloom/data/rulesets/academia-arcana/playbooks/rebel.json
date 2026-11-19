@@ -1,0 +1,19 @@
+[
+  {
+    "type": "template",
+    "id": "rebel",
+    "icon": "dagger",
+    "kind": "playbook",
+    "names": "student-names",
+    "name": "Rebel",
+    "description": "Rules are a map of where the interesting things are kept. You know the back stairs, the loose window, and which prefect can be talked around.",
+    "stats": {
+      "cunning": 1
+    },
+    "features": [
+      "talent-rebel",
+      "signature-spell"
+    ],
+    "order": 3
+  }
+]

@@ -1,0 +1,92 @@
+[
+  {
+    "type": "feature",
+    "id": "species-dwarf-size",
+    "name": "Dwarf: Size",
+    "feature_type": "trait",
+    "description": "Medium (about 4\u20135 feet tall) ",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "species-dwarf-speed",
+    "name": "Dwarf: Speed",
+    "feature_type": "trait",
+    "description": "30 feet",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "species-dwarf-darkvision",
+    "name": "Dwarf: Darkvision",
+    "feature_type": "trait",
+    "description": "You have Darkvision with a range of 120 feet.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "species-dwarf-dwarven-resilience",
+    "name": "Dwarf: Dwarven Resilience",
+    "feature_type": "trait",
+    "description": "You have Resistance to Poison damage. You also have Advantage on saving throws you make to avoid or end the Poisoned condition.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 0,
+    "resistances": [
+      "poison"
+    ],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "species-dwarf-dwarven-toughness",
+    "name": "Dwarf: Dwarven Toughness",
+    "feature_type": "trait",
+    "description": "Your Hit Point maximum increases by 1, and it increases by 1 again whenever you gain a level.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 0,
+    "level_hp_bonus": 1,
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "species-dwarf-stonecunning",
+    "name": "Dwarf: Stonecunning",
+    "feature_type": "trait",
+    "description": "As a Bonus Action, you gain Tremorsense with a range of 60 feet for 10 minutes. You must be on a stone surface or touching a stone surface to use this Tremorsense. The stone can be natural or worked.\n\nYou can use this Bonus Action a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": "bonus_action"
+  },
+  {
+    "type": "template",
+    "id": "dwarf",
+    "kind": "species",
+    "name": "Dwarf",
+    "icon": "helm",
+    "order": 1,
+    "description": "Dwarf. Medium (about 4\u20135 feet tall) . Speed 30 feet. Size. Speed. Darkvision. Dwarven Resilience. Dwarven Toughness. Stonecunning.",
+    "features": [
+      "species-dwarf-size",
+      "species-dwarf-speed",
+      "species-dwarf-darkvision",
+      "species-dwarf-dwarven-resilience",
+      "species-dwarf-dwarven-toughness",
+      "species-dwarf-stonecunning"
+    ],
+    "stats": {
+      "hp": 1
+    }
+  }
+]

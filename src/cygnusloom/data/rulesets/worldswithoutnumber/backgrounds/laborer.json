@@ -1,0 +1,35 @@
+[
+  {
+    "type": "template",
+    "id": "laborer",
+    "icon": "tool",
+    "kind": "background",
+    "name": "Laborer",
+    "description": "You worked with your back and hands for wages, hauling, digging, building, and carrying. You know what a body can do and how to make a hard job go faster.",
+    "skills": {
+      "work": 1
+    },
+    "skill_picks": [
+      {
+        "id": "background_learning",
+        "count": 2,
+        "table": "learning_laborer",
+        "exclude": [
+          "any_skill"
+        ]
+      }
+    ],
+    "learning": [
+      "administer",
+      "connect",
+      "craft",
+      "survive",
+      "exert",
+      "work",
+      "notice",
+      "trade"
+    ],
+    "names": "names",
+    "order": 6
+  }
+]

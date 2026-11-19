@@ -15,10 +15,6 @@ class ContentError(Exception):
 
 
 DEFAULTS_TYPE = "defaults"
-# Creative tables are the oracle and setting tables a rule set, world, or module owns. Keeping
-# them in one named file makes the source of a table obvious and keeps ordinary dice tables
-# separate.
-CREATIVE_TABLE_FILE = "creative.json"
 
 
 @dataclass(frozen=True)
@@ -117,6 +113,9 @@ def _apply_file_defaults(item: Mapping[str, Any], defaults: list[_FileDefaults])
 def read_definitions(directory: Path) -> list[Definition]:
     """Read every `*.json` file under `directory`, in path order.
 
+    The file layout is not part of the content: a definition may live in any file at any depth
+    below the directory, and file names are never read. Only the definitions themselves matter.
+
     Each file must hold a JSON list of objects, and each object needs a non-empty string
     `type` and `id`. A `(type, id)` pair may appear only once in a directory.
 
@@ -150,10 +149,6 @@ def read_definitions(directory: Path) -> list[Definition]:
             if kind == DEFAULTS_TYPE:
                 continue
             ident = required_text(item, "id", label)
-            if kind == "creative_table" and path.name != CREATIVE_TABLE_FILE:
-                raise ContentError(
-                    f"{label}: creative tables must live in a file named {CREATIVE_TABLE_FILE!r}"
-                )
             key = (kind, ident)
             if key in seen:
                 raise ContentError(

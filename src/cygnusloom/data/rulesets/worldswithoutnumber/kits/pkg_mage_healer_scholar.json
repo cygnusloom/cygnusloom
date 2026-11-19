@@ -1,0 +1,31 @@
+[
+  {
+    "type": "template",
+    "id": "pkg_mage_healer_scholar",
+    "icon": "kit-scholar",
+    "kind": "kit",
+    "name": "Candle Scholar",
+    "description": "A reader's loadout: a staff and a pair of daggers, a lantern with oil, a writing kit and paper, a healer's pouch, and a week of food and water, with 80 silver kept back for books, bribes, and reagents.",
+    "grant": {
+      "items": [
+        "Dagger",
+        "Dagger",
+        "Staff",
+        "Backpack",
+        "Lantern",
+        "Tinder Box",
+        "Oil, One Pint",
+        "Oil, One Pint",
+        "Writing Kit",
+        "Paper, 10 Sheets",
+        "Paper, 10 Sheets",
+        "Rations, One Week",
+        "Waterskin",
+        "Healer's Pouch"
+      ],
+      "silver": 80
+    },
+    "names": "names",
+    "order": 1
+  }
+]

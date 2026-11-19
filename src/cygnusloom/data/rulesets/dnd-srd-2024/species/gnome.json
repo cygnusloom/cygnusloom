@@ -1,0 +1,136 @@
+[
+  {
+    "type": "feature",
+    "id": "species-gnome-size",
+    "name": "Gnome: Size",
+    "feature_type": "trait",
+    "description": "Small (about 3\u20134 feet tall)",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "species-gnome-speed",
+    "name": "Gnome: Speed",
+    "feature_type": "trait",
+    "description": "30 feet",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "species-gnome-darkvision",
+    "name": "Gnome: Darkvision",
+    "feature_type": "trait",
+    "description": "You have Darkvision with a range of 60 feet.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "species-gnome-gnomish-cunning",
+    "name": "Gnome: Gnomish Cunning",
+    "feature_type": "trait",
+    "description": "You have Advantage on Intelligence, Wisdom, and Charisma saving throws.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "species-gnome-gnomish-lineage",
+    "name": "Gnome: Gnomish Lineage",
+    "feature_type": "trait",
+    "description": "You are part of a lineage that grants you supernatural abilities. Choose one of the following options; whichever one you choose, Intelligence, Wisdom, or Charisma is your spellcasting ability for the spells you cast with this trait (choose the ability when you select the lineage):\n\n**Forest Gnome.** You know the *Minor Illusion* cantrip. You also always have the *Speak with Animals* spell prepared. You can cast it without a spell slot a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest. You can also use any spell slots you have to cast the spell.\n\n**Rock Gnome.** You know the *Mending* and *Prestidigitation* cantrips. In addition, you can spend 10 minutes casting *Prestidigitation* to create a Tiny clockwork device (AC 5, 1 HP), such as a toy, fire starter, or music box. When you create the device, you determine its function by choosing one effect from *Prestidigitation*; the device produces that effect whenever you or another creature takes a Bonus Action to activate it with a touch. If the chosen effect has options within it, you choose one of those options for the device when you create it. For example, if you choose the spell's ignite-extinguish effect, you determine whether the device ignites or extinguishes fire; the device doesn't do both. You can have three such devices in existence at a time, and each falls apart 8 hours after its creation or when you dismantle it with a touch as a Utilize action.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "lineage-gnome-forest",
+    "name": "Gnome: Forest Gnome Lineage",
+    "feature_type": "trait",
+    "description": "You know the Minor Illusion cantrip and always have Speak with Animals prepared. You can cast Speak with Animals without a spell slot a number of times equal to your Proficiency Bonus, regaining the uses on a Long Rest.",
+    "tag": "lineage-gnome",
+    "rank": 0,
+    "picks": [
+      {
+        "id": "ability",
+        "kind": "stat",
+        "label": "Spellcasting ability",
+        "choices": [
+          "int",
+          "wis",
+          "cha"
+        ]
+      }
+    ],
+    "learn_spells": [
+      "spell-minor-illusion",
+      "spell-speak-with-animals"
+    ],
+    "always_prepared": true,
+    "free_cast": true
+  },
+  {
+    "type": "feature",
+    "id": "lineage-gnome-rock",
+    "name": "Gnome: Rock Gnome Lineage",
+    "feature_type": "trait",
+    "description": "You know the Mending and Prestidigitation cantrips. You can spend 10 minutes casting Prestidigitation to create a Tiny clockwork device, with up to three devices existing at once.",
+    "tag": "lineage-gnome",
+    "rank": 0,
+    "picks": [
+      {
+        "id": "ability",
+        "kind": "stat",
+        "label": "Spellcasting ability",
+        "choices": [
+          "int",
+          "wis",
+          "cha"
+        ]
+      }
+    ],
+    "learn_spells": [
+      "spell-mending",
+      "spell-prestidigitation"
+    ],
+    "always_prepared": true,
+    "free_cast": true
+  },
+  {
+    "type": "template",
+    "id": "gnome",
+    "kind": "species",
+    "name": "Gnome",
+    "icon": "mushroom",
+    "order": 3,
+    "description": "Gnome. Small (about 3\u20134 feet tall). Speed 30 feet. Size. Speed. Darkvision. Gnomish Cunning. Gnomish Lineage.",
+    "features": [
+      "species-gnome-size",
+      "species-gnome-speed",
+      "species-gnome-darkvision",
+      "species-gnome-gnomish-cunning",
+      "species-gnome-gnomish-lineage"
+    ],
+    "feat_picks": [
+      {
+        "id": "lineage",
+        "count": 1,
+        "tag": "lineage-gnome",
+        "feature_type": "trait",
+        "max_rank": 0
+      }
+    ]
+  }
+]

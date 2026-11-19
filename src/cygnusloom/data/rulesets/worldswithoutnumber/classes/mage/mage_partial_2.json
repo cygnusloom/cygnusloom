@@ -1,0 +1,28 @@
+[
+  {
+    "type": "template",
+    "id": "mage_partial_2",
+    "icon": "wand",
+    "kind": "class2",
+    "choice_key": "mage",
+    "name": "Second Partial Class: Mage",
+    "description": "The magical half of an Adventurer. It adds a partial magical tradition, chosen from the partial traditions. A second partial class is always paired with the character's first partial class.",
+    "compatible_with": {
+      "class": [
+        "healer",
+        "vowed"
+      ],
+      "tradition": [
+        "high_mage_partial",
+        "necromancer_partial",
+        "elementalist_partial"
+      ]
+    },
+    "stats": {
+      "hp": 0,
+      "attack_bonus": 0
+    },
+    "names": "names",
+    "order": 2
+  }
+]

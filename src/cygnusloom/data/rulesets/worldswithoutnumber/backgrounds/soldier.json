@@ -1,0 +1,35 @@
+[
+  {
+    "type": "template",
+    "id": "soldier",
+    "icon": "shield",
+    "kind": "background",
+    "name": "Soldier",
+    "description": "You carried a weapon in someone else's war, holding a line and learning what orders cost. You know drill, camp life, and the habits that keep a fighter alive.",
+    "skills": {
+      "stab": 1
+    },
+    "skill_picks": [
+      {
+        "id": "background_learning",
+        "count": 2,
+        "table": "learning_soldier",
+        "exclude": [
+          "any_skill"
+        ]
+      }
+    ],
+    "learning": [
+      "punch",
+      "survive",
+      "administer",
+      "stab",
+      "lead",
+      "shoot",
+      "notice",
+      "exert"
+    ],
+    "names": "names",
+    "order": 17
+  }
+]

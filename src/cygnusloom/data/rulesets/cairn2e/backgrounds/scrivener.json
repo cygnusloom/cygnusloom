@@ -1,0 +1,23 @@
+[
+  {
+    "type": "template",
+    "id": "scrivener",
+    "icon": "scroll",
+    "kind": "background",
+    "name": "Scrivener",
+    "description": "You copy ancient texts and illuminate manuscripts, recording the voices of the clever, the great, and the powerful. You will prove that the pen truly is mightier than the sword.",
+    "features": [
+      "torch",
+      "quill-ink",
+      "blank-book",
+      "awl",
+      "badge"
+    ],
+    "tables": [
+      "scrivener-what-work-did-you-keep-for-yourself",
+      "scrivener-how-do-you-transcribe-sensitive-information"
+    ],
+    "names": "scrivener-names",
+    "order": 19
+  }
+]

@@ -1,0 +1,58 @@
+[
+  {
+    "type": "template",
+    "id": "vowed_partial_2",
+    "icon": "staff",
+    "kind": "class2",
+    "choice_key": "vowed",
+    "name": "Second Partial Class: Vowed",
+    "description": "The bodily-adept half of an Adventurer. It grants an order skill, Martial Style, Unarmed Might, Unarmored Defense, and one more vowed art. A second partial class is always paired with the character's first partial class.",
+    "compatible_with": {
+      "class": [
+        "healer",
+        "vowed"
+      ],
+      "tradition": [
+        "no_tradition"
+      ]
+    },
+    "stats": {
+      "hp": 0,
+      "attack_bonus": 0
+    },
+    "skill_picks": [
+      {
+        "id": "second_order_skill",
+        "label": "Order skill",
+        "count": 1,
+        "table": "all_skills",
+        "max_level": 1,
+        "exclude": [
+          "punch",
+          "shoot",
+          "stab"
+        ]
+      }
+    ],
+    "features": [
+      "art_martial_style",
+      "art_unarmed_might",
+      "art_unarmored_defense"
+    ],
+    "feat_picks": [
+      {
+        "id": "second_class_art_vowed",
+        "count": 1,
+        "tag": "vowed",
+        "max_rank": 0,
+        "exclude": [
+          "art_martial_style",
+          "art_unarmed_might",
+          "art_unarmored_defense"
+        ]
+      }
+    ],
+    "names": "names",
+    "order": 4
+  }
+]
