@@ -51,9 +51,20 @@ KIND_HINTS = {
 }
 
 
-def creation_view(spec: CharacterSpec, rolled: dict[str, int]) -> dict[str, Any]:
+ROLE_LABELS = {
+    "warrior": "Warrior",
+    "magic": "Magic user",
+    "support": "Support",
+}
+
+
+def creation_view(
+    spec: CharacterSpec, rolled: dict[str, int], *, respec: bool = False
+) -> dict[str, Any]:
     """What the creation form shows. A stat in a swap group may trade values with the rest of
-    its group; other stats keep their roll. A derived stat is computed, so it is not shown."""
+    its group; other stats keep their roll. A derived stat is computed, so it is not shown.
+    The layout groups the panels into the rule set's categories and order; a respec hides the
+    identity panels and the flavor details, which the rebuild keeps."""
     group_values: dict[str, list[int]] = {}
     for stat in spec.stats.values():
         if stat.derived is None and stat.swap_group is not None:
@@ -163,6 +174,31 @@ def creation_view(spec: CharacterSpec, rolled: dict[str, int]) -> dict[str, Any]
         for field in spec.fields.values()
         if field.table is None
     ]
+    sections = _creation_sections(spec, kinds, choice_fields, text_fields, respec=respec)
+    presets = [
+        {
+            "id": preset.id,
+            "name": preset.name,
+            "role": preset.role,
+            "role_label": ROLE_LABELS.get(preset.role, preset.role.replace("-", " ").title()),
+            "description": preset.description,
+            "icon": preset.icon,
+            "selections": {
+                "name": preset.suggested_name,
+                "priority": list(preset.priority),
+                "stats": dict(preset.stats),
+                "templates": dict(preset.templates),
+                "fields": dict(preset.fields),
+                "tables": dict(preset.tables),
+                "picks": {key: list(values) for key, values in preset.picks.items()},
+                "feature_choices": {
+                    key: list(values) for key, values in preset.feature_choices.items()
+                },
+                "grants": dict(preset.grants),
+            },
+        }
+        for preset in spec.presets.values()
+    ]
     return {
         "stats": stats,
         # A rule set whose stats use dice can roll a fresh set; one that assigns a pool cannot.
@@ -193,7 +229,118 @@ def creation_view(spec: CharacterSpec, rolled: dict[str, int]) -> dict[str, Any]
         "skill_replacements": _skill_replacements_view(spec),
         "name_suggestions": any(template.names for template in spec.templates.values()),
         "pronoun_options": _pronoun_options(),
+        "sections": sections,
+        "presets": presets,
     }
+
+
+def _creation_sections(
+    spec: CharacterSpec,
+    kinds: list[dict[str, Any]],
+    choice_fields: list[dict[str, Any]],
+    text_fields: list[dict[str, Any]],
+    *,
+    respec: bool,
+) -> list[dict[str, Any]]:
+    """The creation panels grouped into the rule set's sections, in its order. Every panel the
+    layout does not name is appended under More options, so a rule set can never hide one."""
+    panels: dict[str, dict[str, Any]] = {
+        "name": {"id": "name", "kind": "name"},
+        "pronouns": {"id": "pronouns", "kind": "pronouns"},
+        "stats": {"id": "stats", "kind": "stats"},
+        "feature-choices": {"id": "feature-choices", "kind": "feature_choices"},
+        "skill-replacements": {"id": "skill-replacements", "kind": "skill_replacements"},
+    }
+    for group in kinds:
+        panels[f"template-{group['kind']}"] = {
+            "id": f"template-{group['kind']}",
+            "kind": "template",
+            "group": group,
+        }
+    for field in (*choice_fields, *text_fields):
+        panels[f"field-{field['id']}"] = {
+            "id": f"field-{field['id']}",
+            "kind": "choice_field" if "options" in field else "text_field",
+            "field": field,
+        }
+    default_sections = [
+        {
+            "id": "identity",
+            "label": "Identity",
+            "description": "",
+            "items": ["name", "pronouns"],
+        },
+        {
+            "id": "build",
+            "label": "Build",
+            "description": "",
+            "items": ["stats", *(f"template-{group['kind']}" for group in kinds)],
+        },
+        {
+            "id": "details",
+            "label": "Details",
+            "description": "",
+            "items": [f"field-{field['id']}" for field in (*choice_fields, *text_fields)],
+        },
+        {
+            "id": "choices",
+            "label": "Choices",
+            "description": "",
+            "items": ["feature-choices", "skill-replacements"],
+        },
+    ]
+    layout = spec.layouts.get("creation")
+    raw_sections = layout.sections if layout is not None else ()
+    placement = [
+        {
+            "id": section.id,
+            "label": section.label,
+            "description": section.description,
+            "items": list(section.items),
+        }
+        for section in raw_sections
+    ] or default_sections
+    used: set[str] = set()
+    sections: list[dict[str, Any]] = []
+    for section in placement:
+        items: list[dict[str, Any]] = []
+        for item in section["items"]:
+            if item in used or item not in panels:
+                continue
+            panel = panels[item]
+            if _panel_is_hidden(panel, spec, respec):
+                continue
+            used.add(item)
+            items.append(panel)
+        if items:
+            sections.append({**section, "panels": items})
+    leftovers = [
+        panel
+        for item, panel in panels.items()
+        if item not in used and not _panel_is_hidden(panel, spec, respec)
+    ]
+    if leftovers:
+        sections.append(
+            {
+                "id": "more",
+                "label": "More options",
+                "description": "",
+                "panels": leftovers,
+            }
+        )
+    return sections
+
+
+def _panel_is_hidden(panel: dict[str, Any], spec: CharacterSpec, respec: bool) -> bool:
+    """A panel with nothing to show is left out, so a rule set does not get an empty section."""
+    kind = panel["kind"]
+    if kind == "feature_choices":
+        return not _feature_choice_views(spec)
+    if kind == "skill_replacements":
+        return not _skill_replacements_view(spec)
+    if respec and kind in ("name", "pronouns"):
+        return True
+    return bool(respec and kind in ("choice_field", "text_field") and panel["field"].get("flavor"))
 
 
 def pronouns_from_form(form: FormData) -> str:

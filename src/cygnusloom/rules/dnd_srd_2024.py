@@ -1399,14 +1399,23 @@ def _learn_always_prepared(
     ctx.world.with_hook_context(action)
 
 
-def apply_subclass_pick(character: str, pick: Any, choice: str, ctx: ToolContext) -> dict[str, Any]:
-    """Choose a subclass: learn its marker and every subclass feature gained so far."""
+def apply_subclass_pick(
+    character: str, pick: Any, choice: str, ctx: ToolContext, class_choice: str = ""
+) -> dict[str, Any]:
+    """Choose a subclass: learn its marker and every subclass feature gained so far. The
+    subclass must belong to the class this level is being taken in, so a banked pick cannot be
+    spent on another class's path."""
     progression = require_progression(ctx.world)
     found = _read_character(character, ctx)
     subclass_id = choice.removeprefix("subclass-")
     subclass = progression.subclasses.get(subclass_id)
     if subclass is None:
         raise InvalidInput(f"there is no subclass named {subclass_id!r}")
+    chosen_class = str(class_choice).strip().casefold() or class_id(found)
+    if subclass.class_id != chosen_class:
+        raise InvalidInput(
+            f"{found.name} is advancing {chosen_class.title()}, not {subclass.class_id.title()}"
+        )
     if subclass.class_id not in class_levels_of(found):
         raise InvalidInput(f"{found.name} has no {subclass.class_id.title()} level")
     rules = progression.classes.get(subclass.class_id)

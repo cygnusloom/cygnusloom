@@ -2324,7 +2324,7 @@ def _campaign_page(
                 rolled = request.session.get(_roll_key(campaign.id))
                 if not isinstance(rolled, dict) or set(rolled) != rolled_stats:
                     rolled = _roll_stats(request, user, campaign.id)
-            character = creation_view(spec, rolled)
+            character = creation_view(spec, rolled, respec=respec_target is not None)
         party_members = _party_members(
             world.state, spec, user.id, rule_set.hp_stat if rule_set is not None else None
         )

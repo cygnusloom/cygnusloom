@@ -12,7 +12,7 @@ from __future__ import annotations
 import random
 from collections import deque
 from collections.abc import Collection, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any
 
 from cygnusloom.content.definitions import (
@@ -632,6 +632,54 @@ class Field:
 
 
 @dataclass(frozen=True)
+class ScreenSection:
+    """One group of panels on a creation or advancement screen. `items` are panel ids on the
+    creation form, such as `name`, `stats`, `template-class`, or `field-appearance`, or pick ids
+    on the advancement form."""
+
+    id: str
+    label: str
+    description: str = ""
+    items: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class ScreenLayout:
+    """How a rule set groups the parts of a character screen. The engine knows how to render
+    every panel; the layout chooses their categories and order in generic terms. A panel the
+    layout omits is added after the named sections, so no option is ever lost."""
+
+    id: str
+    sections: tuple[ScreenSection, ...]
+
+
+@dataclass(frozen=True)
+class CharacterPreset:
+    """A ready-made standard character: the templates, fields, picks, and feature choices a
+    player would otherwise make by hand. The values are loaded into the normal creation form,
+    so the player can change any of them before submitting. `priority` orders the stats the
+    character cares about most; the form arranges its rolled or assigned values to fit."""
+
+    id: str
+    name: str
+    role: str
+    description: str
+    icon: str = FALLBACK_TEMPLATE
+    suggested_name: str = ""
+    priority: tuple[str, ...] = ()
+    stats: Mapping[str, int] = field(default_factory=dict)
+    templates: Mapping[str, str] = field(default_factory=dict)
+    fields: Mapping[str, str] = field(default_factory=dict)
+    tables: Mapping[str, str] = field(default_factory=dict)
+    # Skill and feature pick values, by pick id, in the order the form shows the picks.
+    picks: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
+    # Feature choice values, keyed by `feature:pick` or `feature:pick:pattern`.
+    feature_choices: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
+    # Starting kit options, by template id.
+    grants: Mapping[str, str] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
 class CounterRef:
     """A counter a template can give a starting value to, with the bounds it keeps."""
 
@@ -663,6 +711,11 @@ class CharacterSpec:
     feature_types: Mapping[str, FeatureTypeRules] = field(
         default_factory=lambda: dict(DEFAULT_FEATURE_TYPES)
     )
+    # How the creation and advancement screens group and order their parts. The core rule set
+    # supplies a default; a rule set may replace either layout by defining the same id.
+    layouts: Mapping[str, ScreenLayout] = field(default_factory=dict)
+    # Ready-made standard characters, keyed by id, offered from the creation screen.
+    presets: Mapping[str, CharacterPreset] = field(default_factory=dict)
 
     def kinds(self) -> list[str]:
         return sorted({t.kind for t in self.templates.values()})
@@ -827,7 +880,7 @@ def build_character(
         raise ContentError(
             f"{template}: starting_silver names no template kind ({starting_silver.kind!r})"
         )
-    return CharacterSpec(
+    spec = CharacterSpec(
         stats=stats,
         templates=templates,
         features=features,
@@ -840,6 +893,388 @@ def build_character(
         starting_silver=starting_silver,
         feature_types=feature_types,
     )
+    layouts = _each(definitions, "character_layout", lambda d: _screen_layout(d, spec, template))
+    presets = _each(
+        definitions,
+        "character_template",
+        lambda d: _character_preset(d, spec, template, template_icon_entries or {}),
+    )
+    return replace(spec, layouts=layouts, presets=presets)
+
+
+# The fixed panels a creation layout may name, besides `template-<kind>`, `field-<id>`, and the
+# `templates` and `fields` group entries.
+CREATION_PANELS = {
+    "name",
+    "pronouns",
+    "stats",
+    "feature-choices",
+    "feature_choices",
+    "skill-replacements",
+    "skill_replacements",
+}
+
+
+def _screen_layout(definition: Definition, spec: CharacterSpec, template: str) -> ScreenLayout:
+    """One screen's sections and item order, validated against the character options."""
+    label = f"{template}: character_layout {definition.id}"
+    data = definition.data
+    unknown = sorted(set(data) - {"type", "id", "sections"})
+    if unknown:
+        raise ContentError(f"{label}: unknown keys: {', '.join(unknown)}")
+    if definition.id not in {"creation", "advancement"}:
+        raise ContentError(f"{label}: id must be 'creation' or 'advancement'")
+    raw_sections = data.get("sections")
+    if not isinstance(raw_sections, list) or not raw_sections:
+        raise ContentError(f"{label}: 'sections' must be a non-empty list")
+    sections: list[ScreenSection] = []
+    seen_sections: set[str] = set()
+    seen_items: set[str] = set()
+    for index, raw in enumerate(raw_sections):
+        section_label = f"{label}: section {index}"
+        if not isinstance(raw, Mapping):
+            raise ContentError(f"{section_label} must be an object")
+        unknown = sorted(set(raw) - {"id", "label", "description", "items"})
+        if unknown:
+            raise ContentError(f"{section_label}: unknown keys: {', '.join(unknown)}")
+        section_id = required_text(raw, "id", section_label)
+        if section_id in seen_sections:
+            raise ContentError(f"{section_label}: duplicate section id {section_id!r}")
+        seen_sections.add(section_id)
+        items_value = raw.get("items", [])
+        if not isinstance(items_value, list) or not all(
+            isinstance(item, str) and item.strip() for item in items_value
+        ):
+            raise ContentError(f"{section_label}: 'items' must be a list of names")
+        items = tuple(item.strip() for item in items_value)
+        description = raw.get("description", "")
+        if not isinstance(description, str):
+            raise ContentError(f"{section_label}: 'description' must be text")
+        if definition.id == "creation":
+            items = _expand_creation_items(items, spec, template, label, seen_items)
+        else:
+            for item in items:
+                if item in seen_items:
+                    raise ContentError(f"{label}: '{item}' is listed in more than one section")
+                seen_items.add(item)
+        sections.append(
+            ScreenSection(
+                id=section_id,
+                label=required_text(raw, "label", section_label),
+                description=description,
+                items=items,
+            )
+        )
+    return ScreenLayout(id=definition.id, sections=tuple(sections))
+
+
+def _expand_creation_items(
+    items: tuple[str, ...],
+    spec: CharacterSpec,
+    template: str,
+    label: str,
+    seen: set[str],
+) -> tuple[str, ...]:
+    """Expand the `templates` and `fields` group entries and check every panel the rule set
+    names. A panel named explicitly wins its place; its group does not repeat it."""
+    explicit = [item for item in items if item not in ("templates", "fields")]
+    duplicates = sorted({item for item in explicit if explicit.count(item) > 1})
+    if duplicates:
+        raise ContentError(f"{label}: panel(s) {', '.join(duplicates)} listed more than once")
+    for candidate in explicit:
+        _check_creation_panel(candidate, spec, label)
+        if candidate in seen:
+            raise ContentError(f"{label}: panel {candidate!r} is listed in more than one place")
+    explicit_set = set(explicit)
+    expanded: list[str] = []
+    for item in items:
+        grouped = item in ("templates", "fields")
+        if item == "templates":
+            candidates = [f"template-{kind}" for kind in spec.kinds()]
+        elif item == "fields":
+            candidates = [f"field-{field_id}" for field_id in spec.fields]
+        else:
+            candidates = [item]
+        for candidate in candidates:
+            if candidate in seen or candidate in expanded:
+                continue
+            if grouped and candidate in explicit_set:
+                # The explicit entry places this panel; the group skips it.
+                continue
+            seen.add(candidate)
+            expanded.append(candidate)
+    return tuple(expanded)
+
+
+def _check_creation_panel(candidate: str, spec: CharacterSpec, label: str) -> None:
+    if candidate in CREATION_PANELS:
+        return
+    if candidate.startswith("template-"):
+        kind = candidate.removeprefix("template-")
+        if kind not in spec.kinds():
+            raise ContentError(f"{label}: no template kind {kind!r}")
+        return
+    if candidate.startswith("field-"):
+        field_id = candidate.removeprefix("field-")
+        if field_id not in spec.fields:
+            raise ContentError(f"{label}: no character field {field_id!r}")
+        return
+    raise ContentError(f"{label}: unknown creation panel {candidate!r}")
+
+
+PRESET_KEYS = {
+    "type",
+    "id",
+    "role",
+    "name",
+    "description",
+    "icon",
+    "looks_like",
+    "name_suggestion",
+    "priority",
+    "stats",
+    "templates",
+    "fields",
+    "tables",
+    "picks",
+    "feature_choices",
+    "grants",
+}
+
+
+def _character_preset(
+    definition: Definition,
+    spec: CharacterSpec,
+    template: str,
+    icon_entries: Mapping[str, tuple[str | None, str | None]],
+) -> CharacterPreset:
+    """A ready-made character, checked against the rule set's templates and options."""
+    label = f"{template}: character_template {definition.id}"
+    data = definition.data
+    unknown = sorted(set(data) - PRESET_KEYS)
+    if unknown:
+        raise ContentError(f"{label}: unknown keys: {', '.join(unknown)}")
+    icon, _ = _icon_fields(data, icon_entries, FALLBACK_TEMPLATE, label)
+    priority = _text_list(data.get("priority", []), "priority", label)
+    for stat_id in priority:
+        stat = spec.stats.get(stat_id)
+        if stat is None or stat.derived is not None or stat.hidden:
+            raise ContentError(f"{label}: priority names no rolled stat ({stat_id!r})")
+    if len(set(priority)) != len(priority):
+        raise ContentError(f"{label}: 'priority' repeats a stat")
+    stats: dict[str, int] = {}
+    raw_stats = data.get("stats", {})
+    if not isinstance(raw_stats, Mapping):
+        raise ContentError(f"{label}: 'stats' must map stat ids to numbers")
+    for stat_id, value in raw_stats.items():
+        if not isinstance(stat_id, str) or not isinstance(value, int) or isinstance(value, bool):
+            raise ContentError(f"{label}: 'stats' must map stat ids to whole numbers")
+        stat = spec.stats.get(stat_id)
+        if stat is None or stat.derived is not None or stat.hidden:
+            raise ContentError(f"{label}: stats names no rolled stat ({stat_id!r})")
+        low, high = spec.stat_bounds(stat_id)
+        if not low <= value <= high:
+            raise ContentError(
+                f"{label}: {stat_id} {value} is outside the stat's range {low}-{high}"
+            )
+        stats[stat_id] = value
+    templates: dict[str, str] = {}
+    raw_templates = data.get("templates", {})
+    if not isinstance(raw_templates, Mapping):
+        raise ContentError(f"{label}: 'templates' must map template kinds to template ids")
+    for kind, template_id in raw_templates.items():
+        if not isinstance(kind, str) or not isinstance(template_id, str):
+            raise ContentError(f"{label}: 'templates' must map template kinds to template ids")
+        chosen = spec.templates.get(template_id)
+        if chosen is None or chosen.kind != kind:
+            raise ContentError(f"{label}: no {kind!r} template {template_id!r}")
+        templates[kind] = template_id
+    fields = _preset_fields(data.get("fields"), spec, label)
+    tables = _preset_tables(data.get("tables"), spec, label)
+    picks = _preset_picks(data.get("picks"), spec, label)
+    grants: dict[str, str] = {}
+    raw_grants = data.get("grants", {})
+    if not isinstance(raw_grants, Mapping):
+        raise ContentError(f"{label}: 'grants' must map template ids to option ids")
+    for template_id, option_id in raw_grants.items():
+        chosen = spec.templates.get(str(template_id))
+        if chosen is None:
+            raise ContentError(f"{label}: grants names no selected template ({template_id!r})")
+        if option_id not in {option.id for option in chosen.grant.options}:
+            raise ContentError(f"{label}: {chosen.id!r} has no starting kit option {option_id!r}")
+        grants[chosen.id] = str(option_id)
+    feature_choices = _preset_feature_choices(
+        data.get("feature_choices"), spec, templates, picks, label
+    )
+    name = data.get("name", definition.id)
+    description = data.get("description", "")
+    suggested_name = data.get("name_suggestion", "")
+    for key, text in (
+        ("name", name),
+        ("description", description),
+        ("name_suggestion", suggested_name),
+    ):
+        if not isinstance(text, str):
+            raise ContentError(f"{label}: {key!r} must be text")
+    return CharacterPreset(
+        id=definition.id,
+        name=name.strip() or definition.id,
+        role=required_text(data, "role", label),
+        description=description.strip(),
+        icon=icon or FALLBACK_TEMPLATE,
+        suggested_name=suggested_name.strip(),
+        priority=priority,
+        stats=stats,
+        templates=templates,
+        fields=fields,
+        tables=tables,
+        picks=picks,
+        feature_choices=feature_choices,
+        grants=grants,
+    )
+
+
+def _preset_fields(value: object, spec: CharacterSpec, label: str) -> dict[str, str]:
+    if value is None:
+        return {}
+    if not isinstance(value, Mapping):
+        raise ContentError(f"{label}: 'fields' must map character field ids to values")
+    fields: dict[str, str] = {}
+    for field_id, text in value.items():
+        if not isinstance(field_id, str) or not isinstance(text, str):
+            raise ContentError(f"{label}: 'fields' must map character field ids to text")
+        field_spec = spec.fields.get(field_id)
+        if field_spec is None:
+            raise ContentError(f"{label}: no character field {field_id!r}")
+        if field_spec.table is not None and not field_spec.flavor:
+            allowed = {option.value for option in spec.tables[field_spec.table]}
+            if text not in allowed:
+                raise ContentError(f"{label}: {text!r} is not an option of {field_spec.name!r}")
+        fields[field_id] = text
+    return fields
+
+
+def _preset_tables(value: object, spec: CharacterSpec, label: str) -> dict[str, str]:
+    if value is None:
+        return {}
+    if not isinstance(value, Mapping):
+        raise ContentError(f"{label}: 'tables' must map table ids to values")
+    tables: dict[str, str] = {}
+    for table_id, text in value.items():
+        if not isinstance(table_id, str) or not isinstance(text, str):
+            raise ContentError(f"{label}: 'tables' must map table ids to text")
+        options = spec.tables.get(table_id)
+        if options is None:
+            raise ContentError(f"{label}: no table {table_id!r}")
+        if text not in {option.value for option in options}:
+            raise ContentError(f"{label}: {text!r} is not an option of table {table_id!r}")
+        tables[table_id] = text
+    return tables
+
+
+def _preset_picks(value: object, spec: CharacterSpec, label: str) -> dict[str, tuple[str, ...]]:
+    if value is None:
+        return {}
+    if not isinstance(value, Mapping):
+        raise ContentError(f"{label}: 'picks' must map pick ids to lists of choices")
+    picks: dict[str, tuple[str, ...]] = {}
+    for pick_id, raw in value.items():
+        if (
+            not isinstance(pick_id, str)
+            or not isinstance(raw, list)
+            or not all(isinstance(item, str) for item in raw)
+        ):
+            raise ContentError(f"{label}: 'picks' must map pick ids to lists of choices")
+        definitions = [
+            pick
+            for template in spec.templates.values()
+            for pick in (*template.skill_picks, *template.feat_picks)
+            if pick.id == pick_id
+        ]
+        if not definitions:
+            raise ContentError(f"{label}: no skill or feature pick {pick_id!r}")
+        allowed: set[str] = set()
+        count = 0
+        for pick in definitions:
+            count = max(count, pick.count)
+            if hasattr(pick, "table"):
+                allowed.update(value for value, _ in skill_pick_options(spec, pick))
+            else:
+                allowed.update(feature.id for feature in feature_pick_options(spec, pick))
+        if len(raw) > count:
+            raise ContentError(
+                f"{label}: pick {pick_id!r} takes {count} choice{'s' if count != 1 else ''}"
+            )
+        if len(set(raw)) != len(raw):
+            raise ContentError(f"{label}: pick {pick_id!r} repeats a choice")
+        for choice in raw:
+            if choice not in allowed:
+                raise ContentError(f"{label}: {choice!r} is not an option of pick {pick_id!r}")
+        picks[pick_id] = tuple(raw)
+    return picks
+
+
+def _preset_feature_choices(
+    value: object,
+    spec: CharacterSpec,
+    templates: Mapping[str, str],
+    picks: Mapping[str, tuple[str, ...]],
+    label: str,
+) -> dict[str, tuple[str, ...]]:
+    """The structured choices features ask for, such as a lineage's ability or Magic
+    Initiate's spell list. The feature must come from a chosen template or pick."""
+    if value is None:
+        return {}
+    if not isinstance(value, Mapping):
+        raise ContentError(f"{label}: 'feature_choices' must map feature choices to lists")
+    possible = {
+        granted.feature
+        for template_id in templates.values()
+        for granted in spec.templates[template_id].features
+    }
+    possible.update(pick for values in picks.values() for pick in values)
+    choices: dict[str, tuple[str, ...]] = {}
+    for key, raw in value.items():
+        if (
+            not isinstance(key, str)
+            or not isinstance(raw, list)
+            or not all(isinstance(item, str) for item in raw)
+        ):
+            raise ContentError(
+                f"{label}: 'feature_choices' must map feature choices to lists of text"
+            )
+        feature_id, separator, pick_id = key.partition(":")
+        feature = spec.features.get(feature_id)
+        if feature is None or not separator:
+            raise ContentError(f"{label}: no feature choice {key!r}")
+        if feature_id not in possible:
+            raise ContentError(f"{label}: {feature.name!r} is not granted by this character")
+        is_pattern = pick_id.endswith(":pattern")
+        pick_id = pick_id.removesuffix(":pattern")
+        pick = next((item for item in feature.picks if item.id == pick_id), None)
+        if pick is None:
+            raise ContentError(f"{label}: {feature.name!r} has no choice {pick_id!r}")
+        if is_pattern:
+            modes = {str(index) for index in range(len(pick.patterns))}
+            if len(raw) != 1 or raw[0] not in modes:
+                raise ContentError(f"{label}: {feature.name!r} has no pattern {raw!r}")
+        elif pick.kind != "text":
+            options = set(_feature_choice_options(spec, pick))
+            if len(set(raw)) != len(raw):
+                raise ContentError(f"{label}: {feature.name!r} repeats a choice")
+            for choice in raw:
+                if choice not in options:
+                    raise ContentError(
+                        f"{label}: {choice!r} is not a valid {pick.label.lower()} for "
+                        f"{feature.name!r}"
+                    )
+            if len(raw) > pick.count:
+                raise ContentError(
+                    f"{label}: {feature.name!r} takes {pick.count} "
+                    f"{pick.label.lower()} choice{'s' if pick.count != 1 else ''}"
+                )
+        choices[key] = tuple(raw)
+    return choices
 
 
 def _derived_skill_pick_ids(stats: Mapping[str, Stat]) -> set[str]:

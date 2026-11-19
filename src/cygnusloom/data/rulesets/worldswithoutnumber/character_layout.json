@@ -1,0 +1,70 @@
+[
+  {
+    "type": "character_layout",
+    "id": "creation",
+    "sections": [
+      {
+        "id": "identity",
+        "label": "Identity",
+        "items": ["name", "pronouns"]
+      },
+      {
+        "id": "attributes",
+        "label": "Attributes",
+        "items": ["stats"]
+      },
+      {
+        "id": "background",
+        "label": "Background",
+        "items": ["template-background"]
+      },
+      {
+        "id": "class",
+        "label": "Class and tradition",
+        "description": "Choose the class first; the traditions and the second partial class that fit it are offered after that.",
+        "items": ["template-class", "template-tradition", "template-class2", "template-tradition2"]
+      },
+      {
+        "id": "gear",
+        "label": "Equipment",
+        "items": ["template-kit"]
+      },
+      {
+        "id": "choices",
+        "label": "Optional replacements",
+        "items": ["skill-replacements"]
+      },
+      {
+        "id": "feature-choices",
+        "label": "Feature choices",
+        "items": ["feature-choices"]
+      },
+      {
+        "id": "details",
+        "label": "Details",
+        "items": ["fields"]
+      }
+    ]
+  },
+  {
+    "type": "character_layout",
+    "id": "advancement",
+    "sections": [
+      {
+        "id": "training",
+        "label": "Skills and attributes",
+        "items": ["skills", "attributes"]
+      },
+      {
+        "id": "features",
+        "label": "Class features",
+        "items": ["focus", "art"]
+      },
+      {
+        "id": "spells",
+        "label": "Spells",
+        "items": ["spells"]
+      }
+    ]
+  }
+]

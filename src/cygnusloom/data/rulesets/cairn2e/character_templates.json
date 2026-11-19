@@ -1,0 +1,86 @@
+[
+  {
+    "type": "character_template",
+    "id": "standard-warrior",
+    "role": "warrior",
+    "name": "The Warrior",
+    "icon": "sword",
+    "name_suggestion": "Bram",
+    "description": "A marchguard with a spear, a shield, and the discipline to hold a line. Cairn has no classes, so the background and gear carry the archetype.",
+    "priority": ["str", "dex", "wil"],
+    "templates": {
+      "background": "marchguard"
+    },
+    "tables": {
+      "marchguard-why-did-you-take-the-oath": "Your life was saved by a member of the Marchguard, and you were inspired to join their ranks. Take a Snare Trap and a Sketchbook filled with detailed drawings.",
+      "marchguard-what-do-you-carry-as-proof-of-your-oath": "Impressive Pin"
+    },
+    "fields": {
+      "physique": "Rugged",
+      "skin": "Scarred",
+      "hair": "Bald",
+      "face": "Square",
+      "speech": "Blunt",
+      "clothing": "Livery",
+      "virtue": "Disciplined",
+      "vice": "Aggressive",
+      "bond": "I still wear the colours of a company that no longer exists, and I will not take them off."
+    }
+  },
+  {
+    "type": "character_template",
+    "id": "standard-magic-user",
+    "role": "magic",
+    "name": "The Witch",
+    "icon": "cauldron",
+    "name_suggestion": "Sela",
+    "description": "A half-witch who bargains with small spirits and knows which herbs to burn. Magic in Cairn is rare, dangerous, and carried in the pack.",
+    "priority": ["wil", "dex", "str"],
+    "templates": {
+      "background": "half-witch"
+    },
+    "tables": {
+      "half-witch-what-did-you-bring-back-from-the-unseelie-court": "A Black Rose Fiddle",
+      "half-witch-what-concoction-do-you-carry-and-what-rare-ingredients-did-you-gather-to-make-it": "Rebirth Ash"
+    },
+    "fields": {
+      "physique": "Lanky",
+      "skin": "Birthmarked",
+      "hair": "Long",
+      "face": "Pale",
+      "speech": "Whispery",
+      "clothing": "Antique",
+      "virtue": "Cautious",
+      "vice": "Vain",
+      "bond": "A voice in the wood taught me one true thing, and I owe it a favour I have not yet been asked to repay."
+    }
+  },
+  {
+    "type": "character_template",
+    "id": "standard-support",
+    "role": "support",
+    "name": "The Surgeon",
+    "icon": "tool",
+    "name_suggestion": "Wenna",
+    "description": "A barber-surgeon with steady hands, a sharp knife, and a bag of useful things. The party's best chance of surviving a bad night.",
+    "priority": ["wil", "dex", "str"],
+    "templates": {
+      "background": "barber-surgeon"
+    },
+    "tables": {
+      "barber-surgeon-how-have-you-improved-yourself": "You have a replacement eye that can magnify objects, act as a telescope, and provide minimal night vision. You cannot wear anything metal on your head, and the presence of strong magnets make you deprived.",
+      "barber-surgeon-what-rare-tool-is-essential-to-your-work": "Regrowth Salve"
+    },
+    "fields": {
+      "physique": "Stout",
+      "skin": "Tanned",
+      "hair": "Braided",
+      "face": "Rakish",
+      "speech": "Precise",
+      "clothing": "Frayed",
+      "virtue": "Merciful",
+      "vice": "Bitter",
+      "bond": "I keep a list of everyone I could not save, and I mean to make it shorter."
+    }
+  }
+]

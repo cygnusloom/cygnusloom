@@ -118,7 +118,12 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="character" value="{{ view.character }}">
     {% if view.summary and view.summary.class_id %}<input type="hidden" name="class" value="{{ view.summary.class_id }}">{% elif view.class_options %}<input type="hidden" name="class" value="{{ view.class_id }}">{% endif %}
-    {% for pick in view.picks %}
+    {% for section in view.pick_sections %}
+    <section class="advancement-category" aria-labelledby="advancement-category-{{ section.id }}">
+      <h2 id="advancement-category-{{ section.id }}">{{ section.label }}</h2>
+      {% if section.description %}<p class="muted">{{ section.description }}</p>{% endif %}
+      <div class="creation-grid">
+    {% for pick in section.picks %}
       {% if pick.kind == "skill" %}
       <fieldset class="creation-panel" data-pick-kind="skill" data-pick-counter="{{ pick.counter }}" data-pick-label="{{ pick.label }}" data-pick-available="{{ pick.available }}">
         <legend>{{ pick.label }}: {{ pick.available }} available</legend>
@@ -189,6 +194,9 @@
         {% endif %}
       </fieldset>
       {% endif %}
+    {% endfor %}
+      </div>
+    </section>
     {% endfor %}
     {% if view.summary and view.summary.feature_choices %}
     <section class="creation-panel">

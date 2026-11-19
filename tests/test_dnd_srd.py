@@ -1213,3 +1213,179 @@ def test_circle_of_the_land_chooses_its_land_spells(
     assert after.marks["land"] == "arid"
     assert "spell-burning-hands" in after.marks["always_prepared"]
     assert "spell-burning-hands" in after.features
+
+
+# The SRD 5.2.1 has one subclass for each class; these are its feature names and the class
+# levels that grant them.
+SRD_SUBCLASSES = {
+    "barbarian": (
+        "path-of-the-berserker",
+        {
+            3: ["Frenzy"],
+            6: ["Mindless Rage"],
+            10: ["Retaliation"],
+            14: ["Intimidating Presence"],
+        },
+    ),
+    "bard": (
+        "college-of-lore",
+        {
+            3: ["Bonus Proficiencies", "Cutting Words"],
+            6: ["Magical Discoveries"],
+            14: ["Peerless Skill"],
+        },
+    ),
+    "cleric": (
+        "life-domain",
+        {
+            3: ["Disciple of Life", "Life Domain Spells", "Preserve Life"],
+            6: ["Blessed Healer"],
+            17: ["Supreme Healing"],
+        },
+    ),
+    "druid": (
+        "circle-of-the-land",
+        {
+            3: ["Circle of the Land Spells", "Land's Aid"],
+            6: ["Natural Recovery"],
+            10: ["Nature's Ward"],
+            14: ["Nature's Sanctuary"],
+        },
+    ),
+    "fighter": (
+        "champion",
+        {
+            3: ["Improved Critical", "Remarkable Athlete"],
+            7: ["Additional Fighting Style"],
+            10: ["Heroic Warrior"],
+            15: ["Superior Critical"],
+            18: ["Survivor"],
+        },
+    ),
+    "monk": (
+        "warrior-of-the-open-hand",
+        {
+            3: ["Open Hand Technique"],
+            6: ["Wholeness of Body"],
+            11: ["Fleet Step"],
+            17: ["Quivering Palm"],
+        },
+    ),
+    "paladin": (
+        "oath-of-devotion",
+        {
+            3: ["Sacred Weapon", "Oath of Devotion Spells"],
+            7: ["Aura of Devotion"],
+            15: ["Smite of Protection"],
+            20: ["Holy Nimbus"],
+        },
+    ),
+    "ranger": (
+        "hunter",
+        {
+            3: ["Hunter's Lore", "Hunter's Prey"],
+            7: ["Defensive Tactics"],
+            11: ["Superior Hunter's Prey"],
+            15: ["Superior Hunter's Defense"],
+        },
+    ),
+    "rogue": (
+        "thief",
+        {
+            3: ["Fast Hands", "Second-Story Work"],
+            9: ["Supreme Sneak"],
+            13: ["Use Magic Device"],
+            17: ["Thief's Reflexes"],
+        },
+    ),
+    "sorcerer": (
+        "draconic-sorcery",
+        {
+            3: ["Draconic Resilience", "Draconic Spells"],
+            6: ["Elemental Affinity"],
+            14: ["Dragon Wings"],
+            18: ["Dragon Companion"],
+        },
+    ),
+    "warlock": (
+        "fiend-patron",
+        {
+            3: ["Dark One's Blessing", "Fiend Spells"],
+            6: ["Dark One's Own Luck"],
+            10: ["Fiendish Resilience"],
+            14: ["Hurl Through Hell"],
+        },
+    ),
+    "wizard": (
+        "evoker",
+        {
+            3: ["Evocation Savant", "Potent Cantrip"],
+            6: ["Sculpt Spells"],
+            10: ["Empowered Evocation"],
+            14: ["Overchannel"],
+        },
+    ),
+}
+
+
+def test_every_class_has_its_srd_subclass_on_the_srd_schedule() -> None:
+    rules = _dnd_rules()
+    spec = rules.character
+    progression = rules.rule_data["progression"]
+    for class_id, (subclass_id, expected_levels) in SRD_SUBCLASSES.items():
+        matches = [
+            subclass
+            for subclass in progression.subclasses.values()
+            if subclass.class_id == class_id
+        ]
+        assert [subclass.id for subclass in matches] == [subclass_id], class_id
+        subclass = matches[0]
+        marker = spec.features[f"subclass-{subclass_id}"]
+        assert marker.name and marker.tag == "subclass", subclass_id
+        actual = {
+            level: [spec.features[feature_id].name for feature_id in feature_ids]
+            for level, feature_ids in sorted(subclass.features.items())
+        }
+        assert actual == expected_levels, subclass_id
+        for feature_ids in subclass.features.values():
+            for feature_id in feature_ids:
+                feature = spec.features[feature_id]
+                assert feature.tag == f"subclass:{subclass_id}", feature_id
+        spell_ids = [spell_id for spells in subclass.spells.values() for spell_id in spells]
+        for land_levels in subclass.land_spells.values():
+            spell_ids.extend(spell_id for spells in land_levels.values() for spell_id in spells)
+        for spell_id in spell_ids:
+            assert spec.features[spell_id].feature_type == "spell", spell_id
+
+
+def test_a_fighter_chooses_the_champion_and_gains_its_level_three_features(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    client, campaign_id = _campaign(client_factory)
+    rules = _dnd_rules()
+    world = client.app.state.content.world_content("testhollow", "dnd-srd-2024")
+    ctx = level_up_service.tool_context(client.app.state.engine, campaign_id, rules, world)
+    tools = tools_for(client.app, campaign_id, rule_set="dnd-srd-2024")
+    for amount in (300, 600):
+        tools.adjust_counter("Rook", "xp", amount)
+        dnd_srd_2024.apply_level_up("Rook", ctx)
+    page = level_up_service.page_view(client.app.state.engine, campaign_id, rules, world, "Rook")
+    assert page is not None and page.kind == level_up_service.PICKS
+    picks = {pick["id"]: pick for pick in page.picks}
+    assert picks["subclass"]["available"] == 1
+    assert [option["id"] for option in picks["subclass"]["options"]] == ["subclass-champion"]
+    level_up_service.apply_page(
+        client.app.state.engine,
+        campaign_id,
+        rules,
+        world,
+        {"pick-subclass-0": "subclass-champion"},
+        "Rook",
+    )
+    after = character_named(app, campaign_id, "Rook")
+    assert after.counters["subclass_picks"] == 0
+    assert "subclass-champion" in after.features
+    assert "subclass-champion-improved-critical" in after.features
+    assert "subclass-champion-remarkable-athlete" in after.features
+    # Level 7's Additional Fighting Style is not part of the level-3 grant.
+    assert "subclass-champion-additional-fighting-style" not in after.features

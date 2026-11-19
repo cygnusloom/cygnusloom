@@ -1,0 +1,234 @@
+{# The individual panels of the character creation form. The rule set's character_layout
+   decides which section each panel belongs to and in what order; these macros render one panel
+   wherever the layout places it. #}
+{% from "macros.html" import choice, choice_picker, choice_panel, dice_button, pick_control, text_panel %}
+
+{% macro name_panel(character) -%}
+<section class="creation-panel" aria-labelledby="panel-name">
+  <h3 id="panel-name">Name</h3>
+  <p class="muted panel-hint">What the GM and the story call you. The dice suggests a name from your chosen background or class.</p>
+  <div class="name-row">
+    <label>
+      <input type="text" name="name" required maxlength="120" aria-labelledby="panel-name">
+    </label>
+    {% if character.name_suggestions %}
+      {{ dice_button("name", "name", attribute="data-name-dice") }}
+    {% endif %}
+  </div>
+  {% for group in character.kinds %}
+    {% for template in group.templates %}
+      <ul class="name-pool" data-name-source="{{ template.id }}" hidden>
+        {% for name in template.names %}<li>{{ name }}</li>{% endfor %}
+      </ul>
+    {% endfor %}
+  {% endfor %}
+</section>
+{%- endmacro %}
+
+{% macro pronouns_panel(character) -%}
+<fieldset class="creation-panel" data-choice-panel="pronouns" data-choice-label="Pronouns" aria-labelledby="panel-pronouns">
+  <h3 id="panel-pronouns">Pronouns</h3>
+  <p class="muted panel-hint">How the GM and the story refer to your character.</p>
+  {% call choice_picker("pronouns", "Pronouns") %}
+    {% for option in character.pronoun_options %}
+      {{ choice("pronouns", option.value, option.title, freeform=option.freeform) }}
+    {% endfor %}
+  {% endcall %}
+  <label class="pronouns-other">
+    Other pronouns
+    <input type="text" name="pronouns-other" maxlength="120" aria-label="Other pronouns, if chosen above">
+  </label>
+</fieldset>
+{%- endmacro %}
+
+{% macro stats_panel(character) -%}
+<section class="creation-panel stats-panel" aria-labelledby="panel-stats">
+  <div class="panel-heading">
+    <h3 id="panel-stats">Stats</h3>
+    <div class="panel-actions">
+      {% if character.can_reroll %}
+      <button type="submit" class="secondary" form="character-reroll" data-reroll-stats title="Roll the rule set's dice for new stats">Randomize</button>
+      {% endif %}
+      {% if character.can_standard %}
+      <button type="button" class="secondary" data-standard-stats title="Use the rule set's standard array">Standard array</button>
+      {% endif %}
+      <button type="button" class="secondary" data-randomize-stats>Random swap</button>
+      <button type="button" class="secondary" data-reset-stats>Reset</button>
+    </div>
+  </div>
+  <p class="muted panel-hint" data-stat-hint>{% if character.can_reroll %}Randomize rolls new values. {% endif %}{% if character.can_standard %}Standard array fills the rule set's array. {% endif %}Select two attributes to trade their values.{% if character.free_swap %} You may arrange them in any order.{% else %} A rolled group allows one swap.{% endif %}</p>
+  <div class="stat-grid">
+    {% for stat in character.stats %}
+      {% if stat.group %}
+      <div class="stat-card" data-stat-card data-stat-id="{{ stat.id }}" data-stat-group="{{ stat.group }}" data-stat-rolled="{{ stat.value }}" data-stat-swap="{{ stat.swap }}"{% if stat.assigned %} data-stat-assigned{% endif %}{% if stat.standard is not none %} data-stat-standard="{{ stat.standard }}"{% endif %} data-stat-bands='{{ stat.modifier_bands|tojson }}'>
+        <button type="button" class="stat-swap" data-stat-select aria-pressed="false">
+          <span class="stat-name">{{ stat.name }}</span>
+          <span class="stat-value" data-stat-value>{{ stat.value }}</span>
+          <span class="stat-modifier" data-stat-modifier{% if stat.modifier is none %} hidden{% endif %}>{{ "%+d"|format(stat.modifier) if stat.modifier is not none else "" }}</span>
+        </button>
+        <input type="hidden" name="stat-{{ stat.id }}" value="{{ stat.value }}">
+      </div>
+      {% else %}
+      <div class="stat-card is-fixed" data-stat-card data-stat-id="{{ stat.id }}" data-stat-rolled="{{ stat.value }}">
+        <span class="stat-name">{{ stat.name }}</span>
+        <span class="stat-value">{{ stat.value }}</span>
+        <input type="hidden" name="stat-{{ stat.id }}" value="{{ stat.value }}">
+      </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+</section>
+{%- endmacro %}
+
+{% macro template_panel(group) -%}
+<fieldset class="creation-panel" data-choice-panel="template-{{ group.kind }}" data-choice-label="{{ group.label }}"{% if group.optional %} data-optional="true"{% endif %} aria-labelledby="panel-kind-{{ group.kind }}">
+  <h3 id="panel-kind-{{ group.kind }}">{{ group.label }}</h3>
+  {% if group.hint %}<p class="muted panel-hint">{{ group.hint }}</p>{% endif %}
+  {% call choice_picker("template-" ~ group.kind, group.label) %}
+    {% if group.optional %}
+      {{ choice("template-" ~ group.kind, "", "None", "Leave this unchosen.") }}
+    {% endif %}
+    {% for template in group.templates %}
+      {{ choice("template-" ~ group.kind, template.id, template.name, template.description, data_select=group.kind, data_compatible_with=template.compatible_with, data_template_requirements=template.template_requirements, data_choice_key=template.choice_key, summary=template.summary, grants=template.grants, icon=template.icon, data_feature_grants=template.features) }}
+    {% endfor %}
+    {% if group.starting_silver %}
+      {{ choice("template-" ~ group.kind, "", group.starting_silver.label, group.starting_silver.description, data_select=group.kind, summary=group.starting_silver.description, icon="coin") }}
+    {% endif %}
+  {% endcall %}
+</fieldset>
+{% for template in group.templates %}
+  <div class="template-tables" data-template-group="{{ group.kind }}" data-template="{{ template.id }}" data-skill-grants='{{ template.skill_grants|tojson }}' hidden>
+    {% if template.grant_options %}
+      <fieldset class="creation-panel starting-kit">
+        <h3>Starting kit</h3>
+        <p class="panel-hint">Choose the equipment package this {{ group.label|lower }} starts with. The SRD lists these as lettered choices.</p>
+        <label>
+          Starting kit
+          <select name="grant-{{ template.id }}">
+            {% for option in template.grant_options %}
+              <option value="{{ option.id }}">{{ option.label }}: {{ option.summary }}</option>
+            {% endfor %}
+          </select>
+        </label>
+      </fieldset>
+    {% endif %}
+    {% for table in template.tables %}
+      {{ choice_panel("field-" ~ table.id, table.label, table.options) }}
+    {% endfor %}
+    {% if template.picks %}
+      <fieldset class="creation-panel tagged-feature-picks" data-tagged-picks="{{ template.id }}" data-tag-field="field-{{ template.picks.tag_field }}" data-skip-tags='{{ template.picks.skip_tags|tojson }}'>
+        <div class="panel-heading">
+          <h3>{{ template.picks.label }}</h3>
+          <button type="button" class="secondary" data-randomize-tagged-picks>Randomize {{ template.picks.label|lower }}</button>
+        </div>
+        <p class="panel-hint">{{ template.picks.hint }}</p>
+        {% for index in range(template.picks.count) %}
+          {% call pick_control("pick-" ~ template.id ~ "-" ~ index, template.picks.noun|capitalize ~ " " ~ (index + 1), template.picks.hint) %}
+            <option value="">Roll</option>
+            {% for pick_group in template.picks.groups %}
+              <optgroup label="{{ pick_group.tag }}" data-tag="{{ pick_group.tag }}">
+                {% for feature in pick_group.features %}
+                  <option value="{{ feature.id }}" data-title="{{ feature.name }}" data-detail="{{ feature.detail }}" data-rank="{{ feature.rank }}"{% if feature.icon %} data-icon="{{ icon_path(feature.icon) }}"{% endif %}>{{ feature.name }}</option>
+                {% endfor %}
+              </optgroup>
+            {% endfor %}
+          {% endcall %}
+        {% endfor %}
+      </fieldset>
+    {% endif %}
+    {% for pick in template.skill_picks %}
+      <fieldset class="creation-panel skill-picks" data-pick-selects="{{ pick.id }}" data-pick-kind="skill" data-pick-template="{{ template.id }}" data-pick-max-level="{{ pick.max_level }}">
+        <div class="panel-heading">
+          <h3>{{ pick.label }}</h3>
+          <button type="button" class="secondary" data-randomize-picks>Randomize skills</button>
+        </div>
+        <p class="panel-hint">{{ pick.hint }}</p>
+        {% for index in range(pick.count) %}
+          {% call pick_control("pick-skill-" ~ template.id ~ "-" ~ pick.id ~ "-" ~ index, "Skill " ~ (index + 1), pick.hint) %}
+            <option value="">Roll</option>
+            {% for option in pick.options %}
+              <option value="{{ option.value }}" data-title="{{ option.title }}" data-detail="{{ option.detail or '' }}"{% if option.icon %} data-icon="{{ icon_path(option.icon) }}"{% endif %}>{{ option.title }}</option>
+            {% endfor %}
+          {% endcall %}
+        {% endfor %}
+      </fieldset>
+    {% endfor %}
+    {% for pick in template.feat_picks %}
+      <fieldset class="creation-panel feat-picks" data-pick-selects="{{ pick.id }}" data-pick-kind="feature" data-pick-template="{{ template.id }}" data-advance-repeated-rank="{{ 'true' if pick.advance_repeated_rank else 'false' }}" data-unique="{{ 'true' if pick.unique else 'false' }}"{% if pick.tags_from %} data-tags-from="{{ pick.tags_from }}"{% endif %}>
+        <div class="panel-heading">
+          <h3>{{ pick.label }}</h3>
+          <button type="button" class="secondary" data-randomize-picks>Randomize {{ pick.label|lower }}</button>
+        </div>
+        <p class="panel-hint">{{ pick.hint }}</p>
+        {% if pick.source_hint %}<p class="muted panel-hint" data-feature-source-hint hidden>{{ pick.source_hint }}</p>{% endif %}
+        {% for index in range(pick.count) %}
+          <div data-feature-pick-row>
+            {% call pick_control("pick-feature-" ~ template.id ~ "-" ~ pick.id ~ "-" ~ index, pick.noun|capitalize ~ " " ~ (index + 1), pick.hint, "data-feature-choice") %}
+              <option value="">Roll</option>
+              {% for option in pick.options %}
+                <option value="{{ option.value }}" data-title="{{ option.title }}" data-description="{{ option.detail or '' }}" data-feature-tag="{{ option.tag }}" data-rank="{{ option.rank }}"{% if option.icon %} data-icon="{{ icon_path(option.icon) }}"{% endif %} data-repeatable="{{ 'true' if option.repeatable else 'false' }}" data-ordered="{{ 'true' if option.ordered else 'false' }}" data-has-next-rank="{{ 'true' if option.has_next_rank else 'false' }}">{{ option.title }}{% if option.rank %} (rank {{ option.rank }}){% endif %}</option>
+              {% endfor %}
+            {% endcall %}
+            <label data-feature-repeat-mode hidden>
+              Repeated {{ pick.noun }}
+              <select name="repeat-feature-{{ template.id }}-{{ pick.id }}-{{ index }}" disabled>
+                <option value="">Advance to the next rank</option>
+                <option value="repeat">Take another distinct choice</option>
+              </select>
+            </label>
+          </div>
+        {% endfor %}
+      </fieldset>
+    {% endfor %}
+  </div>
+{% endfor %}
+{%- endmacro %}
+
+{% macro field_panel(field, kind) -%}
+{% if kind == "choice_field" %}
+  {{ choice_panel("field-" ~ field.id, field.name, field.options, field.description, field.restriction, field.flavor) }}
+{% else %}
+  {{ text_panel("field-" ~ field.id, field.name, field.description) }}
+{% endif %}
+{%- endmacro %}
+
+{% macro feature_choices_panel(character) -%}
+{% if character.feature_choices %}
+<section class="creation-panel" data-feature-choice-section>
+  <h3>Feature choices</h3>
+  <p class="panel-hint">Some features ask you to choose a skill, ability, or detail. Their choices appear here when you take the feature, and every option explains what it does.</p>
+  {% with feature_choices=character.feature_choices %}{% include "_feature_choice_fields.html" %}{% endwith %}
+</section>
+{% endif %}
+{%- endmacro %}
+
+{% macro skill_replacements_panel(character) -%}
+{% if character.skill_replacements %}
+<section class="creation-panel">
+  <details data-skill-replacements>
+    <summary>Excess skill replacements (optional)</summary>
+    <p>If a rolled or granted skill exceeds its starting limit, choose replacement skills in the order they will be needed. Leave a choice blank to roll an eligible replacement.</p>
+    {% for group in character.skill_replacements %}
+      <fieldset class="replacement-group">
+        <legend>{{ group.label }}</legend>
+        {% if group.excluded %}<p>Not eligible: {{ group.excluded|join(", ") }}.</p>{% endif %}
+        <div class="replacement-rows" data-replacement-rows>
+          <label data-replacement-row>
+            <span>Replacement 1</span>
+            <select name="skill-replacement-{{ group.kind }}">
+              <option value="">Roll an eligible skill</option>
+              {% for option in group.options %}
+                <option value="{{ option.value }}" data-detail="{{ option.detail }}"{% if option.icon %} data-icon="{{ icon_path(option.icon) }}"{% endif %}>{{ option.title }}</option>
+              {% endfor %}
+            </select>
+            <img class="choice-icon" data-replacement-icon alt="" hidden>
+            <span class="muted replacement-detail" data-replacement-detail></span>
+          </label>
+        </div>
+        <button type="button" class="secondary" data-add-skill-replacement>Add another replacement</button>
+      </fieldset>
+    {% endfor %}
+  </details>
+</section>
+{% endif %}
+{%- endmacro %}

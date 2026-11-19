@@ -1,5 +1,6 @@
 {% extends "campaign_base.html" %}
-{% from "macros.html" import choice, choice_picker, choice_panel, dice_button, pick_control, text_panel %}
+{% from "macros.html" import choice_panel, text_panel %}
+{% from "_creation_panels.html" import name_panel, pronouns_panel, stats_panel, template_panel, field_panel, feature_choices_panel, skill_replacements_panel %}
 {% block title %}{% if respec %}Respec {{ respec.name }}{% elif hireling %}Add a hireling{% elif party_setup and not show_character %}Your party{% elif show_options %}Create your campaign{% else %}Create your character{% endif %} · {{ campaign.name }}{% endblock %}
 {% block play %}
 <section class="view creation" data-view="play" aria-labelledby="creation-title">
@@ -76,7 +77,12 @@
   <div class="creation-toolbar">
     <button type="button" class="secondary" data-randomize="all">Randomize all</button>
     <button type="button" class="secondary" data-randomize="unchosen">Randomize all not chosen</button>
+    {% if character.presets %}
+    <button type="button" class="secondary" data-open-dialog="dialog-character-templates">Use character template</button>
+    {% endif %}
   </div>
+  {% endif %}
+  {% if show_character %}
   {# The stats panel's Randomize button submits this form when scripts are off. #}
   <form method="post" action="{% if respec %}/campaigns/{{ campaign.id }}/respec/reroll{% else %}/campaigns/{{ campaign.id }}/character/reroll{% endif %}" class="character-reroll" id="character-reroll" data-reroll-form>
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -93,7 +99,7 @@
     </section>
     {% endif %}
     {% if show_options or show_setting %}
-    <section class="creation-section" aria-labelledby="options-title">
+    <section class="creation-section campaign-options-panel" aria-labelledby="options-title">
       <h2 id="options-title">Campaign options</h2>
       {% if show_options %}
       <p class="muted">These options are shared by every character in the campaign, and they are chosen once. Each panel explains what it changes; use the dice button to roll one or the randomize buttons to fill the form.</p>
@@ -110,27 +116,31 @@
       <div class="creation-grid campaign-brief">
         {% if start_levels|length > 1 %}
         <section class="creation-panel" aria-labelledby="panel-start-level">
-          <h3 id="panel-start-level">Starting level</h3>
-          <p class="muted">Where this campaign's characters begin. It is set to level 1 by default; raise it when the story starts with seasoned adventurers.</p>
-          <label class="show-hidden-option"><input type="checkbox" name="follow_owner_level" value="1"{% if follow_owner_level %} checked{% endif %}> New characters follow the campaign owner's character level</label>
-          <input type="hidden" name="follow_owner_level" value="0">
-          <label>
-            Starting level
-            <select name="start_level">
-              {% for level in start_levels %}
-                <option value="{{ level }}"{% if level == start_level %} selected{% endif %}>Level {{ level }}</option>
-              {% endfor %}
-            </select>
-          </label>
-          <p class="muted">The first character begins here, and every level above 1 is gained right after creation on the normal level-up pages, so their player chooses each level's gains and picks. While following, a character joining later begins at the owner's current level and this value keeps up with it; turn following off to keep a fixed level.</p>
+          <details class="optional-options"{% if start_level > 1 %} open{% endif %}>
+            <summary id="panel-start-level">Starting level</summary>
+            <p class="muted">Where this campaign's characters begin. It is set to level 1 by default; raise it when the story starts with seasoned adventurers.</p>
+            <label class="show-hidden-option"><input type="checkbox" name="follow_owner_level" value="1"{% if follow_owner_level %} checked{% endif %}> New characters follow the campaign owner's character level</label>
+            <input type="hidden" name="follow_owner_level" value="0">
+            <label>
+              Starting level
+              <select name="start_level">
+                {% for level in start_levels %}
+                  <option value="{{ level }}"{% if level == start_level %} selected{% endif %}>Level {{ level }}</option>
+                {% endfor %}
+              </select>
+            </label>
+            <p class="muted">The first character begins here, and every level above 1 is gained right after creation on the normal level-up pages, so their player chooses each level's gains and picks. While following, a character joining later begins at the owner's current level and this value keeps up with it; turn following off to keep a fixed level.</p>
+          </details>
         </section>
         {% endif %}
         <section class="creation-panel" aria-labelledby="panel-setting">
-          <h3 id="panel-setting">Setting / story (optional)</h3>
-          <label>
-            <textarea name="setting" rows="6" maxlength="4000" placeholder="Describe the kind of setting or story you want to play. Leave blank to let the world and rule set lead." aria-labelledby="panel-setting">{{ campaign_setting }}</textarea>
-          </label>
-          <p class="muted">Tell Cygnus what kind of world or story you want. Blank is ignored.</p>
+          <details class="optional-options"{% if campaign_setting %} open{% endif %}>
+            <summary id="panel-setting">Setting / story (optional)</summary>
+            <label>
+              <textarea name="setting" rows="6" maxlength="4000" placeholder="Describe the kind of setting or story you want to play. Leave blank to let the world and rule set lead." aria-labelledby="panel-setting">{{ campaign_setting }}</textarea>
+            </label>
+            <p class="muted">Tell Cygnus what kind of world or story you want. Blank is ignored.</p>
+          </details>
         </section>
         <section class="creation-panel table-genres" aria-labelledby="panel-table-genres">
           <details class="creative-sources-details">
@@ -173,229 +183,53 @@
     <section class="creation-section" aria-labelledby="character-title">
       <h2 id="character-title">{% if respec %}{{ respec.name }}'s new build{% elif hireling %}Add a hireling{% else %}Your character{% endif %}</h2>
       <p class="muted">{% if hireling %}Build a companion who begins with the party. A hireling uses the same options, skills, and features as your character, receives the starting kit the choices grant, and is played by you. Their daily wage starts at zero, and the GM may set one during play.{% else %}Choose each panel below to build your character. A blank skill or feature pick is rolled when you submit; the dice button rolls one now. Chosen options explain what they grant.{% endif %}</p>
+      {% if character.presets %}
+      <p class="muted form-hint" data-template-status role="status"></p>
+      <dialog id="dialog-character-templates" class="app-dialog preset-dialog" aria-labelledby="presets-title">
+        <h2 id="presets-title">Use a character template</h2>
+        <p class="muted">Load a complete standard character, then change anything you like. Each one fills the options below and arranges the rolled stats to suit the archetype.</p>
+        <div class="preset-grid">
+          {% for preset in character.presets %}
+          <button type="button" class="preset-card" data-character-template="{{ preset.id }}">
+            <img class="preset-icon" src="{{ icon_path(preset.icon) }}" alt="">
+            <span class="preset-title">{{ preset.name }}</span>
+            <span class="tag">{{ preset.role_label }}</span>
+            <span class="muted preset-description">{{ preset.description }}</span>
+          </button>
+          <script type="application/json" data-character-template-data="{{ preset.id }}">{{ preset.selections|tojson }}</script>
+          {% endfor %}
+        </div>
+        <div class="dialog-actions">
+          <button type="button" class="secondary" data-close-dialog>Cancel</button>
+        </div>
+      </dialog>
+      {% endif %}
       <p class="muted form-hint" data-choice-note role="status" hidden>Some earlier choices were cleared because they no longer fit this selection.</p>
-      <div class="creation-grid">
-        {% if not respec %}
-        <section class="creation-panel" aria-labelledby="panel-name">
-          <h3 id="panel-name">Name</h3>
-          <p class="muted panel-hint">What the GM and the story call you. The dice suggests a name from your chosen background or class.</p>
-          <div class="name-row">
-            <label>
-              <input type="text" name="name" required maxlength="120" aria-labelledby="panel-name">
-            </label>
-            {% if character.name_suggestions %}
-              {{ dice_button("name", "name", attribute="data-name-dice") }}
+      {% for section in character.sections %}
+      <section class="creation-category" aria-labelledby="category-{{ section.id }}">
+        <h3 id="category-{{ section.id }}">{{ section.label }}</h3>
+        {% if section.description %}<p class="muted">{{ section.description }}</p>{% endif %}
+        <div class="creation-grid">
+          {% for panel in section.panels %}
+            {% if panel.kind == "name" %}
+              {{ name_panel(character) }}
+            {% elif panel.kind == "pronouns" %}
+              {{ pronouns_panel(character) }}
+            {% elif panel.kind == "stats" %}
+              {{ stats_panel(character) }}
+            {% elif panel.kind == "template" %}
+              {{ template_panel(panel.group) }}
+            {% elif panel.kind == "choice_field" or panel.kind == "text_field" %}
+              {{ field_panel(panel.field, panel.kind) }}
+            {% elif panel.kind == "feature_choices" %}
+              {{ feature_choices_panel(character) }}
+            {% elif panel.kind == "skill_replacements" %}
+              {{ skill_replacements_panel(character) }}
             {% endif %}
-          </div>
-          {% for group in character.kinds %}
-            {% for template in group.templates %}
-              <ul class="name-pool" data-name-source="{{ template.id }}" hidden>
-                {% for name in template.names %}<li>{{ name }}</li>{% endfor %}
-              </ul>
-            {% endfor %}
           {% endfor %}
-        </section>
-        <fieldset class="creation-panel" data-choice-panel="pronouns" data-choice-label="Pronouns" aria-labelledby="panel-pronouns">
-          <h3 id="panel-pronouns">Pronouns</h3>
-          <p class="muted panel-hint">How the GM and the story refer to your character.</p>
-          {% call choice_picker("pronouns", "Pronouns") %}
-            {% for option in character.pronoun_options %}
-              {{ choice("pronouns", option.value, option.title, freeform=option.freeform) }}
-            {% endfor %}
-          {% endcall %}
-          <label class="pronouns-other">
-            Other pronouns
-            <input type="text" name="pronouns-other" maxlength="120" aria-label="Other pronouns, if chosen above">
-          </label>
-        </fieldset>
-        {% endif %}
-        {% if character.stats %}
-          <section class="creation-panel stats-panel" aria-labelledby="panel-stats">
-            <div class="panel-heading">
-              <h3 id="panel-stats">Stats</h3>
-              <div class="panel-actions">
-                {% if character.can_reroll %}
-                <button type="submit" class="secondary" form="character-reroll" data-reroll-stats title="Roll the rule set's dice for new stats">Randomize</button>
-                {% endif %}
-                {% if character.can_standard %}
-                <button type="button" class="secondary" data-standard-stats title="Use the rule set's standard array">Standard array</button>
-                {% endif %}
-                <button type="button" class="secondary" data-randomize-stats>Random swap</button>
-                <button type="button" class="secondary" data-reset-stats>Reset</button>
-              </div>
-            </div>
-            <p class="muted panel-hint" data-stat-hint>{% if character.can_reroll %}Randomize rolls new values. {% endif %}{% if character.can_standard %}Standard array fills the rule set's array. {% endif %}Select two attributes to trade their values.{% if character.free_swap %} You may arrange them in any order.{% else %} A rolled group allows one swap.{% endif %}</p>
-            <div class="stat-grid">
-              {% for stat in character.stats %}
-                {% if stat.group %}
-                <div class="stat-card" data-stat-card data-stat-id="{{ stat.id }}" data-stat-group="{{ stat.group }}" data-stat-rolled="{{ stat.value }}" data-stat-swap="{{ stat.swap }}"{% if stat.assigned %} data-stat-assigned{% endif %}{% if stat.standard is not none %} data-stat-standard="{{ stat.standard }}"{% endif %} data-stat-bands='{{ stat.modifier_bands|tojson }}'>
-                  <button type="button" class="stat-swap" data-stat-select aria-pressed="false">
-                    <span class="stat-name">{{ stat.name }}</span>
-                    <span class="stat-value" data-stat-value>{{ stat.value }}</span>
-                    <span class="stat-modifier" data-stat-modifier{% if stat.modifier is none %} hidden{% endif %}>{{ "%+d"|format(stat.modifier) if stat.modifier is not none else "" }}</span>
-                  </button>
-                  <input type="hidden" name="stat-{{ stat.id }}" value="{{ stat.value }}">
-                </div>
-                {% else %}
-                <div class="stat-card is-fixed" data-stat-card data-stat-id="{{ stat.id }}" data-stat-rolled="{{ stat.value }}">
-                  <span class="stat-name">{{ stat.name }}</span>
-                  <span class="stat-value">{{ stat.value }}</span>
-                  <input type="hidden" name="stat-{{ stat.id }}" value="{{ stat.value }}">
-                </div>
-                {% endif %}
-              {% endfor %}
-            </div>
-          </section>
-        {% endif %}
-        {% for group in character.kinds %}
-          <fieldset class="creation-panel" data-choice-panel="template-{{ group.kind }}" data-choice-label="{{ group.label }}"{% if group.optional %} data-optional="true"{% endif %} aria-labelledby="panel-kind-{{ group.kind }}">
-            <h3 id="panel-kind-{{ group.kind }}">{{ group.label }}</h3>
-            {% if group.hint %}<p class="muted panel-hint">{{ group.hint }}</p>{% endif %}
-            {% call choice_picker("template-" ~ group.kind, group.label) %}
-              {% if group.optional %}
-                {{ choice("template-" ~ group.kind, "", "None", "Leave this unchosen.") }}
-              {% endif %}
-              {% for template in group.templates %}
-                {{ choice("template-" ~ group.kind, template.id, template.name, template.description, data_select=group.kind, data_compatible_with=template.compatible_with, data_template_requirements=template.template_requirements, data_choice_key=template.choice_key, summary=template.summary, grants=template.grants, icon=template.icon, data_feature_grants=template.features) }}
-              {% endfor %}
-              {% if group.starting_silver %}
-                {{ choice("template-" ~ group.kind, "", group.starting_silver.label, group.starting_silver.description, data_select=group.kind, summary=group.starting_silver.description, icon="coin") }}
-              {% endif %}
-            {% endcall %}
-          </fieldset>
-          {% for template in group.templates %}
-            <div class="template-tables" data-template-group="{{ group.kind }}" data-template="{{ template.id }}" data-skill-grants='{{ template.skill_grants|tojson }}' hidden>
-              {% if template.grant_options %}
-                <fieldset class="creation-panel starting-kit">
-                  <h3>Starting kit</h3>
-                  <p class="panel-hint">Choose the equipment package this {{ group.label|lower }} starts with. The SRD lists these as lettered choices.</p>
-                  <label>
-                    Starting kit
-                    <select name="grant-{{ template.id }}">
-                      {% for option in template.grant_options %}
-                        <option value="{{ option.id }}">{{ option.label }}: {{ option.summary }}</option>
-                      {% endfor %}
-                    </select>
-                  </label>
-                </fieldset>
-              {% endif %}
-              {% for table in template.tables %}
-                {{ choice_panel("field-" ~ table.id, table.label, table.options) }}
-              {% endfor %}
-              {% if template.picks %}
-                <fieldset class="creation-panel tagged-feature-picks" data-tagged-picks="{{ template.id }}" data-tag-field="field-{{ template.picks.tag_field }}" data-skip-tags='{{ template.picks.skip_tags|tojson }}'>
-                  <div class="panel-heading">
-                    <h3>{{ template.picks.label }}</h3>
-                    <button type="button" class="secondary" data-randomize-tagged-picks>Randomize {{ template.picks.label|lower }}</button>
-                  </div>
-                  <p class="panel-hint">{{ template.picks.hint }}</p>
-                  {% for index in range(template.picks.count) %}
-                    {% call pick_control("pick-" ~ template.id ~ "-" ~ index, template.picks.noun|capitalize ~ " " ~ (index + 1), template.picks.hint) %}
-                      <option value="">Roll</option>
-                      {% for group in template.picks.groups %}
-                        <optgroup label="{{ group.tag }}" data-tag="{{ group.tag }}">
-                          {% for feature in group.features %}
-                            <option value="{{ feature.id }}" data-title="{{ feature.name }}" data-detail="{{ feature.detail }}" data-rank="{{ feature.rank }}"{% if feature.icon %} data-icon="{{ icon_path(feature.icon) }}"{% endif %}>{{ feature.name }}</option>
-                          {% endfor %}
-                        </optgroup>
-                      {% endfor %}
-                    {% endcall %}
-                  {% endfor %}
-                </fieldset>
-              {% endif %}
-              {% for pick in template.skill_picks %}
-                <fieldset class="creation-panel skill-picks" data-pick-selects="{{ pick.id }}" data-pick-kind="skill" data-pick-template="{{ template.id }}" data-pick-max-level="{{ pick.max_level }}">
-                  <div class="panel-heading">
-                    <h3>{{ pick.label }}</h3>
-                    <button type="button" class="secondary" data-randomize-picks>Randomize skills</button>
-                  </div>
-                  <p class="panel-hint">{{ pick.hint }}</p>
-                  {% for index in range(pick.count) %}
-                    {% call pick_control("pick-skill-" ~ template.id ~ "-" ~ pick.id ~ "-" ~ index, "Skill " ~ (index + 1), pick.hint) %}
-                      <option value="">Roll</option>
-                      {% for option in pick.options %}
-                        <option value="{{ option.value }}" data-title="{{ option.title }}" data-detail="{{ option.detail or '' }}"{% if option.icon %} data-icon="{{ icon_path(option.icon) }}"{% endif %}>{{ option.title }}</option>
-                      {% endfor %}
-                    {% endcall %}
-                  {% endfor %}
-                </fieldset>
-              {% endfor %}
-              {% for pick in template.feat_picks %}
-                <fieldset class="creation-panel feat-picks" data-pick-selects="{{ pick.id }}" data-pick-kind="feature" data-pick-template="{{ template.id }}" data-advance-repeated-rank="{{ 'true' if pick.advance_repeated_rank else 'false' }}" data-unique="{{ 'true' if pick.unique else 'false' }}"{% if pick.tags_from %} data-tags-from="{{ pick.tags_from }}"{% endif %}>
-                  <div class="panel-heading">
-                    <h3>{{ pick.label }}</h3>
-                    <button type="button" class="secondary" data-randomize-picks>Randomize {{ pick.label|lower }}</button>
-                  </div>
-                  <p class="panel-hint">{{ pick.hint }}</p>
-                  {% if pick.source_hint %}<p class="muted panel-hint" data-feature-source-hint hidden>{{ pick.source_hint }}</p>{% endif %}
-                  {% for index in range(pick.count) %}
-                    <div data-feature-pick-row>
-                      {% call pick_control("pick-feature-" ~ template.id ~ "-" ~ pick.id ~ "-" ~ index, pick.noun|capitalize ~ " " ~ (index + 1), pick.hint, "data-feature-choice") %}
-                        <option value="">Roll</option>
-                        {% for option in pick.options %}
-                          <option value="{{ option.value }}" data-title="{{ option.title }}" data-description="{{ option.detail or '' }}" data-feature-tag="{{ option.tag }}" data-rank="{{ option.rank }}"{% if option.icon %} data-icon="{{ icon_path(option.icon) }}"{% endif %} data-repeatable="{{ 'true' if option.repeatable else 'false' }}" data-ordered="{{ 'true' if option.ordered else 'false' }}" data-has-next-rank="{{ 'true' if option.has_next_rank else 'false' }}">{{ option.title }}{% if option.rank %} (rank {{ option.rank }}){% endif %}</option>
-                        {% endfor %}
-                      {% endcall %}
-                      <label data-feature-repeat-mode hidden>
-                        Repeated {{ pick.noun }}
-                        <select name="repeat-feature-{{ template.id }}-{{ pick.id }}-{{ index }}" disabled>
-                          <option value="">Advance to the next rank</option>
-                          <option value="repeat">Take another distinct choice</option>
-                        </select>
-                      </label>
-                    </div>
-                  {% endfor %}
-                </fieldset>
-              {% endfor %}
-            </div>
-          {% endfor %}
-        {% endfor %}
-        {% if character.feature_choices %}
-        <section class="creation-panel" data-feature-choice-section>
-          <h3>Feature choices</h3>
-                <p class="panel-hint">Some features ask you to choose a skill, ability, or detail. Their choices appear here when you take the feature, and every option explains what it does.</p>
-          {% with feature_choices=character.feature_choices %}{% include "_feature_choice_fields.html" %}{% endwith %}
-        </section>
-        {% endif %}
-        {% for field in character.choice_fields %}
-          {% if not respec or not field.flavor %}
-          {{ choice_panel("field-" ~ field.id, field.name, field.options, field.description, field.restriction, field.flavor) }}
-          {% endif %}
-        {% endfor %}
-        {% for field in character.text_fields %}
-          {% if not respec or not field.flavor %}
-          {{ text_panel("field-" ~ field.id, field.name, field.description) }}
-          {% endif %}
-        {% endfor %}
-        {% if character.skill_replacements %}
-          <section class="creation-panel">
-            <details data-skill-replacements>
-              <summary>Excess skill replacements (optional)</summary>
-              <p>If a rolled or granted skill exceeds its starting limit, choose replacement skills in the order they will be needed. Leave a choice blank to roll an eligible replacement.</p>
-              {% for group in character.skill_replacements %}
-                <fieldset class="replacement-group">
-                  <legend>{{ group.label }}</legend>
-                  {% if group.excluded %}<p>Not eligible: {{ group.excluded|join(", ") }}.</p>{% endif %}
-                  <div class="replacement-rows" data-replacement-rows>
-                    <label data-replacement-row>
-                      <span>Replacement 1</span>
-                      <select name="skill-replacement-{{ group.kind }}">
-                        <option value="">Roll an eligible skill</option>
-                        {% for option in group.options %}
-                          <option value="{{ option.value }}" data-detail="{{ option.detail }}"{% if option.icon %} data-icon="{{ icon_path(option.icon) }}"{% endif %}>{{ option.title }}</option>
-                        {% endfor %}
-                      </select>
-                      <img class="choice-icon" data-replacement-icon alt="" hidden>
-                      <span class="muted replacement-detail" data-replacement-detail></span>
-                    </label>
-                  </div>
-                  <button type="button" class="secondary" data-add-skill-replacement>Add another replacement</button>
-                </fieldset>
-              {% endfor %}
-            </details>
-          </section>
-        {% endif %}
-      </div>
+        </div>
+      </section>
+      {% endfor %}
     </section>
     {% endif %}
     {% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}

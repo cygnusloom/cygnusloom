@@ -3132,7 +3132,7 @@
     "id": "subclass-champion",
     "name": "Champion",
     "feature_type": "trait",
-    "description": "The Champion path for a Fighter. Its features are gained as the class advances.",
+    "description": "A master of weapons and armour who turns every hit into a chance for a decisive blow.",
     "tag": "subclass",
     "rank": 3
   },
@@ -3197,7 +3197,7 @@
     "id": "subclass-circle-of-the-land",
     "name": "Circle of the Land",
     "feature_type": "trait",
-    "description": "The Circle of the Land path for a Druid. Its features are gained as the class advances.",
+    "description": "A druid who draws spells and protection from a chosen kind of land.",
     "tag": "subclass",
     "rank": 3
   },
@@ -3259,7 +3259,7 @@
     "id": "subclass-college-of-lore",
     "name": "College of Lore",
     "feature_type": "trait",
-    "description": "The College of Lore path for a Bard. Its features are gained as the class advances.",
+    "description": "A bard who collects secrets, cuts down foes with words, and learns magic from any tradition.",
     "tag": "subclass",
     "rank": 3
   },
@@ -3332,7 +3332,7 @@
     "id": "subclass-draconic-sorcery",
     "name": "Draconic Sorcery",
     "feature_type": "trait",
-    "description": "The Draconic Sorcery path for a Sorcerer. Its features are gained as the class advances.",
+    "description": "A sorcerer whose blood carries a dragon's resilience and elemental power.",
     "tag": "subclass",
     "rank": 3
   },
@@ -3412,7 +3412,7 @@
     "id": "subclass-evoker",
     "name": "Evoker",
     "feature_type": "trait",
-    "description": "The Evoker path for a Wizard. Its features are gained as the class advances.",
+    "description": "A wizard who shapes destructive magic without harming allies.",
     "tag": "subclass",
     "rank": 3
   },
@@ -3476,7 +3476,7 @@
     "id": "subclass-fiend-patron",
     "name": "Fiend Patron",
     "feature_type": "trait",
-    "description": "The Fiend Patron path for a Warlock. Its features are gained as the class advances.",
+    "description": "A warlock who bargained with a fiend for power, luck, and a share of its resilience.",
     "tag": "subclass",
     "rank": 3
   },
@@ -3551,7 +3551,7 @@
     "id": "subclass-hunter",
     "name": "Hunter",
     "feature_type": "trait",
-    "description": "The Hunter path for a Ranger. Its features are gained as the class advances.",
+    "description": "A ranger trained to bring down the deadliest prey and defend against its tricks.",
     "tag": "subclass",
     "rank": 3
   },
@@ -3616,7 +3616,7 @@
     "id": "subclass-life-domain",
     "name": "Life Domain",
     "feature_type": "trait",
-    "description": "The Life Domain path for a Cleric. Its features are gained as the class advances.",
+    "description": "A cleric of healing and protection whose magic restores the wounded.",
     "tag": "subclass",
     "rank": 3
   },
@@ -3681,7 +3681,7 @@
     "id": "subclass-oath-of-devotion",
     "name": "Oath of Devotion",
     "feature_type": "trait",
-    "description": "The Oath of Devotion path for a Paladin. Its features are gained as the class advances.",
+    "description": "A paladin sworn to courage, honesty, and the defense of the innocent.",
     "tag": "subclass",
     "rank": 3
   },
@@ -3734,7 +3734,7 @@
     "id": "subclass-path-of-the-berserker",
     "name": "Path of the Berserker",
     "feature_type": "trait",
-    "description": "The Path of the Berserker path for a Barbarian. Its features are gained as the class advances.",
+    "description": "A barbarian who gives in to fury and becomes terrifying in battle.",
     "tag": "subclass",
     "rank": 3
   },
@@ -3798,7 +3798,7 @@
     "id": "subclass-thief",
     "name": "Thief",
     "feature_type": "trait",
-    "description": "The Thief path for a Rogue. Its features are gained as the class advances.",
+    "description": "A rogue who steals, climbs, and improvises through danger.",
     "tag": "subclass",
     "rank": 3
   },
@@ -3851,7 +3851,7 @@
     "id": "subclass-warrior-of-the-open-hand",
     "name": "Warrior of the Open Hand",
     "feature_type": "trait",
-    "description": "The Warrior of the Open Hand path for a Monk. Its features are gained as the class advances.",
+    "description": "A monk who perfects unarmed strikes and the flow of body and spirit.",
     "tag": "subclass",
     "rank": 3
   },

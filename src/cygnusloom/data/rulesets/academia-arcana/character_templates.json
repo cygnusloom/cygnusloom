@@ -1,0 +1,86 @@
+[
+  {
+    "type": "character_template",
+    "id": "standard-rebel",
+    "role": "warrior",
+    "name": "The Rebel",
+    "icon": "dagger",
+    "name_suggestion": "Cass",
+    "description": "A third-year rebel who fights with Transfiguration and Warding, knows the back stairs, and is always ready to duel. The closest thing the academy has to a warrior.",
+    "priority": ["cunning", "practice", "charm", "theory", "alchemy"],
+    "templates": {
+      "playbook": "rebel",
+      "starting_year": "year-3"
+    },
+    "picks": {
+      "subjects": ["subject-transfiguration", "subject-warding"],
+      "spells": ["pocket-form", "iron-feather", "soften-stone", "threshold-sigil"],
+      "potions": ["alertness-draught", "calm-tonic"],
+      "enchantments": ["everlight"],
+      "training": ["training-cunning-1"]
+    },
+    "fields": {
+      "major": "Transfiguration",
+      "signature-spell": "A spell that turns a thrown stone into a brief, bright shield.",
+      "ambition": "Win the academy duelling cup, then find out what the trophy is really made of.",
+      "appearance": "A student with ink-stained cuffs, a duelling glove, and a habit of standing where the prefects cannot see them.",
+      "biography": "A scholarship student who learned early that rules are a map of where the interesting things are kept."
+    }
+  },
+  {
+    "type": "character_template",
+    "id": "standard-prodigy",
+    "role": "magic",
+    "name": "The Prodigy",
+    "icon": "rune-circle",
+    "name_suggestion": "Elowen",
+    "description": "A third-year prodigy whose magic comes easily and dangerously. Elemental and Charms spells, a deep practice trait, and the confidence to use both.",
+    "priority": ["practice", "charm", "cunning", "theory", "alchemy"],
+    "templates": {
+      "playbook": "prodigy",
+      "starting_year": "year-3"
+    },
+    "picks": {
+      "subjects": ["subject-elemental", "subject-charms"],
+      "spells": ["candle-call", "gust", "spark-arc", "light-step"],
+      "potions": ["alertness-draught", "mending-paste"],
+      "enchantments": ["warning"],
+      "training": ["training-practice-1"]
+    },
+    "fields": {
+      "major": "Elemental",
+      "signature-spell": "A small flame that burns only for the person the caster names.",
+      "ambition": "Cast something the teachers will talk about for years, preferably without burning down a wing.",
+      "appearance": "A student with singed sleeves, bright eyes, and the slightly distracted look of someone listening to a spell.",
+      "biography": "The teachers noticed them early. So did the other students, which is not always the same thing."
+    }
+  },
+  {
+    "type": "character_template",
+    "id": "standard-alchemist",
+    "role": "support",
+    "name": "The Alchemist",
+    "icon": "alchemy-table",
+    "name_suggestion": "Tamsin",
+    "description": "A third-year alchemist and healer with a portable lab, a shelf of careful notes, and the potions the party will be glad of later.",
+    "priority": ["alchemy", "theory", "practice", "charm", "cunning"],
+    "templates": {
+      "playbook": "alchemist",
+      "starting_year": "year-3"
+    },
+    "picks": {
+      "subjects": ["subject-healing", "subject-warding"],
+      "spells": ["steady-breath", "shared-warmth", "calm-fever", "alarm-bell"],
+      "potions": ["calm-tonic", "mending-paste"],
+      "enchantments": ["clean-water"],
+      "training": ["training-alchemy-1"]
+    },
+    "fields": {
+      "major": "Healing",
+      "signature-spell": "A quiet spell that steadies a shaken hand and slows a fever.",
+      "ambition": "Make the infirmary's supplies last a whole winter, and prove the old recipe was wrong.",
+      "appearance": "A student in a sturdy apron, with a pencil behind one ear and a stoppered bottle in every pocket.",
+      "biography": "Raised in an apothecary's back room, they came to the academy to learn why the old remedies worked."
+    }
+  }
+]

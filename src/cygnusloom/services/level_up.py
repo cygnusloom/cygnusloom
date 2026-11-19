@@ -71,6 +71,8 @@ class AdvancementPage:
     grants: Mapping[str, int] = field(default_factory=dict)
     # The picks a player may spend now, with their options and costs.
     picks: tuple[Mapping[str, Any], ...] = ()
+    # The picks grouped into the rule set's advancement layout, in its order.
+    pick_sections: tuple[Mapping[str, Any], ...] = ()
     # A multiclass character's classes, so a banked pick can say which class it belongs to.
     class_options: tuple[Mapping[str, Any], ...] = ()
     class_id: str = ""
@@ -334,6 +336,7 @@ def page_view(
                 summary=summary,
                 grants=grants,
                 picks=picks,
+                pick_sections=_pick_sections(rule_set, picks),
                 level=_new_level(pc, rule_set, summary),
                 hireling=pc.hireling,
             )
@@ -347,6 +350,7 @@ def page_view(
                 label="Spend picks",
                 level_up=level_rules,
                 picks=picks,
+                pick_sections=_pick_sections(rule_set, picks),
                 class_options=classes,
                 class_id=picked_class,
                 level=_new_level(pc, rule_set, None),
@@ -442,6 +446,42 @@ def pick_views(
                 }
             )
     return tuple(views)
+
+
+def _pick_sections(
+    rule_set: RuleSet, picks: tuple[Mapping[str, Any], ...]
+) -> tuple[Mapping[str, Any], ...]:
+    """Group the picks the way the rule set's advancement layout reads. A pick the layout does
+    not name is shown under More choices, so a rule set can never hide one."""
+    if not picks:
+        return ()
+    by_id = {str(pick["id"]): pick for pick in picks}
+    layout = rule_set.character.layouts.get("advancement")
+    sections: list[dict[str, Any]] = []
+    used: set[str] = set()
+    for section in layout.sections if layout is not None else ():
+        chosen = [by_id[item] for item in section.items if item in by_id and item not in used]
+        used.update(item for item in section.items if item in by_id)
+        if chosen:
+            sections.append(
+                {
+                    "id": section.id,
+                    "label": section.label,
+                    "description": section.description,
+                    "picks": chosen,
+                }
+            )
+    leftovers = [pick for pick in picks if str(pick["id"]) not in used]
+    if leftovers or not sections:
+        sections.append(
+            {
+                "id": "more",
+                "label": "More choices" if sections else "Spend picks",
+                "description": "",
+                "picks": leftovers or list(picks),
+            }
+        )
+    return tuple(sections)
 
 
 def _skill_view(

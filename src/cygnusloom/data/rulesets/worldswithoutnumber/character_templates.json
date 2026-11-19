@@ -1,0 +1,97 @@
+[
+  {
+    "type": "character_template",
+    "id": "standard-warrior",
+    "role": "warrior",
+    "name": "The Warrior",
+    "icon": "sword",
+    "name_suggestion": "Aldric",
+    "description": "A soldier turned adventurer with a shield, a short sword, and the Armsmaster focus. Straightforward, durable, and good at hitting things.",
+    "priority": ["str", "dex", "con", "wis", "cha", "int"],
+    "templates": {
+      "background": "soldier",
+      "class": "warrior",
+      "tradition": "no_tradition",
+      "kit": "pkg_armored_warrior"
+    },
+    "picks": {
+      "background_learning": ["exert", "notice"],
+      "class_free_skill": ["lead"],
+      "class_focus_any": ["focus_alert"],
+      "class_focus_warrior": ["focus_armsmaster"]
+    },
+    "fields": {
+      "look": "broad-shouldered and slow-moving",
+      "personality": "patient and gentle",
+      "accent": "clipped and blunt",
+      "quirk": "keeps glancing at the sky",
+      "goal": "Stand a watch that matters, and come home with a story worth telling."
+    }
+  },
+  {
+    "type": "character_template",
+    "id": "standard-mage",
+    "role": "magic",
+    "name": "The Mage",
+    "icon": "wand",
+    "name_suggestion": "Sable",
+    "description": "A scholar of the High Mage tradition with a staff, a dagger, and a handful of spells. Armored Magic keeps them standing when the line breaks.",
+    "priority": ["int", "con", "dex", "wis", "cha", "str"],
+    "templates": {
+      "background": "scholar",
+      "class": "mage",
+      "tradition": "high_mage",
+      "kit": "pkg_mage_healer_scholar"
+    },
+    "picks": {
+      "background_learning": ["craft", "convince"],
+      "class_free_skill": ["notice"],
+      "class_focus_any": ["focus_armored_magic"],
+      "tradition_art_high": ["art_arcane_lexicon", "art_sense_magic"],
+      "tradition_spells_high": [
+        "spell_apprehending_arcane_form",
+        "spell_coruscating_coffin",
+        "spell_excellent_transpicuous_transformation",
+        "spell_long_amber_moment"
+      ]
+    },
+    "fields": {
+      "look": "pale and bookish",
+      "personality": "curious and full of questions",
+      "accent": "precise and formal",
+      "quirk": "taps a finger against their lips when thinking",
+      "goal": "Read the book that the older mages keep off the shelf, and survive what it says."
+    }
+  },
+  {
+    "type": "character_template",
+    "id": "standard-healer",
+    "role": "support",
+    "name": "The Healer",
+    "icon": "potion",
+    "name_suggestion": "Maren",
+    "description": "A partial Healer paired with a partial Expert: the party's physician, negotiator, and steady hand. Empowered Healer keeps a fallen companion in the fight.",
+    "priority": ["int", "con", "dex", "wis", "cha", "str"],
+    "templates": {
+      "background": "physician",
+      "class": "healer",
+      "class2": "expert_partial_2",
+      "tradition": "no_tradition",
+      "kit": "pkg_mage_healer_scholar"
+    },
+    "picks": {
+      "background_learning": ["administer", "connect"],
+      "class_free_skill": ["notice"],
+      "class_focus_any": ["focus_gifted_chirurgeon"],
+      "class_art_healer": ["art_empowered_healer"],
+      "second_class_focus_expert": ["focus_diplomatic_grace"]
+    },
+    "fields": {
+      "look": "neatly dressed despite the road",
+      "personality": "warm and protective",
+      "accent": "soft and lilting",
+      "quirk": "always eats something while talking",
+      "goal": "Keep every companion breathing, and teach them to do the same for each other."
+    }
+  }
+]

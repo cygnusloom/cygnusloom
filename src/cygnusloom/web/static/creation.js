@@ -1243,6 +1243,214 @@
     }
   };
 
+  // --- Ready-made characters -------------------------------------------------------------
+  // A rule set's standard characters are JSON objects in the page. Loading one checks its
+  // templates, fills its fields, picks, and feature choices, and arranges the stats toward the
+  // archetype's priorities. It never submits, so the player can change any part afterwards.
+
+  const presetFor = (id) => {
+    const script = [...document.querySelectorAll("[data-character-template-data]")].find(
+      (item) => item.dataset.characterTemplateData === id,
+    );
+    try {
+      return JSON.parse(script?.textContent || "null");
+    } catch {
+      return null;
+    }
+  };
+
+  const radioNamed = (name, value) =>
+    [...document.querySelectorAll('input[type="radio"]')].find(
+      (radio) => radio.name === name && radio.value === value,
+    );
+
+  const setRadio = (name, value) => {
+    const radio = radioNamed(name, value);
+    if (!radio) return false;
+    radio.checked = true;
+    refreshSummary(name);
+    return true;
+  };
+
+  // A flavor table also accepts the player's own words, so a preset value that is not one of
+  // the table's options goes in the write-in box.
+  const setFieldValue = (fieldId, value) => {
+    const name = `field-${fieldId}`;
+    if (setRadio(name, value)) return true;
+    const freeform = form?.querySelector(`input[name="${name}-freeform"]`);
+    if (freeform) {
+      for (const radio of document.querySelectorAll(`input[type="radio"][name="${name}"]`)) {
+        radio.checked = false;
+      }
+      refreshSummary(name);
+      freeform.value = value;
+      return true;
+    }
+    const text = form?.querySelector(`[name="${name}"]`);
+    if (text && !(text instanceof RadioNodeList)) {
+      text.value = value;
+      return true;
+    }
+    return false;
+  };
+
+  const visibleSelectsForPick = (pickId) => {
+    const suffix = new RegExp(`-${pickId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}-(\\d+)$`);
+    return [...(form?.querySelectorAll("select") || [])]
+      .filter((select) => suffix.test(select.name || "") && !select.closest("[hidden]"))
+      .sort((left, right) => Number(left.name.match(/-(\d+)$/)?.[1] ?? 0) - Number(right.name.match(/-(\d+)$/)?.[1] ?? 0));
+  };
+
+  const applyPresetStats = (preset) => {
+    const priority = Array.isArray(preset.priority) ? preset.priority : [];
+    const rank = new Map(priority.map((stat, index) => [stat, index]));
+    for (const [group, members] of statGroups) {
+      if (members.length === 0) continue;
+      const ordered = [...members].sort(
+        (left, right) =>
+          (rank.get(left.dataset.statId) ?? priority.length) -
+          (rank.get(right.dataset.statId) ?? priority.length),
+      );
+      if (statGroupIsAssigned(members)) {
+        const exact = Object.fromEntries(
+          members.map((card) => [card.dataset.statId, Number(preset.stats?.[card.dataset.statId])]),
+        );
+        if (members.every((card) => Number.isInteger(exact[card.dataset.statId]))) {
+          for (const card of members) setStatValue(card, exact[card.dataset.statId]);
+          changedStatGroups.set(group, true);
+          continue;
+        }
+      }
+      if (statGroupIsFree(members)) {
+        const values = members.map(statValueOf).sort((left, right) => right - left);
+        ordered.forEach((card, index) => setStatValue(card, values[index]));
+        changedStatGroups.set(group, true);
+        continue;
+      }
+      if (priority.length === 0 || members.length < 2) continue;
+      const base = members.map(statValueOf);
+      const score = (values) =>
+        ordered.reduce((total, card, index) => {
+          const original = members.indexOf(card);
+          return total + values[original] * (priority.length - index);
+        }, 0);
+      let best = [...base];
+      let bestScore = score(base);
+      for (let left = 0; left < base.length; left++) {
+        for (let right = left + 1; right < base.length; right++) {
+          const trial = [...base];
+          [trial[left], trial[right]] = [trial[right], trial[left]];
+          const trialScore = score(trial);
+          if (trialScore > bestScore) {
+            best = trial;
+            bestScore = trialScore;
+          }
+        }
+      }
+      best.forEach((value, index) => setStatValue(members[index], value));
+      changedStatGroups.set(group, true);
+    }
+    setStatHint(
+      "Ready-made character loaded. You can still trade stats, use the standard array, or roll new ones.",
+    );
+  };
+
+  const loadCharacterTemplate = (id) => {
+    const preset = presetFor(id);
+    if (!preset) return;
+    for (const radio of templateRadios) radio.checked = false;
+    const chosenTemplates = preset.templates || {};
+    for (const [kind, templateId] of Object.entries(chosenTemplates)) {
+      const radio = templateRadios.find(
+        (item) => item.dataset.templateSelect === kind && item.value === templateId,
+      );
+      if (radio) radio.checked = true;
+    }
+    refreshTemplateChoices();
+    for (const kind of Object.keys(chosenTemplates)) revealTables(kind);
+    for (const radio of templateRadios) refreshSummary(radio.name);
+    for (const [fieldId, value] of Object.entries(preset.fields || {})) {
+      setFieldValue(fieldId, value);
+    }
+    for (const [tableId, value] of Object.entries(preset.tables || {})) {
+      setFieldValue(tableId, value);
+    }
+    for (const [templateId, optionId] of Object.entries(preset.grants || {})) {
+      const select = form?.querySelector(`select[name="grant-${templateId}"]`);
+      if (select) {
+        select.value = optionId;
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    }
+    refreshRestrictions();
+    refreshTaggedPicks();
+    for (const [pickId, values] of Object.entries(preset.picks || {})) {
+      const selects = visibleSelectsForPick(pickId);
+      [...values].forEach((value, index) => {
+        if (selects[index]) selects[index].value = value;
+      });
+    }
+    refreshSkillPickOptions();
+    refreshFeaturePickOptions();
+    syncFeatureChoicePanels();
+    const choiceEntries = Object.entries(preset.feature_choices || {});
+    // Apply the choices in the order their controls appear. A spell list must be chosen
+    // before spells that belong to it, and a pattern before the slots it decides.
+    const choiceControls = [...(form?.querySelectorAll('[name^="feature-choice-"]') || [])];
+    const choicePosition = (key) => {
+      const [featureId, ...parts] = key.split(":");
+      const pickId = parts.join(":").replace(/:pattern$/, "");
+      const index = choiceControls.findIndex(
+        (control) =>
+          control.name === `feature-choice-${featureId}-${pickId}-0` ||
+          control.name === `feature-choice-${featureId}-${pickId}-mode`,
+      );
+      return index < 0 ? Number.MAX_SAFE_INTEGER : index;
+    };
+    choiceEntries.sort((left, right) => choicePosition(left[0]) - choicePosition(right[0]));
+    for (const [key, values] of choiceEntries) {
+      const [featureId, ...pickParts] = key.split(":");
+      const pickIdWithPattern = pickParts.join(":");
+      if (!featureId || !pickIdWithPattern) continue;
+      const pattern = pickIdWithPattern.endsWith(":pattern");
+      const pickId = pickIdWithPattern.replace(/:pattern$/, "");
+      if (pattern) {
+        const select = form?.querySelector(
+          `select[name="feature-choice-${featureId}-${pickId}-mode"]`,
+        );
+        if (select && values.length > 0) {
+          select.value = values[0];
+          select.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+        continue;
+      }
+      [...values].forEach((value, index) => {
+        const select = form?.querySelector(
+          `select[name="feature-choice-${featureId}-${pickId}-${index}"]`,
+        );
+        if (select) {
+          select.value = value;
+          select.dispatchEvent(new Event("change", { bubbles: true }));
+          return;
+        }
+        const text = form?.querySelector(
+          `input[name="feature-choice-${featureId}-${pickId}-${index}"]`,
+        );
+        if (text) text.value = value;
+      });
+    }
+    syncFeatureChoicePanels();
+    applyPresetStats(preset);
+    if (preset.name) {
+      const nameInput = form?.querySelector('input[name="name"]');
+      if (nameInput && !nameInput.value.trim()) nameInput.value = preset.name;
+    }
+    const status = document.querySelector("[data-template-status]");
+    if (status) {
+      status.textContent = `${preset.name || "The ready-made character"} loaded. Change anything you like, then create the character.`;
+    }
+  };
+
   // Tagged feature picks follow their fields; the name is rolled after all choices.
   const randomizeAll = (onlyUnchosen) => {
     randomizeChoices(onlyUnchosen);
@@ -1287,6 +1495,25 @@
   document.addEventListener("click", (event) => {
     const target = event.target;
 
+    const presetButton = target.closest("[data-character-template]");
+    if (presetButton) {
+      loadCharacterTemplate(presetButton.dataset.characterTemplate);
+      presetButton.closest("dialog")?.close();
+      return;
+    }
+
+    const dialogOpener = target.closest("[data-open-dialog]");
+    if (dialogOpener) {
+      document.getElementById(dialogOpener.dataset.openDialog)?.showModal();
+      return;
+    }
+
+    const dialogCloser = target.closest("[data-close-dialog]");
+    if (dialogCloser) {
+      dialogCloser.closest("dialog")?.close();
+      return;
+    }
+
     const addReplacement = target.closest("[data-add-skill-replacement]");
     if (addReplacement) {
       const rows = addReplacement.closest(".replacement-group")?.querySelector("[data-replacement-rows]");
@@ -1302,7 +1529,7 @@
     }
 
     // A click on the dialog element is either its backdrop or its padding. Only a click outside the box closes it.
-    if (target instanceof HTMLDialogElement && target.classList.contains("choice-dialog")) {
+    if (target instanceof HTMLDialogElement && target.classList.contains("app-dialog")) {
       const rect = target.getBoundingClientRect();
       const outside =
         event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom;
@@ -1440,12 +1667,14 @@
   // choice itself. This check covers the same ground and points at the first gap.
   form?.addEventListener("submit", (event) => {
     const error = form.querySelector(".form-error");
-    const missing = [...form.querySelectorAll("[data-choice-panel]")].filter(
-      (panel) =>
-        !panel.closest("[hidden]") &&
-        panel.querySelector('input[type="radio"]:checked') === null &&
-        !(panel.dataset.optional === "true" && panel.dataset.required !== "true"),
-    );
+    const missing = [...form.querySelectorAll("[data-choice-panel]")].filter((panel) => {
+      if (panel.closest("[hidden]")) return false;
+      if (panel.querySelector('input[type="radio"]:checked') !== null) return false;
+      // A flavor table accepts the player's own words instead of one of its options.
+      const freeform = panel.querySelector('input[name$="-freeform"]');
+      if (freeform && freeform.value.trim() !== "") return false;
+      return !(panel.dataset.optional === "true" && panel.dataset.required !== "true");
+    });
     for (const panel of form.querySelectorAll("[data-choice-panel].is-missing")) {
       if (!missing.includes(panel)) panel.classList.remove("is-missing");
     }

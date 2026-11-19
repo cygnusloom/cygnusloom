@@ -1,0 +1,105 @@
+[
+  {
+    "type": "character_template",
+    "id": "standard-paladin",
+    "role": "warrior",
+    "name": "The Paladin",
+    "icon": "shield",
+    "name_suggestion": "Aelric",
+    "description": "A human soldier sworn to a sacred oath: heavy armour, a longsword, and divine magic that mends and smites. The simplest sturdy warrior to learn the rules with.",
+    "priority": ["str", "cha", "con", "wis", "dex", "int"],
+    "templates": {
+      "species": "human",
+      "background": "soldier",
+      "class": "paladin"
+    },
+    "picks": {
+      "class_skills": ["insight", "persuasion"],
+      "skillful": ["medicine"],
+      "versatile": ["feat-alert"]
+    },
+    "feature_choices": {
+      "background-asi-soldier:scores:pattern": ["1"],
+      "background-asi-soldier:scores": ["str", "con"]
+    },
+    "grants": {
+      "soldier": "a",
+      "paladin": "a"
+    },
+    "fields": {
+      "appearance": "A broad-shouldered soldier in polished chain mail, a longsword at one hip and a worn holy symbol at the throat.",
+      "biography": "A former ranker who took an oath after a battle went badly. They are steady in a fight and slow to abandon anyone."
+    }
+  },
+  {
+    "type": "character_template",
+    "id": "standard-wizard",
+    "role": "magic",
+    "name": "The Wizard",
+    "icon": "staff",
+    "name_suggestion": "Ilyana",
+    "description": "A high elf scholar with a spellbook, a handful of cantrips, and the best spell list in the game. Fragile at first level, but every level adds more answers.",
+    "priority": ["int", "dex", "con", "wis", "cha", "str"],
+    "templates": {
+      "species": "elf",
+      "background": "sage",
+      "class": "wizard"
+    },
+    "picks": {
+      "class_skills": ["investigation", "insight"],
+      "lineage": ["lineage-elf-high-elf"]
+    },
+    "feature_choices": {
+      "lineage-elf-high-elf:ability": ["int"],
+      "background-asi-sage:scores:pattern": ["1"],
+      "background-asi-sage:scores": ["int", "con"],
+      "feat-magic-initiate:list": ["wizard"],
+      "feat-magic-initiate:cantrips": ["spell-fire-bolt", "spell-light"],
+      "feat-magic-initiate:spell": ["spell-magic-missile"],
+      "feat-magic-initiate:ability": ["int"]
+    },
+    "grants": {
+      "sage": "a",
+      "wizard": "a"
+    },
+    "fields": {
+      "appearance": "A tall high elf in a travel-stained robe, with ink on their fingers and a spellbook never far from reach.",
+      "biography": "A library scholar who left the stacks to see whether the old accounts were true. They take notes on everything."
+    }
+  },
+  {
+    "type": "character_template",
+    "id": "standard-cleric",
+    "role": "support",
+    "name": "The Cleric",
+    "icon": "altar",
+    "name_suggestion": "Hesta",
+    "description": "A dwarf acolyte who heals, blesses, and turns the tide without hogging the spotlight. Divine Order: Protector adds martial weapons and heavy armour.",
+    "priority": ["wis", "con", "cha", "str", "dex", "int"],
+    "templates": {
+      "species": "dwarf",
+      "background": "acolyte",
+      "class": "cleric"
+    },
+    "picks": {
+      "class_skills": ["history", "medicine"],
+      "divine_order": ["divine-order-protector"]
+    },
+    "feature_choices": {
+      "background-asi-acolyte:scores:pattern": ["1"],
+      "background-asi-acolyte:scores": ["wis", "cha"],
+      "feat-magic-initiate:list": ["cleric"],
+      "feat-magic-initiate:cantrips": ["spell-guidance", "spell-sacred-flame"],
+      "feat-magic-initiate:spell": ["spell-bless"],
+      "feat-magic-initiate:ability": ["wis"]
+    },
+    "grants": {
+      "acolyte": "a",
+      "cleric": "a"
+    },
+    "fields": {
+      "appearance": "A stocky dwarf in a chain shirt and shield, with a mace kept close and a holy symbol polished bright.",
+      "biography": "Raised in a temple kitchen and sent out to carry word to a distant shrine. They would rather mend a stranger than win an argument."
+    }
+  }
+]

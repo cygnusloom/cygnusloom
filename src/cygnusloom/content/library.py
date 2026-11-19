@@ -2741,6 +2741,8 @@ RULE_SET_DEFINITION_TYPES = frozenset(
         "feature",
         "feature_type",
         "template",
+        "character_layout",
+        "character_template",
         "injury_table",
         "combat",
         "encounter_grid",
