@@ -3482,6 +3482,27 @@ class TablesRolled(GameEvent):
 
 
 @dataclass(frozen=True)
+class DiceRolled(GameEvent):
+    """The GM rolled dice the rules called for, such as a feature die, a Bardic Inspiration
+    die, or a monster's recharge. Every die face is recorded so the roll cannot be invented."""
+
+    kind: ClassVar[str] = "dice.rolled"
+
+    dice: str
+    values: list[int]
+    total: int
+    reason: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        return None
+
+    def render(self) -> str:
+        rolled = ", ".join(str(value) for value in self.values)
+        text = f"Rolled {self.dice}: {rolled} = {self.total}."
+        return f"{text} ({self.reason})" if self.reason else text
+
+
+@dataclass(frozen=True)
 class DungeonEventRolled(GameEvent):
     """A roll on the rule set's dungeon event table. It does not move the day or hour clock."""
 

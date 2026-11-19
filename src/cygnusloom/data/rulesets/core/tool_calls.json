@@ -2765,5 +2765,25 @@
         "query"
       ]
     }
+  },
+  {
+    "type": "tool_call",
+    "id": "roll_dice",
+    "description": "Roll dice the rules call for outside an attack, check, or save, such as a feature die, a Bardic Inspiration die, a monster's recharge, or a random amount. Give a formula such as 1d12 or 2d6+3. The engine rolls and logs every face, so never invent this result.",
+    "parameters": {
+      "properties": {
+        "dice": {
+          "type": "string",
+          "description": "The dice formula to roll, such as 1d12 or 2d6+3."
+        },
+        "reason": {
+          "type": "string",
+          "description": "What the roll is for, such as Stone's Endurance or a breath weapon recharge."
+        }
+      },
+      "required": [
+        "dice"
+      ]
+    }
   }
 ]

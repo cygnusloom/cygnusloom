@@ -56,7 +56,7 @@ from cygnusloom.content.library import (
 )
 from cygnusloom.content.lookup import AmbiguousId, resolve_id
 from cygnusloom.db.models import Campaign
-from cygnusloom.rules.dice import is_formula, max_total, roll_total
+from cygnusloom.rules.dice import is_formula, max_total, roll_total, roll_values
 from cygnusloom.services import advancements as advancements_service
 from cygnusloom.services import aid, combat, custom_features, encounters, morale, reactions
 from cygnusloom.services import attacks as attack_modifiers
@@ -96,6 +96,7 @@ from cygnusloom.services.events import (
     CharacterSaved,
     CheckMade,
     CurrencyChanged,
+    DiceRolled,
     EncounterResourceUsed,
     ExecutionPrepared,
     ExecutionTaken,
@@ -322,6 +323,24 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
             return roll_dice_tables(
                 db, self.campaign_id, tables, self.dice_tables, self.rng, plus=self.plus
             )
+
+    def roll_dice(self, dice: str, reason: str = "") -> dict[str, Any]:
+        """Roll a dice formula the rules call for, such as a feature die, a Bardic Inspiration
+        die, or a monster's recharge. The engine rolls every face and records the result, so the
+        GM never needs to invent one."""
+        formula = dice.strip()
+        if not is_formula(formula):
+            raise InvalidInput(f"{dice!r} is not a dice formula such as '1d12' or '2d6+3'")
+        values, total = roll_values(formula, self.rng, plus=self.plus)
+        why = bounded_text(reason.strip(), "reason", 200) if reason.strip() else ""
+        with session_scope(self.engine) as db:
+            record(
+                db,
+                self.campaign_id,
+                DiceRolled(dice=formula, values=values, total=total, reason=why),
+            )
+            db.commit()
+        return {"dice": formula, "values": values, "total": total, "reason": why}
 
     def list_dice_tables(self) -> dict[str, Any]:
         """The dice and creative tables this campaign offers, after genre filtering."""

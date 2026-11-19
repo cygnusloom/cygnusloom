@@ -28,7 +28,7 @@ PYTHONPATH=$PWD/src /workspaces/cygnusloom/.venv/bin/python scripts/test.py \
 PYTHONPATH=$PWD/src /workspaces/cygnusloom/.venv/bin/python scripts/test.py -q
 ```
 
-The current full suite is **3821 passed**; the two D&D files are **58 passed**; content
+The current full suite is **3822 passed**; the two D&D files are **59 passed**; content
 validation reports **0 warnings**; `ruff check` is clean on the changed source and test
 files.
 
@@ -43,6 +43,9 @@ files.
 | Weapon combat | Move into reach and attack | The player rolls the d20; the engine adds attack and damage modifiers, logs the strike, and spends the attack action |
 | Spellcasting | Create a Cleric, pick spells/cantrips on the advancement page, then cast Guiding Bolt | Prepared list and slots show on the sheet; a spell attack prompts for the d20, logs the roll against AC, and spends the slot |
 | Recovery | Harm a PC, stabilize, then heal | Healing above 0 clears the defeated state; a stabilized character is no longer dying |
+| Monster special ability | A dragon breathes acid on an NPC ally and the PC | `resolve_hazard` rolls the NPC's save and damage, `player_save` prompts the PC, and `add_condition` stores the follow-up condition |
+| GM dice | Ask for a feature die or a breath recharge | `roll_dice` rolls and logs every face instead of the GM inventing one |
+| Reaction effect | Use Uncanny Dodge against a hit | `use_feature` spends the reaction before the attack, then the adjusted damage is applied |
 
 The live checks used a throwaway SQLite database, `CYGNUSLOOM_TEST_LOGIN=1`,
 `CYGNUSLOOM_TEST_LOGIN_ADMIN=1`, `CYGNUSLOOM_DEBUG_PANEL=1`, and
@@ -107,6 +110,10 @@ These were previously listed as gaps and now have data, engine support, and test
   than labeling the statblock's whole attack bonus as a proficiency bonus.
 - An unconscious or dead character cannot use features, class resources, or cast spells
   through the GM tools until healing revives it.
+- The GM can roll feature dice, Bardic Inspiration, monster recharges, and other rules
+  dice with `roll_dice`; the engine records every face in the Log. Reaction effects such
+  as Uncanny Dodge spend their reaction before the hit resolves, so the cost is tracked
+  even when the damage would end the encounter.
 
 ## Remaining limits
 

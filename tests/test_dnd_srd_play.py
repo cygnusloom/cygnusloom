@@ -8,6 +8,7 @@ advancement page after an experience award.
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import replace
 from typing import Any
 
 import pytest
@@ -23,6 +24,7 @@ from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.events import EncounterTurnEnded, load_state, record
 
 from .factories import (
+    Rolls,
     character_named,
     close_opening,
     create_campaign_direct,
@@ -482,3 +484,33 @@ def test_the_bestiary_keeps_multiattack_skills_and_cr(
     tools.create_monster("Goblin", "Cave", template="monster-goblin-warrior")
     goblin = character_named(app, campaign_id, "Goblin")
     assert goblin.skills["stealth"] == 6
+
+
+def test_the_gm_rolls_feature_dice_with_the_engine(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    from cygnusloom.services.events import _decode_event
+
+    client, campaign_id, _ctx = _campaign(client_factory)
+    tools = replace(
+        tools_for(client.app, campaign_id, rule_set="dnd-srd-2024"), rng=Rolls(7)
+    )
+    rolled = tools.roll_dice("1d12", "Stone's Endurance")
+    assert rolled == {
+        "dice": "1d12",
+        "values": [7],
+        "total": 7,
+        "reason": "Stone's Endurance",
+    }
+    with Session(app.state.engine) as db:
+        row = db.exec(
+            select(Event)
+            .where(Event.campaign_id == campaign_id, Event.kind == "dice.rolled")
+            .order_by(Event.id.desc())
+        ).first()
+    assert row is not None
+    assert _decode_event(row.kind, row.payload).render() == (
+        "Rolled 1d12: 7 = 7. (Stone's Endurance)"
+    )
+    with pytest.raises(InvalidInput, match="not a dice formula"):
+        tools.roll_dice("banana")
