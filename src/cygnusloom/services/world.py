@@ -2244,6 +2244,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 skill_amount = rule.amount
             stat = ""
             stat_amount = 0
+            stat_raises: dict[str, int] = {}
             if rule.grant == "modifier":
                 bonus = spec.modifier(character.stats, choice) + character.stat_modifiers.get(
                     choice, 0
@@ -2263,6 +2264,16 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                     )
                 stat = choice
                 stat_amount = rule.amount
+                before = spec.modifier(character.stats, choice)
+                after = spec.modifier({**character.stats, choice: score + rule.amount}, choice)
+                delta = after - before
+                if delta:
+                    level = character.counters.get("level", 1)
+                    for dependent in spec.stats.values():
+                        if dependent.plus_modifier != choice or dependent.derived is not None:
+                            continue
+                        steps = level if dependent.plus_modifier_per_level else 1
+                        stat_raises[dependent.id] = delta * steps
             record(
                 db,
                 self.campaign_id,
@@ -2275,6 +2286,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                     skill_amount=skill_amount,
                     stat=stat,
                     stat_amount=stat_amount,
+                    stat_raises=stat_raises,
                 ),
             )
             db.commit()

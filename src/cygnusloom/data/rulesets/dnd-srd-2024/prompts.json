@@ -27,13 +27,13 @@
     "type": "prompt",
     "id": "spellcasting",
     "step": "state",
-    "text": "Use cast_spell when a character casts a spell they know. A cantrip costs no slot; a leveled spell spends a slot of its level or higher. Pass slot_level when the player upcasts; the spell's higher-level text applies. The result gives the spell save DC and spell attack bonus, so roll NPC saves with roll_save or let the player roll with player_save, and use the spell's own damage and area from its description. A concentration spell ends any earlier concentration spell. A spellcaster learns new spells when the level-up page offers them, and a feature such as Magic Initiate may teach one with learn_spell. Never let a character cast a spell they have not learned."
+    "text": "Spellcasters prepare leveled spells. After a long rest, call prepare_spells with the player's chosen list: a wizard chooses from the spellbook, a cleric, druid, paladin, or ranger chooses from the class list, and a bard, sorcerer, or warlock chooses from the spells they know. The Prepared Spells number for the class and level is the limit; cantrips are always available and do not count. Use cast_spell only for a spell that is known and, when leveled, prepared. A cantrip costs no slot; a leveled spell spends a slot of its level or higher. Pass slot_level when the player upcasts; the spell's higher-level text applies. A prepared spell with the Ritual tag can be cast with ritual true: it takes 10 minutes and spends no slot. A concentration spell sets concentration and ends the earlier concentration spell; a long rest clears it. The result gives the spell save DC and spell attack bonus, so roll NPC saves with roll_save or let the player roll with player_save, and use the spell's own damage and area from its description. A spellcaster learns new spells when the level-up page offers them, and a feature such as Magic Initiate may teach one with learn_spell. Never let a character cast a leveled spell they have not prepared. A Circle of the Land druid calls choose_land after each long rest; the chosen land's Circle spells become always prepared."
   },
   {
     "type": "prompt",
     "id": "rests",
     "step": "state",
-    "text": "A short rest takes 1 hour: call rest with length short, then spend_hit_die once for each Hit Point Die a character spends. A long rest takes 8 hours and restores all hit points, Hit Point Dice, and spell slots; call rest with length long. The engine refills slots and Hit Point Dice for you. Do not add advance_time for the same period, and do not restore hit points by narration alone."
+    "text": "A short rest takes 1 hour: call rest with length short, then spend_hit_die once for each Hit Point Die a character spends. A long rest takes 8 hours and restores all hit points, Hit Point Dice, class resource uses, and spell slots; call rest with length long. The engine refills slots, Hit Point Dice, and class resources for you. After a long rest, call prepare_spells for each spellcaster so the player can change their prepared list. Do not add advance_time for the same period, and do not restore hit points by narration alone."
   },
   {
     "type": "prompt",
@@ -79,5 +79,15 @@
     "type": "prompt",
     "id": "feature_text",
     "text": "Before you resolve a spell, class feature, species trait, or feat, read it with lookup_feature. The statblock names the character's features and prints their short notes; the full text is the rule. Never invent an effect a feature does not state, and never add a bonus the feature does not give."
+  },
+  {
+    "type": "prompt",
+    "id": "class_resources",
+    "text": "Class resources are tracked as counters: Rage, Bardic Inspiration, Channel Divinity, Wild Shape, Second Wind, Action Surge, Indomitable, Focus Points, the Lay On Hands pool, Sorcery Points, Arcane Recovery, Favored Enemy, Tireless, Mystic Arcanum, and Dark One's Luck. When a player spends one, call use_class_resource and narrate the result; never spend a use by narration alone. A short rest returns one use of Rage, Channel Divinity, Wild Shape, and Second Wind and all Action Surge and Focus Points; a long rest refills every pool. The character sheet shows what is left."
+  },
+  {
+    "type": "prompt",
+    "id": "attunement",
+    "text": "A magic item whose description says it requires attunement works only for a character attuned to it. Attunement takes a short rest and a character can be attuned to at most three items; call attune_item when a player attunes and unattune_item when they end it. The spellcasting prompt already covers concentration, which is separate from attunement."
   }
 ]

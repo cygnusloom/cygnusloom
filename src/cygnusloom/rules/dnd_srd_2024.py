@@ -11,7 +11,7 @@ level are also handled here from the validated ``progression`` rule data.
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from itertools import pairwise
 from types import MappingProxyType
 from typing import Any, Protocol
@@ -32,6 +32,7 @@ from cygnusloom.services.events import (
     FeatureLearned,
     current,
     record,
+    same_item_name,
 )
 from cygnusloom.services.hooks import HookContext
 
@@ -47,6 +48,35 @@ ABILITY_NAMES = {
 CASTING_KINDS = ("none", "full", "half", "pact")
 SLOT_TABLES = ("none", "full", "half", "pact")
 DEFAULT_DC = 15
+# Character marks: the leveled spells prepared for the day, the always-prepared spells a
+# subclass grants, and the concentration spell being maintained.
+PREPARED_MARK = "prepared"
+ALWAYS_PREPARED_MARK = "always_prepared"
+CONCENTRATION_MARK = "concentration"
+# The magic items a character is attuned to, at most three.
+ATTUNED_MARK = "attuned"
+# The land a Circle of the Land druid chose for the current set of Circle spells.
+LAND_MARK = "land"
+# The counters the use_class_resource tool may spend.
+RESOURCE_COUNTERS = frozenset(
+    {
+        "rage",
+        "bardic_inspiration",
+        "channel_divinity",
+        "wild_shape",
+        "second_wind",
+        "action_surge",
+        "indomitable",
+        "focus_points",
+        "lay_on_hands",
+        "sorcery_points",
+        "arcane_recovery",
+        "favored_enemy",
+        "tireless",
+        "mystic_arcanum",
+        "dark_ones_luck",
+    }
+)
 
 
 class _WorldWithRuleData(Protocol):
@@ -72,15 +102,27 @@ class DndClass:
     spells: tuple[int, ...]
     slot_table: str
     features: Mapping[int, tuple[str, ...]]
+    # Each resource counter's maximum at every level.
+    resources: Mapping[str, tuple[int, ...]] = field(default_factory=dict)
+    # The levels that grant Metamagic options, and how many each grants.
+    metamagic_levels: frozenset[int] = frozenset()
+    metamagic_counts: tuple[int, ...] = ()
+    # Eldritch Invocation slots at every level.
+    invocations: tuple[int, ...] = ()
 
 
 @dataclass(frozen=True)
 class DndSubclass:
-    """One subclass's feature ids by the class level that grants them."""
+    """One subclass's feature ids by the class level that grants them, and the spells it always
+    prepares."""
 
     id: str
     class_id: str
     features: Mapping[int, tuple[str, ...]]
+    spells: Mapping[int, tuple[str, ...]] = field(default_factory=dict)
+    always_prepared: bool = False
+    # Circle of the Land spell tables, keyed by land name and then class level.
+    land_spells: Mapping[str, Mapping[int, tuple[str, ...]]] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -106,26 +148,40 @@ def configure_progression(
     for class_id, rules in progression.classes.items():
         template = character.templates.get(class_id)
         if template is None or template.kind != "class":
-            raise ContentError(
-                f"{label}: class {class_id!r} has no class template of the same id"
-            )
+            raise ContentError(f"{label}: class {class_id!r} has no class template of the same id")
         for feature_id in _every_feature(rules, progression.subclasses):
             feature = character.features.get(feature_id)
             if feature is None:
-                raise ContentError(
-                    f"{label}: class {class_id!r} names no feature {feature_id!r}"
-                )
+                raise ContentError(f"{label}: class {class_id!r} names no feature {feature_id!r}")
         for spell_id in _class_spells(progression, class_id):
             spell = character.features.get(spell_id)
             if spell is None or spell.feature_type != "spell":
                 raise ContentError(
                     f"{label}: class {class_id!r} spell list names no spell {spell_id!r}"
                 )
+        for resource in rules.resources:
+            if resource not in character.counters:
+                raise ContentError(f"{label}: class {class_id!r} names no counter {resource!r}")
     for subclass_id, subclass in progression.subclasses.items():
         if subclass.class_id not in progression.classes:
             raise ContentError(
                 f"{label}: subclass {subclass_id!r} names no class {subclass.class_id!r}"
             )
+        for spell_ids in subclass.spells.values():
+            for spell_id in spell_ids:
+                spell = character.features.get(spell_id)
+                if spell is None or spell.feature_type != "spell":
+                    raise ContentError(
+                        f"{label}: subclass {subclass_id!r} names no spell {spell_id!r}"
+                    )
+        for land_levels in subclass.land_spells.values():
+            for spell_ids in land_levels.values():
+                for spell_id in spell_ids:
+                    spell = character.features.get(spell_id)
+                    if spell is None or spell.feature_type != "spell":
+                        raise ContentError(
+                            f"{label}: subclass {subclass_id!r} names no spell {spell_id!r}"
+                        )
     return progression
 
 
@@ -178,6 +234,10 @@ def parse_progression(data: Mapping[str, Any], label: str = "progression") -> Dn
                 "spells",
                 "slot_table",
                 "features",
+                "resources",
+                "metamagic_levels",
+                "metamagic_counts",
+                "invocations",
             },
             class_label,
         )
@@ -221,19 +281,76 @@ def parse_progression(data: Mapping[str, Any], label: str = "progression") -> Dn
             spells=_per_level(entry["spells"], max_level, f"{class_label}.spells"),
             slot_table=slot_table,
             features=_feature_levels(entry["features"], max_level, f"{class_label}.features"),
+            resources={
+                resource: _resource_levels(values, max_level, f"{class_label}.resources.{resource}")
+                for resource, values in _object(
+                    entry.get("resources", {}), f"{class_label}.resources"
+                ).items()
+            },
+            metamagic_levels=_levels(
+                entry.get("metamagic_levels", []), max_level, f"{class_label}.metamagic_levels"
+            ),
+            metamagic_counts=tuple(
+                _whole(value, f"{class_label}.metamagic_counts", 0, 20)
+                for value in entry.get("metamagic_counts", [])
+            ),
+            invocations=_per_level(
+                entry.get("invocations", [0] * max_level),
+                max_level,
+                f"{class_label}.invocations",
+            ),
         )
     subclasses_data = _object(data["subclasses"], f"{label}.subclasses")
     subclasses: dict[str, DndSubclass] = {}
     for subclass_id, raw in subclasses_data.items():
         subclass_label = f"{label}.subclasses[{subclass_id!r}]"
         entry = _object(raw, subclass_label)
-        _keys(entry, {"class", "features"}, subclass_label)
+        _keys(
+            entry,
+            {"class", "features", "spells", "always_prepared", "land_spells"},
+            subclass_label,
+        )
+        subclass_spells: dict[int, tuple[str, ...]] = {}
+        for level_key, values in _object(
+            entry.get("spells", {}), f"{subclass_label}.spells"
+        ).items():
+            try:
+                number = int(level_key)
+            except (TypeError, ValueError):
+                raise ContentError(
+                    f"{subclass_label}.spells: level keys must be whole numbers"
+                ) from None
+            subclass_spells[_whole(number, f"{subclass_label}.spells level", 1, max_level)] = (
+                _texts(values, f"{subclass_label}.spells[{level_key}]")
+            )
+        always = entry.get("always_prepared", False)
+        if not isinstance(always, bool):
+            raise ContentError(f"{subclass_label}.always_prepared must be true or false")
+        land_spells: dict[str, Mapping[int, tuple[str, ...]]] = {}
+        for land, raw_levels in _object(
+            entry.get("land_spells", {}), f"{subclass_label}.land_spells"
+        ).items():
+            land_levels: dict[int, tuple[str, ...]] = {}
+            for level_key, values in _object(
+                raw_levels, f"{subclass_label}.land_spells[{land!r}]"
+            ).items():
+                try:
+                    number = int(level_key)
+                except (TypeError, ValueError):
+                    raise ContentError(
+                        f"{subclass_label}.land_spells: level keys must be whole numbers"
+                    ) from None
+                land_levels[_whole(number, f"{subclass_label}.land_spells level", 1, max_level)] = (
+                    _texts(values, f"{subclass_label}.land_spells[{land!r}][{level_key}]")
+                )
+            land_spells[land] = MappingProxyType(land_levels)
         subclasses[subclass_id] = DndSubclass(
             id=subclass_id,
             class_id=_text(entry["class"], f"{subclass_label}.class"),
-            features=_feature_levels(
-                entry["features"], max_level, f"{subclass_label}.features"
-            ),
+            features=_feature_levels(entry["features"], max_level, f"{subclass_label}.features"),
+            spells=MappingProxyType(subclass_spells),
+            always_prepared=always,
+            land_spells=MappingProxyType(land_spells),
         )
     spell_lists_data = _object(data["spell_lists"], f"{label}.spell_lists")
     spell_lists: dict[str, Mapping[int, tuple[str, ...]]] = {}
@@ -329,16 +446,35 @@ def _modifier(found: Any, spec: CharacterSpec, stat: str) -> int:
     return found.modifier(spec, stat)
 
 
-def _save_bonus(
-    found: Any, spec: CharacterSpec, progression: DndProgression, stat: str
-) -> int:
-    """An ability save: the modifier plus the proficiency bonus when the class is proficient."""
+def _save_bonus(found: Any, spec: CharacterSpec, progression: DndProgression, stat: str) -> int:
+    """An ability save: a statblock's printed save bonus, or the modifier plus the proficiency
+    bonus when the class is proficient."""
+    if found.kind != PC_KIND:
+        printed = found.stats.get(f"save_{stat}")
+        if printed is not None:
+            # Statblock scores are stored non-negative, so a save bonus is recorded as 11 + the
+            # printed bonus.
+            return int(printed) - 11
     bonus = _modifier(found, spec, stat)
     if found.kind == PC_KIND:
         rules = progression.classes.get(class_id(found))
         if rules is not None and stat in rules.saves:
             bonus += proficiency_bonus(_level(found))
     return bonus
+
+
+def _resource_targets(found: Any, rules: DndClass, level: int) -> dict[str, int]:
+    """Each class resource's full value at a level, with the pools that follow a score or the
+    level itself filled in."""
+    targets: dict[str, int] = {}
+    for counter, values in rules.resources.items():
+        target = values[level - 1] if 0 < level <= len(values) else 0
+        if counter == "bardic_inspiration":
+            target = max(1, (int(found.stats.get("cha", 10)) - 10) // 2)
+        elif counter == "lay_on_hands":
+            target = 5 * level
+        targets[counter] = target
+    return targets
 
 
 def _spell_max_rank(found: Any, progression: DndProgression) -> int:
@@ -364,11 +500,7 @@ def _slot_counts(found: Any, progression: DndProgression) -> dict[int, int]:
     table = progression.slots.get(rules.slot_table, ())
     if not table:
         return {}
-    return {
-        index: count
-        for index, count in enumerate(table[level - 1], start=1)
-        if count > 0
-    }
+    return {index: count for index, count in enumerate(table[level - 1], start=1) if count > 0}
 
 
 def _class_spells(progression: DndProgression, class_id: str) -> tuple[str, ...]:
@@ -436,9 +568,7 @@ def _project(character: str, ctx: ToolContext) -> LevelGrants:
     rules: DndClass = facts["rules"]
     pools = {
         "spell_picks": max(0, rules.spells[new_level - 1] - rules.spells[level - 1]),
-        "cantrip_picks": max(
-            0, rules.cantrips[new_level - 1] - rules.cantrips[level - 1]
-        ),
+        "cantrip_picks": max(0, rules.cantrips[new_level - 1] - rules.cantrips[level - 1]),
         "asi_picks": 1 if new_level in rules.asi_levels else 0,
         "fighting_style_picks": 1 if new_level in rules.fighting_style_levels else 0,
         "expertise_picks": 2 if new_level in rules.expertise_levels else 0,
@@ -478,7 +608,11 @@ def _project(character: str, ctx: ToolContext) -> LevelGrants:
     if pools["subclass_picks"]:
         lines.append("Choose a subclass.")
     if values["features"]:
-        names = [ctx.world.character.features[f].name for f in values["features"] if f in ctx.world.character.features]
+        names = [
+            ctx.world.character.features[f].name
+            for f in values["features"]
+            if f in ctx.world.character.features
+        ]
         if names:
             lines.append(f"Class features: {', '.join(names)}.")
     return LevelGrants(
@@ -533,11 +667,26 @@ def apply_level_up(character: str, ctx: ToolContext) -> dict[str, Any]:
             ctx.world.adjust_counter(character, counter, amount)
     for feature_id in grants.values["features"]:
         _learn(ctx, character, feature_id, cause=f"level {new_level}")
+    for counter, target in _resource_targets(found, rules, new_level).items():
+        current = int(found.counters.get(counter, 0))
+        if target != current:
+            ctx.world.adjust_counter(character, counter, target - current)
+    if new_level in rules.metamagic_levels:
+        order = sorted(rules.metamagic_levels)
+        index = order.index(new_level)
+        count = rules.metamagic_counts[index] if index < len(rules.metamagic_counts) else 0
+        if count:
+            ctx.world.adjust_counter(character, "metamagic_picks", count)
+    if rules.invocations:
+        gained = rules.invocations[new_level - 1] - rules.invocations[old_level - 1]
+        if gained > 0:
+            ctx.world.adjust_counter(character, "invocation_picks", gained)
     chosen = subclass_id(found, spec, progression)
     if chosen:
         subclass = progression.subclasses[chosen]
         for feature_id in subclass.features.get(new_level, ()):
             _learn(ctx, character, feature_id, cause=f"{subclass.id} level {new_level}")
+        _learn_always_prepared(ctx, character, subclass, new_level)
     return {
         "character": character,
         "level": new_level,
@@ -560,9 +709,7 @@ def _raise_proficient_skills(
         if level < old_pb:
             continue
         amount = (new_pb - old_pb) * (2 if level >= old_pb * 2 else 1)
-        ctx.world.raise_skill(
-            character, skill_id, level + amount, cause="proficiency bonus"
-        )
+        ctx.world.raise_skill(character, skill_id, level + amount, cause="proficiency bonus")
 
 
 def _set_slots(
@@ -692,6 +839,41 @@ def fighting_style_options(
     ]
 
 
+def _tagged_feat_options(
+    character: str, ctx: ToolContext, tag: str, level: int | None = None
+) -> list[dict[str, Any]]:
+    """The feat options with a tag that the character does not already know and whose
+    prerequisite level is open."""
+    spec = ctx.world.character
+    found = _read_character(character, ctx)
+    target_level = level or _stored_level(found)
+    return sorted(
+        (
+            _option(feature)
+            for feature in spec.features.values()
+            if feature.feature_type == "feat"
+            and feature.tag == tag
+            and feature.rank <= target_level
+            and feature.id not in found.features
+        ),
+        key=lambda option: (option["rank"], option["name"]),
+    )
+
+
+def metamagic_options(
+    character: str, pick: Any, ctx: ToolContext, level: int | None = None
+) -> list[dict[str, Any]]:
+    """The Metamagic options the sorcerer does not already know."""
+    return _tagged_feat_options(character, ctx, "metamagic", level)
+
+
+def invocation_options(
+    character: str, pick: Any, ctx: ToolContext, level: int | None = None
+) -> list[dict[str, Any]]:
+    """The Eldritch Invocations open to the warlock at this level."""
+    return _tagged_feat_options(character, ctx, "invocation", level)
+
+
 def subclass_options(
     character: str, pick: Any, ctx: ToolContext, level: int | None = None
 ) -> list[dict[str, Any]]:
@@ -752,9 +934,38 @@ def apply_fighting_style_pick(
     return {**result, pick.counter: remaining["value"]}
 
 
-def apply_subclass_pick(
-    character: str, pick: Any, choice: str, ctx: ToolContext
-) -> dict[str, Any]:
+def _learn_always_prepared(
+    ctx: ToolContext, character: str, subclass: DndSubclass, level: int
+) -> None:
+    """Learn a subclass's always-prepared spells and add them to the prepared mark."""
+    if not subclass.always_prepared:
+        return
+    spell_ids = [
+        spell
+        for spell_level, spells in subclass.spells.items()
+        if spell_level <= level
+        for spell in spells
+    ]
+    for spell_id in spell_ids:
+        _learn(ctx, character, spell_id, cause=f"{subclass.id} spells")
+    if not spell_ids:
+        return
+
+    def action(hc: HookContext) -> None:
+        found = hc.character(character)
+        existing = [str(item) for item in found.marks.get(ALWAYS_PREPARED_MARK) or []]
+        merged = list(dict.fromkeys([*existing, *spell_ids]))
+        hc.set_mark(
+            found.name,
+            ALWAYS_PREPARED_MARK,
+            merged,
+            f"{found.name} always has {len(merged)} subclass spells prepared.",
+        )
+
+    ctx.world.with_hook_context(action)
+
+
+def apply_subclass_pick(character: str, pick: Any, choice: str, ctx: ToolContext) -> dict[str, Any]:
     """Choose a subclass: learn its marker and every subclass feature gained so far."""
     progression = require_progression(ctx.world)
     found = _read_character(character, ctx)
@@ -768,6 +979,7 @@ def apply_subclass_pick(
         if feature_level <= level:
             for feature_id in feature_ids:
                 _learn(ctx, character, feature_id, cause=f"{subclass.id} level {feature_level}")
+    _learn_always_prepared(ctx, character, subclass, level)
     remaining = ctx.world.adjust_counter(character, pick.counter, -1)
     return {**result, pick.counter: remaining["value"]}
 
@@ -783,7 +995,9 @@ def apply_expertise_pick(
         raise InvalidInput(f"{choice!r} is not an expertise option")
     current_level = spec.skill_level(found.skills, skill_id)
     bonus = proficiency_bonus(_stored_level(found))
-    new_level = min(current_level + bonus, spec.skill_progression.maximum if spec.skill_progression else 20)
+    new_level = min(
+        current_level + bonus, spec.skill_progression.maximum if spec.skill_progression else 20
+    )
     result = ctx.world.raise_skill(character, skill_id, new_level, cause="expertise")
     remaining = ctx.world.adjust_counter(character, pick.counter, -1)
     return {**result, pick.counter: remaining["value"]}
@@ -824,6 +1038,7 @@ def roll_save(
         _, rolled = roll_mode_values("1d20", ctx.world.rng, mode=mode)
     total = rolled + bonus
     passed = total >= difficulty
+
     def action(hc: HookContext) -> None:
         db, campaign_id = hc.session()
         record(
@@ -851,6 +1066,7 @@ def roll_save(
             ),
         )
         db.commit()
+
     ctx.world.with_hook_context(action)
     return {
         "character": found.name,
@@ -886,8 +1102,13 @@ def death_save(name: str, ctx: ToolContext, roll: int = 0) -> dict[str, Any]:
         ctx.world.restore_stat(found.name, "hp", 1, cause="a natural 20 on a death save")
         _reset_death_saves(ctx, found.name)
         _record_stabilized(ctx, found.name, by="a natural 20 on a death save")
-        return {"character": found.name, "roll": rolled, "outcome": outcome, "failures": 0,
-                "successes": 0}
+        return {
+            "character": found.name,
+            "roll": rolled,
+            "outcome": outcome,
+            "failures": 0,
+            "successes": 0,
+        }
     gain = 2 if rolled == 1 else 0
     if outcome == "success":
         successes += 1
@@ -897,19 +1118,33 @@ def death_save(name: str, ctx: ToolContext, roll: int = 0) -> dict[str, Any]:
         _adjust_death_counter(ctx, found.name, "death_saves", 1 + gain)
     _record_death_save(ctx, found.name, rolled, outcome == "success", outcome)
     if failures >= 3:
+
         def action(hc: HookContext) -> None:
             db, campaign_id = hc.session()
-            record(db, campaign_id, CharacterDied(name=found.name, cause="three failed death saves"))
+            record(
+                db, campaign_id, CharacterDied(name=found.name, cause="three failed death saves")
+            )
             db.commit()
+
         ctx.world.with_hook_context(action)
         _reset_death_saves(ctx, found.name)
-        return {"character": found.name, "roll": rolled, "outcome": "dead", "failures": 3,
-                "successes": successes}
+        return {
+            "character": found.name,
+            "roll": rolled,
+            "outcome": "dead",
+            "failures": 3,
+            "successes": successes,
+        }
     if successes >= 3:
         _record_stabilized(ctx, found.name, by="three successful death saves")
         _reset_death_saves(ctx, found.name)
-        return {"character": found.name, "roll": rolled, "outcome": "stable", "failures": failures,
-                "successes": 3}
+        return {
+            "character": found.name,
+            "roll": rolled,
+            "outcome": "stable",
+            "failures": failures,
+            "successes": 3,
+        }
     return {
         "character": found.name,
         "roll": rolled,
@@ -919,17 +1154,18 @@ def death_save(name: str, ctx: ToolContext, roll: int = 0) -> dict[str, Any]:
     }
 
 
-def _record_death_save(
-    ctx: ToolContext, name: str, roll: int, passed: bool, cause: str
-) -> None:
+def _record_death_save(ctx: ToolContext, name: str, roll: int, passed: bool, cause: str) -> None:
     def action(hc: HookContext) -> None:
         db, campaign_id = hc.session()
         record(
             db,
             campaign_id,
-            CharacterSaved(name=name, stat="death", roll=roll, score=10, passed=passed, cause=cause),
+            CharacterSaved(
+                name=name, stat="death", roll=roll, score=10, passed=passed, cause=cause
+            ),
         )
         db.commit()
+
     ctx.world.with_hook_context(action)
 
 
@@ -938,6 +1174,7 @@ def _record_stabilized(ctx: ToolContext, name: str, *, by: str) -> None:
         db, campaign_id = hc.session()
         record(db, campaign_id, CharacterStabilized(name=name, by=by))
         db.commit()
+
     ctx.world.with_hook_context(action)
 
 
@@ -978,13 +1215,160 @@ def spend_hit_die(name: str, ctx: ToolContext) -> dict[str, Any]:
     }
 
 
+def attune_item(character: str, item: str, ctx: ToolContext) -> dict[str, Any]:
+    """Attune to a carried magic item during a short rest. A character holds at most three
+    attunements."""
+    spec = ctx.world.character
+    found = _read_character(character, ctx)
+    feature = _item_feature(spec, item)
+    if "attunement" not in (feature.description or "").casefold():
+        raise InvalidInput(f"{feature.name} does not require attunement")
+    if not any(same_item_name(carried.name, feature.name) for carried in found.items):
+        raise InvalidInput(f"{found.name} does not carry {feature.name}")
+    attuned = [str(entry) for entry in found.marks.get(ATTUNED_MARK) or []]
+    if feature.id in attuned or feature.name in attuned:
+        return {"character": found.name, "attuned": attuned, "already": True}
+    if len(attuned) >= 3:
+        raise InvalidInput(f"{found.name} is already attuned to three items")
+
+    def action(hc: HookContext) -> None:
+        current = hc.character(character)
+        names = [*attuned, feature.name]
+        hc.set_mark(
+            current.name,
+            ATTUNED_MARK,
+            names,
+            f"{current.name} attunes to {feature.name}.",
+        )
+
+    ctx.world.with_hook_context(action)
+    return {
+        "character": found.name,
+        "attuned": [*attuned, feature.name],
+        "item": feature.id,
+    }
+
+
+def unattune_item(character: str, item: str, ctx: ToolContext) -> dict[str, Any]:
+    """End an attunement to a magic item."""
+    spec = ctx.world.character
+    found = _read_character(character, ctx)
+    feature = _item_feature(spec, item)
+    attuned = [str(entry) for entry in found.marks.get(ATTUNED_MARK) or []]
+    remaining = [entry for entry in attuned if entry not in {feature.id, feature.name}]
+    if len(remaining) == len(attuned):
+        raise InvalidInput(f"{found.name} is not attuned to {feature.name}")
+
+    def action(hc: HookContext) -> None:
+        current = hc.character(character)
+        hc.set_mark(
+            current.name,
+            ATTUNED_MARK,
+            remaining or None,
+            f"{current.name} ends the attunement to {feature.name}.",
+        )
+
+    ctx.world.with_hook_context(action)
+    return {"character": found.name, "attuned": remaining, "item": feature.id}
+
+
+def _item_feature(spec: CharacterSpec, item: str) -> Feature:
+    wanted = item.strip().casefold()
+    matches = [
+        feature
+        for feature in spec.features.values()
+        if feature.feature_type == "item"
+        and (feature.id.casefold() == wanted or feature.name.casefold() == wanted)
+    ]
+    if not matches:
+        raise InvalidInput(f"there is no item named {item!r}")
+    if len(matches) > 1:
+        raise InvalidInput(f"{item!r} is ambiguous; give the item id")
+    return matches[0]
+
+
+def choose_land(character: str, land: str, ctx: ToolContext) -> dict[str, Any]:
+    """Choose the land whose Circle spells a Circle of the Land druid has prepared."""
+    progression = require_progression(ctx.world)
+    spec = ctx.world.character
+    found = _read_character(character, ctx)
+    rules = _class_rules(found, progression)
+    chosen_subclass = subclass_id(found, spec, progression)
+    if chosen_subclass is None:
+        raise InvalidInput(f"{found.name} has no subclass")
+    subclass = progression.subclasses[chosen_subclass]
+    wanted = land.strip().casefold()
+    if wanted not in subclass.land_spells:
+        raise InvalidInput(
+            f"{found.name}'s subclass has no land {land!r}; choose one of "
+            + ", ".join(sorted(subclass.land_spells))
+        )
+    level = _level(found)
+    spell_ids = [
+        spell
+        for spell_level, spells in subclass.land_spells[wanted].items()
+        if spell_level <= level
+        for spell in spells
+    ]
+    for spell_id in spell_ids:
+        _learn(ctx, character, spell_id, cause=f"{wanted} land spells")
+
+    def action(hc: HookContext) -> None:
+        current = hc.character(character)
+        hc.set_mark(
+            current.name,
+            LAND_MARK,
+            wanted,
+            f"{current.name} chooses the {wanted} land for the Circle spells.",
+        )
+        hc.set_mark(
+            current.name,
+            ALWAYS_PREPARED_MARK,
+            spell_ids or None,
+            f"{current.name} always has the {wanted} land spells prepared.",
+        )
+
+    ctx.world.with_hook_context(action)
+    return {
+        "character": found.name,
+        "land": wanted,
+        "spells": spell_ids,
+        "class": rules.id,
+    }
+
+
+def use_class_resource(
+    character: str, resource: str, ctx: ToolContext, amount: int = 1, cause: str = ""
+) -> dict[str, Any]:
+    """Spend uses from a class resource pool, such as Rages, Focus Points, or Sorcery Points."""
+    spec = ctx.world.character
+    found = _read_character(character, ctx)
+    if resource not in RESOURCE_COUNTERS:
+        raise InvalidInput("resource must be one of: " + ", ".join(sorted(RESOURCE_COUNTERS)))
+    if resource not in spec.counters or resource not in found.counters:
+        raise InvalidInput(f"{found.name} has no {resource} pool")
+    spent = whole_number(amount, "amount", 1, 100)
+    if int(found.counters.get(resource, 0)) < spent:
+        raise InvalidInput(f"{found.name} has no {resource} uses left")
+    result = ctx.world.adjust_counter(character, resource, -spent)
+    return {
+        "character": found.name,
+        "resource": resource,
+        "spent": spent,
+        "remaining": result["value"],
+        "cause": cause or f"spending {resource}",
+    }
+
+
 def cast_spell(
     name: str,
     spell: str,
     ctx: ToolContext,
     slot_level: int = 0,
+    ritual: bool = False,
 ) -> dict[str, Any]:
-    """Cast a known spell, spending a slot of the chosen level or the spell's own."""
+    """Cast a known spell, spending a slot of the chosen level or the spell's own. A prepared
+    spell with the Ritual tag can be cast as a ritual instead, taking 10 minutes and no slot."""
     progression = require_progression(ctx.world)
     spec = ctx.world.character
     found = _read_character(name, ctx)
@@ -993,14 +1377,26 @@ def cast_spell(
         raise InvalidInput(f"{found.name} does not know {feature.name}")
     rank = feature.rank
     rules = _class_rules(found, progression)
-    chosen_slot = whole_number(slot_level, "slot_level", 0, 9) if slot_level else rank
+    is_ritual = "| ritual" in (feature.description or "").casefold()
     if rank == 0:
+        if ritual:
+            raise InvalidInput(f"{feature.name} is a cantrip, not a ritual")
         return _cast_result(found, feature, 0, ctx, spec, rules)
+    if not _is_prepared(found, feature.id):
+        raise InvalidInput(f"{found.name} has not prepared {feature.name}")
+    if ritual:
+        if not is_ritual:
+            raise InvalidInput(f"{feature.name} has no Ritual tag")
+        if slot_level:
+            raise InvalidInput("a ritual cannot be cast at a higher level")
+        _set_concentration(ctx, found, feature, spec)
+        return _cast_result(found, feature, 0, ctx, spec, rules, ritual=True)
+    chosen_slot = whole_number(slot_level, "slot_level", 0, 9) if slot_level else rank
     if chosen_slot < rank:
-        raise InvalidInput(f"{feature.name} is level {rank}; a level {chosen_slot} slot cannot cast it")
-    available = {
-        index: found.counters.get(f"slot_{index}", 0) for index in range(1, 10)
-    }
+        raise InvalidInput(
+            f"{feature.name} is level {rank}; a level {chosen_slot} slot cannot cast it"
+        )
+    available = {index: found.counters.get(f"slot_{index}", 0) for index in range(1, 10)}
     used = 0
     if available.get(chosen_slot, 0) > 0:
         used = chosen_slot
@@ -1013,7 +1409,113 @@ def cast_spell(
             f"{found.name} has no spell slot of level {chosen_slot} or higher available"
         )
     ctx.world.adjust_counter(name, f"slot_{used}", -1)
+    _set_concentration(ctx, found, feature, spec)
     return _cast_result(found, feature, used, ctx, spec, rules)
+
+
+def prepare_spells(character: str, spells: Sequence[str], ctx: ToolContext) -> dict[str, Any]:
+    """Prepare the leveled spells a caster can cast today. A wizard prepares from the spellbook;
+    a cleric, druid, paladin, or ranger prepares from the class list; a bard, sorcerer, or warlock
+    prepares from the spells they know. Cantrips are always available and take no slot in the
+    list."""
+    progression = require_progression(ctx.world)
+    spec = ctx.world.character
+    chosen: list[str] = []
+    for spell in spells:
+        feature = _find_spell(spec, str(spell))
+        if feature.rank == 0:
+            raise InvalidInput(f"{feature.name} is a cantrip and is always available")
+        chosen.append(feature.id)
+    if len(set(chosen)) != len(chosen):
+        raise InvalidInput("a prepared spell may not be listed twice")
+
+    def check(hc: HookContext) -> dict[str, Any]:
+        found = hc.character(character)
+        rules = _class_rules(found, progression)
+        if rules.casting == "none":
+            raise InvalidInput(f"{found.name}'s class cannot cast spells")
+        level = _level(found)
+        limit = rules.spells[level - 1] if level <= len(rules.spells) else 0
+        max_rank = _max_rank_for(rules, progression, level)
+        for spell_id in chosen:
+            feature = spec.features[spell_id]
+            if feature.rank > max_rank:
+                raise InvalidInput(
+                    f"{feature.name} is level {feature.rank}; {found.name} has no slot of that "
+                    "level"
+                )
+            if spell_id in found.features:
+                continue
+            if rules.id not in {"cleric", "druid", "paladin", "ranger"}:
+                raise InvalidInput(f"{found.name} does not know {feature.name}")
+            class_spells = progression.spell_lists.get(rules.id, {}).get(feature.rank, ())
+            if spell_id not in class_spells:
+                raise InvalidInput(f"{feature.name} is not a {rules.id} spell")
+        if len(chosen) > limit:
+            raise InvalidInput(
+                f"{found.name} may prepare {limit} spells at level {level}, not {len(chosen)}"
+            )
+        return {"limit": limit, "level": level}
+
+    allowed = ctx.world.with_hook_context(check)
+    for spell_id in chosen:
+        _learn(ctx, character, spell_id, cause="preparing spells")
+    names = ", ".join(spec.features[spell_id].name for spell_id in chosen) or "no spells"
+
+    def write(hc: HookContext) -> dict[str, Any]:
+        found = hc.character(character)
+        hc.set_mark(
+            found.name,
+            PREPARED_MARK,
+            chosen or None,
+            f"{found.name} prepares {names}.",
+        )
+        return {
+            "character": found.name,
+            "prepared": chosen,
+            "limit": allowed["limit"],
+            "level": allowed["level"],
+        }
+
+    return ctx.world.with_hook_context(write)
+
+
+def _is_prepared(found: Any, spell_id: str) -> bool:
+    """Whether a leveled spell is prepared. A sheet recorded before preparation existed has no
+    mark, so its known spells stay castable until the player prepares a list."""
+    always = [str(item) for item in found.marks.get(ALWAYS_PREPARED_MARK) or []]
+    if spell_id in always:
+        return True
+    prepared = found.marks.get(PREPARED_MARK)
+    if prepared is None:
+        return True
+    return spell_id in [str(item) for item in prepared]
+
+
+def _set_concentration(ctx: ToolContext, found: Any, feature: Feature, spec: CharacterSpec) -> None:
+    """Record the concentration spell being maintained, ending any earlier one."""
+    if "duration: concentration" not in (feature.description or "").casefold():
+        return
+
+    def action(hc: HookContext) -> None:
+        current = hc.character(found.name).marks.get(CONCENTRATION_MARK)
+        if current and current != feature.id:
+            old = spec.features.get(str(current))
+            hc.set_mark(
+                found.name,
+                CONCENTRATION_MARK,
+                None,
+                f"{found.name} stops concentrating on {old.name if old else current}.",
+            )
+        if current != feature.id:
+            hc.set_mark(
+                found.name,
+                CONCENTRATION_MARK,
+                feature.id,
+                f"{found.name} concentrates on {feature.name}.",
+            )
+
+    ctx.world.with_hook_context(action)
 
 
 def _cast_result(
@@ -1023,6 +1525,8 @@ def _cast_result(
     ctx: ToolContext,
     spec: CharacterSpec,
     rules: DndClass,
+    *,
+    ritual: bool = False,
 ) -> dict[str, Any]:
     ability = rules.ability or "int"
     modifier = _modifier(found, spec, ability)
@@ -1035,23 +1539,71 @@ def _cast_result(
         "level": feature.rank,
         "slot_level": slot_level or None,
         "slots_left": max(0, remaining) if remaining is not None else None,
+        "ritual": ritual,
         "spell_attack_bonus": bonus + modifier,
         "spell_save_dc": 8 + bonus + modifier,
         "description": feature.description,
-        "concentration": "concentration" in feature.description.casefold(),
+        "concentration": "duration: concentration" in (feature.description or "").casefold(),
     }
+
+
+def _remember_prepared(ctx: ToolContext, character: str, spell_id: str) -> None:
+    """Add a newly learned leveled spell to the prepared list when it has room, and start a
+    list for a caster who has none yet."""
+    spec = ctx.world.character
+    feature = spec.features.get(spell_id)
+    if feature is None or feature.rank == 0:
+        return
+    progression = require_progression(ctx.world)
+    found = _read_character(character, ctx)
+    rules = _class_rules(found, progression)
+    if rules.casting == "none":
+        return
+    level = _level(found)
+    limit = rules.spells[level - 1] if level <= len(rules.spells) else 0
+    if limit <= 0:
+        return
+    stored = found.marks.get(PREPARED_MARK)
+    if stored is None:
+        known = [
+            found_id
+            for found_id, count in found.features.items()
+            if count > 0
+            and (candidate := spec.features.get(found_id)) is not None
+            and candidate.feature_type == "spell"
+            and candidate.rank > 0
+        ]
+        prepared = known[:limit]
+    else:
+        prepared = [str(item) for item in stored]
+        if spell_id not in prepared and len(prepared) < limit:
+            prepared.append(spell_id)
+    if prepared == [str(item) for item in stored or []]:
+        return
+
+    def action(hc: HookContext) -> None:
+        current = hc.character(character)
+        names = ", ".join(spec.features[item].name for item in prepared) or "no spells"
+        hc.set_mark(
+            current.name,
+            PREPARED_MARK,
+            prepared or None,
+            f"{current.name} has {names} prepared.",
+        )
+
+    ctx.world.with_hook_context(action)
 
 
 def learn_spell(name: str, spell: str, ctx: ToolContext) -> dict[str, Any]:
     """Learn a spell or cantrip without spending a pick, for a feature that grants one."""
     spec = ctx.world.character
     feature = _find_spell(spec, spell)
-    return _learn(ctx, name, feature.id, cause="a learned spell")
+    result = _learn(ctx, name, feature.id, cause="a learned spell")
+    _remember_prepared(ctx, name, feature.id)
+    return result
 
 
-def learn_feature(
-    name: str, feature: str, ctx: ToolContext, cause: str = ""
-) -> dict[str, Any]:
+def learn_feature(name: str, feature: str, ctx: ToolContext, cause: str = "") -> dict[str, Any]:
     """Learn a feature by id or name, for a species or background that grants a choice."""
     spec = ctx.world.character
     wanted = feature.strip().casefold()
@@ -1074,10 +1626,7 @@ def _find_spell(spec: CharacterSpec, spell: str) -> Feature:
         feature
         for feature in spec.features.values()
         if feature.feature_type == "spell"
-        and (
-            feature.id.casefold() in (wanted, wanted_id)
-            or feature.name.casefold() == wanted
-        )
+        and (feature.id.casefold() in (wanted, wanted_id) or feature.name.casefold() == wanted)
     ]
     if not matches:
         raise InvalidInput(f"there is no spell named {spell!r}")
@@ -1112,13 +1661,34 @@ def after_rest(
         return
     db, _campaign_id = hc.session()
     level = _level(character)
+    resources = _resource_targets(character, rules, level)
     if length == "short":
         if rules.slot_table == "pact":
             count, slot_level = progression.pact_slots[level - 1]
-            _fill_counter(hc, character, f"slot_{slot_level}", count)
+            _fill_counter(hc, character, f"slot_{slot_level}", count, maximum=4)
+        for counter in ("rage", "channel_divinity", "wild_shape", "second_wind"):
+            target = resources.get(counter, 0)
+            if target and character.counters.get(counter, 0) < target:
+                _fill_counter(
+                    hc,
+                    character,
+                    counter,
+                    min(target, int(character.counters.get(counter, 0)) + 1),
+                    maximum=100,
+                )
+        for counter in ("action_surge", "focus_points"):
+            if counter in resources:
+                _fill_counter(hc, character, counter, resources[counter], maximum=100)
         return
     if length != "long":
         return
+    if character.marks.get(CONCENTRATION_MARK):
+        hc.set_mark(
+            character.name,
+            CONCENTRATION_MARK,
+            None,
+            f"{character.name} stops concentrating on a spell over the long rest.",
+        )
     targets = {index: 0 for index in range(1, 10)}
     if rules.slot_table == "pact":
         count, slot_level = progression.pact_slots[level - 1]
@@ -1127,16 +1697,19 @@ def after_rest(
         for index, count in enumerate(progression.slots[rules.slot_table][level - 1], start=1):
             targets[index] = count
     for index, target in targets.items():
-        _fill_counter(hc, character, f"slot_{index}", target)
-    _fill_counter(hc, character, "hit_dice", level)
+        _fill_counter(hc, character, f"slot_{index}", target, maximum=4)
+    _fill_counter(hc, character, "hit_dice", level, maximum=20)
     for counter in ("death_saves", "death_successes"):
-        _fill_counter(hc, character, counter, 0)
+        _fill_counter(hc, character, counter, 0, maximum=3)
+    for counter, target in resources.items():
+        _fill_counter(hc, character, counter, target, maximum=100)
     db.commit()
 
 
-def _fill_counter(hc: HookContext, character: Any, counter: str, target: int) -> None:
+def _fill_counter(
+    hc: HookContext, character: Any, counter: str, target: int, *, maximum: int
+) -> None:
     """Set a counter to a rest's target, keeping it within its catalogue maximum."""
-    maximum = 20 if counter == "hit_dice" else 4 if counter.startswith("slot_") else 3
     target = min(target, maximum)
     current_value = character.counters.get(counter)
     if current_value is None or current_value == target:
@@ -1175,6 +1748,7 @@ def _learn(ctx: ToolContext, character: str, feature_id: str, *, cause: str) -> 
     feature = spec.features.get(feature_id)
     if feature is None:
         raise InvalidInput(f"there is no feature named {feature_id!r}")
+
     def action(hc: HookContext) -> bool:
         found = hc.character(character)
         if found.features.get(feature.id, 0):
@@ -1193,6 +1767,7 @@ def _learn(ctx: ToolContext, character: str, feature_id: str, *, cause: str) -> 
         )
         db.commit()
         return True
+
     learned = ctx.world.with_hook_context(action)
     return {
         "character": character,
@@ -1299,6 +1874,13 @@ def _per_level(value: object, max_level: int, label: str) -> tuple[int, ...]:
     return tuple(_whole(item, f"{label}[{index}]", 0, 30) for index, item in enumerate(value, 1))
 
 
+def _resource_levels(value: object, max_level: int, label: str) -> tuple[int, ...]:
+    """A resource pool's size at each level, such as a Lay On Hands pool of 5 per level."""
+    if not isinstance(value, Sequence) or len(value) != max_level:
+        raise ContentError(f"{label}: needs {max_level} levels")
+    return tuple(_whole(item, f"{label}[{index}]", 0, 100) for index, item in enumerate(value, 1))
+
+
 def _levels(value: object, max_level: int, label: str) -> frozenset[int]:
     if not isinstance(value, list):
         raise ContentError(f"{label}: must be a list of levels")
@@ -1329,7 +1911,9 @@ def _text(value: object, label: str, *, allow_empty: bool = False) -> str:
 
 
 def _texts(value: object, label: str) -> tuple[str, ...]:
-    if not isinstance(value, list) or not all(isinstance(item, str) and item.strip() for item in value):
+    if not isinstance(value, list) or not all(
+        isinstance(item, str) and item.strip() for item in value
+    ):
         raise ContentError(f"{label}: must be a list of names")
     return tuple(item.strip() for item in value)
 

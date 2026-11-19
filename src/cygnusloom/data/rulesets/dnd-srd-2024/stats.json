@@ -443,6 +443,7 @@
     "name": "Hit Points",
     "formula": "1d1",
     "plus_modifier": "con",
+    "plus_modifier_per_level": true,
     "minimum": 1,
     "hidden": true
   },
@@ -452,5 +453,59 @@
     "name": "Proficiency Bonus",
     "formula": "1d1",
     "hidden": true
+  },
+  {
+    "type": "stat",
+    "id": "save_str",
+    "name": "Strength Save",
+    "formula": "1d1",
+    "minimum": 0,
+    "hidden": true,
+    "sheet_hidden": true
+  },
+  {
+    "type": "stat",
+    "id": "save_dex",
+    "name": "Dexterity Save",
+    "formula": "1d1",
+    "minimum": 0,
+    "hidden": true,
+    "sheet_hidden": true
+  },
+  {
+    "type": "stat",
+    "id": "save_con",
+    "name": "Constitution Save",
+    "formula": "1d1",
+    "minimum": 0,
+    "hidden": true,
+    "sheet_hidden": true
+  },
+  {
+    "type": "stat",
+    "id": "save_int",
+    "name": "Intelligence Save",
+    "formula": "1d1",
+    "minimum": 0,
+    "hidden": true,
+    "sheet_hidden": true
+  },
+  {
+    "type": "stat",
+    "id": "save_wis",
+    "name": "Wisdom Save",
+    "formula": "1d1",
+    "minimum": 0,
+    "hidden": true,
+    "sheet_hidden": true
+  },
+  {
+    "type": "stat",
+    "id": "save_cha",
+    "name": "Charisma Save",
+    "formula": "1d1",
+    "minimum": 0,
+    "hidden": true,
+    "sheet_hidden": true
   }
 ]

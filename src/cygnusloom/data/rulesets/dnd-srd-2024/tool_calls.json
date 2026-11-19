@@ -243,7 +243,7 @@
     "id": "cast_spell",
     "python_module": "dnd_srd_2024",
     "function": "cast_spell",
-    "description": "Cast a spell a character knows, spending a slot of its level or higher. Cantrips cost no slot. Pass slot_level when upcasting. The result gives the spell save DC, spell attack bonus, and the spell's text for its effect.",
+    "description": "Cast a prepared spell, spending a slot of its level or higher. Cantrips cost no slot and need no preparation. Pass slot_level when upcasting. Pass ritual true for a prepared spell with the Ritual tag: it takes 10 minutes and spends no slot. The result gives the spell save DC, spell attack bonus, concentration, and the spell's text for its effect.",
     "parameters": {
       "properties": {
         "name": {
@@ -260,11 +260,147 @@
           "maximum": 9,
           "default": 0,
           "description": "The slot level spent; 0 uses the spell's own level."
+        },
+        "ritual": {
+          "type": "boolean",
+          "default": false,
+          "description": "Cast the ritual version: 10 minutes, no slot, no upcasting. The spell must have the Ritual tag."
         }
       },
       "required": [
         "name",
         "spell"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "prepare_spells",
+    "python_module": "dnd_srd_2024",
+    "function": "prepare_spells",
+    "description": "Prepare the leveled spells a caster can cast today after a long rest. A wizard prepares from the spellbook; a cleric, druid, paladin, or ranger prepares from the class list; a bard, sorcerer, or warlock prepares from the spells they know. Cantrips are always available and take no slot in the list. The number prepared is the Prepared Spells number for the class and level.",
+    "parameters": {
+      "properties": {
+        "character": {
+          "type": "string",
+          "description": "The caster preparing spells."
+        },
+        "spells": {
+          "type": "array",
+          "minItems": 0,
+          "maxItems": 25,
+          "items": {
+            "type": "string"
+          },
+          "description": "The leveled spell names or ids to prepare; the list replaces the old one."
+        }
+      },
+      "required": [
+        "character",
+        "spells"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "choose_land",
+    "python_module": "dnd_srd_2024",
+    "function": "choose_land",
+    "description": "Choose the land for a Circle of the Land druid after a long rest. The land's Circle spells for the druid's level become always prepared. The lands are arid, polar, temperate, and tropical.",
+    "parameters": {
+      "properties": {
+        "character": {
+          "type": "string",
+          "description": "The Circle of the Land druid."
+        },
+        "land": {
+          "type": "string",
+          "description": "The land: arid, polar, temperate, or tropical."
+        }
+      },
+      "required": [
+        "character",
+        "land"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "attune_item",
+    "python_module": "dnd_srd_2024",
+    "function": "attune_item",
+    "description": "Attune to a carried magic item that requires attunement, during a short rest. A character can be attuned to at most three items.",
+    "parameters": {
+      "properties": {
+        "character": {
+          "type": "string",
+          "description": "The character attuning."
+        },
+        "item": {
+          "type": "string",
+          "description": "The carried magic item's name or id."
+        }
+      },
+      "required": [
+        "character",
+        "item"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "unattune_item",
+    "python_module": "dnd_srd_2024",
+    "function": "unattune_item",
+    "description": "End an attunement to a magic item.",
+    "parameters": {
+      "properties": {
+        "character": {
+          "type": "string",
+          "description": "The character."
+        },
+        "item": {
+          "type": "string",
+          "description": "The magic item's name or id."
+        }
+      },
+      "required": [
+        "character",
+        "item"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "use_class_resource",
+    "python_module": "dnd_srd_2024",
+    "function": "use_class_resource",
+    "description": "Spend a use of a class resource such as Rage, Bardic Inspiration, Channel Divinity, Wild Shape, Second Wind, Action Surge, Indomitable, Focus Points, the Lay On Hands pool, Sorcery Points, Arcane Recovery, Favored Enemy, Tireless, Mystic Arcanum, or Dark One's Luck. The engine records the spending and returns what is left; rests refill the appropriate pools.",
+    "parameters": {
+      "properties": {
+        "character": {
+          "type": "string",
+          "description": "The character spending the resource."
+        },
+        "resource": {
+          "type": "string",
+          "description": "The resource counter id, such as rage or sorcery_points."
+        },
+        "amount": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 1,
+          "description": "How many uses or pool points to spend."
+        },
+        "cause": {
+          "type": "string",
+          "description": "What the resource is spent on."
+        }
+      },
+      "required": [
+        "character",
+        "resource"
       ]
     }
   },

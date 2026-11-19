@@ -59,6 +59,30 @@
         "apply": "apply_fighting_style_pick"
       },
       {
+        "id": "metamagic",
+        "label": "Metamagic",
+        "kind": "feature",
+        "counter": "metamagic_picks",
+        "feature_type": "feat",
+        "tags": [
+          "metamagic"
+        ],
+        "options": "metamagic_options",
+        "apply": "apply_feat_pick"
+      },
+      {
+        "id": "invocations",
+        "label": "Eldritch Invocations",
+        "kind": "feature",
+        "counter": "invocation_picks",
+        "feature_type": "feat",
+        "tags": [
+          "invocation"
+        ],
+        "options": "invocation_options",
+        "apply": "apply_feat_pick"
+      },
+      {
         "id": "subclass",
         "label": "Subclass",
         "kind": "feature",

@@ -194,8 +194,15 @@ CLASS_SKILLS = {
         "stealth",
     ],
     "sorcerer": ["arcana", "deception", "insight", "intimidation", "persuasion", "religion"],
-    "warlock": ["arcana", "deception", "history", "intimidation", "investigation", "nature",
-                "religion"],
+    "warlock": [
+        "arcana",
+        "deception",
+        "history",
+        "intimidation",
+        "investigation",
+        "nature",
+        "religion",
+    ],
     "wizard": ["arcana", "history", "insight", "investigation", "medicine", "nature", "religion"],
 }
 
@@ -237,32 +244,58 @@ CLASS_KITS = {
         "gold": 9,
     },
     "fighter": {
-        "items": ["Greatsword", "Flail", "Javelin", "Javelin", "Javelin", "Javelin",
-                  "Javelin", "Javelin", "Javelin", "Javelin", "Dungeoneer's Pack"],
+        "items": [
+            "Greatsword",
+            "Flail",
+            "Javelin",
+            "Javelin",
+            "Javelin",
+            "Javelin",
+            "Javelin",
+            "Javelin",
+            "Javelin",
+            "Javelin",
+            "Dungeoneer's Pack",
+        ],
         "equip": ["Chain Mail"],
         "gold": 4,
     },
     "monk": {
-        "items": ["Spear", "Dagger", "Dagger", "Dagger", "Dagger", "Dagger",
-                  "Explorer's Pack"],
+        "items": ["Spear", "Dagger", "Dagger", "Dagger", "Dagger", "Dagger", "Explorer's Pack"],
         "equip": [],
         "gold": 11,
     },
     "paladin": {
-        "items": ["Longsword", "Javelin", "Javelin", "Javelin", "Javelin", "Javelin",
-                  "Javelin", "Holy Symbol", "Priest's Pack"],
+        "items": [
+            "Longsword",
+            "Javelin",
+            "Javelin",
+            "Javelin",
+            "Javelin",
+            "Javelin",
+            "Javelin",
+            "Holy Symbol",
+            "Priest's Pack",
+        ],
         "equip": ["Chain Mail", "Shield"],
         "gold": 9,
     },
     "ranger": {
-        "items": ["Scimitar", "Shortsword", "Longbow", "Arrows (20)", "Quiver",
-                  "Explorer's Pack"],
+        "items": ["Scimitar", "Shortsword", "Longbow", "Arrows (20)", "Quiver", "Explorer's Pack"],
         "equip": ["Studded Leather Armor"],
         "gold": 7,
     },
     "rogue": {
-        "items": ["Dagger", "Dagger", "Shortsword", "Shortbow", "Arrows (20)", "Quiver",
-                  "Thieves' Tools", "Burglar's Pack"],
+        "items": [
+            "Dagger",
+            "Dagger",
+            "Shortsword",
+            "Shortbow",
+            "Arrows (20)",
+            "Quiver",
+            "Thieves' Tools",
+            "Burglar's Pack",
+        ],
         "equip": ["Leather Armor"],
         "gold": 8,
     },
@@ -330,8 +363,26 @@ CLASS_SPELLS = {
 }
 
 XP_STANDARD = [
-    0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000,
-    85000, 100000, 120000, 140000, 165000, 195000, 225000, 265000, 305000, 355000,
+    0,
+    300,
+    900,
+    2700,
+    6500,
+    14000,
+    23000,
+    34000,
+    48000,
+    64000,
+    85000,
+    100000,
+    120000,
+    140000,
+    165000,
+    195000,
+    225000,
+    265000,
+    305000,
+    355000,
 ]
 
 FULL_SLOTS = [
@@ -624,6 +675,7 @@ def build_stats() -> None:
             "name": "Hit Points",
             "formula": "1d1",
             "plus_modifier": "con",
+            "plus_modifier_per_level": True,
             "minimum": 1,
             "hidden": True,
         },
@@ -635,6 +687,18 @@ def build_stats() -> None:
             "hidden": True,
         },
     ]
+    for ident, name in ABILITY_NAMES.items():
+        stats.append(
+            {
+                "type": "stat",
+                "id": f"save_{ident}",
+                "name": f"{name} Save",
+                "formula": "1d1",
+                "minimum": 0,
+                "hidden": True,
+                "sheet_hidden": True,
+            }
+        )
     write("stats.json", stats)
 
 
@@ -769,6 +833,157 @@ def build_counters() -> None:
             "min": 0,
             "initial": 0,
             "description": "Proficient skills the character may sharpen into expertise.",
+        },
+        {
+            "type": "counter",
+            "id": "metamagic_picks",
+            "label": "Metamagic Picks",
+            "min": 0,
+            "initial": 0,
+            "description": "Metamagic options the character may learn.",
+        },
+        {
+            "type": "counter",
+            "id": "invocation_picks",
+            "label": "Eldritch Invocation Picks",
+            "min": 0,
+            "initial": 0,
+            "description": "Eldritch Invocations the character may learn.",
+        },
+        {
+            "type": "counter",
+            "id": "rage",
+            "label": "Rages",
+            "min": 0,
+            "max": 6,
+            "initial": 0,
+            "description": "Rages left; one returns on a short rest and all on a long rest.",
+        },
+        {
+            "type": "counter",
+            "id": "bardic_inspiration",
+            "label": "Bardic Inspiration",
+            "min": 0,
+            "max": 20,
+            "initial": 0,
+            "description": "Bardic Inspiration uses left; all return on a long rest.",
+        },
+        {
+            "type": "counter",
+            "id": "channel_divinity",
+            "label": "Channel Divinity",
+            "min": 0,
+            "max": 4,
+            "initial": 0,
+            "description": "Channel Divinity uses left; one returns on a short rest and all on a long rest.",
+        },
+        {
+            "type": "counter",
+            "id": "wild_shape",
+            "label": "Wild Shape",
+            "min": 0,
+            "max": 4,
+            "initial": 0,
+            "description": "Wild Shape uses left; one returns on a short rest and all on a long rest.",
+        },
+        {
+            "type": "counter",
+            "id": "second_wind",
+            "label": "Second Wind",
+            "min": 0,
+            "max": 4,
+            "initial": 0,
+            "description": "Second Wind uses left; one returns on a short rest and all on a long rest.",
+        },
+        {
+            "type": "counter",
+            "id": "action_surge",
+            "label": "Action Surge",
+            "min": 0,
+            "max": 2,
+            "initial": 0,
+            "description": "Action Surge uses left; all return on a short or long rest.",
+        },
+        {
+            "type": "counter",
+            "id": "indomitable",
+            "label": "Indomitable",
+            "min": 0,
+            "max": 3,
+            "initial": 0,
+            "description": "Indomitable uses left; all return on a long rest.",
+        },
+        {
+            "type": "counter",
+            "id": "focus_points",
+            "label": "Focus Points",
+            "min": 0,
+            "max": 20,
+            "initial": 0,
+            "description": "Focus Points left; all return on a short or long rest.",
+        },
+        {
+            "type": "counter",
+            "id": "lay_on_hands",
+            "label": "Lay On Hands",
+            "min": 0,
+            "max": 100,
+            "initial": 0,
+            "description": "Healing pool left; it refills on a long rest.",
+        },
+        {
+            "type": "counter",
+            "id": "sorcery_points",
+            "label": "Sorcery Points",
+            "min": 0,
+            "max": 22,
+            "initial": 0,
+            "description": "Sorcery Points left; all return on a long rest.",
+        },
+        {
+            "type": "counter",
+            "id": "arcane_recovery",
+            "label": "Arcane Recovery",
+            "min": 0,
+            "max": 1,
+            "initial": 0,
+            "description": "Arcane Recovery uses left; it returns on a long rest.",
+        },
+        {
+            "type": "counter",
+            "id": "favored_enemy",
+            "label": "Favored Enemy",
+            "min": 0,
+            "max": 6,
+            "initial": 0,
+            "description": "Free Hunter's Mark uses left; all return on a long rest.",
+        },
+        {
+            "type": "counter",
+            "id": "tireless",
+            "label": "Tireless",
+            "min": 0,
+            "max": 1,
+            "initial": 0,
+            "description": "Tireless uses left; it returns on a long rest.",
+        },
+        {
+            "type": "counter",
+            "id": "mystic_arcanum",
+            "label": "Mystic Arcanum",
+            "min": 0,
+            "max": 4,
+            "initial": 0,
+            "description": "Mystic Arcanum uses left; all return on a long rest.",
+        },
+        {
+            "type": "counter",
+            "id": "dark_ones_luck",
+            "label": "Dark One's Luck",
+            "min": 0,
+            "max": 20,
+            "initial": 0,
+            "description": "Dark One's Luck uses left; all return on a long rest.",
         },
     ]
     for number in range(1, 10):
@@ -941,9 +1156,30 @@ def build_tables() -> None:
             "type": "table",
             "id": "names",
             "options": [
-                "Aelric", "Bryn", "Calla", "Daric", "Elowen", "Fenn", "Galen", "Hesta",
-                "Ilyana", "Jorunn", "Kael", "Lira", "Marek", "Nessa", "Orin", "Perrin",
-                "Quilla", "Rhea", "Sable", "Tamsin", "Ulric", "Vessa", "Wren", "Yara",
+                "Aelric",
+                "Bryn",
+                "Calla",
+                "Daric",
+                "Elowen",
+                "Fenn",
+                "Galen",
+                "Hesta",
+                "Ilyana",
+                "Jorunn",
+                "Kael",
+                "Lira",
+                "Marek",
+                "Nessa",
+                "Orin",
+                "Perrin",
+                "Quilla",
+                "Rhea",
+                "Sable",
+                "Tamsin",
+                "Ulric",
+                "Vessa",
+                "Wren",
+                "Yara",
             ],
         },
         {
@@ -1201,16 +1437,46 @@ def build_equipment() -> None:
         ),
     ]
     shop: list[dict[str, Any]] = [
-        {"type": "shop_item", "id": "shop-silver", "feature": "silver", "category": "coin",
-         "price": 1, "size": "tiny"},
-        {"type": "shop_item", "id": "shop-musical-instrument",
-         "feature": "musical-instrument", "category": "tool", "price": 300, "size": "normal"},
-        {"type": "shop_item", "id": "shop-arcane-focus", "feature": "arcane-focus",
-         "category": "focus", "price": 100, "size": "small"},
-        {"type": "shop_item", "id": "shop-holy-symbol", "feature": "holy-symbol",
-         "category": "focus", "price": 50, "size": "tiny"},
-        {"type": "shop_item", "id": "shop-spellbook", "feature": "spellbook",
-         "category": "tool", "price": 500, "size": "normal"},
+        {
+            "type": "shop_item",
+            "id": "shop-silver",
+            "feature": "silver",
+            "category": "coin",
+            "price": 1,
+            "size": "tiny",
+        },
+        {
+            "type": "shop_item",
+            "id": "shop-musical-instrument",
+            "feature": "musical-instrument",
+            "category": "tool",
+            "price": 300,
+            "size": "normal",
+        },
+        {
+            "type": "shop_item",
+            "id": "shop-arcane-focus",
+            "feature": "arcane-focus",
+            "category": "focus",
+            "price": 100,
+            "size": "small",
+        },
+        {
+            "type": "shop_item",
+            "id": "shop-holy-symbol",
+            "feature": "holy-symbol",
+            "category": "focus",
+            "price": 50,
+            "size": "tiny",
+        },
+        {
+            "type": "shop_item",
+            "id": "shop-spellbook",
+            "feature": "spellbook",
+            "category": "tool",
+            "price": 500,
+            "size": "normal",
+        },
     ]
     for record in weapons:
         ident = f"weapon-{key_id(record['key'])}"
@@ -1351,14 +1617,23 @@ def build_equipment() -> None:
     write("equipment.json", definitions)
 
 
-
 def build_spells() -> dict[str, dict[int, list[str]]]:
     spells = load("spells")
     definitions = []
     spell_lists: dict[str, dict[int, list[str]]] = defaultdict(lambda: defaultdict(list))
     class_ids = {
-        "barbarian", "bard", "cleric", "druid", "fighter", "monk", "paladin", "ranger",
-        "rogue", "sorcerer", "warlock", "wizard",
+        "barbarian",
+        "bard",
+        "cleric",
+        "druid",
+        "fighter",
+        "monk",
+        "paladin",
+        "ranger",
+        "rogue",
+        "sorcerer",
+        "warlock",
+        "wizard",
     }
     for spell in spells:
         ident = f"spell-{key_id(spell['key'])}"
@@ -1494,8 +1769,14 @@ def build_species() -> None:
         for trait in record.get("traits", []):
             ident = f"species-{species_id}-{slug(trait['name'])}"
             extra: dict[str, Any] = {}
-            if trait["name"] in ("Draconic Ancestry", "Elven Lineage", "Gnomish Lineage",
-                                 "Giant Ancestry", "Fiendish Legacy", "Versatile"):
+            if trait["name"] in (
+                "Draconic Ancestry",
+                "Elven Lineage",
+                "Gnomish Lineage",
+                "Giant Ancestry",
+                "Fiendish Legacy",
+                "Versatile",
+            ):
                 extra["picks"] = [
                     {
                         "id": "choice",
@@ -1644,7 +1925,6 @@ def build_backgrounds() -> None:
     write("backgrounds.json", definitions)
 
 
-
 CLASS_SKIP_FEATURES = {
     "Ability Score Improvement",
     "Epic Boon",
@@ -1674,7 +1954,9 @@ SLOT_TABLE = {
 
 
 def class_feature_levels(record: dict[str, Any], default: int = 1) -> list[int]:
-    levels = [int(entry["level"]) for entry in record.get("gained_at", []) if int(entry["level"]) > 0]
+    levels = [
+        int(entry["level"]) for entry in record.get("gained_at", []) if int(entry["level"]) > 0
+    ]
     if levels:
         return sorted(set(levels))
     match = re.search(r"level (\d+)", record.get("desc", ""), re.IGNORECASE)
@@ -1687,19 +1969,237 @@ def class_feature_id(class_id: str, record: dict[str, Any]) -> str:
     key = key_id(record["key"])
     prefix = f"{class_id}_"
     if key.startswith(prefix):
-        key = key[len(prefix):]
+        key = key[len(prefix) :]
     return f"class-{class_id}-{slug(key)}"
 
 
+def subclass_spell_list(
+    record: dict[str, Any], spells_by_name: dict[str, str]
+) -> tuple[dict[str, list[str]], bool]:
+    """A subclass's always-prepared spells by class level, parsed from its Spells table."""
+    if record["name"] == "Circle of the Land":
+        return {}, False
+    by_level: dict[str, list[str]] = {}
+    for entry in record.get("features", []):
+        name = entry.get("name", "")
+        text = entry.get("desc", "")
+        if not name.endswith(" Spells") or "Table:" not in text:
+            continue
+        for level, names in re.findall(r"^\|(\d+)\|([^|]+)\|", text, flags=re.MULTILINE):
+            spell_ids = [
+                spells_by_name[spell.strip().casefold()]
+                for spell in names.split(",")
+                if spell.strip().casefold() in spells_by_name
+            ]
+            if spell_ids:
+                by_level[level] = spell_ids
+    return by_level, bool(by_level)
+
+
+def subclass_land_spells(
+    record: dict[str, Any], spells_by_name: dict[str, str]
+) -> dict[str, dict[str, list[str]]]:
+    """The four Circle of the Land tables, keyed by land and then class level."""
+    if record["name"] != "Circle of the Land":
+        return {}
+    lands: dict[str, dict[str, list[str]]] = {}
+    for entry in record.get("features", []):
+        if entry.get("name") != "Circle of the Land Spells":
+            continue
+        text = entry.get("desc", "")
+        for match in re.finditer(r"Table: (\w+) Land(.*?)(?=\nTable:|\Z)", text, flags=re.DOTALL):
+            land = match.group(1).casefold()
+            rows: dict[str, list[str]] = {}
+            for level, names in re.findall(
+                r"^\|(\d+)\|([^|]+)\|", match.group(2), flags=re.MULTILINE
+            ):
+                spell_ids = [
+                    spells_by_name[spell.strip().casefold()]
+                    for spell in names.split(",")
+                    if spell.strip().casefold() in spells_by_name
+                ]
+                if spell_ids:
+                    rows[level] = spell_ids
+            if rows:
+                lands[land] = rows
+    return lands
+
+
 def feature_choice_picks(name: str) -> list[dict[str, Any]]:
-    if name in ("Divine Order", "Primal Order", "Weapon Mastery", "Metamagic",
-                "Eldritch Invocations", "Fighting Style", "Pact Magic"):
+    if name in ("Weapon Mastery", "Pact Magic"):
         return [{"id": "choice", "kind": "text", "label": name}]
     return []
 
 
+def markdown_options(text: str) -> list[tuple[str, str]]:
+    """Split an option list written with `### Name` headings into (name, body) pairs."""
+    # The source leaves one option's heading as an indented line without ###; give it a
+    # heading so every option is read the same way.
+    text = re.sub(r"\n\s+([A-Z][^\n]+)\n\n\*Cost:", r"\n### \1\n\n*Cost:", text)
+    options: list[tuple[str, str]] = []
+    parts = re.split(r"^\s*###\s+", text, flags=re.MULTILINE)[1:]
+    for part in parts:
+        lines = part.splitlines()
+        if not lines:
+            continue
+        name = lines[0].strip()
+        body = "\n".join(lines[1:]).strip()
+        if name:
+            options.append((name, body))
+    return options
+
+
+def option_features(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Metamagic and Eldritch Invocation options, plus the Divine and Primal Orders."""
+    definitions: list[dict[str, Any]] = []
+    for record in records:
+        for entry in record.get("features", []):
+            if entry.get("feature_type") != "CLASS_FEATURE_OPTION_LIST":
+                continue
+            if record["name"] == "Sorcerer":
+                tag = "metamagic"
+                prefix = "metamagic"
+                rank = 0
+            elif record["name"] == "Warlock":
+                tag = "invocation"
+                prefix = "invocation"
+                rank = 0
+            else:
+                continue
+            for name, body in markdown_options(entry.get("desc", "")):
+                level = 0
+                match = re.search(r"Prerequisite:.*?Level (\d+)\+", body)
+                if match:
+                    level = int(match.group(1))
+                definitions.append(
+                    feature(
+                        f"{prefix}-{slug(name)}",
+                        name,
+                        body or name,
+                        feature_type="feat",
+                        tag=tag,
+                        rank=level or rank,
+                        repeatable="**Repeatable.**" in body,
+                    )
+                )
+    definitions += [
+        feature(
+            "divine-order-protector",
+            "Divine Order: Protector",
+            "Trained for battle, you gain proficiency with Martial weapons and training with "
+            "Heavy armor.",
+            feature_type="feat",
+            tag="divine-order",
+            rank=1,
+        ),
+        feature(
+            "divine-order-thaumaturge",
+            "Divine Order: Thaumaturge",
+            "You know one extra cantrip from the Cleric spell list. In addition, your mystical "
+            "connection to the divine gives you a bonus to your Intelligence (Arcana or Religion) "
+            "checks. The bonus equals your Wisdom modifier (minimum of +1).",
+            feature_type="feat",
+            tag="divine-order",
+            rank=1,
+        ),
+        feature(
+            "primal-order-magician",
+            "Primal Order: Magician",
+            "You know one extra cantrip from the Druid spell list. In addition, your mystical "
+            "connection to nature gives you a bonus to your Intelligence (Arcana or Nature) "
+            "checks. The bonus equals your Wisdom modifier (minimum bonus of +1).",
+            feature_type="feat",
+            tag="primal-order",
+            rank=1,
+        ),
+        feature(
+            "primal-order-warden",
+            "Primal Order: Warden",
+            "Trained for battle, you gain proficiency with Martial weapons and training with "
+            "Medium armor.",
+            feature_type="feat",
+            tag="primal-order",
+            rank=1,
+        ),
+    ]
+    return definitions
+
+
+def class_table_values(record: dict[str, Any], name: str, default: int = 0) -> list[int]:
+    """A 20-level array from one CLASS_TABLE_DATA column, carrying each value forward."""
+    values = [default] * 20
+    entry = next(
+        (
+            item
+            for item in record.get("features", [])
+            if item.get("feature_type") == "CLASS_TABLE_DATA" and item.get("name") == name
+        ),
+        None,
+    )
+    if entry is None:
+        return values
+    rows = sorted(entry.get("data_for_class_table") or [], key=lambda row: int(row["level"]))
+    current = default
+    by_level: dict[int, int] = {}
+    for row in rows:
+        raw = str(row["column_value"]).strip()
+        try:
+            current = int(raw)
+        except ValueError:
+            if raw.casefold() == "unlimited":
+                current = 99
+            else:
+                continue
+        by_level[int(row["level"])] = current
+    current = default
+    for level in range(1, 21):
+        if level in by_level:
+            current = by_level[level]
+        values[level - 1] = current
+    return values
+
+
+def class_resources(record: dict[str, Any], class_id: str) -> dict[str, list[int]]:
+    """The class resource pools, one 20-level array each."""
+    resources: dict[str, list[int]] = {}
+    tables = {
+        "rage": "Rages",
+        "bardic_inspiration": "Bardic Inspiration",
+        "channel_divinity": "Channel Divinity",
+        "wild_shape": "Wild Shape",
+        "second_wind": "Second Wind",
+        "focus_points": "Focus Points",
+        "sorcery_points": "Sorcery Points",
+        "favored_enemy": "Favored Enemy",
+    }
+    for key, table in tables.items():
+        values = class_table_values(record, table)
+        if any(values):
+            resources[key] = values
+    if class_id == "druid":
+        resources["wild_shape"] = [0, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4]
+    if class_id == "fighter":
+        resources["action_surge"] = [0] + [1] * 15 + [2] * 4
+        resources["indomitable"] = [0] * 8 + [1] * 4 + [2] * 4 + [3] * 4
+    if class_id == "paladin":
+        resources["lay_on_hands"] = [5 * level for level in range(1, 21)]
+    if class_id == "ranger":
+        resources["tireless"] = [0] * 9 + [1] * 11
+    if class_id == "wizard":
+        resources["arcane_recovery"] = [1] * 20
+    if class_id == "warlock":
+        resources["mystic_arcanum"] = [0] * 10 + [1] * 2 + [2] * 2 + [3] * 2 + [4] * 4
+    if class_id == "bard":
+        resources["bardic_inspiration"] = [0] * 20  # filled from Charisma by the rules module
+    return resources
+
+
 def build_classes(spell_lists: dict[str, dict[int, list[str]]]) -> None:
     records = load("classes")
+    spell_definitions = json.loads((OUT / "spells.json").read_text(encoding="utf-8"))
+    spells_by_name = {
+        str(entry["name"]).casefold(): str(entry["id"]) for entry in spell_definitions
+    }
     base = {key_id(record["key"]): record for record in records if not record.get("subclass_of")}
     subclass_records = [record for record in records if record.get("subclass_of")]
     definitions: list[dict[str, Any]] = []
@@ -1763,7 +2263,14 @@ def build_classes(spell_lists: dict[str, dict[int, list[str]]]) -> None:
         if class_id == "rogue":
             expertise_levels.discard(1)
         kits = CLASS_KITS[class_id]
+        resources = class_resources(record, class_id)
         counters: dict[str, int] = {"hit_dice": 1}
+        for resource, values in resources.items():
+            counters[resource] = values[0]
+        if class_id == "bard":
+            counters["bardic_inspiration"] = 1
+        if class_id == "warlock":
+            counters["invocation_picks"] = 1
         if CLASS_SPELLS[class_id][0]:
             counters["slot_1"] = 1 if class_id == "warlock" else 2
         if CLASS_CANTRIPS[class_id][0]:
@@ -1810,6 +2317,26 @@ def build_classes(spell_lists: dict[str, dict[int, list[str]]]) -> None:
                     "max_rank": 1,
                 }
             ]
+        if class_id == "cleric":
+            template["feat_picks"] = [
+                {
+                    "id": "divine_order",
+                    "count": 1,
+                    "tag": "divine-order",
+                    "feature_type": "feat",
+                    "max_rank": 1,
+                }
+            ]
+        if class_id == "druid":
+            template["feat_picks"] = [
+                {
+                    "id": "primal_order",
+                    "count": 1,
+                    "tag": "primal-order",
+                    "feature_type": "feat",
+                    "max_rank": 1,
+                }
+            ]
         if counters:
             template["counters"] = counters
         definitions.append(template)
@@ -1833,6 +2360,14 @@ def build_classes(spell_lists: dict[str, dict[int, list[str]]]) -> None:
             "cantrips": CLASS_CANTRIPS[class_id],
             "spells": CLASS_SPELLS[class_id],
             "slot_table": SLOT_TABLE.get(class_id, "none"),
+            "resources": resources,
+            "metamagic_levels": [2, 10, 17] if class_id == "sorcerer" else [],
+            "metamagic_counts": [2, 2, 2] if class_id == "sorcerer" else [],
+            "invocations": (
+                class_table_values(record, "Eldritch Invocations")
+                if class_id == "warlock"
+                else [0] * 20
+            ),
             "features": {str(level): ids for level, ids in sorted(level_features.items())},
         }
     progression_subclasses: dict[str, Any] = {}
@@ -1875,10 +2410,18 @@ def build_classes(spell_lists: dict[str, dict[int, list[str]]]) -> None:
                 rank=3,
             )
         )
+        subclass_spells, always_prepared = subclass_spell_list(record, spells_by_name)
         progression_subclasses[subclass_id] = {
             "class": parent,
             "features": {str(level): ids for level, ids in sorted(levels.items())},
+            "spells": {
+                level: ids
+                for level, ids in sorted(subclass_spells.items(), key=lambda item: int(item[0]))
+            },
+            "always_prepared": always_prepared,
+            "land_spells": subclass_land_spells(record, spells_by_name),
         }
+    definitions.extend(option_features(records))
     write("classes.json", definitions)
     progression = {
         "type": "rule_data",
@@ -1890,8 +2433,7 @@ def build_classes(spell_lists: dict[str, dict[int, list[str]]]) -> None:
         "classes": progression_classes,
         "subclasses": progression_subclasses,
         "spell_lists": spell_lists,
-        "slots": {"none": [[0] * 9 for _ in range(20)], "full": FULL_SLOTS,
-                  "half": HALF_SLOTS},
+        "slots": {"none": [[0] * 9 for _ in range(20)], "full": FULL_SLOTS, "half": HALF_SLOTS},
         "pact_slots": PACT_SLOTS,
     }
     write("progression.json", [progression])
@@ -1955,6 +2497,26 @@ def build_classes(spell_lists: dict[str, dict[int, list[str]]]) -> None:
                         "apply": "apply_fighting_style_pick",
                     },
                     {
+                        "id": "metamagic",
+                        "label": "Metamagic",
+                        "kind": "feature",
+                        "counter": "metamagic_picks",
+                        "feature_type": "feat",
+                        "tags": ["metamagic"],
+                        "options": "metamagic_options",
+                        "apply": "apply_feat_pick",
+                    },
+                    {
+                        "id": "invocations",
+                        "label": "Eldritch Invocations",
+                        "kind": "feature",
+                        "counter": "invocation_picks",
+                        "feature_type": "feat",
+                        "tags": ["invocation"],
+                        "options": "invocation_options",
+                        "apply": "apply_feat_pick",
+                    },
+                    {
                         "id": "subclass",
                         "label": "Subclass",
                         "kind": "feature",
@@ -1981,15 +2543,33 @@ def build_classes(spell_lists: dict[str, dict[int, list[str]]]) -> None:
     print(f"classes: {len(progression_classes)}, subclasses: {len(progression_subclasses)}")
 
 
-
 def monster_attack_dice(attack: dict[str, Any]) -> str:
     count = attack.get("damage_die_count")
     die = attack.get("damage_die_type")
     bonus = int(attack.get("damage_bonus") or 0)
     if not die:
         return "1d1"
-    dice = f"{int(count or 1)}d{int(die.lstrip('Dd'))}"
+    parts = [f"{int(count or 1)}d{int(die.lstrip('Dd'))}"]
+    extra_count = attack.get("extra_damage_die_count")
+    extra_die = attack.get("extra_damage_die_type")
+    if extra_count and extra_die:
+        parts.append(f"{int(extra_count)}d{int(extra_die.lstrip('Dd'))}")
+    dice = "+".join(parts)
     return f"{dice}{'+' if bonus >= 0 else '-'}{abs(bonus)}" if bonus else dice
+
+
+def monster_usage(action: dict[str, Any]) -> str:
+    """A short recharge or per-day note for an action."""
+    usage = action.get("usage_limits") or {}
+    kind = usage.get("type")
+    param = usage.get("param")
+    if kind == "RECHARGE_ON_ROLL" and param is not None:
+        return f"Recharge {int(param)}-6"
+    if kind == "PER_DAY" and param is not None:
+        return f"{int(param)}/Day"
+    if kind:
+        return str(kind).replace("_", " ").title()
+    return ""
 
 
 def monster_actions(record: dict[str, Any]) -> list[dict[str, Any]]:
@@ -2032,17 +2612,71 @@ def monster_description(record: dict[str, Any]) -> str:
         + (f" ({record['armor_detail']})" if record.get("armor_detail") else "")
         + ".",
         f"Hit Points {record.get('hit_points') or 1} ({record.get('hit_dice') or '1d1'}).",
-        f"Speed {speeds or '30 ft.'}.",
+        f"Speed {(speeds or '30 ft.').rstrip('.')}.",
     ]
+    saves = record.get("saving_throws") or {}
+    proficient_saves = []
+    for name in ABILITY_NAMES.values():
+        bonus = saves.get(name.casefold())
+        score = int(record["ability_scores"].get(name.casefold()) or 10)
+        if bonus is not None and int(bonus) != (score - 10) // 2:
+            proficient_saves.append(f"{name} {int(bonus):+d}")
+    if proficient_saves:
+        lines.append(f"Saving Throws: {', '.join(proficient_saves)}.")
+    skills = record.get("skill_bonuses") or {}
+    if skills:
+        lines.append(
+            "Skills: "
+            + ", ".join(
+                f"{name.replace('_', ' ').title()} {int(bonus):+d}"
+                for name, bonus in sorted(skills.items())
+            )
+            + "."
+        )
     if record.get("languages"):
-        lines.append(f"Languages: {record['languages'].get('as_string', '')}.")
+        spoken = str(record["languages"].get("as_string", "")).rstrip(".")
+        if spoken:
+            lines.append(f"Languages: {spoken}.")
     if record.get("challenge_rating") is not None:
         lines.append(f"Challenge Rating {record['challenge_rating']}.")
     return " ".join(lines)
 
 
+def monster_sense_and_defense_abilities(record: dict[str, Any]) -> list[dict[str, Any]]:
+    """The statblock's senses, damage defenses, and condition immunities as passive rules."""
+    abilities: list[dict[str, Any]] = []
+    senses = [
+        (label, record.get(key))
+        for label, key in (
+            ("Darkvision", "darkvision_range"),
+            ("Blindsight", "blindsight_range"),
+            ("Tremorsense", "tremorsense_range"),
+            ("Truesight", "truesight_range"),
+        )
+        if record.get(key)
+    ]
+    passive = record.get("passive_perception")
+    if senses or passive:
+        text = ", ".join(f"{label} {int(value)} ft." for label, value in senses)
+        if passive:
+            text = f"{text}, " if text else ""
+            text += f"Passive Perception {int(passive)}"
+        abilities.append({"kind": "passive", "name": "Senses", "description": text})
+    defenses = record.get("resistances_and_immunities") or {}
+    for key, label in (
+        ("damage_resistances_display", "Damage Resistances"),
+        ("damage_immunities_display", "Damage Immunities"),
+        ("damage_vulnerabilities_display", "Damage Vulnerabilities"),
+        ("condition_immunities_display", "Condition Immunities"),
+    ):
+        text = str(defenses.get(key) or "").strip()
+        if text:
+            abilities.append({"kind": "passive", "name": label, "description": text})
+    return abilities
+
+
 def monster_abilities(record: dict[str, Any]) -> list[dict[str, Any]]:
-    abilities = []
+    abilities = monster_sense_and_defense_abilities(record)
     for trait in record.get("traits", []) or []:
         abilities.append(
             {
@@ -2056,8 +2690,9 @@ def monster_abilities(record: dict[str, Any]) -> list[dict[str, Any]]:
             continue
         kind = "action" if action.get("action_type") == "ACTION" else "action"
         text = action.get("desc", "") or action.get("name", "")
-        if action.get("usage_limits"):
-            text += f" ({action['usage_limits']})"
+        usage = monster_usage(action)
+        if usage:
+            text += f" ({usage})"
         abilities.append(
             {
                 "kind": kind,
@@ -2106,6 +2741,13 @@ def build_monsters() -> None:
             "hp": max(1, int(record.get("hit_points") or 1)),
             "attack_bonus": max(to_hits, default=0) if to_hits else 0,
         }
+        saves = record.get("saving_throws") or {}
+        for ident, name in ABILITY_NAMES.items():
+            bonus = saves.get(name.casefold())
+            if bonus is None:
+                bonus = (int(record["ability_scores"].get(name.casefold()) or 10) - 10) // 2
+            # Keep every statblock score non-negative; the rules module reads the offset.
+            stats[f"save_{ident}"] = max(0, int(bonus) + 11)
         definition: dict[str, Any] = {
             "type": "monster",
             "id": f"monster-{key_id(record['key'])}",
@@ -2198,11 +2840,8 @@ def build_rules() -> None:
             }
         )
     for ident, text, important in DND_RULES:
-        definitions.append(
-            {"type": "rule", "id": ident, "text": text, "important": important}
-        )
+        definitions.append({"type": "rule", "id": ident, "text": text, "important": important})
     write("rules.json", definitions)
-
 
 
 def build_prompts() -> None:
@@ -2237,13 +2876,13 @@ def build_prompts() -> None:
                 "type": "prompt",
                 "id": "spellcasting",
                 "step": "state",
-                "text": "Use cast_spell when a character casts a spell they know. A cantrip costs no slot; a leveled spell spends a slot of its level or higher. Pass slot_level when the player upcasts; the spell's higher-level text applies. The result gives the spell save DC and spell attack bonus, so roll NPC saves with roll_save or let the player roll with player_save, and use the spell's own damage and area from its description. A concentration spell ends any earlier concentration spell. A spellcaster learns new spells when the level-up page offers them, and a feature such as Magic Initiate may teach one with learn_spell. Never let a character cast a spell they have not learned.",
+                "text": "Spellcasters prepare leveled spells. After a long rest, call prepare_spells with the player's chosen list: a wizard chooses from the spellbook, a cleric, druid, paladin, or ranger chooses from the class list, and a bard, sorcerer, or warlock chooses from the spells they know. The Prepared Spells number for the class and level is the limit; cantrips are always available and do not count. Use cast_spell only for a spell that is known and, when leveled, prepared. A cantrip costs no slot; a leveled spell spends a slot of its level or higher. Pass slot_level when the player upcasts; the spell's higher-level text applies. A prepared spell with the Ritual tag can be cast with ritual true: it takes 10 minutes and spends no slot. A concentration spell sets concentration and ends the earlier concentration spell; a long rest clears it. The result gives the spell save DC and spell attack bonus, so roll NPC saves with roll_save or let the player roll with player_save, and use the spell's own damage and area from its description. A spellcaster learns new spells when the level-up page offers them, and a feature such as Magic Initiate may teach one with learn_spell. Never let a character cast a leveled spell they have not prepared. A Circle of the Land druid calls choose_land after each long rest; the chosen land's Circle spells become always prepared.",
             },
             {
                 "type": "prompt",
                 "id": "rests",
                 "step": "state",
-                "text": "A short rest takes 1 hour: call rest with length short, then spend_hit_die once for each Hit Point Die a character spends. A long rest takes 8 hours and restores all hit points, Hit Point Dice, and spell slots; call rest with length long. The engine refills slots and Hit Point Dice for you. Do not add advance_time for the same period, and do not restore hit points by narration alone.",
+                "text": "A short rest takes 1 hour: call rest with length short, then spend_hit_die once for each Hit Point Die a character spends. A long rest takes 8 hours and restores all hit points, Hit Point Dice, class resource uses, and spell slots; call rest with length long. The engine refills slots, Hit Point Dice, and class resources for you. After a long rest, call prepare_spells for each spellcaster so the player can change their prepared list. Do not add advance_time for the same period, and do not restore hit points by narration alone.",
             },
             {
                 "type": "prompt",
@@ -2289,6 +2928,16 @@ def build_prompts() -> None:
                 "type": "prompt",
                 "id": "feature_text",
                 "text": "Before you resolve a spell, class feature, species trait, or feat, read it with lookup_feature. The statblock names the character's features and prints their short notes; the full text is the rule. Never invent an effect a feature does not state, and never add a bonus the feature does not give.",
+            },
+            {
+                "type": "prompt",
+                "id": "class_resources",
+                "text": "Class resources are tracked as counters: Rage, Bardic Inspiration, Channel Divinity, Wild Shape, Second Wind, Action Surge, Indomitable, Focus Points, the Lay On Hands pool, Sorcery Points, Arcane Recovery, Favored Enemy, Tireless, Mystic Arcanum, and Dark One's Luck. When a player spends one, call use_class_resource and narrate the result; never spend a use by narration alone. A short rest returns one use of Rage, Channel Divinity, Wild Shape, and Second Wind and all Action Surge and Focus Points; a long rest refills every pool. The character sheet shows what is left.",
+            },
+            {
+                "type": "prompt",
+                "id": "attunement",
+                "text": "A magic item whose description says it requires attunement works only for a character attuned to it. Attunement takes a short rest and a character can be attuned to at most three items; call attune_item when a player attunes and unattune_item when they end it. The spellcasting prompt already covers concentration, which is separate from attunement.",
             },
         ],
     )
@@ -2438,7 +3087,7 @@ def build_tool_calls() -> None:
                         "type": "string",
                         "description": "What the GM says to invite the death save.",
                     },
-                    "name": {"type": "string", "description": "The dying player character."}
+                    "name": {"type": "string", "description": "The dying player character."},
                 },
                 "required": ["prompt", "name"],
             },
@@ -2456,7 +3105,10 @@ def build_tool_calls() -> None:
             "description": "Spend one of a character's Hit Point Dice on a short rest to regain its roll plus the Constitution modifier. Call it once per die spent, after the rest.",
             "parameters": {
                 "properties": {
-                    "name": {"type": "string", "description": "The character spending a Hit Point Die."}
+                    "name": {
+                        "type": "string",
+                        "description": "The character spending a Hit Point Die.",
+                    }
                 },
                 "required": ["name"],
             },
@@ -2466,7 +3118,7 @@ def build_tool_calls() -> None:
             "id": "cast_spell",
             "python_module": "dnd_srd_2024",
             "function": "cast_spell",
-            "description": "Cast a spell a character knows, spending a slot of its level or higher. Cantrips cost no slot. Pass slot_level when upcasting. The result gives the spell save DC, spell attack bonus, and the spell's text for its effect.",
+            "description": "Cast a prepared spell, spending a slot of its level or higher. Cantrips cost no slot and need no preparation. Pass slot_level when upcasting. Pass ritual true for a prepared spell with the Ritual tag: it takes 10 minutes and spends no slot. The result gives the spell save DC, spell attack bonus, concentration, and the spell's text for its effect.",
             "parameters": {
                 "properties": {
                     "name": {"type": "string", "description": "The caster."},
@@ -2478,8 +3130,127 @@ def build_tool_calls() -> None:
                         "default": 0,
                         "description": "The slot level spent; 0 uses the spell's own level.",
                     },
+                    "ritual": {
+                        "type": "boolean",
+                        "default": False,
+                        "description": "Cast the ritual version: 10 minutes, no slot, no upcasting. The spell must have the Ritual tag.",
+                    },
                 },
                 "required": ["name", "spell"],
+            },
+        },
+        {
+            "type": "tool_call",
+            "id": "prepare_spells",
+            "python_module": "dnd_srd_2024",
+            "function": "prepare_spells",
+            "description": "Prepare the leveled spells a caster can cast today after a long rest. A wizard prepares from the spellbook; a cleric, druid, paladin, or ranger prepares from the class list; a bard, sorcerer, or warlock prepares from the spells they know. Cantrips are always available and take no slot in the list. The number prepared is the Prepared Spells number for the class and level.",
+            "parameters": {
+                "properties": {
+                    "character": {
+                        "type": "string",
+                        "description": "The caster preparing spells.",
+                    },
+                    "spells": {
+                        "type": "array",
+                        "minItems": 0,
+                        "maxItems": 25,
+                        "items": {"type": "string"},
+                        "description": "The leveled spell names or ids to prepare; the list replaces the old one.",
+                    },
+                },
+                "required": ["character", "spells"],
+            },
+        },
+        {
+            "type": "tool_call",
+            "id": "choose_land",
+            "python_module": "dnd_srd_2024",
+            "function": "choose_land",
+            "description": "Choose the land for a Circle of the Land druid after a long rest. The land's Circle spells for the druid's level become always prepared. The lands are arid, polar, temperate, and tropical.",
+            "parameters": {
+                "properties": {
+                    "character": {
+                        "type": "string",
+                        "description": "The Circle of the Land druid.",
+                    },
+                    "land": {
+                        "type": "string",
+                        "description": "The land: arid, polar, temperate, or tropical.",
+                    },
+                },
+                "required": ["character", "land"],
+            },
+        },
+        {
+            "type": "tool_call",
+            "id": "attune_item",
+            "python_module": "dnd_srd_2024",
+            "function": "attune_item",
+            "description": "Attune to a carried magic item that requires attunement, during a short rest. A character can be attuned to at most three items.",
+            "parameters": {
+                "properties": {
+                    "character": {
+                        "type": "string",
+                        "description": "The character attuning.",
+                    },
+                    "item": {
+                        "type": "string",
+                        "description": "The carried magic item's name or id.",
+                    },
+                },
+                "required": ["character", "item"],
+            },
+        },
+        {
+            "type": "tool_call",
+            "id": "unattune_item",
+            "python_module": "dnd_srd_2024",
+            "function": "unattune_item",
+            "description": "End an attunement to a magic item.",
+            "parameters": {
+                "properties": {
+                    "character": {
+                        "type": "string",
+                        "description": "The character.",
+                    },
+                    "item": {
+                        "type": "string",
+                        "description": "The magic item's name or id.",
+                    },
+                },
+                "required": ["character", "item"],
+            },
+        },
+        {
+            "type": "tool_call",
+            "id": "use_class_resource",
+            "python_module": "dnd_srd_2024",
+            "function": "use_class_resource",
+            "description": "Spend a use of a class resource such as Rage, Bardic Inspiration, Channel Divinity, Wild Shape, Second Wind, Action Surge, Indomitable, Focus Points, the Lay On Hands pool, Sorcery Points, Arcane Recovery, Favored Enemy, Tireless, Mystic Arcanum, or Dark One's Luck. The engine records the spending and returns what is left; rests refill the appropriate pools.",
+            "parameters": {
+                "properties": {
+                    "character": {
+                        "type": "string",
+                        "description": "The character spending the resource.",
+                    },
+                    "resource": {
+                        "type": "string",
+                        "description": "The resource counter id, such as rage or sorcery_points.",
+                    },
+                    "amount": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 100,
+                        "default": 1,
+                        "description": "How many uses or pool points to spend.",
+                    },
+                    "cause": {
+                        "type": "string",
+                        "description": "What the resource is spent on.",
+                    },
+                },
+                "required": ["character", "resource"],
             },
         },
         {
@@ -2504,7 +3275,10 @@ def build_tool_calls() -> None:
             "description": "Teach a character a feature, feat, or trait by name, for a choice a species or background grants. Do not use it to bypass a level-up choice the player has not made.",
             "parameters": {
                 "properties": {
-                    "name": {"type": "string", "description": "The character learning the feature."},
+                    "name": {
+                        "type": "string",
+                        "description": "The character learning the feature.",
+                    },
                     "feature": {"type": "string", "description": "The feature's name or id."},
                     "cause": {"type": "string", "description": "Why the character learns it."},
                 },
@@ -2513,7 +3287,6 @@ def build_tool_calls() -> None:
         },
     ]
     write("tool_calls.json", tools)
-
 
 
 def build_clock() -> None:
@@ -2534,6 +3307,7 @@ def build_clock() -> None:
 def build_world_terrain() -> None:
     source = ROOT / "src/cygnusloom/data/rulesets/cairn2e/world_terrain.json"
     write("world_terrain.json", json.loads(source.read_text(encoding="utf-8")))
+
 
 if __name__ == "__main__":
     main()

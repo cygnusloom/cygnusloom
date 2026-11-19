@@ -93,6 +93,157 @@
   },
   {
     "type": "counter",
+    "id": "metamagic_picks",
+    "label": "Metamagic Picks",
+    "min": 0,
+    "initial": 0,
+    "description": "Metamagic options the character may learn."
+  },
+  {
+    "type": "counter",
+    "id": "invocation_picks",
+    "label": "Eldritch Invocation Picks",
+    "min": 0,
+    "initial": 0,
+    "description": "Eldritch Invocations the character may learn."
+  },
+  {
+    "type": "counter",
+    "id": "rage",
+    "label": "Rages",
+    "min": 0,
+    "max": 6,
+    "initial": 0,
+    "description": "Rages left; one returns on a short rest and all on a long rest."
+  },
+  {
+    "type": "counter",
+    "id": "bardic_inspiration",
+    "label": "Bardic Inspiration",
+    "min": 0,
+    "max": 20,
+    "initial": 0,
+    "description": "Bardic Inspiration uses left; all return on a long rest."
+  },
+  {
+    "type": "counter",
+    "id": "channel_divinity",
+    "label": "Channel Divinity",
+    "min": 0,
+    "max": 4,
+    "initial": 0,
+    "description": "Channel Divinity uses left; one returns on a short rest and all on a long rest."
+  },
+  {
+    "type": "counter",
+    "id": "wild_shape",
+    "label": "Wild Shape",
+    "min": 0,
+    "max": 4,
+    "initial": 0,
+    "description": "Wild Shape uses left; one returns on a short rest and all on a long rest."
+  },
+  {
+    "type": "counter",
+    "id": "second_wind",
+    "label": "Second Wind",
+    "min": 0,
+    "max": 4,
+    "initial": 0,
+    "description": "Second Wind uses left; one returns on a short rest and all on a long rest."
+  },
+  {
+    "type": "counter",
+    "id": "action_surge",
+    "label": "Action Surge",
+    "min": 0,
+    "max": 2,
+    "initial": 0,
+    "description": "Action Surge uses left; all return on a short or long rest."
+  },
+  {
+    "type": "counter",
+    "id": "indomitable",
+    "label": "Indomitable",
+    "min": 0,
+    "max": 3,
+    "initial": 0,
+    "description": "Indomitable uses left; all return on a long rest."
+  },
+  {
+    "type": "counter",
+    "id": "focus_points",
+    "label": "Focus Points",
+    "min": 0,
+    "max": 20,
+    "initial": 0,
+    "description": "Focus Points left; all return on a short or long rest."
+  },
+  {
+    "type": "counter",
+    "id": "lay_on_hands",
+    "label": "Lay On Hands",
+    "min": 0,
+    "max": 100,
+    "initial": 0,
+    "description": "Healing pool left; it refills on a long rest."
+  },
+  {
+    "type": "counter",
+    "id": "sorcery_points",
+    "label": "Sorcery Points",
+    "min": 0,
+    "max": 22,
+    "initial": 0,
+    "description": "Sorcery Points left; all return on a long rest."
+  },
+  {
+    "type": "counter",
+    "id": "arcane_recovery",
+    "label": "Arcane Recovery",
+    "min": 0,
+    "max": 1,
+    "initial": 0,
+    "description": "Arcane Recovery uses left; it returns on a long rest."
+  },
+  {
+    "type": "counter",
+    "id": "favored_enemy",
+    "label": "Favored Enemy",
+    "min": 0,
+    "max": 6,
+    "initial": 0,
+    "description": "Free Hunter's Mark uses left; all return on a long rest."
+  },
+  {
+    "type": "counter",
+    "id": "tireless",
+    "label": "Tireless",
+    "min": 0,
+    "max": 1,
+    "initial": 0,
+    "description": "Tireless uses left; it returns on a long rest."
+  },
+  {
+    "type": "counter",
+    "id": "mystic_arcanum",
+    "label": "Mystic Arcanum",
+    "min": 0,
+    "max": 4,
+    "initial": 0,
+    "description": "Mystic Arcanum uses left; all return on a long rest."
+  },
+  {
+    "type": "counter",
+    "id": "dark_ones_luck",
+    "label": "Dark One's Luck",
+    "min": 0,
+    "max": 20,
+    "initial": 0,
+    "description": "Dark One's Luck uses left; all return on a long rest."
+  },
+  {
+    "type": "counter",
     "id": "slot_1",
     "label": "Level 1 Spell Slots",
     "min": 0,

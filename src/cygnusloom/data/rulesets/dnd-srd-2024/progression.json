@@ -93,6 +93,54 @@
           0
         ],
         "slot_table": "none",
+        "resources": {
+          "rage": [
+            2,
+            2,
+            3,
+            3,
+            3,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            5,
+            5,
+            5,
+            5,
+            5,
+            6,
+            6,
+            6,
+            6
+          ]
+        },
+        "metamagic_levels": [],
+        "metamagic_counts": [],
+        "invocations": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
         "features": {
           "1": [
             "class-barbarian-rage",
@@ -202,6 +250,54 @@
           22
         ],
         "slot_table": "full",
+        "resources": {
+          "bardic_inspiration": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "metamagic_levels": [],
+        "metamagic_counts": [],
+        "invocations": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
         "features": {
           "1": [
             "class-bard-bard-spell-list",
@@ -291,6 +387,54 @@
           22
         ],
         "slot_table": "full",
+        "resources": {
+          "channel_divinity": [
+            0,
+            2,
+            2,
+            2,
+            2,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            4,
+            4,
+            4
+          ]
+        },
+        "metamagic_levels": [],
+        "metamagic_counts": [],
+        "invocations": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
         "features": {
           "1": [
             "class-cleric-cleric-spell-list",
@@ -380,6 +524,54 @@
           22
         ],
         "slot_table": "full",
+        "resources": {
+          "wild_shape": [
+            0,
+            2,
+            2,
+            2,
+            2,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            4,
+            4,
+            4,
+            4
+          ]
+        },
+        "metamagic_levels": [],
+        "metamagic_counts": [],
+        "invocations": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
         "features": {
           "1": [
             "class-druid-druid-spell-list",
@@ -476,6 +668,98 @@
           0
         ],
         "slot_table": "none",
+        "resources": {
+          "second_wind": [
+            2,
+            2,
+            2,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4
+          ],
+          "action_surge": [
+            0,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            2,
+            2,
+            2,
+            2
+          ],
+          "indomitable": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            1,
+            1,
+            1,
+            2,
+            2,
+            2,
+            2,
+            3,
+            3,
+            3,
+            3
+          ]
+        },
+        "metamagic_levels": [],
+        "metamagic_counts": [],
+        "invocations": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
         "features": {
           "1": [
             "class-fighter-second-wind",
@@ -572,6 +856,54 @@
           0
         ],
         "slot_table": "none",
+        "resources": {
+          "focus_points": [
+            0,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20
+          ]
+        },
+        "metamagic_levels": [],
+        "metamagic_counts": [],
+        "invocations": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
         "features": {
           "1": [
             "class-monk-deflect-attacks",
@@ -688,6 +1020,76 @@
           13
         ],
         "slot_table": "half",
+        "resources": {
+          "channel_divinity": [
+            0,
+            0,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3
+          ],
+          "lay_on_hands": [
+            5,
+            10,
+            15,
+            20,
+            25,
+            30,
+            35,
+            40,
+            45,
+            50,
+            55,
+            60,
+            65,
+            70,
+            75,
+            80,
+            85,
+            90,
+            95,
+            100
+          ]
+        },
+        "metamagic_levels": [],
+        "metamagic_counts": [],
+        "invocations": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
         "features": {
           "1": [
             "class-paladin-lay-on-hands",
@@ -792,6 +1194,76 @@
           13
         ],
         "slot_table": "half",
+        "resources": {
+          "favored_enemy": [
+            2,
+            2,
+            2,
+            2,
+            3,
+            3,
+            3,
+            3,
+            4,
+            4,
+            4,
+            4,
+            5,
+            5,
+            5,
+            5,
+            6,
+            6,
+            6,
+            6
+          ],
+          "tireless": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ]
+        },
+        "metamagic_levels": [],
+        "metamagic_counts": [],
+        "invocations": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
         "features": {
           "1": [
             "class-ranger-favored-enemy",
@@ -894,6 +1366,31 @@
           0
         ],
         "slot_table": "none",
+        "resources": {},
+        "metamagic_levels": [],
+        "metamagic_counts": [],
+        "invocations": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
         "features": {
           "1": [
             "class-rogue-sneak-attack",
@@ -994,6 +1491,62 @@
           21
         ],
         "slot_table": "full",
+        "resources": {
+          "sorcery_points": [
+            0,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20
+          ]
+        },
+        "metamagic_levels": [
+          2,
+          10,
+          17
+        ],
+        "metamagic_counts": [
+          2,
+          2,
+          2
+        ],
+        "invocations": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
         "features": {
           "1": [
             "class-sorcerer-innate-sorcery",
@@ -1081,6 +1634,54 @@
           15
         ],
         "slot_table": "pact",
+        "resources": {
+          "mystic_arcanum": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            1,
+            2,
+            2,
+            3,
+            3,
+            4,
+            4,
+            4,
+            4
+          ]
+        },
+        "metamagic_levels": [],
+        "metamagic_counts": [],
+        "invocations": [
+          1,
+          3,
+          3,
+          3,
+          5,
+          5,
+          6,
+          6,
+          7,
+          7,
+          7,
+          8,
+          8,
+          8,
+          9,
+          9,
+          9,
+          10,
+          10,
+          10
+        ],
         "features": {
           "1": [
             "class-warlock-eldritch-invocations",
@@ -1173,6 +1774,54 @@
           24
         ],
         "slot_table": "full",
+        "resources": {
+          "arcane_recovery": [
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ]
+        },
+        "metamagic_levels": [],
+        "metamagic_counts": [],
+        "invocations": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
         "features": {
           "1": [
             "class-wizard-arcane-recovery",
@@ -1215,7 +1864,10 @@
           "18": [
             "subclass-champion-survivor"
           ]
-        }
+        },
+        "spells": {},
+        "always_prepared": false,
+        "land_spells": {}
       },
       "circle-of-the-land": {
         "class": "druid",
@@ -1233,6 +1885,74 @@
           "14": [
             "subclass-circle-of-the-land-natures-sanctuary"
           ]
+        },
+        "spells": {},
+        "always_prepared": false,
+        "land_spells": {
+          "arid": {
+            "3": [
+              "spell-blur",
+              "spell-burning-hands",
+              "spell-fire-bolt"
+            ],
+            "5": [
+              "spell-fireball"
+            ],
+            "7": [
+              "spell-blight"
+            ],
+            "9": [
+              "spell-wall-of-stone"
+            ]
+          },
+          "polar": {
+            "3": [
+              "spell-fog-cloud",
+              "spell-hold-person",
+              "spell-ray-of-frost"
+            ],
+            "5": [
+              "spell-sleet-storm"
+            ],
+            "7": [
+              "spell-ice-storm"
+            ],
+            "9": [
+              "spell-cone-of-cold"
+            ]
+          },
+          "temperate": {
+            "3": [
+              "spell-misty-step",
+              "spell-shocking-grasp",
+              "spell-sleep"
+            ],
+            "5": [
+              "spell-lightning-bolt"
+            ],
+            "7": [
+              "spell-freedom-of-movement"
+            ],
+            "9": [
+              "spell-tree-stride"
+            ]
+          },
+          "tropical": {
+            "3": [
+              "spell-acid-splash",
+              "spell-ray-of-sickness",
+              "spell-web"
+            ],
+            "5": [
+              "spell-stinking-cloud"
+            ],
+            "7": [
+              "spell-polymorph"
+            ],
+            "9": [
+              "spell-insect-plague"
+            ]
+          }
         }
       },
       "college-of-lore": {
@@ -1248,7 +1968,10 @@
           "14": [
             "subclass-college-of-lore-peerless-skill"
           ]
-        }
+        },
+        "spells": {},
+        "always_prepared": false,
+        "land_spells": {}
       },
       "draconic-sorcery": {
         "class": "sorcerer",
@@ -1266,7 +1989,29 @@
           "19": [
             "subclass-draconic-sorcery-dragon-companion"
           ]
-        }
+        },
+        "spells": {
+          "3": [
+            "spell-alter-self",
+            "spell-chromatic-orb",
+            "spell-command",
+            "spell-dragons-breath"
+          ],
+          "5": [
+            "spell-fear",
+            "spell-fly"
+          ],
+          "7": [
+            "spell-arcane-eye",
+            "spell-charm-monster"
+          ],
+          "9": [
+            "spell-legend-lore",
+            "spell-summon-dragon"
+          ]
+        },
+        "always_prepared": true,
+        "land_spells": {}
       },
       "evoker": {
         "class": "wizard",
@@ -1284,7 +2029,10 @@
           "14": [
             "subclass-evoker-overchannel"
           ]
-        }
+        },
+        "spells": {},
+        "always_prepared": false,
+        "land_spells": {}
       },
       "fiend-patron": {
         "class": "warlock",
@@ -1302,7 +2050,29 @@
           "14": [
             "subclass-fiend-patron-hurl-through-hell"
           ]
-        }
+        },
+        "spells": {
+          "3": [
+            "spell-burning-hands",
+            "spell-command",
+            "spell-scorching-ray",
+            "spell-suggestion"
+          ],
+          "5": [
+            "spell-fireball",
+            "spell-stinking-cloud"
+          ],
+          "7": [
+            "spell-fire-shield",
+            "spell-wall-of-fire"
+          ],
+          "9": [
+            "spell-geas",
+            "spell-insect-plague"
+          ]
+        },
+        "always_prepared": true,
+        "land_spells": {}
       },
       "hunter": {
         "class": "ranger",
@@ -1320,7 +2090,10 @@
           "15": [
             "subclass-hunter-superior-hunters-defense"
           ]
-        }
+        },
+        "spells": {},
+        "always_prepared": false,
+        "land_spells": {}
       },
       "life-domain": {
         "class": "cleric",
@@ -1336,7 +2109,29 @@
           "17": [
             "subclass-life-domain-supreme-healing"
           ]
-        }
+        },
+        "spells": {
+          "3": [
+            "spell-aid",
+            "spell-bless",
+            "spell-cure-wounds",
+            "spell-lesser-restoration"
+          ],
+          "5": [
+            "spell-mass-healing-word",
+            "spell-revivify"
+          ],
+          "7": [
+            "spell-aura-of-life",
+            "spell-death-ward"
+          ],
+          "9": [
+            "spell-greater-restoration",
+            "spell-mass-cure-wounds"
+          ]
+        },
+        "always_prepared": true,
+        "land_spells": {}
       },
       "oath-of-devotion": {
         "class": "paladin",
@@ -1354,7 +2149,31 @@
           "20": [
             "subclass-oath-of-devotion-holy-nimbus"
           ]
-        }
+        },
+        "spells": {
+          "3": [
+            "spell-protection-from-evil-and-good",
+            "spell-shield-of-faith"
+          ],
+          "5": [
+            "spell-aid",
+            "spell-zone-of-truth"
+          ],
+          "9": [
+            "spell-beacon-of-hope",
+            "spell-dispel-magic"
+          ],
+          "13": [
+            "spell-freedom-of-movement",
+            "spell-guardian-of-faith"
+          ],
+          "17": [
+            "spell-commune",
+            "spell-flame-strike"
+          ]
+        },
+        "always_prepared": true,
+        "land_spells": {}
       },
       "path-of-the-berserker": {
         "class": "barbarian",
@@ -1371,7 +2190,10 @@
           "14": [
             "subclass-path-of-the-berserker-intimidating-presence"
           ]
-        }
+        },
+        "spells": {},
+        "always_prepared": false,
+        "land_spells": {}
       },
       "thief": {
         "class": "rogue",
@@ -1389,7 +2211,10 @@
           "17": [
             "subclass-thief-thiefs-reflexes"
           ]
-        }
+        },
+        "spells": {},
+        "always_prepared": false,
+        "land_spells": {}
       },
       "warrior-of-the-open-hand": {
         "class": "monk",
@@ -1406,7 +2231,10 @@
           "17": [
             "subclass-warrior-of-the-open-hand-quivering-palm"
           ]
-        }
+        },
+        "spells": {},
+        "always_prepared": false,
+        "land_spells": {}
       }
     },
     "spell_lists": {

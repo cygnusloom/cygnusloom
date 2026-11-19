@@ -1887,13 +1887,13 @@ def _sheet_text(spec: CharacterSpec, character: Character, *, include_fields: bo
     sheet = _sheet_of(character)
     if not include_fields:
         sheet = replace(sheet, fields={})
-    own = sheet.stats
+    own = {
+        stat: value
+        for stat, value in sheet.stats.items()
+        if stat in spec.stats and not spec.stats[stat].sheet_hidden
+    }
     if character.kind == PC_KIND:
-        own = {
-            stat: value
-            for stat, value in sheet.stats.items()
-            if not _is_statblock_default(spec, stat)
-        }
+        own = {stat: value for stat, value in own.items() if not _is_statblock_default(spec, stat)}
     effective = replace(spec, features=custom_features.merged_features(spec, character))
     text = describe(
         effective,

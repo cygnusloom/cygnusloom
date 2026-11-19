@@ -3775,11 +3775,13 @@ CHARACTER_DEFINITION_KEYS: Mapping[str, frozenset[str]] = {
             "swap_group",
             "modifier",
             "plus_modifier",
+            "plus_modifier_per_level",
             "minimum",
             "values",
             "formula",
             "standard",
             "hidden",
+            "sheet_hidden",
         }
     ),
     "skill": frozenset({"type", "id", "name", "description", "icon", "looks_like"}),

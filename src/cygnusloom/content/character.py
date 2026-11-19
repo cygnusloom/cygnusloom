@@ -201,6 +201,9 @@ class Stat:
     # The stat whose modifier is added to a rolled or given value, such as Constitution to a hit
     # die. Empty when the value is used as it stands.
     plus_modifier: str = ""
+    # Whether a later raise of `plus_modifier` adds the modifier's change once for every level
+    # the character has, as 2024 D&D does for hit points and Constitution.
+    plus_modifier_per_level: bool = False
     # The lowest value the stat may take after it is rolled or given, such as 1 hit point.
     minimum: int | None = None
     # The parts of the stat, when it is computed from the others rather than rolled. Such a stat
@@ -209,6 +212,9 @@ class Stat:
     # A stat the creation form does not ask the player for, such as hit points or a proficiency
     # bonus. It is still rolled or derived when the character is resolved.
     hidden: bool = False
+    # A statblock-only score, such as a monster's printed save, that a character sheet leaves
+    # out.
+    sheet_hidden: bool = False
 
     def modifier(self, score: int) -> int:
         """The modifier a score gives: the modifier of the highest band it reaches, or the score
@@ -825,11 +831,18 @@ def _stat(definition: Definition, template: str) -> Stat:
     plus_modifier = definition.data.get("plus_modifier", "")
     if not isinstance(plus_modifier, str) or (plus_modifier and not plus_modifier.strip()):
         raise ContentError(f"{label}: 'plus_modifier' must be the id of a stat")
+    per_level = definition.data.get("plus_modifier_per_level", False)
+    if not isinstance(per_level, bool):
+        raise ContentError(f"{label}: 'plus_modifier_per_level' must be true or false")
+    if per_level and not plus_modifier:
+        raise ContentError(f"{label}: 'plus_modifier_per_level' needs a 'plus_modifier'")
     minimum = definition.data.get("minimum")
     if minimum is not None and (isinstance(minimum, bool) or not isinstance(minimum, int)):
         raise ContentError(f"{label}: 'minimum' must be a whole number")
     if "values" in definition.data:
-        return _assigned_stat(definition, label, name, swap, bands, plus_modifier, minimum)
+        return _assigned_stat(
+            definition, label, name, swap, bands, plus_modifier, per_level, minimum
+        )
     formula = required_text(definition.data, "formula", label)
     match = FORMULA.fullmatch(formula)
     if match is None:
@@ -859,8 +872,10 @@ def _stat(definition: Definition, template: str) -> Stat:
         standard=standard,
         modifier_bands=bands,
         plus_modifier=plus_modifier,
+        plus_modifier_per_level=per_level,
         minimum=minimum,
         hidden=_hidden(definition.data, label),
+        sheet_hidden=_sheet_hidden(definition.data, label),
     )
 
 
@@ -890,7 +905,15 @@ def _modifier_bands(value: object, label: str) -> tuple[tuple[int, int], ...]:
 
 def _derived_stat(definition: Definition, label: str, name: str) -> Stat:
     data = definition.data
-    for key in ("formula", "values", "swap_group", "modifier", "plus_modifier", "standard"):
+    for key in (
+        "formula",
+        "values",
+        "swap_group",
+        "modifier",
+        "plus_modifier",
+        "plus_modifier_per_level",
+        "standard",
+    ):
         if key in data:
             raise ContentError(f"{label}: a stat with 'derived' takes no {key!r}")
     return Stat(
@@ -902,6 +925,7 @@ def _derived_stat(definition: Definition, label: str, name: str) -> Stat:
         high=0,
         derived=_derived(data["derived"], label),
         hidden=_hidden(data, label),
+        sheet_hidden=_sheet_hidden(data, label),
     )
 
 
@@ -910,6 +934,14 @@ def _hidden(data: Mapping[str, Any], label: str) -> bool:
     value = data.get("hidden", False)
     if not isinstance(value, bool):
         raise ContentError(f"{label}: 'hidden' must be true or false")
+    return value
+
+
+def _sheet_hidden(data: Mapping[str, Any], label: str) -> bool:
+    """Whether a statblock-only stat is kept off the character sheet."""
+    value = data.get("sheet_hidden", False)
+    if not isinstance(value, bool):
+        raise ContentError(f"{label}: 'sheet_hidden' must be true or false")
     return value
 
 
@@ -1070,6 +1102,7 @@ def _assigned_stat(
     swap: str | None,
     bands: tuple[tuple[int, int], ...],
     plus_modifier: str,
+    per_level: bool,
     minimum: int | None = None,
 ) -> Stat:
     if "formula" in definition.data:
@@ -1095,7 +1128,9 @@ def _assigned_stat(
         values=tuple(values),
         modifier_bands=bands,
         plus_modifier=plus_modifier,
+        plus_modifier_per_level=per_level,
         minimum=minimum,
+        sheet_hidden=_sheet_hidden(definition.data, label),
     )
 
 
@@ -1316,13 +1351,9 @@ def _feature_picks(
                 "'score', or 'check_best'"
             )
         if grant in ("trained", "skill") and kind != "skill":
-            raise ContentError(
-                f"{label}: pick {pick_id!r} can grant {grant} only to a skill"
-            )
+            raise ContentError(f"{label}: pick {pick_id!r} can grant {grant} only to a skill")
         if grant in ("modifier", "score") and kind != "stat":
-            raise ContentError(
-                f"{label}: pick {pick_id!r} can grant a {grant} only to a stat"
-            )
+            raise ContentError(f"{label}: pick {pick_id!r} can grant a {grant} only to a stat")
         if grant == "check_best" and kind != "skill":
             raise ContentError(f"{label}: pick {pick_id!r} can improve checks only with a skill")
         amount = _pick_number(entry, "amount", label, pick_id)
@@ -1331,9 +1362,7 @@ def _feature_picks(
         if grant in ("score", "skill") and amount < 1:
             raise ContentError(f"{label}: pick {pick_id!r} needs a positive 'amount'")
         if grant not in ("score", "skill") and "amount" in entry:
-            raise ContentError(
-                f"{label}: pick {pick_id!r} 'amount' needs grant 'score' or 'skill'"
-            )
+            raise ContentError(f"{label}: pick {pick_id!r} 'amount' needs grant 'score' or 'skill'")
         dice = _pick_number(entry, "dice", label, pick_id)
         keep = _pick_number(entry, "keep", label, pick_id)
         if grant == "check_best":

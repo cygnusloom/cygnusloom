@@ -3070,6 +3070,8 @@ class FeatureChoiceMade(GameEvent):
     stat: str = ""
     # A score the choice adds to `stat`, when the pick grants a score.
     stat_amount: int = 0
+    # Stats whose maximum rises with the score, such as hit points when Constitution rises.
+    stat_raises: dict[str, int] = field(default_factory=dict)
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         character = state.characters[name_key(self.name)]
@@ -3083,6 +3085,8 @@ class FeatureChoiceMade(GameEvent):
             character.stats[self.stat] = character.stats.get(self.stat, 0) + self.stat_amount
         elif self.stat:
             character.stat_modifiers[self.stat] = character.stat_modifiers.get(self.stat, 0) + 1
+        for stat_id, amount in self.stat_raises.items():
+            character.stats[stat_id] = character.stats.get(stat_id, 0) + amount
 
     def render(self) -> str:
         return f"{self.name} chooses {self.choice} for {self.feature} ({self.pick})."
