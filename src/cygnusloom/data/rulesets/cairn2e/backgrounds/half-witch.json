@@ -1,0 +1,23 @@
+[
+  {
+    "type": "template",
+    "id": "half-witch",
+    "icon": "cauldron",
+    "kind": "background",
+    "name": "Half Witch",
+    "description": "Born of both the mortal world and the unseen, you are an enigma to some and feared by many. Yours is the tale of what happens when two worlds collide.",
+    "features": [
+      "torch",
+      "spellbook-thicket",
+      "iron-dagger",
+      "herbs-pouch",
+      "ghillie-suit"
+    ],
+    "tables": [
+      "half-witch-what-did-you-bring-back-from-the-unseelie-court",
+      "half-witch-what-concoction-do-you-carry-and-what-rare-ingredients-did-you-gather-to-make-it"
+    ],
+    "names": "half-witch-names",
+    "order": 10
+  }
+]

@@ -1,0 +1,42 @@
+[
+  {
+    "type": "template",
+    "id": "high_mage_partial",
+    "icon": "rune-circle",
+    "kind": "tradition",
+    "choice_key": "high_mage",
+    "name": "High Mage, Partial",
+    "description": "Formal High Magic learned alongside another trade. A partial High Mage picks one art and two first-level spells, and learns one more art at levels 2, 3, 6, and 9.",
+    "compatible_with": {
+      "class": [
+        "healer",
+        "vowed",
+        "adventurer_expert_mage",
+        "adventurer_warrior_mage",
+        "adventurer_mage_mage"
+      ]
+    },
+    "skills": {
+      "magic": 1
+    },
+    "feat_picks": [
+      {
+        "id": "tradition_art_high",
+        "count": 1,
+        "tag": "high",
+        "max_rank": 0
+      },
+      {
+        "id": "tradition_spells_high",
+        "count": 2,
+        "tags": [
+          "high"
+        ],
+        "feature_type": "spell",
+        "max_rank": 1
+      }
+    ],
+    "names": "names",
+    "order": 2
+  }
+]

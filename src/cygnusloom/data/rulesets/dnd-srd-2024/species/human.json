@@ -1,0 +1,90 @@
+[
+  {
+    "type": "feature",
+    "id": "species-human-size",
+    "name": "Human: Size",
+    "feature_type": "trait",
+    "description": "Medium (about 4\u20137 feet tall) or Small (about 2\u20134 feet tall), chosen when you select this species",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "species-human-speed",
+    "name": "Human: Speed",
+    "feature_type": "trait",
+    "description": "30 feet",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "species-human-resourceful",
+    "name": "Human: Resourceful",
+    "feature_type": "trait",
+    "description": "You gain Heroic Inspiration whenever you finish a Long Rest.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "species-human-skillful",
+    "name": "Human: Skillful",
+    "feature_type": "trait",
+    "description": "You gain proficiency in one skill of your choice.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "species-human-versatile",
+    "name": "Human: Versatile",
+    "feature_type": "trait",
+    "description": "You gain an Origin feat of your choice (see \"Feats\"). Skilled is recommended.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
+  },
+  {
+    "type": "template",
+    "id": "human",
+    "kind": "species",
+    "name": "Human",
+    "icon": "humanoid",
+    "order": 6,
+    "description": "Human. Medium (about 4\u20137 feet tall) or Small (about 2\u20134 feet tall), chosen when you select this species. Speed 30 feet. Size. Speed. Resourceful. Skillful. Versatile.",
+    "features": [
+      "species-human-size",
+      "species-human-speed",
+      "species-human-resourceful",
+      "species-human-skillful",
+      "species-human-versatile"
+    ],
+    "skill_picks": [
+      {
+        "id": "skillful",
+        "count": 1,
+        "table": "all_skills",
+        "max_level": 2
+      }
+    ],
+    "feat_picks": [
+      {
+        "id": "versatile",
+        "count": 1,
+        "tag": "origin",
+        "feature_type": "feat",
+        "max_rank": 1
+      }
+    ]
+  }
+]

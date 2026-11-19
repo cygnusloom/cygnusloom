@@ -147,7 +147,7 @@ Open http://localhost:21872 and follow the same Authentik and model setup. This 
 - `./scripts/backup.sh` backs up the databases to `backups/`.
 - Never run `docker compose down -v` unless you intend to delete the database volumes.
 
-Configuration examples are in [.env.example](.env.example). Worlds and rule sets live in [src/cygnusloom/data](src/cygnusloom/data); treat content as trusted code because it can import Python modules. See [docs/AUTHORING.md](docs/AUTHORING.md) for the supported content format, inheritance, defaults, and world layout. Check a content tree with `uv run cygnusloom content validate` (add `--all-pairs` or `--strict` for broader checks).
+Configuration examples are in [.env.example](.env.example). Worlds, modules, and rule sets live in [src/cygnusloom/data](src/cygnusloom/data); each is discovered by its identifying entry (`world`, `module`, or `rule_set`) in a folder, and the file names and nesting inside that folder do not matter. Treat content as trusted code because it can import Python modules. Check a content tree with `uv run cygnusloom content validate` (add `--all-pairs` or `--strict` for broader checks).
 
 ## License
 

@@ -1,0 +1,52 @@
+[
+  {
+    "type": "template",
+    "id": "expert_partial_2",
+    "icon": "tool",
+    "kind": "class2",
+    "choice_key": "expert",
+    "name": "Second Partial Class: Expert",
+    "description": "The skilled half of an Adventurer. It adds an Expert's training and one non-combat Focus. A second partial class is always paired with the character's first partial class.",
+    "compatible_with": {
+      "class": [
+        "healer",
+        "vowed"
+      ],
+      "tradition": [
+        "no_tradition"
+      ]
+    },
+    "stats": {
+      "hp": 0,
+      "attack_bonus": 0
+    },
+    "feat_picks": [
+      {
+        "id": "second_class_focus_expert",
+        "count": 1,
+        "tag": "focus",
+        "max_rank": 1,
+        "advance_repeated_rank": true,
+        "exclude": [
+          "focus_alert",
+          "focus_armored_magic",
+          "focus_armsmaster",
+          "focus_assassin",
+          "focus_close_combatant",
+          "focus_deadeye",
+          "focus_die_hard",
+          "focus_impervious_defense",
+          "focus_lucky",
+          "focus_shocking_assault",
+          "focus_snipers_eye",
+          "focus_unarmed_combatant",
+          "focus_valiant_defender",
+          "focus_whirlwind_assault",
+          "focus_special_origin"
+        ]
+      }
+    ],
+    "names": "names",
+    "order": 1
+  }
+]

@@ -1,0 +1,43 @@
+[
+  {
+    "type": "template",
+    "id": "necromancer_partial",
+    "icon": "bones",
+    "kind": "tradition",
+    "choice_key": "necromancer",
+    "name": "Necromancer, Partial",
+    "description": "Necromancy studied alongside another trade. A partial Necromancer picks one art and two first-level spells, and learns one more art at levels 3, 6, and 9.",
+    "compatible_with": {
+      "class": [
+        "healer",
+        "vowed",
+        "adventurer_expert_mage",
+        "adventurer_warrior_mage",
+        "adventurer_mage_mage"
+      ]
+    },
+    "skills": {
+      "magic": 1
+    },
+    "feat_picks": [
+      {
+        "id": "tradition_art_necromancer",
+        "count": 1,
+        "tag": "necromancer",
+        "max_rank": 0
+      },
+      {
+        "id": "tradition_spells_necromancer",
+        "count": 2,
+        "tags": [
+          "high",
+          "necromancer"
+        ],
+        "feature_type": "spell",
+        "max_rank": 1
+      }
+    ],
+    "names": "names",
+    "order": 4
+  }
+]

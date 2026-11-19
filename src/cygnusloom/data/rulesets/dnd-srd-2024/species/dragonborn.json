@@ -1,0 +1,236 @@
+[
+  {
+    "type": "feature",
+    "id": "species-dragonborn-size",
+    "name": "Dragonborn: Size",
+    "feature_type": "trait",
+    "description": "Medium (about 5\u20137 feet tall)",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "species-dragonborn-speed",
+    "name": "Dragonborn: Speed",
+    "feature_type": "trait",
+    "description": "30 feet",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "species-dragonborn-draconic-ancestry",
+    "name": "Dragonborn: Draconic Ancestry",
+    "feature_type": "trait",
+    "description": "Your lineage stems from a dragon progenitor. Choose the kind of dragon from the Draconic Ancestors table. Your choice affects your Breath Weapon and Damage Resistance traits as well as your appearance.\n\nTable: Draconic Ancestors\n\n| Dragon | Damage Type |\n|---|---|\n| Black | Acid |\n| Blue | Lightning |\n| Brass |Fire |\n| Bronze | Lightning |\n| Copper | Acid|\n|Gold|Fire|\n|Green|Poison|\n|Red|Fire|\n|Silver|Cold|\n|White|Cold|",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "species-dragonborn-breath-weapon",
+    "name": "Dragonborn: Breath Weapon",
+    "feature_type": "trait",
+    "description": "When you take the Attack action on your turn, you can replace one of your attacks with an exhalation of magical energy in either a 15-foot Cone or a 30-foot Line that is 5 feet wide (choose the shape each time). Each creature in that area must make a Dexterity saving throw (DC 8 plus your Constitution modifier and Proficiency Bonus). On a failed save, a creature takes 1d10 damage of the type determined by your Draconic Ancestry trait. On a successful save, a creature takes half as much damage. This damage increases by 1d10 when you reach character levels 5 (2d10), 11 (3d10), and 17 (4d10).\n\nYou can use this Breath Weapon a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "species-dragonborn-damage-resistance",
+    "name": "Dragonborn: Damage Resistance",
+    "feature_type": "trait",
+    "description": "You have Resistance to the damage type determined by your Draconic Ancestry trait.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "species-dragonborn-darkvision",
+    "name": "Dragonborn: Darkvision",
+    "feature_type": "trait",
+    "description": "You have Darkvision with a range of 60 feet",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "species-dragonborn-draconic-flight",
+    "name": "Dragonborn: Draconic Flight",
+    "feature_type": "trait",
+    "description": "When you reach character level 5, you can channel draconic magic to give yourself temporary flight. As a Bonus Action, you sprout spectral wings on your back that last for 10 minutes or until you retract the wings (no action required) or have the Incapacitated condition. During that time, you have a Fly Speed equal to your Speed. Your wings appear to be made of the same energy as your Breath Weapon. Once you use this trait, you can't use it again until you finish a Long Rest.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 5,
+    "turn_resource": "bonus_action"
+  },
+  {
+    "type": "feature",
+    "id": "lineage-dragonborn-black",
+    "name": "Dragonborn: Black Ancestry",
+    "feature_type": "trait",
+    "description": "Your draconic ancestor is a Black dragon. Your Breath Weapon deals acid damage, and you have Resistance to acid damage.",
+    "tag": "lineage-dragonborn",
+    "rank": 0,
+    "resistances": [
+      "acid"
+    ],
+    "damage_type": "acid"
+  },
+  {
+    "type": "feature",
+    "id": "lineage-dragonborn-blue",
+    "name": "Dragonborn: Blue Ancestry",
+    "feature_type": "trait",
+    "description": "Your draconic ancestor is a Blue dragon. Your Breath Weapon deals lightning damage, and you have Resistance to lightning damage.",
+    "tag": "lineage-dragonborn",
+    "rank": 0,
+    "resistances": [
+      "lightning"
+    ],
+    "damage_type": "lightning"
+  },
+  {
+    "type": "feature",
+    "id": "lineage-dragonborn-brass",
+    "name": "Dragonborn: Brass Ancestry",
+    "feature_type": "trait",
+    "description": "Your draconic ancestor is a Brass dragon. Your Breath Weapon deals fire damage, and you have Resistance to fire damage.",
+    "tag": "lineage-dragonborn",
+    "rank": 0,
+    "resistances": [
+      "fire"
+    ],
+    "damage_type": "fire"
+  },
+  {
+    "type": "feature",
+    "id": "lineage-dragonborn-bronze",
+    "name": "Dragonborn: Bronze Ancestry",
+    "feature_type": "trait",
+    "description": "Your draconic ancestor is a Bronze dragon. Your Breath Weapon deals lightning damage, and you have Resistance to lightning damage.",
+    "tag": "lineage-dragonborn",
+    "rank": 0,
+    "resistances": [
+      "lightning"
+    ],
+    "damage_type": "lightning"
+  },
+  {
+    "type": "feature",
+    "id": "lineage-dragonborn-copper",
+    "name": "Dragonborn: Copper Ancestry",
+    "feature_type": "trait",
+    "description": "Your draconic ancestor is a Copper dragon. Your Breath Weapon deals acid damage, and you have Resistance to acid damage.",
+    "tag": "lineage-dragonborn",
+    "rank": 0,
+    "resistances": [
+      "acid"
+    ],
+    "damage_type": "acid"
+  },
+  {
+    "type": "feature",
+    "id": "lineage-dragonborn-gold",
+    "name": "Dragonborn: Gold Ancestry",
+    "feature_type": "trait",
+    "description": "Your draconic ancestor is a Gold dragon. Your Breath Weapon deals fire damage, and you have Resistance to fire damage.",
+    "tag": "lineage-dragonborn",
+    "rank": 0,
+    "resistances": [
+      "fire"
+    ],
+    "damage_type": "fire"
+  },
+  {
+    "type": "feature",
+    "id": "lineage-dragonborn-green",
+    "name": "Dragonborn: Green Ancestry",
+    "feature_type": "trait",
+    "description": "Your draconic ancestor is a Green dragon. Your Breath Weapon deals poison damage, and you have Resistance to poison damage.",
+    "tag": "lineage-dragonborn",
+    "rank": 0,
+    "resistances": [
+      "poison"
+    ],
+    "damage_type": "poison"
+  },
+  {
+    "type": "feature",
+    "id": "lineage-dragonborn-red",
+    "name": "Dragonborn: Red Ancestry",
+    "feature_type": "trait",
+    "description": "Your draconic ancestor is a Red dragon. Your Breath Weapon deals fire damage, and you have Resistance to fire damage.",
+    "tag": "lineage-dragonborn",
+    "rank": 0,
+    "resistances": [
+      "fire"
+    ],
+    "damage_type": "fire"
+  },
+  {
+    "type": "feature",
+    "id": "lineage-dragonborn-silver",
+    "name": "Dragonborn: Silver Ancestry",
+    "feature_type": "trait",
+    "description": "Your draconic ancestor is a Silver dragon. Your Breath Weapon deals cold damage, and you have Resistance to cold damage.",
+    "tag": "lineage-dragonborn",
+    "rank": 0,
+    "resistances": [
+      "cold"
+    ],
+    "damage_type": "cold"
+  },
+  {
+    "type": "feature",
+    "id": "lineage-dragonborn-white",
+    "name": "Dragonborn: White Ancestry",
+    "feature_type": "trait",
+    "description": "Your draconic ancestor is a White dragon. Your Breath Weapon deals cold damage, and you have Resistance to cold damage.",
+    "tag": "lineage-dragonborn",
+    "rank": 0,
+    "resistances": [
+      "cold"
+    ],
+    "damage_type": "cold"
+  },
+  {
+    "type": "template",
+    "id": "dragonborn",
+    "kind": "species",
+    "name": "Dragonborn",
+    "icon": "dragon",
+    "order": 0,
+    "description": "Dragonborn. Medium (about 5\u20137 feet tall). Speed 30 feet. Size. Speed. Draconic Ancestry. Breath Weapon. Damage Resistance. Darkvision. Draconic Flight.",
+    "features": [
+      "species-dragonborn-size",
+      "species-dragonborn-speed",
+      "species-dragonborn-draconic-ancestry",
+      "species-dragonborn-breath-weapon",
+      "species-dragonborn-damage-resistance",
+      "species-dragonborn-darkvision",
+      "species-dragonborn-draconic-flight"
+    ],
+    "feat_picks": [
+      {
+        "id": "ancestry",
+        "count": 1,
+        "tag": "lineage-dragonborn",
+        "feature_type": "trait",
+        "max_rank": 0
+      }
+    ]
+  }
+]

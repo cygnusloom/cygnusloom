@@ -1,0 +1,19 @@
+[
+  {
+    "type": "template",
+    "id": "alchemist",
+    "icon": "alchemy-table",
+    "kind": "playbook",
+    "names": "student-names",
+    "name": "Alchemist",
+    "description": "You trust a well-stoppered bottle more than a grand gesture. Your sleeves smell of sulphur, and your pockets rattle when you run.",
+    "stats": {
+      "alchemy": 1
+    },
+    "features": [
+      "talent-alchemist",
+      "signature-spell"
+    ],
+    "order": 2
+  }
+]

@@ -1,0 +1,59 @@
+[
+  {
+    "type": "template",
+    "id": "expert",
+    "icon": "tool",
+    "kind": "class",
+    "name": "Expert",
+    "description": "A skilled professional who solves problems with training and nerve. You roll a d6 for hit points each level, gain one free non-combat Focus, one free Focus of any kind, and the Masterful Expertise and Quick Learner abilities.",
+    "stats": {
+      "attack_bonus": -1
+    },
+    "skill_picks": [
+      {
+        "id": "class_free_skill",
+        "count": 1,
+        "table": "all_skills",
+        "max_level": 1
+      }
+    ],
+    "feat_picks": [
+      {
+        "id": "class_focus_any",
+        "count": 1,
+        "tag": "focus",
+        "max_rank": 1,
+        "exclude": [
+          "focus_special_origin",
+          "focus_armored_magic"
+        ]
+      },
+      {
+        "id": "class_focus_expert",
+        "count": 1,
+        "tag": "focus",
+        "max_rank": 1,
+        "advance_repeated_rank": true,
+        "exclude": [
+          "focus_alert",
+          "focus_armored_magic",
+          "focus_armsmaster",
+          "focus_assassin",
+          "focus_close_combatant",
+          "focus_deadeye",
+          "focus_die_hard",
+          "focus_impervious_defense",
+          "focus_lucky",
+          "focus_shocking_assault",
+          "focus_snipers_eye",
+          "focus_unarmed_combatant",
+          "focus_valiant_defender",
+          "focus_whirlwind_assault",
+          "focus_special_origin"
+        ]
+      }
+    ],
+    "names": "names",
+    "order": 1
+  }
+]

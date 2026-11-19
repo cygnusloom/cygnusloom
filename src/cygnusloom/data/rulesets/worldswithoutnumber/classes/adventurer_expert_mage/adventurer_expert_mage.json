@@ -1,0 +1,61 @@
+[
+  {
+    "type": "template",
+    "id": "adventurer_expert_mage",
+    "icon": "backpack",
+    "kind": "class",
+    "name": "Adventurer: Expert and Mage",
+    "description": "A seeker who pairs practical training with spellcraft from one tradition. You roll a d6 for hit points, gain one free non-combat Focus and one free Focus of any kind, and learn the arts and spells of your tradition.",
+    "stats": {
+      "attack_bonus": -1
+    },
+    "skill_picks": [
+      {
+        "id": "class_free_skill",
+        "count": 1,
+        "table": "all_skills",
+        "max_level": 1
+      }
+    ],
+    "feat_picks": [
+      {
+        "id": "class_focus_any",
+        "count": 1,
+        "tag": "focus",
+        "max_rank": 1,
+        "exclude": [
+          "focus_special_origin",
+          "focus_developed_attribute",
+          "focus_nullifier"
+        ]
+      },
+      {
+        "id": "class_focus_expert",
+        "count": 1,
+        "tag": "focus",
+        "max_rank": 1,
+        "advance_repeated_rank": true,
+        "exclude": [
+          "focus_alert",
+          "focus_armsmaster",
+          "focus_assassin",
+          "focus_close_combatant",
+          "focus_deadeye",
+          "focus_developed_attribute",
+          "focus_die_hard",
+          "focus_impervious_defense",
+          "focus_lucky",
+          "focus_nullifier",
+          "focus_shocking_assault",
+          "focus_snipers_eye",
+          "focus_unarmed_combatant",
+          "focus_valiant_defender",
+          "focus_whirlwind_assault",
+          "focus_special_origin"
+        ]
+      }
+    ],
+    "names": "names",
+    "order": 6
+  }
+]

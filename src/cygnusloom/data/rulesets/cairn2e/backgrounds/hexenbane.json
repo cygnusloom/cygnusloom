@@ -1,0 +1,23 @@
+[
+  {
+    "type": "template",
+    "id": "hexenbane",
+    "icon": "sword",
+    "kind": "background",
+    "name": "Hexenbane",
+    "description": "You are a mere digit on the unerring hand of justice. You go where others fear to tread, unyielding and unbroken.",
+    "features": [
+      "torch",
+      "vestments-of-the-order",
+      "blessed-tinctures",
+      "silver-knife",
+      "crossbow"
+    ],
+    "tables": [
+      "hexenbane-to-which-order-do-you-belong",
+      "hexenbane-what-was-your-vow"
+    ],
+    "names": "hexenbane-names",
+    "order": 11
+  }
+]

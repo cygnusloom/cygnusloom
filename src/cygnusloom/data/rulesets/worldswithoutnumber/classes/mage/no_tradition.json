@@ -1,0 +1,21 @@
+[
+  {
+    "type": "template",
+    "id": "no_tradition",
+    "icon": "rune-circle",
+    "kind": "tradition",
+    "name": "No Tradition",
+    "description": "A character with no magical training. Warriors, Experts, Healers, Vowed, and Adventurers without a spellcasting partial class choose this.",
+    "compatible_with": {
+      "class": [
+        "warrior",
+        "expert",
+        "healer",
+        "vowed",
+        "adventurer_expert_warrior"
+      ]
+    },
+    "names": "names",
+    "order": 0
+  }
+]

@@ -1,0 +1,38 @@
+[
+  {
+    "type": "template",
+    "id": "necromancer",
+    "icon": "bones",
+    "kind": "tradition",
+    "name": "Necromancer",
+    "description": "A tradition concerned with death, the body's remains, and the powers that linger around them. A full Necromancer picks one art and four first-level spells, and may learn High Magic or Necromancer spells.",
+    "compatible_with": {
+      "class": [
+        "mage"
+      ]
+    },
+    "skills": {
+      "magic": 1
+    },
+    "feat_picks": [
+      {
+        "id": "tradition_art_necromancer",
+        "count": 1,
+        "tag": "necromancer",
+        "max_rank": 0
+      },
+      {
+        "id": "tradition_spells_necromancer",
+        "count": 4,
+        "tags": [
+          "high",
+          "necromancer"
+        ],
+        "feature_type": "spell",
+        "max_rank": 1
+      }
+    ],
+    "names": "names",
+    "order": 3
+  }
+]

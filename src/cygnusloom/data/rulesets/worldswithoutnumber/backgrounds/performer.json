@@ -1,0 +1,35 @@
+[
+  {
+    "type": "template",
+    "id": "performer",
+    "icon": "lute",
+    "kind": "background",
+    "name": "Performer",
+    "description": "You earned your bread by holding a crowd's attention, whether with a song, a story, or a trick. You know how to read an audience and how to leave it wanting more.",
+    "skills": {
+      "perform": 1
+    },
+    "skill_picks": [
+      {
+        "id": "background_learning",
+        "count": 2,
+        "table": "learning_performer",
+        "exclude": [
+          "any_skill"
+        ]
+      }
+    ],
+    "learning": [
+      "notice",
+      "administer",
+      "convince",
+      "connect",
+      "know",
+      "sneak",
+      "perform",
+      "lead"
+    ],
+    "names": "names",
+    "order": 11
+  }
+]

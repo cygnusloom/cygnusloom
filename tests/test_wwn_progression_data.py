@@ -17,7 +17,7 @@ from cygnusloom.content.character import (
     Template,
     TemplateRequirement,
 )
-from cygnusloom.content.definitions import ContentError
+from cygnusloom.content.definitions import ContentError, read_definitions
 from cygnusloom.rules.wwn_progression import (
     CastingRow,
     ClassPairing,
@@ -38,8 +38,6 @@ PROGRESSION_PATH = (
     / "worldswithoutnumber"
     / "progression.json"
 )
-CLASSES_PATH = PROGRESSION_PATH.with_name("classes.json")
-TEMPLATES_PATH = PROGRESSION_PATH.with_name("templates.json")
 LEVEL_UP_PATH = PROGRESSION_PATH.with_name("level_up.json")
 
 
@@ -68,9 +66,9 @@ def _character_spec(
     level_maximum: int = 10,
 ) -> CharacterSpec:
     definitions = [
-        definition
-        for path in (CLASSES_PATH, TEMPLATES_PATH)
-        for definition in json.loads(path.read_text(encoding="utf-8"))
+        definition.data
+        for definition in read_definitions(PROGRESSION_PATH.parent)
+        if definition.type == "template"
     ]
     templates = {
         definition["id"]: Template(
@@ -290,7 +288,7 @@ def test_the_experience_chart_is_authored_once() -> None:
     assert level_up["xp_source"] == "progression.xp"
     assert "tracks" not in level_up
     # No other rule-set file may author experience thresholds of its own.
-    for path in PROGRESSION_PATH.parent.glob("*.json"):
+    for path in PROGRESSION_PATH.parent.rglob("*.json"):
         if path == PROGRESSION_PATH:
             continue
         for definition in json.loads(path.read_text(encoding="utf-8")):

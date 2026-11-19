@@ -1,0 +1,59 @@
+[
+  {
+    "type": "template",
+    "id": "warrior_partial_2",
+    "icon": "sword",
+    "kind": "class2",
+    "choice_key": "warrior",
+    "name": "Second Partial Class: Warrior",
+    "description": "The martial half of an Adventurer. It adds a Warrior's hit points and attack bonus and one martial Focus. A second partial class is always paired with the character's first partial class.",
+    "compatible_with": {
+      "class": [
+        "healer",
+        "vowed"
+      ],
+      "tradition": [
+        "no_tradition"
+      ]
+    },
+    "stats": {
+      "hp": 2,
+      "attack_bonus": 1
+    },
+    "feat_picks": [
+      {
+        "id": "second_class_focus_warrior",
+        "count": 1,
+        "tag": "focus",
+        "max_rank": 1,
+        "advance_repeated_rank": true,
+        "exclude": [
+          "focus_armored_magic",
+          "focus_artisan",
+          "focus_authority",
+          "focus_connected",
+          "focus_cultured",
+          "focus_dealmaker",
+          "focus_developed_attribute",
+          "focus_diplomatic_grace",
+          "focus_gifted_chirurgeon",
+          "focus_henchkeeper",
+          "focus_impostor",
+          "focus_nullifier",
+          "focus_poisoner",
+          "focus_polymath",
+          "focus_rider",
+          "focus_specialist",
+          "focus_spirit_familiar",
+          "focus_trapmaster",
+          "focus_unique_gift",
+          "focus_well_met",
+          "focus_xenoblooded",
+          "focus_special_origin"
+        ]
+      }
+    ],
+    "names": "names",
+    "order": 0
+  }
+]

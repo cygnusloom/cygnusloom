@@ -1,0 +1,69 @@
+[
+  {
+    "type": "template",
+    "id": "adventurer_warrior_mage",
+    "icon": "backpack",
+    "kind": "class",
+    "name": "Adventurer: Warrior and Mage",
+    "description": "A fighter who also wields one tradition's magic. You roll a d6 with a +2 class bonus at first level, add +1 to attack rolls, gain one free Warrior Focus and one free Focus of any kind, and learn the arts and spells of your tradition.",
+    "stats": {
+      "hp": 2,
+      "attack_bonus": 0
+    },
+    "skill_picks": [
+      {
+        "id": "class_free_skill",
+        "count": 1,
+        "table": "all_skills",
+        "max_level": 1
+      }
+    ],
+    "feat_picks": [
+      {
+        "id": "class_focus_any",
+        "count": 1,
+        "tag": "focus",
+        "max_rank": 1,
+        "exclude": [
+          "focus_special_origin",
+          "focus_developed_attribute",
+          "focus_nullifier",
+          "focus_polymath"
+        ]
+      },
+      {
+        "id": "class_focus_warrior",
+        "count": 1,
+        "tag": "focus",
+        "max_rank": 1,
+        "advance_repeated_rank": true,
+        "exclude": [
+          "focus_armored_magic",
+          "focus_artisan",
+          "focus_authority",
+          "focus_connected",
+          "focus_cultured",
+          "focus_dealmaker",
+          "focus_developed_attribute",
+          "focus_diplomatic_grace",
+          "focus_gifted_chirurgeon",
+          "focus_henchkeeper",
+          "focus_impostor",
+          "focus_nullifier",
+          "focus_poisoner",
+          "focus_polymath",
+          "focus_rider",
+          "focus_specialist",
+          "focus_spirit_familiar",
+          "focus_trapmaster",
+          "focus_unique_gift",
+          "focus_well_met",
+          "focus_xenoblooded",
+          "focus_special_origin"
+        ]
+      }
+    ],
+    "names": "names",
+    "order": 7
+  }
+]

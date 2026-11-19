@@ -1,0 +1,73 @@
+[
+  {
+    "type": "feature",
+    "id": "species-orc-size",
+    "name": "Orc: Size",
+    "feature_type": "trait",
+    "description": "Medium (about 6\u20137 feet tall)",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "species-orc-speed",
+    "name": "Orc: Speed",
+    "feature_type": "trait",
+    "description": "30 feet",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "species-orc-adrenaline-rush",
+    "name": "Orc: Adrenaline Rush",
+    "feature_type": "trait",
+    "description": "You can take the Dash action as a Bonus Action. When you do so, you gain a number of Temporary Hit Points equal to your Proficiency Bonus.\n\nYou can use this trait a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Short or Long Rest.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": "bonus_action"
+  },
+  {
+    "type": "feature",
+    "id": "species-orc-darkvision",
+    "name": "Orc: Darkvision",
+    "feature_type": "trait",
+    "description": "You have Darkvision with a range of 120 feet.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "species-orc-relentless-endurance",
+    "name": "Orc: Relentless Endurance",
+    "feature_type": "trait",
+    "description": "When you are reduced to 0 Hit Points but not killed outright, you can drop to 1 Hit Point instead. Once you use this trait, you can't do so again until you finish a Long Rest.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
+  },
+  {
+    "type": "template",
+    "id": "orc",
+    "kind": "species",
+    "name": "Orc",
+    "icon": "axe",
+    "order": 7,
+    "description": "Orc. Medium (about 6\u20137 feet tall). Speed 30 feet. Size. Speed. Adrenaline Rush. Darkvision. Relentless Endurance.",
+    "features": [
+      "species-orc-size",
+      "species-orc-speed",
+      "species-orc-adrenaline-rush",
+      "species-orc-darkvision",
+      "species-orc-relentless-endurance"
+    ]
+  }
+]

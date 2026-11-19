@@ -1,0 +1,35 @@
+[
+  {
+    "type": "template",
+    "id": "physician",
+    "icon": "potion",
+    "kind": "background",
+    "name": "Physician",
+    "description": "You studied the body and the illnesses that trouble it, and you learned how much can be done with steady hands and clean cloth. People come to you when they are afraid.",
+    "skills": {
+      "heal": 1
+    },
+    "skill_picks": [
+      {
+        "id": "background_learning",
+        "count": 2,
+        "table": "learning_physician",
+        "exclude": [
+          "any_skill"
+        ]
+      }
+    ],
+    "learning": [
+      "connect",
+      "notice",
+      "administer",
+      "heal",
+      "convince",
+      "know",
+      "craft",
+      "survive"
+    ],
+    "names": "names",
+    "order": 12
+  }
+]

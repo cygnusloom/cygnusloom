@@ -1,0 +1,78 @@
+[
+  {
+    "type": "template",
+    "id": "vowed",
+    "icon": "staff",
+    "kind": "class",
+    "name": "Vowed (Partial)",
+    "description": "A bodily adept who refines inner power into supernatural martial arts. A non-combat bonus skill appropriate to their order (subject to GM approval), Martial Style, Unarmed Might, and Unarmored Defense, plus one more art of their choice, with more arts as they advance. The Vowed is a partial class: choose a second partial class from the second-class panel. A Vowed may pair with a Healer, a Partial Warrior, a Partial Expert, or a Partial Mage with a partial tradition.",
+    "template_requirements": [
+      {
+        "kinds": [
+          "class",
+          "class2"
+        ],
+        "distinct": true,
+        "missing_message": "a Vowed must pair with another partial class",
+        "duplicate_message": "a Vowed must pair with a different partial class"
+      }
+    ],
+    "stats": {
+      "hp": 0,
+      "attack_bonus": -1
+    },
+    "skill_picks": [
+      {
+        "id": "order_skill",
+        "label": "Order skill",
+        "count": 1,
+        "table": "all_skills",
+        "max_level": 1,
+        "exclude": [
+          "punch",
+          "shoot",
+          "stab"
+        ]
+      },
+      {
+        "id": "class_free_skill",
+        "label": "General skill",
+        "count": 1,
+        "table": "all_skills",
+        "max_level": 1
+      }
+    ],
+    "features": [
+      "art_martial_style",
+      "art_unarmed_might",
+      "art_unarmored_defense"
+    ],
+    "feat_picks": [
+      {
+        "id": "class_focus_any",
+        "count": 1,
+        "tag": "focus",
+        "max_rank": 1,
+        "exclude": [
+          "focus_special_origin",
+          "focus_developed_attribute",
+          "focus_nullifier",
+          "focus_polymath"
+        ]
+      },
+      {
+        "id": "class_art_vowed",
+        "count": 1,
+        "tag": "vowed",
+        "max_rank": 0,
+        "exclude": [
+          "art_martial_style",
+          "art_unarmed_might",
+          "art_unarmored_defense"
+        ]
+      }
+    ],
+    "names": "names",
+    "order": 3
+  }
+]

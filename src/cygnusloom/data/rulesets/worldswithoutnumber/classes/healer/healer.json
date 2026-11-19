@@ -1,0 +1,66 @@
+[
+  {
+    "type": "template",
+    "id": "healer",
+    "icon": "potion",
+    "kind": "class",
+    "name": "Healer (Partial)",
+    "description": "A spellcaster of curative arts. Heal as a bonus skill, the Healing Touch art, and one more art of their choice, with more arts as they advance. The Healer is a partial class: choose a second partial class from the second-class panel. A Healer may pair with a Vowed, a Partial Warrior, a Partial Expert, or a Partial Mage with a partial tradition.",
+    "template_requirements": [
+      {
+        "kinds": [
+          "class",
+          "class2"
+        ],
+        "distinct": true,
+        "missing_message": "a Healer must pair with another partial class",
+        "duplicate_message": "a Healer must pair with a different partial class"
+      }
+    ],
+    "stats": {
+      "hp": -1,
+      "attack_bonus": -1
+    },
+    "skills": {
+      "heal": 1
+    },
+    "skill_picks": [
+      {
+        "id": "class_free_skill",
+        "count": 1,
+        "table": "all_skills",
+        "max_level": 1
+      }
+    ],
+    "features": [
+      "art_healing_touch"
+    ],
+    "feat_picks": [
+      {
+        "id": "class_focus_any",
+        "count": 1,
+        "tag": "focus",
+        "max_rank": 1,
+        "exclude": [
+          "focus_special_origin",
+          "focus_developed_attribute",
+          "focus_nullifier",
+          "focus_polymath"
+        ]
+      },
+      {
+        "id": "class_art_healer",
+        "count": 1,
+        "tag": "healer",
+        "max_rank": 0,
+        "exclude": [
+          "art_healing_touch",
+          "art_limb_restoration",
+          "art_revive_the_fallen"
+        ]
+      }
+    ],
+    "names": "names",
+    "order": 2
+  }
+]

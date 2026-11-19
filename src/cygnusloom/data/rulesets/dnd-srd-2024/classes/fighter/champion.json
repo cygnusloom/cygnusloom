@@ -1,0 +1,78 @@
+[
+  {
+    "type": "feature",
+    "id": "subclass-champion-additional-fighting-style",
+    "name": "Additional Fighting Style",
+    "feature_type": "trait",
+    "description": "You gain another Fighting Style feat of your choice.",
+    "tag": "subclass:champion",
+    "rank": 7,
+    "picks": [],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "subclass-champion-heroic-warrior",
+    "name": "Heroic Warrior",
+    "feature_type": "trait",
+    "description": "The thrill of battle drives you toward victory. During combat, you can give yourself Heroic Inspiration whenever you start your turn without it.",
+    "tag": "subclass:champion",
+    "rank": 10,
+    "picks": [],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "subclass-champion-improved-critical",
+    "name": "Improved Critical",
+    "feature_type": "trait",
+    "description": "Your attack rolls with weapons and Unarmed Strikes can score a Critical Hit on a roll of 19 or 20 on the d20.",
+    "tag": "subclass:champion",
+    "rank": 3,
+    "picks": [],
+    "turn_resource": "",
+    "critical_min": 19
+  },
+  {
+    "type": "feature",
+    "id": "subclass-champion-remarkable-athlete",
+    "name": "Remarkable Athlete",
+    "feature_type": "trait",
+    "description": "Thanks to your athleticism, you have Advantage on Initiative rolls and Strength (Athletics) checks.",
+    "tag": "subclass:champion",
+    "rank": 3,
+    "picks": [],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "subclass-champion-superior-critical",
+    "name": "Superior Critical",
+    "feature_type": "trait",
+    "description": "Your attack rolls with weapons and Unarmed Strikes can now score a Critical Hit on a roll of 18\u201320 on the d20.",
+    "tag": "subclass:champion",
+    "rank": 15,
+    "picks": [],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "subclass-champion-survivor",
+    "name": "Survivor",
+    "feature_type": "trait",
+    "description": "You attain the pinnacle of resilience in battle, giving you these benefits.\n\n**Defy Death**. You have Advantage on Death Saving Throws. Moreover, when you roll 18\u201320 on a Death Saving Throw, you gain the benefit of rolling a 20 on it.\n\n**Heroic Rally**. At the start of each of your turns, you regain Hit Points equal to 5 plus your Constitution modifier if you are Bloodied and have at least 1 Hit Point.",
+    "tag": "subclass:champion",
+    "rank": 18,
+    "picks": [],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "subclass-champion",
+    "name": "Champion",
+    "feature_type": "trait",
+    "description": "The Champion path for a Fighter. Its features are gained as the class advances.",
+    "tag": "subclass",
+    "rank": 3
+  }
+]

@@ -1,0 +1,289 @@
+[
+  {
+    "type": "feature",
+    "id": "class-paladin-abjure-foes",
+    "name": "Abjure Foes",
+    "feature_type": "trait",
+    "description": "As a Magic action, you can expend one use of this class's Channel Divinity to overwhelm foes with awe. As you present your Holy Symbol or weapon, you can target a number of creatures equal to your Charisma modifier (minimum of one creature) that you can see within 60 feet of yourself. Each target must succeed on a Wisdom saving throw or have the Frightened condition for 1 minute or until it takes any damage. While Frightened in this way, a target can do only one of the following on its turns: move, take an action, or take a Bonus Action.",
+    "tag": "class:paladin",
+    "rank": 9,
+    "picks": [],
+    "resource_counter": "channel_divinity",
+    "turn_resource": "action"
+  },
+  {
+    "type": "feature",
+    "id": "class-paladin-aura-expansion",
+    "name": "Aura Expansion",
+    "feature_type": "trait",
+    "description": "Your Aura of Protection is now a 30-foot Emanation.",
+    "tag": "class:paladin",
+    "rank": 18,
+    "picks": [],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "class-paladin-aura-of-courage",
+    "name": "Aura of Courage",
+    "feature_type": "trait",
+    "description": "You and your allies have Immunity to the Frightened condition while in your Aura of Protection. If a Frightened ally enters the aura, that condition has no effect on that ally while there.",
+    "tag": "class:paladin",
+    "rank": 10,
+    "picks": [],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "class-paladin-aura-of-protection",
+    "name": "Aura of Protection",
+    "feature_type": "trait",
+    "description": "You radiate a protective, unseeable aura in a 10-foot Emanation that originates from you. The aura is inactive while you have the Incapacitated condition.\n\nYou and your allies in the aura gain a bonus to saving throws equal to your Charisma modifier (minimum bonus of +1).\n\nIf another Paladin is present, a creature can benefit from only one Aura of Protection at a time; the creature chooses which aura while in them.",
+    "tag": "class:paladin",
+    "rank": 6,
+    "picks": [],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "class-paladin-channel-divinity",
+    "name": "Channel Divinity",
+    "feature_type": "trait",
+    "description": "You can channel divine energy directly from the Outer Planes, using it to fuel magical effects. You start with one such effect: Divine Sense, which is described below. Other Paladin features give additional Channel Divinity effect options. Each time you use this class's Channel Divinity, you choose which effect from this class to create.\n\nYou can use this class's Channel Divinity twice. You regain one of its expended uses when you finish a Short Rest, and you regain all expended uses when you finish a Long Rest. You gain an additional use when you reach Paladin level 11.\n\nIf a Channel Divinity effect requires a saving throw, the DC equals the spell save DC from this class's Spellcasting feature.\n\n**Divine Sense.** As a Bonus Action, you can open your awareness to detect Celestials, Fiends, and Undead. For the next 10 minutes or until you have the Incapacitated condition, you know the location of any creature of those types within 60 feet of yourself, and you know its creature type. Within the same radius, you also detect the presence of any place or object that has been consecrated or desecrated, as with the *Hallow* spell.",
+    "tag": "class:paladin",
+    "rank": 3,
+    "picks": [],
+    "resource_counter": "channel_divinity",
+    "turn_resource": "action"
+  },
+  {
+    "type": "feature",
+    "id": "class-paladin-extra-attack",
+    "name": "Extra Attack",
+    "feature_type": "trait",
+    "description": "You can attack twice instead of once whenever you take the Attack action on your turn.",
+    "tag": "class:paladin",
+    "rank": 5,
+    "picks": [],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "class-paladin-faithful-steed",
+    "name": "Faithful Steed",
+    "feature_type": "trait",
+    "description": "You can call on the aid of an otherworldly steed. You always have the *Find Steed* spell prepared.\n\nYou can also cast the spell once without expending a spell slot, and you regain the ability to do so when you finish a Long Rest.",
+    "tag": "class:paladin",
+    "rank": 5,
+    "picks": [],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "class-paladin-lay-on-hands",
+    "name": "Lay On Hands",
+    "feature_type": "trait",
+    "description": "Your blessed touch can heal wounds. You have a pool of healing power that replenishes when you finish a Long Rest. With that pool, you can restore a total number of Hit Points equal to five times your Paladin level.\n\nAs a Bonus Action, you can touch a creature (which could be yourself) and draw power from the pool of healing to restore a number of Hit Points to that creature, up to the maximum amount remaining in the pool.\n\nYou can also expend 5 Hit Points from the pool of healing power to remove the Poisoned condition from the creature; those points don't also restore Hit Points to the creature.",
+    "tag": "class:paladin",
+    "rank": 1,
+    "picks": [],
+    "resource_counter": "lay_on_hands",
+    "turn_resource": "action"
+  },
+  {
+    "type": "feature",
+    "id": "class-paladin-paladins-smite",
+    "name": "Paladin's Smite",
+    "feature_type": "trait",
+    "description": "You always have the *Divine Smite* spell prepared. In addition, you can cast it without expending a spell slot, but you must finish a Long Rest before you can cast it in this way again.",
+    "tag": "class:paladin",
+    "rank": 2,
+    "picks": [],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "class-paladin-radiant-strikes",
+    "name": "Radiant Strikes",
+    "feature_type": "trait",
+    "description": "Your strikes now carry supernatural power. When you hit a target with an attack roll using a Melee weapon or an Unarmed Strike, the target takes an extra 1d8 Radiant damage.",
+    "tag": "class:paladin",
+    "rank": 11,
+    "picks": [],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "class-paladin-restoring-touch",
+    "name": "Restoring Touch",
+    "feature_type": "trait",
+    "description": "When you use Lay On Hands on a creature, you can also remove one or more of the following conditions from the creature: Blinded, Charmed, Deafened, Frightened, Paralyzed, or Stunned. You must expend 5 Hit Points from the healing pool of Lay On Hands for each of these conditions you remove; those points don't also restore Hit Points to the creature.",
+    "tag": "class:paladin",
+    "rank": 14,
+    "picks": [],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "class-paladin-spell-list",
+    "name": "Paladin Spell List",
+    "feature_type": "trait",
+    "description": "This section presents the Paladin spell list. The spells are organized by spell level and then alphabetized, and each spell's school of magic is listed. In the Special column, *C* means the spell requires Concentration, *R* means it's a Ritual, and *M* means it requires a specific Material component.\n\nTable: Level 1 Paladin Spells\n\n|Spell|School|Special|\n|---|---|---|\n|Bless|Enchantment|C, M|\n|Command|Enchantment|\u2014|\n|Cure Wounds|Abjuration|\u2014|\n|Detect Evil and Good|Divination|C|\n|Detect Magic|Divination|C, R|\n|Detect Poison and Disease|Divination|C, R|\n|Divine Favor|Transmutation|\u2014|\n|Divine Smite|Evocation|\u2014|\n|Heroism|Enchantment|C|\n|Protection from Evil and Good|Abjuration|C, M|\n|Purify Food and Drink|Transmutation|R|\n|Searing Smite|Evocation|\u2014|\n|Shield of Faith|Abjuration|C|\n\nTable: Level 2 Paladin Spells\n\n|Spell|School|Special|\n|---|---|---|\n|Aid|Abjuration|\u2014|\n|Find Steed|Conjuration|\u2014|\n|Gentle Repose|Necromancy|R, M|\n|Lesser Restoration|Abjuration|\u2014|\n|Locate Object|Divination|C|\n|Magic Weapon|Transmutation|\u2014|\n|Prayer of Healing|Abjuration|\u2014|\n|Protection from Poison|Abjuration|\u2014|\n|Shining Smite|Transmutation|C|\n|Warding Bond|Abjuration|M|\n|Zone of Truth|Enchantment|\u2014|\n\nTable: Level 3 Paladin Spells\n\n|Spell|School|Special|\n|---|---|---|\n|Create Food and Water|Conjuration|\u2014|\n|Daylight|Evocation|\u2014|\n|Dispel Magic|Abjuration|\u2014|\n|Magic Circle|Abjuration|M|\n|Remove Curse|Abjuration|\u2014|\n|Revivify|Necromancy|M|\n\nTable: Level 4 Paladin Spells\n\n|Spell|School|Special|\n|---|---|---|\n|Aura of Life|Abjuration|C|\n|Banishment|Abjuration|C|\n|Death Ward|Abjuration|\u2014|\n|Locate Creature|Divination|C|\n\nTable: Level 5 Paladin Spells\n\n|Spell|School|Special|\n|---|---|---|\n|Dispel Evil and Good|Abjuration|C|\n|Geas|Enchantment|\u2014|\n|Greater Restoration|Abjuration|M|\n|Raise Dead|Necromancy|M|",
+    "tag": "class:paladin",
+    "rank": 1,
+    "picks": [],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "class-paladin-spellcasting",
+    "name": "Spellcasting",
+    "feature_type": "trait",
+    "description": "You have learned to cast spells through prayer and meditation. See \"Spells\" for the rules on spellcasting. The information below details how you use those rules with Paladin spells, which appear in the Paladin spell list later in the class's description.\n\n**Spell Slots.** The Paladin Features table shows how many spell slots you have to cast your level 1+ spells. You regain all expended slots when you finish a Long Rest.\n\n**Prepared Spells of Level 1+**. You prepare the list of level 1+ spells that are available for you to cast with this feature. To start, choose two level 1 Paladin spells. *Heroism* and *Searing Smite* are recommended.\n\nThe number of spells on your list increases as you gain Paladin levels, as shown in the Prepared Spells column of the Paladin Features table. Whenever that number increases, choose additional Paladin spells until the number of spells on your list matches the number in the Paladin Features table. The chosen spells must be of a level for which you have spell slots. For example, if you're a level 5 Paladin, your list of prepared spells can include six Paladin spells of level 1 or 2 in any combination.\n\nIf another Paladin feature gives you spells that you always have prepared, those spells don't count against the number of spells you can prepare with this feature, but those spells otherwise count as Paladin spells for you.\n\n**Changing Your Prepared Spells.** Whenever you finish a Long Rest, you can replace one spell on your list with another Paladin spell for which you have spell slots.\n\n**Spellcasting Ability.** Charisma is your spellcasting ability for your Paladin spells.\n\n**Spellcasting Focus.** You can use a Holy Symbol as a Spellcasting Focus for your Paladin spells.",
+    "tag": "class:paladin",
+    "rank": 1,
+    "picks": [],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "class-paladin-weapon-mastery",
+    "name": "Weapon Mastery",
+    "feature_type": "trait",
+    "description": "Your training with weapons allows you to use the mastery properties of two kinds of weapons of your choice with which you have proficiency, such as Longswords and Javelins.\n\nWhenever you finish a Long Rest, you can change the kinds of weapons you chose. For example, you could switch to using the mastery properties of Halberds and Flails.",
+    "tag": "class:paladin",
+    "rank": 1,
+    "picks": [
+      {
+        "id": "weapons",
+        "kind": "feature",
+        "label": "Weapon kinds",
+        "feature_type": "item",
+        "tags": [
+          "weapon"
+        ],
+        "count": 2
+      }
+    ],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "class-paladin-armor-training",
+    "name": "Armor Training",
+    "feature_type": "trait",
+    "description": "You gain training with light, medium, heavy, shield armor, proficiency with simple weapons and martial weapons.",
+    "tag": "class:paladin",
+    "rank": 1,
+    "armor_training": [
+      "light",
+      "medium",
+      "heavy",
+      "shield"
+    ],
+    "weapon_training": [
+      "simple",
+      "martial"
+    ],
+    "tool_training": []
+  },
+  {
+    "type": "feature",
+    "id": "class-paladin-multiclass-training",
+    "name": "Multiclass Training",
+    "feature_type": "trait",
+    "description": "You gain training with light, medium, shield armor, proficiency with martial weapons.",
+    "tag": "class:paladin",
+    "rank": 1,
+    "armor_training": [
+      "light",
+      "medium",
+      "shield"
+    ],
+    "weapon_training": [
+      "martial"
+    ],
+    "tool_training": []
+  },
+  {
+    "type": "template",
+    "id": "paladin",
+    "kind": "class",
+    "name": "Paladin",
+    "icon": "shield",
+    "order": 6,
+    "description": "A holy warrior bound by an oath, blending steel and divine magic. Hit Point Die: d10. Saving Throw Proficiencies: Charisma, Wisdom.",
+    "stats": {
+      "hp": 9,
+      "attack_bonus": 1
+    },
+    "skill_picks": [
+      {
+        "id": "class_skills",
+        "count": 2,
+        "table": "skills_paladin",
+        "max_level": 2
+      }
+    ],
+    "features": [
+      "class-paladin-armor-training",
+      "class-paladin-lay-on-hands",
+      "class-paladin-spell-list",
+      "class-paladin-spellcasting",
+      "class-paladin-weapon-mastery"
+    ],
+    "grant": {
+      "items": [
+        "Longsword",
+        "Javelin",
+        "Javelin",
+        "Javelin",
+        "Javelin",
+        "Javelin",
+        "Javelin",
+        "Holy Symbol",
+        "Priest's Pack"
+      ],
+      "equip": [
+        "Chain Mail",
+        "Shield"
+      ],
+      "silver": 90,
+      "options": [
+        {
+          "id": "a",
+          "label": "A: class kit",
+          "items": [
+            "Longsword",
+            "Javelin",
+            "Javelin",
+            "Javelin",
+            "Javelin",
+            "Javelin",
+            "Javelin",
+            "Holy Symbol",
+            "Priest's Pack"
+          ],
+          "equip": [
+            "Chain Mail",
+            "Shield"
+          ],
+          "silver": 90
+        },
+        {
+          "id": "b",
+          "label": "B: 150 GP",
+          "silver": 1500
+        }
+      ]
+    },
+    "names": "names",
+    "counters": {
+      "hit_dice": 1,
+      "channel_divinity": 0,
+      "lay_on_hands": 5,
+      "slot_1": 2,
+      "spell_picks": 2
+    }
+  }
+]

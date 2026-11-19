@@ -1,0 +1,51 @@
+[
+  {
+    "type": "template",
+    "id": "elementalist_partial",
+    "icon": "elemental",
+    "kind": "tradition",
+    "choice_key": "elementalist",
+    "name": "Elementalist, Partial",
+    "description": "Elemental mastery studied alongside another trade. A partial Elementalist gains Elemental Resilience and Elemental Sparks, picks one more art and two first-level spells, and learns one more art at levels 3, 6, and 9.",
+    "compatible_with": {
+      "class": [
+        "healer",
+        "vowed",
+        "adventurer_expert_mage",
+        "adventurer_warrior_mage",
+        "adventurer_mage_mage"
+      ]
+    },
+    "skills": {
+      "magic": 1
+    },
+    "features": [
+      "art_elemental_resilience",
+      "art_elemental_sparks"
+    ],
+    "feat_picks": [
+      {
+        "id": "tradition_art_elementalist",
+        "count": 1,
+        "tag": "elementalist",
+        "max_rank": 0,
+        "exclude": [
+          "art_elemental_resilience",
+          "art_elemental_sparks"
+        ]
+      },
+      {
+        "id": "tradition_spells_elementalist",
+        "count": 2,
+        "tags": [
+          "high",
+          "elementalist"
+        ],
+        "feature_type": "spell",
+        "max_rank": 1
+      }
+    ],
+    "names": "names",
+    "order": 6
+  }
+]

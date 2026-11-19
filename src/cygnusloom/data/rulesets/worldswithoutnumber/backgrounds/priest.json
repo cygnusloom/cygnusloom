@@ -1,0 +1,35 @@
+[
+  {
+    "type": "template",
+    "id": "priest",
+    "icon": "altar",
+    "kind": "background",
+    "name": "Priest",
+    "description": "You served a temple or a congregation, learning the rites and the politics that surround them. You know what people believe and how to speak to that belief.",
+    "skills": {
+      "pray": 1
+    },
+    "skill_picks": [
+      {
+        "id": "background_learning",
+        "count": 2,
+        "table": "learning_priest",
+        "exclude": [
+          "any_skill"
+        ]
+      }
+    ],
+    "learning": [
+      "heal",
+      "connect",
+      "lead",
+      "convince",
+      "know",
+      "notice",
+      "administer",
+      "pray"
+    ],
+    "names": "names",
+    "order": 13
+  }
+]

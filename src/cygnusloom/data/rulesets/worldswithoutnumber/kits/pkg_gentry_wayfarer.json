@@ -1,0 +1,30 @@
+[
+  {
+    "type": "template",
+    "id": "pkg_gentry_wayfarer",
+    "icon": "kit-envoy",
+    "kind": "kit",
+    "name": "Household Envoy",
+    "description": "A messenger sent in a great house's name: a linothorax worn under fine clothes, a short sword, a writing kit and paper, and 20 silver for inns and gate fees.",
+    "grant": {
+      "items": [
+        "Linothorax",
+        "Short Sword",
+        "Clothes, Fine",
+        "Writing Kit",
+        "Paper, 10 Sheets",
+        "Backpack",
+        "Rations, One Week",
+        "Waterskin",
+        "Tinder Box",
+        "Torch"
+      ],
+      "silver": 20,
+      "equip": [
+        "Linothorax"
+      ]
+    },
+    "names": "names",
+    "order": 5
+  }
+]

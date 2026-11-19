@@ -1,0 +1,45 @@
+[
+  {
+    "type": "template",
+    "id": "healer_partial_2",
+    "icon": "potion",
+    "kind": "class2",
+    "choice_key": "healer",
+    "name": "Second Partial Class: Healer",
+    "description": "The curative half of an Adventurer. It grants Heal as a bonus skill, the Healing Touch art, and one more healer art. A second partial class is always paired with the character's first partial class.",
+    "compatible_with": {
+      "class": [
+        "healer",
+        "vowed"
+      ],
+      "tradition": [
+        "no_tradition"
+      ]
+    },
+    "stats": {
+      "hp": -1,
+      "attack_bonus": 0
+    },
+    "skills": {
+      "heal": 1
+    },
+    "features": [
+      "art_healing_touch"
+    ],
+    "feat_picks": [
+      {
+        "id": "second_class_art_healer",
+        "count": 1,
+        "tag": "healer",
+        "max_rank": 0,
+        "exclude": [
+          "art_healing_touch",
+          "art_limb_restoration",
+          "art_revive_the_fallen"
+        ]
+      }
+    ],
+    "names": "names",
+    "order": 3
+  }
+]

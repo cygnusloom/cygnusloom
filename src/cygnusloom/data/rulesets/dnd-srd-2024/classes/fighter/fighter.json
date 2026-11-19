@@ -1,0 +1,343 @@
+[
+  {
+    "type": "feature",
+    "id": "class-fighter-action-surge",
+    "name": "Action Surge",
+    "feature_type": "trait",
+    "description": "You can push yourself beyond your normal limits for a moment. On your turn, you can take one additional action, except the Magic action.\n\nOnce you use this feature, you can't do so again until you finish a Short or Long Rest. Starting at level 17, you can use it twice before a rest but only once on a turn.\n\nLevel 2: one use; Level 17: two uses",
+    "tag": "class:fighter",
+    "rank": 2,
+    "picks": [],
+    "resource_counter": "action_surge",
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "class-fighter-extra-attack",
+    "name": "Extra Attack",
+    "feature_type": "trait",
+    "description": "You can attack twice instead of once whenever you take the Attack action on your turn.",
+    "tag": "class:fighter",
+    "rank": 5,
+    "picks": [],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "class-fighter-indomitable",
+    "name": "Indomitable",
+    "feature_type": "trait",
+    "description": "If you fail a saving throw, you can reroll it with a bonus equal to your Fighter level. You must use the new roll, and you can't use this feature again until you finish a Long Rest.\n\nLevel 9: one use; Level 17: three uses; Level 13: two uses",
+    "tag": "class:fighter",
+    "rank": 9,
+    "picks": [],
+    "resource_counter": "indomitable",
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "class-fighter-second-wind",
+    "name": "Second Wind",
+    "feature_type": "trait",
+    "description": "You have a limited well of physical and mental stamina that you can draw on. As a Bonus Action, you can use it to regain Hit Points equal to 1d10 plus your Fighter level.\n\nYou can use this feature twice. You regain one expended use when you finish a Short Rest, and you regain all expended uses when you finish a Long Rest.\n\nWhen you reach certain Fighter levels, you gain more uses of this feature, as shown in the Second Wind column of the Fighter Features table.",
+    "tag": "class:fighter",
+    "rank": 1,
+    "picks": [],
+    "resource_counter": "second_wind",
+    "turn_resource": "bonus_action"
+  },
+  {
+    "type": "feature",
+    "id": "class-fighter-studied-attacks",
+    "name": "Studdied Attacks",
+    "feature_type": "trait",
+    "description": "You study your opponents and learn from each attack you make. If you make an attack roll against a creature and miss, you have Advantage on your next attack roll against that creature before the end of your next turn.",
+    "tag": "class:fighter",
+    "rank": 13,
+    "picks": [],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "class-fighter-tactical-master",
+    "name": "Tactical Master",
+    "feature_type": "trait",
+    "description": "When you attack with a weapon whose mastery property you can use, you can replace that property with the Push, Sap, or Slow property for that attack.",
+    "tag": "class:fighter",
+    "rank": 9,
+    "picks": [],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "class-fighter-tactical-mind",
+    "name": "Tactical Mind",
+    "feature_type": "trait",
+    "description": "You have a mind for tactics on and off the battlefield. When you fail an ability check, you can expend a use of your Second Wind to push yourself toward success. Rather than regaining Hit Points, you roll 1d10 and add the number rolled to the ability check, potentially turning it into a success. If the check still fails, this use of Second Wind isn't expended.",
+    "tag": "class:fighter",
+    "rank": 2,
+    "picks": [],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "class-fighter-tactical-shift",
+    "name": "Tactical Shift",
+    "feature_type": "trait",
+    "description": "Whenever you activate your Second Wind with a Bonus Action, you can move up to half your Speed without provoking Opportunity Attacks.",
+    "tag": "class:fighter",
+    "rank": 5,
+    "picks": [],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "class-fighter-three-extra-attacks",
+    "name": "Three Extra Attacks",
+    "feature_type": "trait",
+    "description": "You can attack four times instead of once whenever you take the Attack action on your turn.",
+    "tag": "class:fighter",
+    "rank": 20,
+    "picks": [],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "class-fighter-two-extra-attacks",
+    "name": "Two Extra Attacks",
+    "feature_type": "trait",
+    "description": "You can attack three times instead of once whenever you take the Attack action on your turn.",
+    "tag": "class:fighter",
+    "rank": 11,
+    "picks": [],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "class-fighter-weapon-mastery",
+    "name": "Weapon Mastery",
+    "feature_type": "trait",
+    "description": "Your training with weapons allows you to use the mastery properties of three kinds of Simple or Martial weapons of your choice. Whenever you finish a Long Rest, you can practice weapon drills and change one of those weapon choices.\n\nWhen you reach certain Fighter levels, you gain the ability to use the mastery properties of more kinds of weapons, as shown in the Weapon Mastery column of the Fighter Features table.",
+    "tag": "class:fighter",
+    "rank": 1,
+    "picks": [
+      {
+        "id": "weapons",
+        "kind": "feature",
+        "label": "Weapon kinds",
+        "feature_type": "item",
+        "tags": [
+          "weapon"
+        ],
+        "count": 3
+      }
+    ],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "class-fighter-weapon-mastery-4",
+    "name": "Weapon Mastery: Additional Kind",
+    "feature_type": "trait",
+    "description": "Your training lets you use the mastery property of one more weapon kind (chosen at level 4).",
+    "tag": "class:fighter",
+    "rank": 4,
+    "picks": [
+      {
+        "id": "weapons",
+        "kind": "feature",
+        "label": "Weapon kinds",
+        "feature_type": "item",
+        "tags": [
+          "weapon"
+        ],
+        "count": 1
+      }
+    ]
+  },
+  {
+    "type": "feature",
+    "id": "class-fighter-weapon-mastery-10",
+    "name": "Weapon Mastery: Additional Kind",
+    "feature_type": "trait",
+    "description": "Your training lets you use the mastery property of one more weapon kind (chosen at level 10).",
+    "tag": "class:fighter",
+    "rank": 10,
+    "picks": [
+      {
+        "id": "weapons",
+        "kind": "feature",
+        "label": "Weapon kinds",
+        "feature_type": "item",
+        "tags": [
+          "weapon"
+        ],
+        "count": 1
+      }
+    ]
+  },
+  {
+    "type": "feature",
+    "id": "class-fighter-weapon-mastery-16",
+    "name": "Weapon Mastery: Additional Kind",
+    "feature_type": "trait",
+    "description": "Your training lets you use the mastery property of one more weapon kind (chosen at level 16).",
+    "tag": "class:fighter",
+    "rank": 16,
+    "picks": [
+      {
+        "id": "weapons",
+        "kind": "feature",
+        "label": "Weapon kinds",
+        "feature_type": "item",
+        "tags": [
+          "weapon"
+        ],
+        "count": 1
+      }
+    ]
+  },
+  {
+    "type": "feature",
+    "id": "class-fighter-armor-training",
+    "name": "Armor Training",
+    "feature_type": "trait",
+    "description": "You gain training with light, medium, heavy, shield armor, proficiency with simple weapons and martial weapons.",
+    "tag": "class:fighter",
+    "rank": 1,
+    "armor_training": [
+      "light",
+      "medium",
+      "heavy",
+      "shield"
+    ],
+    "weapon_training": [
+      "simple",
+      "martial"
+    ],
+    "tool_training": []
+  },
+  {
+    "type": "feature",
+    "id": "class-fighter-multiclass-training",
+    "name": "Multiclass Training",
+    "feature_type": "trait",
+    "description": "You gain training with light, medium, shield armor, proficiency with martial weapons.",
+    "tag": "class:fighter",
+    "rank": 1,
+    "armor_training": [
+      "light",
+      "medium",
+      "shield"
+    ],
+    "weapon_training": [
+      "martial"
+    ],
+    "tool_training": []
+  },
+  {
+    "type": "template",
+    "id": "fighter",
+    "kind": "class",
+    "name": "Fighter",
+    "icon": "sword",
+    "order": 4,
+    "description": "A disciplined master of weapons and armour. Hit Point Die: d10. Saving Throw Proficiencies: Strength, Constitution.",
+    "stats": {
+      "hp": 9,
+      "attack_bonus": 1
+    },
+    "skill_picks": [
+      {
+        "id": "class_skills",
+        "count": 2,
+        "table": "skills_fighter",
+        "max_level": 2
+      }
+    ],
+    "features": [
+      "class-fighter-armor-training",
+      "class-fighter-second-wind",
+      "class-fighter-weapon-mastery"
+    ],
+    "grant": {
+      "items": [
+        "Greatsword",
+        "Flail",
+        "Javelin",
+        "Javelin",
+        "Javelin",
+        "Javelin",
+        "Javelin",
+        "Javelin",
+        "Javelin",
+        "Javelin",
+        "Dungeoneer's Pack"
+      ],
+      "equip": [
+        "Chain Mail"
+      ],
+      "silver": 40,
+      "options": [
+        {
+          "id": "a",
+          "label": "A: class kit",
+          "items": [
+            "Greatsword",
+            "Flail",
+            "Javelin",
+            "Javelin",
+            "Javelin",
+            "Javelin",
+            "Javelin",
+            "Javelin",
+            "Javelin",
+            "Javelin",
+            "Dungeoneer's Pack"
+          ],
+          "equip": [
+            "Chain Mail"
+          ],
+          "silver": 40
+        },
+        {
+          "id": "b",
+          "label": "B: light kit",
+          "items": [
+            "Scimitar",
+            "Shortsword",
+            "Longbow",
+            "Arrows (20)",
+            "Quiver",
+            "Dungeoneer's Pack"
+          ],
+          "equip": [
+            "Studded Leather Armor"
+          ],
+          "silver": 110
+        },
+        {
+          "id": "c",
+          "label": "C: 155 GP",
+          "silver": 1550
+        }
+      ]
+    },
+    "names": "names",
+    "feat_picks": [
+      {
+        "id": "fighting_style",
+        "count": 1,
+        "tag": "fighting-style",
+        "feature_type": "feat",
+        "max_rank": 1
+      }
+    ],
+    "counters": {
+      "hit_dice": 1,
+      "second_wind": 2,
+      "action_surge": 0,
+      "indomitable": 0
+    }
+  }
+]

@@ -1,0 +1,35 @@
+[
+  {
+    "type": "template",
+    "id": "scholar",
+    "icon": "book",
+    "kind": "background",
+    "name": "Scholar",
+    "description": "You spent your time among books, teachers, and old records, learning what the world has written down. You know how to ask a useful question and where an answer might hide.",
+    "skills": {
+      "know": 1
+    },
+    "skill_picks": [
+      {
+        "id": "background_learning",
+        "count": 2,
+        "table": "learning_scholar",
+        "exclude": [
+          "any_skill"
+        ]
+      }
+    ],
+    "learning": [
+      "notice",
+      "craft",
+      "pray",
+      "connect",
+      "administer",
+      "convince",
+      "know",
+      "heal"
+    ],
+    "names": "names",
+    "order": 15
+  }
+]

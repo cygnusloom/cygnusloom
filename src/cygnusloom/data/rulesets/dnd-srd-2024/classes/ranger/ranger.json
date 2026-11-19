@@ -1,0 +1,300 @@
+[
+  {
+    "type": "feature",
+    "id": "class-ranger-deft-explorer",
+    "name": "Deft Explorer",
+    "feature_type": "trait",
+    "description": "Thanks to your travels, you gain the following benefits.\n\n**Expertise.** Choose one of your skill proficiencies with which you lack Expertise. You gain Expertise in that skill.\n\n**Languages.** You know two languages of your choice from the language tables in \"Character Creation.\"",
+    "tag": "class:ranger",
+    "rank": 2,
+    "picks": [
+      {
+        "id": "expertise",
+        "kind": "skill",
+        "label": "Expertise",
+        "grant": "expertise",
+        "choices": [
+          "acrobatics",
+          "animal_handling",
+          "arcana",
+          "athletics",
+          "deception",
+          "history",
+          "insight",
+          "intimidation",
+          "investigation",
+          "medicine",
+          "nature",
+          "perception",
+          "performance",
+          "persuasion",
+          "religion",
+          "sleight_of_hand",
+          "stealth",
+          "survival"
+        ]
+      },
+      {
+        "id": "languages",
+        "kind": "text",
+        "label": "Languages",
+        "count": 2
+      }
+    ],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "class-ranger-extra-attack",
+    "name": "Extra Attack",
+    "feature_type": "trait",
+    "description": "You can attack twice instead of once whenever you take the Attack action on your turn.",
+    "tag": "class:ranger",
+    "rank": 5,
+    "picks": [],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "class-ranger-favored-enemy",
+    "name": "Favored Enemy",
+    "feature_type": "trait",
+    "description": "You always have the *Hunter's Mark* spell prepared. You can cast it twice without expending a spell slot, and you regain all expended uses of this ability when you finish a Long Rest.\n\nThe number of times you can cast the spell without a spell slot increases when you reach certain Ranger levels, as shown in the Favored Enemy column of the Ranger Features table.",
+    "tag": "class:ranger",
+    "rank": 1,
+    "picks": [],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "class-ranger-feral-senses",
+    "name": "Feral Senses",
+    "feature_type": "trait",
+    "description": "Your connection to the forces of nature grants you Blindsight with a range of 30 feet.",
+    "tag": "class:ranger",
+    "rank": 18,
+    "picks": [],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "class-ranger-foe-slayer",
+    "name": "Foe Slayer",
+    "feature_type": "trait",
+    "description": "The damage die of your *Hunter's Mark* is a d10 rather than a d6.",
+    "tag": "class:ranger",
+    "rank": 20,
+    "picks": [],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "class-ranger-natures-veil",
+    "name": "Nature's Veil",
+    "feature_type": "trait",
+    "description": "You invoke spirits of nature to magically hide yourself. As a Bonus Action, you can give yourself the Invisible condition until the end of your next turn.\n\nYou can use this feature a number of times equal to your Wisdom modifier (minimum of once), and you regain all expended uses when you finish a Long Rest.",
+    "tag": "class:ranger",
+    "rank": 14,
+    "picks": [],
+    "turn_resource": "bonus_action"
+  },
+  {
+    "type": "feature",
+    "id": "class-ranger-precise-hunter",
+    "name": "Precise Hunter",
+    "feature_type": "trait",
+    "description": "You have Advantage on attack rolls against the creature currently marked by your *Hunter's Mark*.",
+    "tag": "class:ranger",
+    "rank": 17,
+    "picks": [],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "class-ranger-relentless-hunter",
+    "name": "Relentless Hunter",
+    "feature_type": "trait",
+    "description": "Taking damage can't break your Concentration on *Hunter's Mark*.",
+    "tag": "class:ranger",
+    "rank": 13,
+    "picks": [],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "class-ranger-roving",
+    "name": "Roving",
+    "feature_type": "trait",
+    "description": "Your Speed increases by 10 feet while you aren't wearing Heavy armor. You also have a Climb Speed and a Swim Speed equal to your Speed.",
+    "tag": "class:ranger",
+    "rank": 6,
+    "picks": [],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "class-ranger-spell-list",
+    "name": "Ranger Spell List",
+    "feature_type": "trait",
+    "description": "This section presents the Ranger spell list. The spells are organized by spell level and then alphabetized, and each spell's school of magic is listed. In the Special column, *C* means the spell requires Concentration, *R* means it's a Ritual, and *M* means it requires a specific Material component.\n\nTable: Level 1 Ranger Spells\n\n|Spell|School|Special|\n|---|---|---|\n|Alarm|Abjuration|R|\n|Animal Friendship|Enchantment|\u2014|\n|Cure Wounds|Abjuration|\u2014|\n|Detect Magic|Divination|C, R|\n|Detect Poison and Disease|Divination|C, R|\n|Ensnaring Strike|Conjuration|C|\n|Entangle|Conjuration|C|\n|Fog Cloud|Conjuration|C|\n|Goodberry|Conjuration|\u2014|\n|Hunter's Mark|Divination|C|\n|Jump|Transmutation|\u2014|\n|Longstrider|Transmutation|\u2014|\n|Speak with Animals|Divination|R|\n\nTable: Level 2 Ranger Spells\n\n|Spell|School|Special|\n|---|---|---|\n|Aid|Abjuration|\u2014|\n|Animal Messenger|Enchantment|R|\n|Barkskin|Transmutation|\u2014|\n|Darkvision|Transmutation|\u2014|\n|Enhance Ability|Transmutation|C|\n|Find Traps|Divination|\u2014|\n|Gust of Wind|Evocation|C|\n|Lesser Restoration|Abjuration|\u2014|\n|Locate Animals or Plants|Divination|R|\n|Locate Object|Divination|C|\n|Magic Weapon|Transmutation|\u2014|\n|Pass without Trace|Abjuration|C|\n|Protection from Poison|Abjuration|\u2014|\n|Silence|Illusion|C, R|\n|Spike Growth|Transmutation|C|\n\nTable: Level 3 Ranger Spells\n\n|Spell|School|Special|\n|---|---|---|\n|Conjure Animals|Conjuration|C|\n|Daylight|Evocation|\u2014|\n|Dispel Magic|Abjuration|\u2014|\n|Meld into Stone|Transmutation|R|\n|Nondetection|Abjuration|M|\n|Plant Growth|Transmutation|\u2014|\n|Protection from Energy|Abjuration|C|\n|Revivify|Necromancy|M|\n|Speak with Plants|Transmutation|\u2014|\n|Water Breathing|Transmutation|R|\n|Water Walk|Transmutation|R|\n|Wind Wall|Evocation|C|\n\nTable: Level 4 Ranger Spells\n\n|Spell|School|Special|\n|---|---|---|\n|Conjure Woodland Beings|Conjuration|C|\n|Dominate Beast|Enchantment|C|\n|Freedom of Movement|Abjuration|\u2014|\n|Locate Creature|Divination|C|\n|Stoneskin|Transmutation|C, M|\n\nTable: Level 5 Ranger Spells\n\n|Spell|School|Special|\n|---|---|---|\n|Commune with Nature|Divination|R|\n|Greater Restoration|Abjuration|M|\n|Tree Stride|Conjuration|C|",
+    "tag": "class:ranger",
+    "rank": 1,
+    "picks": [],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "class-ranger-spellcasting",
+    "name": "Spellcasting",
+    "feature_type": "trait",
+    "description": "You have learned to channel the magical essence of nature to cast spells. See \"Spells\" for the rules on spellcasting. The information below details how you use those rules with Ranger spells, which appear in the Ranger spell list later in the class's description.\n\n**Spell Slots.** The Ranger Features table shows how many spell slots you have to cast your level 1+ spells. You regain all expended slots when you finish a Long Rest.\n\n**Prepared Spells of Level 1+**. You prepare the list of level 1+ spells that are available for you to cast with this feature. To start, choose two level 1 Ranger spells. *Cure Wounds* and *Ensnaring Strike* are recommended.\n\nThe number of spells on your list increases as you gain Ranger levels, as shown in the Prepared Spells column of the Ranger Features table. Whenever that number increases, choose additional Ranger spells until the number of spells on your list matches the number in the Ranger Features table. The chosen spells must be of a level for which you have spell slots. For example, if you're a level 5 Ranger, your list of prepared spells can include six Ranger spells of level 1 or 2 in any combination.\n\nIf another Ranger feature gives you spells that you always have prepared, those spells don't count against the number of spells you can prepare with this feature, but those spells otherwise count as Ranger spells for you.\n\n**Changing Your Prepared Spells.** Whenever you finish a Long Rest, you can replace one spell on your list with another Ranger spell for which you have spell slots.\n\n**Spellcasting Ability.** Wisdom is your spellcasting ability for your Ranger spells.\n\n**Spellcasting Focus.** You can use a Druidic Focus as a Spellcasting Focus for your Ranger spells.",
+    "tag": "class:ranger",
+    "rank": 1,
+    "picks": [],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "class-ranger-tireless",
+    "name": "Tireless",
+    "feature_type": "trait",
+    "description": "Primal forces now help fuel you on your journeys, granting you the following benefits.\n\n**Temporary Hit Points.** As a Magic action, you can give yourself a number of Temporary Hit Points equal to 1d8 plus your Wisdom modifier (minimum of 1). You can use this action a number of times equal to your Wisdom modifier (minimum of once), and you regain all expended uses when you finish a Long Rest.\n\n**Decrease Exhaustion.** Whenever you finish a Short Rest, your Exhaustion level, if any, decreases by 1.",
+    "tag": "class:ranger",
+    "rank": 10,
+    "picks": [],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "class-ranger-weapon-mastery",
+    "name": "Weapon Mastery",
+    "feature_type": "trait",
+    "description": "Your training with weapons allows you to use the mastery properties of two kinds of weapons of your choice with which you have proficiency, such as Longbows and Shortswords.\n\nWhenever you finish a Long Rest, you can change the kinds of weapons you chose. For example, you could switch to using the mastery properties of Scimitars and Longswords.",
+    "tag": "class:ranger",
+    "rank": 1,
+    "picks": [
+      {
+        "id": "weapons",
+        "kind": "feature",
+        "label": "Weapon kinds",
+        "feature_type": "item",
+        "tags": [
+          "weapon"
+        ],
+        "count": 2
+      }
+    ],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "class-ranger-armor-training",
+    "name": "Armor Training",
+    "feature_type": "trait",
+    "description": "You gain training with light, medium, shield armor, proficiency with simple weapons and martial weapons.",
+    "tag": "class:ranger",
+    "rank": 1,
+    "armor_training": [
+      "light",
+      "medium",
+      "shield"
+    ],
+    "weapon_training": [
+      "simple",
+      "martial"
+    ],
+    "tool_training": []
+  },
+  {
+    "type": "feature",
+    "id": "class-ranger-multiclass-training",
+    "name": "Multiclass Training",
+    "feature_type": "trait",
+    "description": "You gain training with light, medium, shield armor, proficiency with martial weapons, one skill of your choice from the class list.",
+    "tag": "class:ranger",
+    "rank": 1,
+    "armor_training": [
+      "light",
+      "medium",
+      "shield"
+    ],
+    "weapon_training": [
+      "martial"
+    ],
+    "tool_training": []
+  },
+  {
+    "type": "template",
+    "id": "ranger",
+    "kind": "class",
+    "name": "Ranger",
+    "icon": "bow",
+    "order": 7,
+    "description": "A hunter and tracker who guards the wild places. Hit Point Die: d10. Saving Throw Proficiencies: Dexterity, Strength.",
+    "stats": {
+      "hp": 9,
+      "attack_bonus": 1
+    },
+    "skill_picks": [
+      {
+        "id": "class_skills",
+        "count": 3,
+        "table": "skills_ranger",
+        "max_level": 2
+      }
+    ],
+    "features": [
+      "class-ranger-armor-training",
+      "class-ranger-favored-enemy",
+      "class-ranger-spell-list",
+      "class-ranger-spellcasting",
+      "class-ranger-weapon-mastery",
+      "spell-hunters-mark"
+    ],
+    "grant": {
+      "items": [
+        "Scimitar",
+        "Shortsword",
+        "Longbow",
+        "Arrows (20)",
+        "Quiver",
+        "Explorer's Pack"
+      ],
+      "equip": [
+        "Studded Leather Armor"
+      ],
+      "silver": 70,
+      "options": [
+        {
+          "id": "a",
+          "label": "A: class kit",
+          "items": [
+            "Scimitar",
+            "Shortsword",
+            "Longbow",
+            "Arrows (20)",
+            "Quiver",
+            "Explorer's Pack"
+          ],
+          "equip": [
+            "Studded Leather Armor"
+          ],
+          "silver": 70
+        },
+        {
+          "id": "b",
+          "label": "B: 150 GP",
+          "silver": 1500
+        }
+      ]
+    },
+    "names": "names",
+    "counters": {
+      "hit_dice": 1,
+      "favored_enemy": 2,
+      "tireless": 0,
+      "slot_1": 2,
+      "spell_picks": 2
+    }
+  }
+]

@@ -1,0 +1,75 @@
+[
+  {
+    "type": "feature",
+    "id": "subclass-draconic-sorcery-draconic-resilience",
+    "name": "Draconic Resilience",
+    "feature_type": "trait",
+    "description": "The magic in your body manifests physical traits of your draconic gift. Your Hit Point maximum increases by 3, and it increases by 1 whenever you gain another Sorcerer level.\n\nParts of you are also covered by dragon-like scales. While you aren't wearing armor, your base Armor Class equals 10 plus your Dexterity and Charisma modifiers.",
+    "tag": "subclass:draconic-sorcery",
+    "rank": 3,
+    "picks": [],
+    "defense_floor": {
+      "base": 10,
+      "modifiers": [
+        "cha"
+      ],
+      "requires_no_armor": true
+    },
+    "level_hp_bonus": 1,
+    "flat_hp_bonus": 3,
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "subclass-draconic-sorcery-draconic-spells",
+    "name": "Draconic Spells",
+    "feature_type": "trait",
+    "description": "When you reach a Sorcerer level specified in the Draconic Spells table, you thereafter always have the listed spells prepared.\n\nTable: Draconic Spells\n\n|Sorcerer Level|Spells|\n|---|---|\n|3|Alter Self, Chromatic Orb, Command, Dragon's Breath|\n|5|Fear, Fly|\n|7|Arcane Eye, Charm Monster|\n|9|Legend Lore, Summon Dragon|",
+    "tag": "subclass:draconic-sorcery",
+    "rank": 3,
+    "picks": [],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "subclass-draconic-sorcery-dragon-companion",
+    "name": "Dragon Companion",
+    "feature_type": "trait",
+    "description": "You can cast *Summon Dragon* without a Material component. You can also cast it once without a spell slot, and you regain the ability to cast it in this way when you finish a Long Rest.\n\nWhenever you start casting the spell, you can modify it so that it doesn't require Concentration. If you do so, the spell's duration becomes 1 minute for that casting.",
+    "tag": "subclass:draconic-sorcery",
+    "rank": 18,
+    "picks": [],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "subclass-draconic-sorcery-dragon-wings",
+    "name": "Dragon Wings",
+    "feature_type": "trait",
+    "description": "As a Bonus Action, you can cause draconic wings to appear on your back. The wings last for 1 hour or until you dismiss them (no action required). For the duration, you have a Fly Speed of 60 feet.\n\nOnce you use this feature, you can't use it again until you finish a Long Rest unless you spend 3 Sorcery Points (no action required) to restore your use of it.",
+    "tag": "subclass:draconic-sorcery",
+    "rank": 14,
+    "picks": [],
+    "turn_resource": "bonus_action"
+  },
+  {
+    "type": "feature",
+    "id": "subclass-draconic-sorcery-elemental-affinity",
+    "name": "Elemental Affinity",
+    "feature_type": "trait",
+    "description": "Your draconic magic has an affinity with a damage type associated with dragons. Choose one of those types: Acid, Cold, Fire, Lightning, or Poison.\n\nYou have Resistance to that damage type, and when you cast a spell that deals damage of that type, you can add your Charisma modifier to one damage roll of that spell.",
+    "tag": "subclass:draconic-sorcery",
+    "rank": 6,
+    "picks": [],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "subclass-draconic-sorcery",
+    "name": "Draconic Sorcery",
+    "feature_type": "trait",
+    "description": "The Draconic Sorcery path for a Sorcerer. Its features are gained as the class advances.",
+    "tag": "subclass",
+    "rank": 3
+  }
+]

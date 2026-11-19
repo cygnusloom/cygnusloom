@@ -1,0 +1,35 @@
+[
+  {
+    "type": "template",
+    "id": "pkg_roguish_wanderer",
+    "icon": "kit-knife",
+    "kind": "kit",
+    "name": "Back-Alley Knife",
+    "description": "A quiet entry loadout: a buff coat and small shield, a stiletto and a brace of throwing blades, rope and a grappling hook for the way in and the way out.",
+    "grant": {
+      "items": [
+        "Buff Coat",
+        "Small Shield",
+        "Stiletto",
+        "Throwing Blade",
+        "Throwing Blade",
+        "Throwing Blade",
+        "Throwing Blade",
+        "Backpack",
+        "Rations, One Week",
+        "Waterskin",
+        "Tinder Box",
+        "Torch",
+        "Torch",
+        "Grappling Hook",
+        "Rope, 50 ft"
+      ],
+      "equip": [
+        "Buff Coat",
+        "Small Shield"
+      ]
+    },
+    "names": "names",
+    "order": 3
+  }
+]

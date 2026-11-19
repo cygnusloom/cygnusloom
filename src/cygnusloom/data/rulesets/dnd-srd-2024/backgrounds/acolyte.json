@@ -1,0 +1,87 @@
+[
+  {
+    "type": "feature",
+    "id": "background-asi-acolyte",
+    "name": "Acolyte: Ability Scores",
+    "feature_type": "trait",
+    "description": "Increase one of these abilities by 2 and another by 1, or each of them by 1: Intelligence, Wisdom, Charisma.",
+    "tag": "background",
+    "rank": 0,
+    "tool_training": [
+      "Calligrapher's Supplies"
+    ],
+    "picks": [
+      {
+        "id": "scores",
+        "kind": "stat",
+        "label": "Abilities",
+        "grant": "score",
+        "amount": 1,
+        "count": 3,
+        "max_value": 20,
+        "choices": [
+          "int",
+          "wis",
+          "cha"
+        ],
+        "patterns": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            1
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "type": "template",
+    "id": "acolyte",
+    "kind": "background",
+    "name": "Acolyte",
+    "icon": "altar",
+    "order": 0,
+    "description": "Acolyte. Tool proficiency: Calligrapher's Supplies. Equipment: *Choose A or B:* (A) Calligrapher's Supplies, Book (prayers), Holy Symbol, Parchment (10 sheets), Robe, 8 GP; or (B) 50 GP",
+    "skills": {
+      "insight": 1,
+      "religion": 1
+    },
+    "features": [
+      "background-asi-acolyte",
+      "feat-magic-initiate"
+    ],
+    "grant": {
+      "items": [
+        "Calligrapher's Supplies (10 GP)",
+        "Book",
+        "Holy Symbol",
+        "Parchment",
+        "Robe"
+      ],
+      "silver": 80,
+      "options": [
+        {
+          "id": "a",
+          "label": "A: background kit",
+          "items": [
+            "Calligrapher's Supplies (10 GP)",
+            "Book",
+            "Holy Symbol",
+            "Parchment",
+            "Robe"
+          ],
+          "silver": 80
+        },
+        {
+          "id": "b",
+          "label": "B: 50 GP",
+          "silver": 500
+        }
+      ]
+    }
+  }
+]

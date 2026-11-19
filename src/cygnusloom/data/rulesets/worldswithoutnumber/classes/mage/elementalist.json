@@ -1,0 +1,46 @@
+[
+  {
+    "type": "template",
+    "id": "elementalist",
+    "icon": "elemental",
+    "kind": "tradition",
+    "name": "Elementalist",
+    "description": "A tradition that treats the raw elements as living forces to be courted and commanded. A full Elementalist gains Elemental Resilience and Elemental Sparks, picks one more art and four first-level spells, and may learn High Magic or Elementalist spells.",
+    "compatible_with": {
+      "class": [
+        "mage"
+      ]
+    },
+    "skills": {
+      "magic": 1
+    },
+    "features": [
+      "art_elemental_resilience",
+      "art_elemental_sparks"
+    ],
+    "feat_picks": [
+      {
+        "id": "tradition_art_elementalist",
+        "count": 1,
+        "tag": "elementalist",
+        "max_rank": 0,
+        "exclude": [
+          "art_elemental_resilience",
+          "art_elemental_sparks"
+        ]
+      },
+      {
+        "id": "tradition_spells_elementalist",
+        "count": 4,
+        "tags": [
+          "high",
+          "elementalist"
+        ],
+        "feature_type": "spell",
+        "max_rank": 1
+      }
+    ],
+    "names": "names",
+    "order": 5
+  }
+]

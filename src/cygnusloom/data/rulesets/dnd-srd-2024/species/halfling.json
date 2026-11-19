@@ -1,0 +1,85 @@
+[
+  {
+    "type": "feature",
+    "id": "species-halfling-size",
+    "name": "Halfling: Size",
+    "feature_type": "trait",
+    "description": "Small (about 2\u20133 feet tall) ",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "species-halfling-speed",
+    "name": "Halfling: Speed",
+    "feature_type": "trait",
+    "description": "30 feet",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "species-halfling-brave",
+    "name": "Halfling: Brave",
+    "feature_type": "trait",
+    "description": "You have Advantage on saving throws you make to avoid or end the Frightened condition.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "species-halfling-halfling-nimbleness",
+    "name": "Halfling: Halfling Nimbleness",
+    "feature_type": "trait",
+    "description": "You can move through the space of any creature that is a size larger than you, but you can't stop in the same space.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "species-halfling-luck",
+    "name": "Halfling: Luck",
+    "feature_type": "trait",
+    "description": "When you roll a 1 on the d20 of a D20 Test, you can reroll the die, and you must use the new roll.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "species-halfling-naturally-stealthy",
+    "name": "Halfling: Naturally Stealthy",
+    "feature_type": "trait",
+    "description": "You can take the Hide action even when you are obscured only by a creature that is at least one size larger than you.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
+  },
+  {
+    "type": "template",
+    "id": "halfling",
+    "kind": "species",
+    "name": "Halfling",
+    "icon": "campfire",
+    "order": 5,
+    "description": "Halfling. Small (about 2\u20133 feet tall) . Speed 30 feet. Size. Speed. Brave. Halfling Nimbleness. Luck. Naturally Stealthy.",
+    "features": [
+      "species-halfling-size",
+      "species-halfling-speed",
+      "species-halfling-brave",
+      "species-halfling-halfling-nimbleness",
+      "species-halfling-luck",
+      "species-halfling-naturally-stealthy"
+    ]
+  }
+]

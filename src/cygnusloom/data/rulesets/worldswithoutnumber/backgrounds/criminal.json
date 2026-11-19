@@ -1,0 +1,35 @@
+[
+  {
+    "type": "template",
+    "id": "criminal",
+    "icon": "key",
+    "kind": "background",
+    "name": "Criminal",
+    "description": "You learned to take what you wanted without being seen, and to talk your way out when you were. You know the underworld's rules and the people who bend them.",
+    "skills": {
+      "sneak": 1
+    },
+    "skill_picks": [
+      {
+        "id": "background_learning",
+        "count": 2,
+        "table": "learning_criminal",
+        "exclude": [
+          "any_skill"
+        ]
+      }
+    ],
+    "learning": [
+      "notice",
+      "exert",
+      "connect",
+      "trade",
+      "administer",
+      "punch",
+      "convince",
+      "sneak"
+    ],
+    "names": "names",
+    "order": 4
+  }
+]

@@ -1,0 +1,91 @@
+[
+  {
+    "type": "template",
+    "id": "adventurer_expert_warrior",
+    "icon": "backpack",
+    "kind": "class",
+    "name": "Adventurer: Expert and Warrior",
+    "description": "A dabbler who combines the Expert's training with the Warrior's fighting edge. You roll a d6 with a +2 class bonus at first level, add +1 to attack rolls, and gain one free Expert Focus, one free Warrior Focus, and one free Focus of any kind.",
+    "stats": {
+      "hp": 2,
+      "attack_bonus": 0
+    },
+    "skill_picks": [
+      {
+        "id": "class_free_skill",
+        "count": 1,
+        "table": "all_skills",
+        "max_level": 1
+      }
+    ],
+    "feat_picks": [
+      {
+        "id": "class_focus_any",
+        "count": 1,
+        "tag": "focus",
+        "max_rank": 1,
+        "exclude": [
+          "focus_special_origin",
+          "focus_armored_magic"
+        ]
+      },
+      {
+        "id": "class_focus_warrior",
+        "count": 1,
+        "tag": "focus",
+        "max_rank": 1,
+        "advance_repeated_rank": true,
+        "exclude": [
+          "focus_armored_magic",
+          "focus_artisan",
+          "focus_authority",
+          "focus_connected",
+          "focus_cultured",
+          "focus_dealmaker",
+          "focus_developed_attribute",
+          "focus_diplomatic_grace",
+          "focus_gifted_chirurgeon",
+          "focus_henchkeeper",
+          "focus_impostor",
+          "focus_nullifier",
+          "focus_poisoner",
+          "focus_polymath",
+          "focus_rider",
+          "focus_specialist",
+          "focus_spirit_familiar",
+          "focus_trapmaster",
+          "focus_unique_gift",
+          "focus_well_met",
+          "focus_xenoblooded",
+          "focus_special_origin"
+        ]
+      },
+      {
+        "id": "class_focus_expert",
+        "count": 1,
+        "tag": "focus",
+        "max_rank": 1,
+        "advance_repeated_rank": true,
+        "exclude": [
+          "focus_alert",
+          "focus_armored_magic",
+          "focus_armsmaster",
+          "focus_assassin",
+          "focus_close_combatant",
+          "focus_deadeye",
+          "focus_die_hard",
+          "focus_impervious_defense",
+          "focus_lucky",
+          "focus_shocking_assault",
+          "focus_snipers_eye",
+          "focus_unarmed_combatant",
+          "focus_valiant_defender",
+          "focus_whirlwind_assault",
+          "focus_special_origin"
+        ]
+      }
+    ],
+    "names": "names",
+    "order": 5
+  }
+]

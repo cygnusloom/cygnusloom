@@ -1,0 +1,189 @@
+[
+  {
+    "type": "feature",
+    "id": "class-wizard-arcane-recovery",
+    "name": "Arcane Recovery",
+    "feature_type": "trait",
+    "description": "You can regain some of your magical energy by studying your spellbook. When you finish a Short Rest, you can choose expended spell slots to recover. The spell slots can have a combined level equal to no more than half your Wizard level (round up), and none of the slots can be level 6 or higher. For example, if you're a level 4 Wizard, you can recover up to two levels' worth of spell slots, regaining either one level 2 spell slot or two level 1 spell slots.\n\nOnce you use this feature, you can't do so again until you finish a Long Rest.",
+    "tag": "class:wizard",
+    "rank": 1,
+    "picks": [],
+    "resource_counter": "arcane_recovery",
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "class-wizard-memorize-spell",
+    "name": "Memorize Spell",
+    "feature_type": "trait",
+    "description": "Whenever you finish a Short Rest, you can study your spellbook and replace one of the level 1+ Wizard spells you have prepared for your Spellcasting feature with another level 1+ spell from the book.",
+    "tag": "class:wizard",
+    "rank": 5,
+    "picks": [],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "class-wizard-ritual-adept",
+    "name": "Ritual Adept",
+    "feature_type": "trait",
+    "description": "You can cast any spell as a Ritual if that spell has the Ritual tag and the spell is in your spellbook. You needn't have the spell prepared, but you must read from the book to cast a spell in this way.",
+    "tag": "class:wizard",
+    "rank": 1,
+    "picks": [],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "class-wizard-scholar",
+    "name": "Scholar",
+    "feature_type": "trait",
+    "description": "While studying magic, you also specialized in another field of study. Choose one of the following skills in which you have proficiency: Arcana, History, Investigation, Medicine, Nature, or Religion. You have Expertise in the chosen skill.",
+    "tag": "class:wizard",
+    "rank": 2,
+    "picks": [
+      {
+        "id": "expertise",
+        "kind": "skill",
+        "label": "Expertise",
+        "grant": "expertise",
+        "choices": [
+          "arcana",
+          "history",
+          "investigation",
+          "medicine",
+          "nature",
+          "religion"
+        ]
+      }
+    ],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "class-wizard-signature-spells",
+    "name": "Signature Spells",
+    "feature_type": "trait",
+    "description": "Choose two level 3 spells in your spellbook as your signature spells. You always have these spells prepared, and you can cast each of them once at level 3 without expending a spell slot. When you do so, you can't cast them in this way again until you finish a Short or Long Rest. To cast either spell at a higher level, you must expend a spell slot.",
+    "tag": "class:wizard",
+    "rank": 20,
+    "picks": [],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "class-wizard-spell-mastery",
+    "name": "Spell Mastery",
+    "feature_type": "trait",
+    "description": "You have achieved such mastery over certain spells that you can cast them at will. Choose a level 1 and a level 2 spell in your spellbook that have a casting time of an action. You always have those spells prepared, and you can cast them at their lowest level without expending a spell slot. To cast either spell at a higher level, you must expend a spell slot.\n\nWhenever you finish a Long Rest, you can study your spellbook and replace one of those spells with an eligible spell of the same level from the book.",
+    "tag": "class:wizard",
+    "rank": 18,
+    "picks": [],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "class-wizard-spellcasting",
+    "name": "Spellcasting",
+    "feature_type": "trait",
+    "description": "As a student of arcane magic, you have learned to cast spells. See \"Spells\" for the rules on spellcasting. The information below details how you use those rules with Wizard spells, which appear in the Wizard spell list later in the class's description.\n\n**Cantrips.** You know three Wizard cantrips of your choice. *Light*, *Mage Hand*, and *Ray of Frost* are recommended. Whenever you finish a Long Rest, you can replace one of your cantrips from this feature with another Wizard cantrip of your choice.\n\nWhen you reach Wizard levels 4 and 10, you learn another Wizard cantrip of your choice, as shown in the Cantrips column of the Wizard Features table.\n\n**Spellbook.** Your wizardly apprenticeship culminated in the creation of a unique book: your spellbook. It is a Tiny object that weighs 3 pounds, contains 100 pages, and can be read only by you or someone casting *Identify*. You determine the book's appearance and materials, such as a gilt-edged tome or a collection of vellum bound with twine.\n\nThe book contains the level 1+ spells you know. It starts with six level 1 Wizard spells of your choice. *Detect Magic*, *Feather Fall*, *Mage Armor*, *Magic Missile*, *Sleep*, and *Thunderwave* are recommended.\n\nWhenever you gain a Wizard level after 1, add two Wizard spells of your choice to your spellbook. Each of these spells must be of a level for which you have spell slots, as shown in the Wizard Features table. The spells are the culmination of arcane research you do regularly.\n\n**Spell Slots.** The Wizard Features table shows how many spell slots you have to cast your level 1+ spells. You regain all expended slots when you finish a Long Rest.\n\n**Prepared Spells of Level 1+.** You prepare the list of level 1+ spells that are available for you to cast with this feature. To do so, choose four spells from your spellbook. The chosen spells must be of a level for which you have spell slots.\n\nThe number of spells on your list increases as you gain Wizard levels, as shown in the Prepared Spells column of the Wizard Features table. Whenever that number increases, choose additional Wizard spells until the number of spells on your list matches the number in the table. The chosen spells must be of a level for which you have spell slots. For example, if you're a level 3 Wizard, your list of prepared spells can include six spells of levels 1 and 2 in any combination, chosen from your spellbook.\n\nIf another Wizard feature gives you spells that you always have prepared, those spells don't count against the number of spells you can prepare with this feature, but those spells otherwise count as Wizard spells for you.\n\n**Changing Your Prepared Spells.** Whenever you finish a Long Rest, you can change your list of prepared spells, replacing any of the spells there with spells from your spellbook.\n\n**Spellcasting Ability.** Intelligence is your spellcasting ability for your Wizard spells.\n\n**Spellcasting Focus.** You can use an Arcane Focus or your spellbook as a Spellcasting Focus for your Wizard spells.\n\n> ### Expanding and Replacing a Spellbook\n\n> The spells you add to your spellbook as you gain levels reflect your ongoing magical research, but you might find other spells during your adventures that you can add to the book. You could discover a Wizard spell on a *Spell Scroll*, for example, and then copy it into your spellbook.\n\n>**Copying a Spell into the Book.** When you find a level 1+ Wizard spell, you can copy it into your spellbook if it's of a level you can prepare and if you have time to copy it. For each level of the spell, the transcription takes 2 hours and costs 50 GP. Afterward you can prepare the spell like the other spells in your spellbook.\n\n> **Copying the Book.** You can copy a spell from your spellbook into another book. This is like copying a new spell into your spellbook but faster, since you already know how to cast the spell. You need spend only 1 hour and 10 GP for each level of the copied spell.\n\n> If you lose your spellbook, you can use the same procedure to transcribe the Wizard spells that you have prepared into a new spellbook. Filling out the remainder of the new book requires you to find new spells to do so. For this reason, many wizards keep a backup spellbook.",
+    "tag": "class:wizard",
+    "rank": 1,
+    "picks": [],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "class-wizard-wizard-spell-list",
+    "name": "Wizard Spell List",
+    "feature_type": "trait",
+    "description": "This section presents the Wizard spell list. The spells are organized by spell level and then alphabetized, and each spell's school of magic is listed. In the Special column, *C* means the spell requires Concentration, *R* means it's a Ritual, and *M* means it requires a specific Material component.\n\nTable: Cantrips (Level 0 Wizard Spells)\n\n|Spell|School|Special|\n|---|---|---|\n|Acid Splash|Evocation|\u2014|\n|Chill Touch|Necromancy|\u2014|\n|Dancing Lights|Illusion|C|\n|Elementalism|Transmutation|\u2014|\n|Fire Bolt|Evocation|\u2014|\n|Light|Evocation|\u2014|\n|Mage Hand|Conjuration|\u2014|\n|Mending|Transmutation|\u2014|\n|Message|Transmutation|\u2014|\n|Minor Illusion|Illusion|\u2014|\n|Poison Spray|Necromancy|\u2014|\n|Prestidigitation|Transmutation|\u2014|\n|Ray of Frost|Evocation|\u2014|\n|Shocking Grasp|Evocation|\u2014|\n|True Strike|Divination|\u2014|\n\nTable: Level 1 Wizard Spells\n\n|Spell|School|Special|\n|---|---|---|\n|Alarm|Abjuration|R|\n|Burning Hands|Evocation|\u2014|\n|Charm Person|Enchantment|\u2014|\n|Chromatic Orb|Evocation|M|\n|Color Spray|Illusion|\u2014|\n|Comprehend Languages|Divination|R|\n|Detect Magic|Divination|C, R|\n|Disguise Self|Illusion|\u2014|\n|Expeditious Retreat|Transmutation|C|\n|False Life|Necromancy|\u2013|\n|Feather Fall|Transmutation|\u2014|\n|Find Familiar|Conjuration|R, M|\n|Floating Disk|Conjuration|R|\n|Fog Cloud|Conjuration|C|\n|Grease|Conjuration|\u2014|\n|Hideous Laughter|Enchantment|C|\n|Ice Knife|Conjuration|\u2014|\n|Identify|Divination|R, M|\n|Illusory Script|Illusion|R, M|\n|Jump|Transmutation|\u2014|\n|Longstrider|Transmutation|\u2014|\n|Mage Armor|Abjuration|\u2014|\n|Magic Missile|Evocation|\u2014|\n|Protection from Evil and Good|Abjuration|C, M|\n|Ray of Sickness|Necromancy|\u2014|\n|Shield|Abjuration|\u2014|\n|Silent Image|Illusion|C|\n|Sleep|Enchantment|C|\n|Thunderwave|Evocation|\u2014|\n|Unseen Servant|Conjuration|R|\n\nTable: Level 2 Wizard Spells\n\n|Spell|School|Special|\n|---|---|---|\n|Acid Arrow|Evocation|\u2014|\n|Alter Self|Transmutation|C|\n|Arcane Lock|Abjuration|M|\n|Arcanist's Magic Aura|Illusion|\u2014|\n|Augury|Divination|R, M|\n|Blindness/Deafness|Transmutation|\u2014|\n|Blur|Illusion|C|\n|Continual Flame|Evocation|M|\n|Darkness|Evocation|C|\n|Darkvision|Transmutation|\u2014|\n|Detect Thoughts|Divination|C|\n|Dragon's Breath|Transmutation|C|\n|Enhance Ability|Transmutation|C|\n|Enlarge/Reduce|Transmutation|C|\n|Flaming Sphere|Evocation|C|\n|Gentle Repose|Necromancy|R, M|\n|Gust of Wind|Evocation|C|\n|Hold Person|Enchantment|C|\n|Invisibility|Illusion|C|\n|Knock|Transmutation|\u2014|\n|Levitate|Transmutation|C|\n|Locate Object|Divination|C|\n|Magic Mouth|Illusion|R, M|\n|Magic Weapon|Transmutation|\u2014|\n|Mind Spike|Divination|C|\n|Mirror Image|Illusion|\u2014|\n|Misty Step|Conjuration|\u2014|\n|Ray of Enfeeblement|Necromancy|C|\n|Rope Trick|Transmutation|\u2014|\n|Scorching Ray|Evocation|\u2014|\n|See Invisibility|Divination|\u2014|\n|Shatter|Evocation|\u2014|\n|Spider Climb|Transmutation|C|\n|Suggestion|Enchantment|C|\n|Web|Conjuration|C|\n\nTable: Level 3 Wizard Spells\n\n|Spell|School|Special|\n|---|---|---|\n|Animate Dead|Necromancy|\u2014|\n|Bestow Curse|Necromancy|C|\n|Blink|Transmutation|\u2014|\n|Clairvoyance|Divination|C, M|\n|Counterspell|Abjuration|\u2014|\n|Dispel Magic|Abjuration|\u2014|\n|Fear|Illusion|C|\n|Fireball|Evocation|\u2014|\n|Fly|Transmutation|C|\n|Gaseous Form|Transmutation|C|\n|Glyph of Warding|Abjuration|M|\n|Haste|Transmutation|C|\n|Hypnotic Pattern|Illusion|C|\n|Lightning Bolt|Evocation|\u2014|\n|Magic Circle|Abjuration|M|\n|Major Image|Illusion|C|\n|Nondetection|Abjuration|M|\n|Phantom Steed|Illusion|R|\n|Protection from Energy|Abjuration|C|\n|Remove Curse|Abjuration|\u2014|\n|Sending|Divination|\u2014|\n|Sleet Storm|Conjuration|C|\n|Slow|Transmutation|C|\n|Speak with Dead|Necromancy|\u2014|\n|Stinking Cloud|Conjuration|C|\n|Tiny Hut|Evocation|R|\n|Tongues|Divination|\u2014|\n|Vampiric Touch|Necromancy|C|\n|Water Breathing|Transmutation|R|\n\nTable: Level 4 Wizard Spells\n\n|Spell|School|Special|\n|---|---|---|\n|Arcane Eye|Divination|C|\n|Banishment|Abjuration|C|\n|Black Tentacles|Conjuration|C|\n|Blight|Necromancy|\u2014|\n|Charm Monster|Enchantment|\u2014|\n|Confusion|Enchantment|C|\n|Conjure Minor Elementals|Conjuration|C|\n|Control Water|Transmutation|C|\n|Dimension Door|Conjuration|\u2014|\n|Divination|Divination|R, M|\n|Fabricate|Transmutation|\u2014|\n|Faithful Hound|Conjuration|\u2014|\n|Fire Shield|Evocation|\u2014|\n|Greater Invisibility|Illusion|C|\n|Hallucinatory Terrain|Illusion|\u2014|\n|Ice Storm|Evocation|\u2014|\n|Locate Creature|Divination|C|\n|Phantasmal Killer|Illusion|C|\n|Polymorph|Transmutation|C|\n|Private Sanctum|Abjuration|\u2014|\n|Resilient Sphere|Abjuration|C|\n|Secret Chest|Conjuration|M|\n|Stone Shape|Transmutation|\u2014|\n|Stoneskin|Transmutation|C, M|\n|Vitriolic Sphere|Evocation|\u2014|\n|Wall of Fire|Evocation|C|\n\nTable: Level 5 Wizard Spells\n\n|Spell|School|Special|\n|---|---|---|\n|Animate Objects|Transmutation|C|\n|Arcane Hand|Evocation|C|\n|Cloudkill|Conjuration|C|\n|Cone of Cold|Evocation|\u2014|\n|Conjure Elemental|Conjuration|C|\n|Contact Other Plane|Divination|R|\n|Creation|Illusion|\u2014|\n|Dominate Person|Enchantment|C|\n|Dream|Illusion|\u2014|\n|Geas|Enchantment|\u2014|\n|Hold Monster|Enchantment|C|\n|Legend Lore|Divination|M|\n|Mislead|Illusion|C|\n|Modify Memory|Enchantment|C|\n|Passwall|Transmutation|\u2014|\n|Planar Binding|Abjuration|M|\n|Scrying|Divination|C, M|\n|Seeming|Illusion|\u2014|\n|Summon Dragon|Conjuration|C, M|\n|Telekinesis|Transmutation|C|\n|Telepathic Bond|Divination|R|\n|Teleportation Circle|Conjuration|M|\n|Wall of Force|Evocation|C|\n|Wall of Stone|Evocation|C|\n\nTable: Level 6 Wizard Spells\n\n|Spell|School|Special|\n|---|---|---|\n|Chain Lightning|Evocation|\u2014|\n|Circle of Death|Necromancy|M|\n|Contingency|Abjuration|M|\n|Create Undead|Necromancy|M|\n|Disintegrate|Transmutation|\u2014|\n|Eyebite|Necromancy|C|\n|Flesh to Stone|Transmutation|C|\n|Freezing Sphere|Evocation|\u2014|\n|Globe of Invulnerability|Abjuration|C|\n|Guards and Wards|Abjuration|M|\n|Instant Summons|Conjuration|R, M|\n|Irresistible Dance|Enchantment|C|\n|Magic Jar|Necromancy|M|\n|Mass Suggestion|Enchantment|\u2014|\n|Move Earth|Transmutation|C|\n|Programmed Illusion|Illusion|M|\n|Sunbeam|Evocation|C|\n|True Seeing|Divination|M|\n|Wall of Ice|Evocation|C|\n\nTable: Level 7 Wizard Spells\n\n|Spell|School|Special|\n|---|---|---|\n|Arcane Sword|Evocation|C, M|\n|Delayed Blast Fireball|Evocation|C|\n|Etherealness|Conjuration|\u2014|\n|Finger of Death|Necromancy|\u2014|\n|Forcecage|Evocation|C, M|\n|Magnificent Mansion|Conjuration|M|\n|Mirage Arcane|Illusion|\u2014|\n|Plane Shift|Conjuration|M|\n|Prismatic Spray|Evocation|\u2014|\n|Project Image|Illusion|C, M|\n|Reverse Gravity|Transmutation|C|\n|Sequester|Transmutation|M|\n|Simulacrum|Illusion|M|\n|Symbol|Abjuration|M|\n|Teleport|Conjuration|\u2014|\n\nTable: Level 8 Wizard Spells\n\n|Spell|School|Special|\n|---|---|---|\n|Antimagic Field|Abjuration|C|\n|Antipathy/Sympathy|Enchantment|\u2014|\n|Befuddlement|Enchantment|\u2014|\n|Clone|Necromancy|M|\n|Control Weather|Transmutation|C|\n|Demiplane|Conjuration|\u2014|\n|Dominate Monster|Enchantment|C|\n|Incendiary Cloud|Conjuration|C|\n|Maze|Conjuration|C|\n|Mind Blank|Abjuration|\u2014|\n|Power Word Stun|Enchantment|\u2014|\n|Sunburst|Evocation|\u2014|\n\nTable: Level 9 Wizard Spells\n\n|Spell|School|Special|\n|---|---|---|\n|Astral Projection|Necromancy|M|\n|Foresight|Divination|\u2014|\n|Gate|Conjuration|C, M|\n|Imprisonment|Abjuration|M|\n|Meteor Swarm|Evocation|\u2014|\n|Power Word Kill|Enchantment|\u2014|\n|Prismatic Wall|Abjuration|\u2014|\n|Shapechange|Transmutation|C, M|\n|Time Stop|Transmutation|\u2014|\n|True Polymorph|Transmutation|C|\n|Weird|Illusion|C|\n|Wish|Conjuration|\u2014|",
+    "tag": "class:wizard",
+    "rank": 1,
+    "picks": [],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "class-wizard-armor-training",
+    "name": "Weapon Training",
+    "feature_type": "trait",
+    "description": "You gain proficiency with simple weapons.",
+    "tag": "class:wizard",
+    "rank": 1,
+    "armor_training": [],
+    "weapon_training": [
+      "simple"
+    ],
+    "tool_training": []
+  },
+  {
+    "type": "template",
+    "id": "wizard",
+    "kind": "class",
+    "name": "Wizard",
+    "icon": "staff",
+    "order": 11,
+    "description": "A scholar of magic who prepares spells from a spellbook. Hit Point Die: d6. Saving Throw Proficiencies: Intelligence, Wisdom.",
+    "stats": {
+      "hp": 5,
+      "attack_bonus": 1
+    },
+    "skill_picks": [
+      {
+        "id": "class_skills",
+        "count": 2,
+        "table": "skills_wizard",
+        "max_level": 2
+      }
+    ],
+    "features": [
+      "class-wizard-armor-training",
+      "class-wizard-arcane-recovery",
+      "class-wizard-ritual-adept",
+      "class-wizard-spellcasting",
+      "class-wizard-wizard-spell-list"
+    ],
+    "grant": {
+      "items": [
+        "Dagger",
+        "Dagger",
+        "Arcane Focus",
+        "Robe",
+        "Spellbook",
+        "Scholar's Pack"
+      ],
+      "equip": [],
+      "silver": 50,
+      "options": [
+        {
+          "id": "a",
+          "label": "A: class kit",
+          "items": [
+            "Dagger",
+            "Dagger",
+            "Arcane Focus",
+            "Robe",
+            "Spellbook",
+            "Scholar's Pack"
+          ],
+          "equip": [],
+          "silver": 50
+        },
+        {
+          "id": "b",
+          "label": "B: 55 GP",
+          "silver": 550
+        }
+      ]
+    },
+    "names": "names",
+    "counters": {
+      "hit_dice": 1,
+      "arcane_recovery": 1,
+      "slot_1": 2,
+      "cantrip_picks": 3,
+      "spell_picks": 6
+    }
+  }
+]

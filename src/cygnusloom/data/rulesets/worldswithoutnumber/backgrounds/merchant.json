@@ -1,0 +1,35 @@
+[
+  {
+    "type": "template",
+    "id": "merchant",
+    "icon": "coin",
+    "kind": "background",
+    "name": "Merchant",
+    "description": "You bought low, sold high, and learned which promises are worth a handshake. You can judge a cargo, a customer, and a road's likely troubles.",
+    "skills": {
+      "trade": 1
+    },
+    "skill_picks": [
+      {
+        "id": "background_learning",
+        "count": 2,
+        "table": "learning_merchant",
+        "exclude": [
+          "any_skill"
+        ]
+      }
+    ],
+    "learning": [
+      "administer",
+      "sail",
+      "know",
+      "trade",
+      "convince",
+      "ride",
+      "connect",
+      "notice"
+    ],
+    "names": "names",
+    "order": 7
+  }
+]

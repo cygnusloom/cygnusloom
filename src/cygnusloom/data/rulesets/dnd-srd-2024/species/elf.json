@@ -1,0 +1,299 @@
+[
+  {
+    "type": "feature",
+    "id": "species-elf-size",
+    "name": "Elf: Size",
+    "feature_type": "trait",
+    "description": "Medium (about 5\u20136 feet tall)",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "species-elf-speed",
+    "name": "Elf: Speed",
+    "feature_type": "trait",
+    "description": "30 feet",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "species-elf-darkvision",
+    "name": "Elf: Darkvision",
+    "feature_type": "trait",
+    "description": "You have Darkvision with a range of 60 feet.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "species-elf-elven-lineage",
+    "name": "Elf: Elven Lineage",
+    "feature_type": "trait",
+    "description": "You are part of a lineage that grants you supernatural abilities. Choose a lineage from the Elven Lineages table. You gain the level 1 benefit of that lineage.\n\nWhen you reach character levels 3 and 5, you learn a higher-level spell, as shown on the table. You always have that spell prepared. You can cast it once without a spell slot, and you regain the ability to cast it in that way when you finish a Long Rest. You can also cast the spell using any spell slots you have of the appropriate level.\n\nTable: Elven Lineages\n\n|Lineage|Level 1|Level 3|Level 5|\n|---|---|---|---|\n|Drow|The range of your Darkvision increases to 120 feet. You also know the Dancing Lights cantrip.|Faerie Fire|Darkness|\n|High Elf|You know the Prestidigitation cantrip. Whenever you finish a Long Rest, you can replace that cantrip with a different cantrip from the Wizard spell list.|Detect Magic|Misty Step|\n|Wood Elf|Your Speed increases to 35 feet. You also know the Druidcraft cantrip.|Longstrider|Pass without Trace|\n\nIntelligence, Wisdom, or Charisma is your spellcasting ability for the spells you cast with this trait (choose the ability when you select the lineage).",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "species-elf-fey-ancestry",
+    "name": "Elf: Fey Ancestry",
+    "feature_type": "trait",
+    "description": "You have Advantage on saving throws you make to avoid or end the Charmed condition.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "species-elf-keen-senses",
+    "name": "Elf: Keen Senses",
+    "feature_type": "trait",
+    "description": "You have proficiency in the Insight, Perception, or Survival skill.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 0,
+    "picks": [
+      {
+        "id": "skill",
+        "kind": "skill",
+        "label": "Skill",
+        "choices": [
+          "insight",
+          "perception",
+          "survival"
+        ],
+        "grant": "proficiency"
+      }
+    ],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "species-elf-trance",
+    "name": "Elf: Trance",
+    "feature_type": "trait",
+    "description": "You don't need to sleep, and magic can't put you to sleep. You can finish a Long Rest in 4 hours if you spend those hours in a trancelike meditation, during which you retain consciousness.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 0,
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "lineage-elf-drow",
+    "name": "Elf: Drow Lineage",
+    "feature_type": "trait",
+    "description": "The range of your Darkvision increases to 120 feet. You know the Dancing Lights cantrip. At level 3 you learn Faerie Fire, and at level 5 you learn Darkness; each is always prepared and can be cast once without a spell slot per Long Rest.",
+    "tag": "lineage-elf",
+    "rank": 0,
+    "picks": [
+      {
+        "id": "ability",
+        "kind": "stat",
+        "label": "Spellcasting ability",
+        "choices": [
+          "int",
+          "wis",
+          "cha"
+        ]
+      }
+    ],
+    "learn_spells": [
+      "spell-dancing-lights"
+    ],
+    "always_prepared": true,
+    "free_cast": true
+  },
+  {
+    "type": "feature",
+    "id": "lineage-elf-high-elf",
+    "name": "Elf: High Elf Lineage",
+    "feature_type": "trait",
+    "description": "You know the Prestidigitation cantrip, and you can replace it with another Wizard cantrip whenever you finish a Long Rest. At level 3 you learn Detect Magic, and at level 5 you learn Misty Step; each is always prepared and can be cast once without a spell slot per Long Rest.",
+    "tag": "lineage-elf",
+    "rank": 0,
+    "picks": [
+      {
+        "id": "ability",
+        "kind": "stat",
+        "label": "Spellcasting ability",
+        "choices": [
+          "int",
+          "wis",
+          "cha"
+        ]
+      }
+    ],
+    "learn_spells": [
+      "spell-prestidigitation"
+    ],
+    "always_prepared": true,
+    "free_cast": true
+  },
+  {
+    "type": "feature",
+    "id": "lineage-elf-wood-elf",
+    "name": "Elf: Wood Elf Lineage",
+    "feature_type": "trait",
+    "description": "Your Speed increases to 35 feet. You know the Druidcraft cantrip. At level 3 you learn Longstrider, and at level 5 you learn Pass without Trace; each is always prepared and can be cast once without a spell slot per Long Rest.",
+    "tag": "lineage-elf",
+    "rank": 0,
+    "picks": [
+      {
+        "id": "ability",
+        "kind": "stat",
+        "label": "Spellcasting ability",
+        "choices": [
+          "int",
+          "wis",
+          "cha"
+        ]
+      }
+    ],
+    "learn_spells": [
+      "spell-druidcraft"
+    ],
+    "always_prepared": true,
+    "free_cast": true
+  },
+  {
+    "type": "feature",
+    "id": "lineage-elf-drow-spell-3-spell-faerie-fire",
+    "name": "Elf: Drow Lineage - Faerie Fire",
+    "feature_type": "trait",
+    "description": "You always have Faerie Fire prepared. You can cast it once without a spell slot, regaining that use on a Long Rest.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 3,
+    "requires_feature": "lineage-elf-drow",
+    "learn_spells": [
+      "spell-faerie-fire"
+    ],
+    "always_prepared": true,
+    "free_cast": true
+  },
+  {
+    "type": "feature",
+    "id": "lineage-elf-drow-spell-5-spell-darkness",
+    "name": "Elf: Drow Lineage - Darkness",
+    "feature_type": "trait",
+    "description": "You always have Darkness prepared. You can cast it once without a spell slot, regaining that use on a Long Rest.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 5,
+    "requires_feature": "lineage-elf-drow",
+    "learn_spells": [
+      "spell-darkness"
+    ],
+    "always_prepared": true,
+    "free_cast": true
+  },
+  {
+    "type": "feature",
+    "id": "lineage-elf-high-elf-spell-3-spell-detect-magic",
+    "name": "Elf: High Elf Lineage - Detect Magic",
+    "feature_type": "trait",
+    "description": "You always have Detect Magic prepared. You can cast it once without a spell slot, regaining that use on a Long Rest.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 3,
+    "requires_feature": "lineage-elf-high-elf",
+    "learn_spells": [
+      "spell-detect-magic"
+    ],
+    "always_prepared": true,
+    "free_cast": true
+  },
+  {
+    "type": "feature",
+    "id": "lineage-elf-high-elf-spell-5-spell-misty-step",
+    "name": "Elf: High Elf Lineage - Misty Step",
+    "feature_type": "trait",
+    "description": "You always have Misty Step prepared. You can cast it once without a spell slot, regaining that use on a Long Rest.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 5,
+    "requires_feature": "lineage-elf-high-elf",
+    "learn_spells": [
+      "spell-misty-step"
+    ],
+    "always_prepared": true,
+    "free_cast": true
+  },
+  {
+    "type": "feature",
+    "id": "lineage-elf-wood-elf-spell-3-spell-longstrider",
+    "name": "Elf: Wood Elf Lineage - Longstrider",
+    "feature_type": "trait",
+    "description": "You always have Longstrider prepared. You can cast it once without a spell slot, regaining that use on a Long Rest.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 3,
+    "requires_feature": "lineage-elf-wood-elf",
+    "learn_spells": [
+      "spell-longstrider"
+    ],
+    "always_prepared": true,
+    "free_cast": true
+  },
+  {
+    "type": "feature",
+    "id": "lineage-elf-wood-elf-spell-5-spell-pass-without-trace",
+    "name": "Elf: Wood Elf Lineage - Pass without Trace",
+    "feature_type": "trait",
+    "description": "You always have Pass without Trace prepared. You can cast it once without a spell slot, regaining that use on a Long Rest.",
+    "tag": "species",
+    "rank": 0,
+    "min_level": 5,
+    "requires_feature": "lineage-elf-wood-elf",
+    "learn_spells": [
+      "spell-pass-without-trace"
+    ],
+    "always_prepared": true,
+    "free_cast": true
+  },
+  {
+    "type": "template",
+    "id": "elf",
+    "kind": "species",
+    "name": "Elf",
+    "icon": "tree",
+    "order": 2,
+    "description": "Elf. Medium (about 5\u20136 feet tall). Speed 30 feet. Size. Speed. Darkvision. Elven Lineage. Fey Ancestry. Keen Senses. Trance.",
+    "features": [
+      "species-elf-size",
+      "species-elf-speed",
+      "species-elf-darkvision",
+      "species-elf-elven-lineage",
+      "species-elf-fey-ancestry",
+      "species-elf-keen-senses",
+      "species-elf-trance",
+      "lineage-elf-drow-spell-3-spell-faerie-fire",
+      "lineage-elf-drow-spell-5-spell-darkness",
+      "lineage-elf-high-elf-spell-3-spell-detect-magic",
+      "lineage-elf-high-elf-spell-5-spell-misty-step",
+      "lineage-elf-wood-elf-spell-3-spell-longstrider",
+      "lineage-elf-wood-elf-spell-5-spell-pass-without-trace"
+    ],
+    "feat_picks": [
+      {
+        "id": "lineage",
+        "count": 1,
+        "tag": "lineage-elf",
+        "feature_type": "trait",
+        "max_rank": 0
+      }
+    ]
+  }
+]

@@ -1,0 +1,35 @@
+[
+  {
+    "type": "template",
+    "id": "sailor",
+    "icon": "boat",
+    "kind": "background",
+    "name": "Sailor",
+    "description": "You worked a deck through weather and bad luck, learning ropes, currents, and the tempers of a crew. You can handle a boat and read the sky over open water.",
+    "skills": {
+      "sail": 1
+    },
+    "skill_picks": [
+      {
+        "id": "background_learning",
+        "count": 2,
+        "table": "learning_sailor",
+        "exclude": [
+          "any_skill"
+        ]
+      }
+    ],
+    "learning": [
+      "punch",
+      "trade",
+      "connect",
+      "exert",
+      "notice",
+      "survive",
+      "craft",
+      "sail"
+    ],
+    "names": "names",
+    "order": 14
+  }
+]

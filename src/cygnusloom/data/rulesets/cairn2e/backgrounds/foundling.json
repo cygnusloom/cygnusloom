@@ -1,0 +1,23 @@
+[
+  {
+    "type": "template",
+    "id": "foundling",
+    "icon": "backpack",
+    "kind": "background",
+    "name": "Foundling",
+    "description": "An odd birthmark, a strange smell: somehow, the touch of elsewhere still lingers. Wherever you are, you have trouble fitting in. Roll on the Omens table (even if you\u2019re not the youngest player), but keep the results private for now.",
+    "features": [
+      "torch",
+      "salt-pouch",
+      "heirloom-amulet",
+      "sling",
+      "dagger"
+    ],
+    "tables": [
+      "foundling-who-took-you-in",
+      "foundling-what-keeps-bad-tidings-at-bay"
+    ],
+    "names": "foundling-names",
+    "order": 7
+  }
+]

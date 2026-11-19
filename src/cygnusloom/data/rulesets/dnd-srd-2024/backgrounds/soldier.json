@@ -1,0 +1,91 @@
+[
+  {
+    "type": "feature",
+    "id": "background-asi-soldier",
+    "name": "Soldier: Ability Scores",
+    "feature_type": "trait",
+    "description": "Increase one of these abilities by 2 and another by 1, or each of them by 1: Strength, Dexterity, Constitution.",
+    "tag": "background",
+    "rank": 0,
+    "tool_training": [
+      "Gaming Set"
+    ],
+    "picks": [
+      {
+        "id": "scores",
+        "kind": "stat",
+        "label": "Abilities",
+        "grant": "score",
+        "amount": 1,
+        "count": 3,
+        "max_value": 20,
+        "choices": [
+          "str",
+          "dex",
+          "con"
+        ],
+        "patterns": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            1
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "type": "template",
+    "id": "soldier",
+    "kind": "background",
+    "name": "Soldier",
+    "icon": "sword",
+    "order": 3,
+    "description": "Soldier. Tool proficiency: Gaming Set. Equipment: *Choose A or B:* (A) Spear, Shortbow, 20 Arrows, Gaming Set (same as above), Healer's Kit, Quiver, Traveler's Clothes, 14 GP; or (B) 50 GP",
+    "skills": {
+      "athletics": 1,
+      "intimidation": 1
+    },
+    "features": [
+      "background-asi-soldier",
+      "feat-savage-attacker"
+    ],
+    "grant": {
+      "items": [
+        "Spear",
+        "Shortbow",
+        "Arrows (20)",
+        "Gaming Set, Dice",
+        "Healer's Kit",
+        "Quiver",
+        "Clothes, Traveler's"
+      ],
+      "silver": 140,
+      "options": [
+        {
+          "id": "a",
+          "label": "A: background kit",
+          "items": [
+            "Spear",
+            "Shortbow",
+            "Arrows (20)",
+            "Gaming Set, Dice",
+            "Healer's Kit",
+            "Quiver",
+            "Clothes, Traveler's"
+          ],
+          "silver": 140
+        },
+        {
+          "id": "b",
+          "label": "B: 50 GP",
+          "silver": 500
+        }
+      ]
+    }
+  }
+]

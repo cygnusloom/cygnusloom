@@ -1,0 +1,35 @@
+[
+  {
+    "type": "template",
+    "id": "hunter",
+    "icon": "bow",
+    "kind": "background",
+    "name": "Hunter",
+    "description": "You spent your days tracking game and your nights reading the sounds of the dark. You know how to wait, where to aim, and when to leave a kill behind.",
+    "skills": {
+      "shoot": 1
+    },
+    "skill_picks": [
+      {
+        "id": "background_learning",
+        "count": 2,
+        "table": "learning_hunter",
+        "exclude": [
+          "any_skill"
+        ]
+      }
+    ],
+    "learning": [
+      "ride",
+      "survive",
+      "shoot",
+      "stab",
+      "notice",
+      "craft",
+      "exert",
+      "sneak"
+    ],
+    "names": "names",
+    "order": 5
+  }
+]

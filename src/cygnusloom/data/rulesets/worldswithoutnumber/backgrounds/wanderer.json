@@ -1,0 +1,35 @@
+[
+  {
+    "type": "template",
+    "id": "wanderer",
+    "icon": "boots",
+    "kind": "background",
+    "name": "Wanderer",
+    "description": "You never stayed anywhere long enough to put down roots, moving from road to road and town to town. You know how to travel light, find shelter, and read a new place quickly.",
+    "skills": {
+      "survive": 1
+    },
+    "skill_picks": [
+      {
+        "id": "background_learning",
+        "count": 2,
+        "table": "learning_wanderer",
+        "exclude": [
+          "any_skill"
+        ]
+      }
+    ],
+    "learning": [
+      "notice",
+      "trade",
+      "ride",
+      "sneak",
+      "exert",
+      "connect",
+      "craft",
+      "survive"
+    ],
+    "names": "names",
+    "order": 19
+  }
+]

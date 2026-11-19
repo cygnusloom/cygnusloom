@@ -1,0 +1,34 @@
+[
+  {
+    "type": "template",
+    "id": "artisan",
+    "icon": "anvil",
+    "kind": "background",
+    "name": "Artisan",
+    "description": "You trained at a bench, forge, or loom, turning raw material into goods that other people need. Your hands know tools, and your eye knows good work from bad.",
+    "skills": {
+      "craft": 1
+    },
+    "skill_picks": [
+      {
+        "id": "background_learning",
+        "count": 2,
+        "table": "learning_artisan",
+        "exclude": [
+          "any_skill"
+        ]
+      }
+    ],
+    "learning": [
+      "connect",
+      "convince",
+      "craft",
+      "exert",
+      "know",
+      "notice",
+      "trade"
+    ],
+    "names": "names",
+    "order": 0
+  }
+]

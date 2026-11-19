@@ -601,6 +601,9 @@ class Template:
     choice_key: str = ""
     # Items, money, and equipment handed over at creation, such as a starting equipment kit.
     grant: TemplateGrant = field(default_factory=TemplateGrant)
+    # Where this template sits among templates of its kind, lowest first. Ties break by id, so
+    # the order is part of the entry itself and never of the file layout.
+    order: int = 0
 
 
 @dataclass(frozen=True)
@@ -831,6 +834,12 @@ def build_character(
             icon_entries=template_icon_entries or {},
         ),
     )
+    # A template's place among its kind comes from its own `order` and id, never from the file
+    # it was read from, so the same entries give the same form in any data layout.
+    templates = {
+        ident: item
+        for ident, item in sorted(templates.items(), key=lambda pair: (pair[1].order, pair[0]))
+    }
     _check_stat_links(stats, skills, counter_ids, template)
     _check_derived_skill_picks(stats, templates, fields, template)
     kinds = {item.kind for item in templates.values()}
@@ -2645,6 +2654,9 @@ def _template(
     choice_key = data.get("choice_key", definition.id)
     if not isinstance(choice_key, str) or not choice_key.strip():
         raise ContentError(f"{label}: 'choice_key' must be non-empty text")
+    order = data.get("order", 0)
+    if not isinstance(order, int) or isinstance(order, bool):
+        raise ContentError(f"{label}: 'order' must be a whole number")
     return Template(
         id=definition.id,
         kind=kind,
@@ -2667,6 +2679,7 @@ def _template(
         template_requirements=_template_requirements(data.get("template_requirements", []), label),
         choice_key=choice_key,
         grant=_template_grant(data.get("grant"), label),
+        order=order,
     )
 
 

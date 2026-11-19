@@ -1,0 +1,30 @@
+[
+  {
+    "type": "template",
+    "id": "pkg_adventuring_peasant",
+    "icon": "kit-levy",
+    "kind": "kit",
+    "name": "Village Levy",
+    "description": "A villager called out to fight: a war shirt and a large shield, a light spear and a dagger, and a bundle of food and fire for the march.",
+    "grant": {
+      "items": [
+        "War Shirt",
+        "Large Shield",
+        "Light Spear",
+        "Dagger",
+        "Backpack",
+        "Rations, One Week",
+        "Waterskin",
+        "Tinder Box",
+        "Torch",
+        "Torch"
+      ],
+      "equip": [
+        "War Shirt",
+        "Large Shield"
+      ]
+    },
+    "names": "names",
+    "order": 4
+  }
+]

@@ -1,0 +1,64 @@
+[
+  {
+    "type": "feature",
+    "id": "subclass-college-of-lore-bonus-proficiencies",
+    "name": "Bonus Proficiencies",
+    "feature_type": "trait",
+    "description": "You gain proficiency with three skills of your choice.",
+    "tag": "subclass:college-of-lore",
+    "rank": 3,
+    "picks": [
+      {
+        "id": "skills",
+        "kind": "skill",
+        "label": "Skills",
+        "grant": "proficiency",
+        "count": 3
+      }
+    ],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "subclass-college-of-lore-cutting-words",
+    "name": "Cutting Words",
+    "feature_type": "trait",
+    "description": "You learn to use your wit to supernaturally distract, confuse, and otherwise sap the confidence and competence of others. When a creature that you can see within 60 feet of yourself makes a damage roll or succeeds on an ability check or attack roll, you can take a Reaction to expend one use of your Bardic Inspiration; roll your Bardic Inspiration die, and subtract the number rolled from the creature's roll, reducing the damage or potentially turning the success into a failure.",
+    "tag": "subclass:college-of-lore",
+    "rank": 3,
+    "picks": [],
+    "resource_counter": "bardic_inspiration",
+    "turn_resource": "reaction"
+  },
+  {
+    "type": "feature",
+    "id": "subclass-college-of-lore-magical-discoveries",
+    "name": "Magical Discoveries",
+    "feature_type": "trait",
+    "description": "You learn two spells of your choice. These spells can come from the Cleric, Druid, or Wizard spell list or any combination thereof (see a class's section for its spell list). A spell you choose must be a cantrip or a spell for which you have spell slots, as shown in the Bard Features table.\n\nYou always have the chosen spells prepared, and whenever you gain a Bard level, you can replace one of the spells with another spell that meets these requirements.",
+    "tag": "subclass:college-of-lore",
+    "rank": 6,
+    "picks": [],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "subclass-college-of-lore-peerless-skill",
+    "name": "Peerless Skill",
+    "feature_type": "trait",
+    "description": "When you make an ability check or attack roll and fail, you can expend one use of Bardic Inspiration; roll the Bardic Inspiration die, and add the number rolled to the d20, potentially turning a failure into a success. On a failure, the Bardic Inspiration isn't expended.",
+    "tag": "subclass:college-of-lore",
+    "rank": 14,
+    "picks": [],
+    "turn_resource": ""
+  },
+  {
+    "type": "feature",
+    "id": "subclass-college-of-lore",
+    "name": "College of Lore",
+    "feature_type": "trait",
+    "description": "The College of Lore path for a Bard. Its features are gained as the class advances.",
+    "tag": "subclass",
+    "rank": 3
+  }
+]
