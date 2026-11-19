@@ -636,6 +636,7 @@ def _feature_choice_views(spec: CharacterSpec) -> list[dict[str, Any]]:
         {
             "id": feature.id,
             "name": feature.name,
+            "description": feature.description,
             "picks": [dict(pick) for pick in feature_choice_views(spec, feature)],
         }
         for feature in spec.features.values()

@@ -165,12 +165,19 @@
     "rank": 1,
     "picks": [
       {
+        "id": "list",
+        "kind": "option",
+        "label": "Spell list",
+        "table": "spell_lists"
+      },
+      {
         "id": "cantrips",
         "kind": "spell",
         "label": "Cantrips",
         "grant": "learn",
         "count": 2,
-        "max_rank": 0
+        "max_rank": 0,
+        "groups_from": "list"
       },
       {
         "id": "spell",
@@ -178,7 +185,9 @@
         "label": "Level 1 spell",
         "grant": "learn",
         "count": 1,
-        "max_rank": 1
+        "min_rank": 1,
+        "max_rank": 1,
+        "groups_from": "list"
       },
       {
         "id": "ability",

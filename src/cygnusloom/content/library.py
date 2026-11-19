@@ -3834,6 +3834,7 @@ CHARACTER_DEFINITION_KEYS: Mapping[str, frozenset[str]] = {
             "standard",
             "hidden",
             "sheet_hidden",
+            "description",
         }
     ),
     "skill": frozenset({"type", "id", "name", "description", "icon", "looks_like"}),
@@ -3878,6 +3879,7 @@ CHARACTER_DEFINITION_KEYS: Mapping[str, frozenset[str]] = {
             "armor_category",
             "weapon_category",
             "weapon_properties",
+            "groups",
             "rules",
             "tag",
             "rank",

@@ -220,6 +220,8 @@ class Stat:
     # A statblock-only score, such as a monster's printed save, that a character sheet leaves
     # out.
     sheet_hidden: bool = False
+    # What the score is used for, shown beside it where a feature asks the player to choose one.
+    description: str = ""
 
     def modifier(self, score: int) -> int:
         """The modifier a score gives: the modifier of the highest band it reaches, or the score
@@ -281,7 +283,17 @@ class FeaturePick:
     # For a feature pick, the feature type and tags its options must match.
     feature_type: str = ""
     tags: tuple[str, ...] = ()
-    max_rank: int = 0
+    # The ranks a feature or spell option may have. A `max_rank` of None allows any rank, and
+    # `min_rank` of 0 includes cantrips.
+    min_rank: int = 0
+    max_rank: int | None = None
+    # Groups an option feature must belong to, such as a spell's class lists. Empty means
+    # options of any group.
+    groups: tuple[str, ...] = ()
+    # Another pick on the same feature whose chosen values name the groups this pick offers.
+    groups_from: str = ""
+    # For an `option` pick, the table its fixed choices come from.
+    table: str = ""
     # An ability-score allocation with more than one valid shape, such as +2/+1 or
     # +1/+1/+1. The player picks one index; the values are read in order.
     patterns: tuple[tuple[int, ...], ...] = ()
@@ -377,6 +389,10 @@ class Feature:
     mastery: str = ""
     # The counter this feature spends when it is used, such as rage or wild_shape.
     resource_counter: str = ""
+    # Groups this feature belongs to, such as a spell's class lists or a weapon's simple/martial
+    # category and properties. A feature pick may offer only the groups it names, or the groups
+    # another pick chooses.
+    groups: tuple[str, ...] = ()
     # Armor categories this feature trains, such as "light", "medium", "heavy", or "shield".
     armor_training: tuple[str, ...] = ()
     # Weapon training this feature grants: "simple", "martial", a category with a property
@@ -797,6 +813,7 @@ def build_character(
                 )
     _check_fields(fields, tables, template)
     _check_pick_fields(templates, fields, tables, template)
+    _check_feature_pick_tables(features, tables, template)
     used_feature_types = {feature.feature_type for feature in features.values()}
     for item in fields.values():
         if item.knows is not None and item.knows not in used_feature_types:
@@ -908,6 +925,38 @@ def _each(definitions: list[Definition], kind: str, make: Any) -> dict[str, Any]
     return {d.id: make(d) for d in definitions if d.type == kind}
 
 
+def _check_feature_pick_tables(
+    features: Mapping[str, Feature],
+    tables: Mapping[str, tuple[TableOption, ...]],
+    template: str,
+) -> None:
+    """Check that an option pick names a table and that a dependent pick names a pick of the
+    same feature, so the form can offer only options the rules allow."""
+    for feature in features.values():
+        for pick in feature.picks:
+            label = f"{template}: feature {feature.id!r} pick {pick.id!r}"
+            if pick.kind == "option":
+                if not pick.table:
+                    raise ContentError(f"{label}: an option pick needs a 'table'")
+                if pick.table not in tables:
+                    raise ContentError(f"{label}: 'table' names no table ({pick.table!r})")
+                values = {option.value for option in tables[pick.table]}
+                unknown = [value for value in (*pick.choices, *pick.exclude) if value not in values]
+                if unknown:
+                    raise ContentError(
+                        f"{label}: {unknown[0]!r} is no option of the {pick.table!r} table"
+                    )
+            if not pick.groups_from:
+                continue
+            source = next((item for item in feature.picks if item.id == pick.groups_from), None)
+            if source is None:
+                raise ContentError(
+                    f"{label}: 'groups_from' names no pick of this feature ({pick.groups_from!r})"
+                )
+            if source.kind == "text":
+                raise ContentError(f"{label}: 'groups_from' cannot name a text pick")
+
+
 def _stat(definition: Definition, template: str) -> Stat:
     label = f"{template}: stat {definition.id}"
     name = required_text(definition.data, "name", label)
@@ -971,7 +1020,16 @@ def _stat(definition: Definition, template: str) -> Stat:
         minimum=minimum,
         hidden=_hidden(definition.data, label),
         sheet_hidden=_sheet_hidden(definition.data, label),
+        description=_stat_description(definition.data, label),
     )
+
+
+def _stat_description(data: Mapping[str, Any], label: str) -> str:
+    """What a stat's score is used for, beside its name in a feature's choices."""
+    description = data.get("description", "")
+    if not isinstance(description, str):
+        raise ContentError(f"{label}: 'description' must be text")
+    return description
 
 
 def _modifier_bands(value: object, label: str) -> tuple[tuple[int, int], ...]:
@@ -1229,6 +1287,7 @@ def _assigned_stat(
         plus_modifier_per_level=per_level,
         minimum=minimum,
         sheet_hidden=_sheet_hidden(definition.data, label),
+        description=_stat_description(definition.data, label),
     )
 
 
@@ -1420,6 +1479,7 @@ def load_feature(
     tag = data.get("tag", "")
     if not isinstance(tag, str):
         raise ContentError(f"{label}: 'tag' must be text")
+    groups = _text_list(data.get("groups", []), "groups", label)
     rank = data.get("rank", 0)
     if isinstance(rank, bool) or not isinstance(rank, int) or rank < 0:
         raise ContentError(f"{label}: 'rank' must be a whole number, 0 or more")
@@ -1517,6 +1577,7 @@ def load_feature(
         rules=rule_ids(data, label),
         tag=tag,
         rank=rank,
+        groups=groups,
         skill=skill,
         attributes=_stat_ids(data.get("attributes", []), "attributes", stats, label),
         shock=shock,
@@ -1580,9 +1641,10 @@ def _feature_picks(
             raise ContentError(f"{label}: each pick must be an object")
         pick_id = required_text(entry, "id", f"{label}: pick")
         kind = required_text(entry, "kind", f"{label}: pick {pick_id}")
-        if kind not in ("stat", "skill", "text", "feature", "spell"):
+        if kind not in ("stat", "skill", "text", "feature", "spell", "option"):
             raise ContentError(
-                f"{label}: pick {pick_id!r} kind must be stat, skill, text, feature, or spell"
+                f"{label}: pick {pick_id!r} kind must be stat, skill, text, feature, spell, or "
+                "option"
             )
         label_text = required_text(entry, "label", f"{label}: pick {pick_id}")
         choices = _text_list(entry.get("choices", []), "choices", f"{label}: pick {pick_id}")
@@ -1601,9 +1663,35 @@ def _feature_picks(
         if not isinstance(feature_type, str):
             raise ContentError(f"{label}: pick {pick_id!r} 'feature_type' must be text")
         tags = _text_list(entry.get("tags", []), "tags", f"{label}: pick {pick_id}")
-        max_rank = entry.get("max_rank", 0)
-        if isinstance(max_rank, bool) or not isinstance(max_rank, int) or max_rank < 0:
+        min_rank = entry.get("min_rank", 0)
+        if isinstance(min_rank, bool) or not isinstance(min_rank, int) or min_rank < 0:
+            raise ContentError(f"{label}: pick {pick_id!r} 'min_rank' must be 0 or more")
+        max_rank = entry.get("max_rank")
+        if max_rank is not None and (
+            isinstance(max_rank, bool) or not isinstance(max_rank, int) or max_rank < 0
+        ):
             raise ContentError(f"{label}: pick {pick_id!r} 'max_rank' must be 0 or more")
+        if max_rank is not None and min_rank > max_rank:
+            raise ContentError(f"{label}: pick {pick_id!r} 'min_rank' is above its 'max_rank'")
+        if (min_rank or max_rank is not None) and kind not in ("feature", "spell"):
+            raise ContentError(
+                f"{label}: pick {pick_id!r} 'min_rank' and 'max_rank' are only for feature and "
+                "spell picks"
+            )
+        groups = _text_list(entry.get("groups", []), "groups", f"{label}: pick {pick_id}")
+        groups_from = entry.get("groups_from", "")
+        if not isinstance(groups_from, str):
+            raise ContentError(f"{label}: pick {pick_id!r} 'groups_from' must be a pick id")
+        if (groups or groups_from) and kind not in ("feature", "spell"):
+            raise ContentError(
+                f"{label}: pick {pick_id!r} 'groups' and 'groups_from' are only for feature and "
+                "spell picks"
+            )
+        table = entry.get("table", "")
+        if not isinstance(table, str):
+            raise ContentError(f"{label}: pick {pick_id!r} 'table' must be a table id")
+        if table and kind != "option":
+            raise ContentError(f"{label}: pick {pick_id!r} 'table' needs kind 'option'")
         raw_patterns = entry.get("patterns", [])
         if not isinstance(raw_patterns, list):
             raise ContentError(f"{label}: pick {pick_id!r} 'patterns' must be a list")
@@ -1639,6 +1727,8 @@ def _feature_picks(
             raise ContentError(
                 f"{label}: pick {pick_id!r} 'grant' must be one of {', '.join(allowed_grants)}"
             )
+        if kind == "option" and grant:
+            raise ContentError(f"{label}: pick {pick_id!r} an option pick grants nothing")
         if grant in ("trained", "skill", "proficiency", "expertise") and kind != "skill":
             raise ContentError(f"{label}: pick {pick_id!r} can grant {grant} only to a skill")
         if grant in ("modifier", "score") and kind != "stat":
@@ -1680,7 +1770,11 @@ def _feature_picks(
                 amount=amount,
                 feature_type=feature_type,
                 tags=tags,
+                min_rank=min_rank,
                 max_rank=max_rank,
+                groups=groups,
+                groups_from=groups_from,
+                table=table,
                 patterns=tuple(patterns),
             )
         )
@@ -3371,6 +3465,8 @@ def _check_feature_choices(spec: CharacterSpec, submitted: Mapping[str, Any]) ->
                 )
         if pick.kind != "text" and len(set(values)) != len(values):
             raise CharacterError(f"{feature.name!r} chooses the same {pick.label.lower()} twice")
+        if pick.kind != "text":
+            check_feature_choice_groups(spec, feature, pick, values, given)
 
 
 def _check_field_values(spec: CharacterSpec, fields: Mapping[str, Any]) -> None:
@@ -3876,6 +3972,7 @@ def _feature_choice_values(
                 continue
             if not options:
                 raise CharacterError(f"{feature.name!r} has no {pick.label.lower()} to choose")
+            check_feature_choice_groups(spec, feature, pick, values, given)
             if len(values) < allowed and pick.kind == "skill":
                 # A rolled skill feature still needs a usable choice. Unlike a stat modifier,
                 # which the player or GM can pick later, a skill grant cannot be applied without
@@ -3926,6 +4023,8 @@ def _feature_choice_options(spec: CharacterSpec, pick: FeaturePick) -> tuple[str
         options = [stat.id for stat in spec.stats.values() if stat.derived is None]
     elif pick.kind == "skill":
         options = list(spec.skills)
+    elif pick.kind == "option":
+        options = [option.value for option in spec.tables.get(pick.table, ())]
     elif pick.kind in ("feature", "spell"):
         options = [
             feature.id
@@ -3933,7 +4032,9 @@ def _feature_choice_options(spec: CharacterSpec, pick: FeaturePick) -> tuple[str
             if (pick.kind != "spell" or feature.feature_type == "spell")
             and (not pick.feature_type or feature.feature_type == pick.feature_type)
             and (not pick.tags or feature.tag in pick.tags)
-            and (not pick.max_rank or feature.rank <= pick.max_rank)
+            and feature.rank >= pick.min_rank
+            and (pick.max_rank is None or feature.rank <= pick.max_rank)
+            and (not pick.groups or set(pick.groups) & set(feature.groups))
         ]
     else:
         return ()
@@ -3947,34 +4048,162 @@ def feature_choice_options(spec: CharacterSpec, pick: FeaturePick) -> tuple[str,
     return _feature_choice_options(spec, pick)
 
 
+def _feature_choice_source(feature: Feature, pick: FeaturePick) -> FeaturePick | None:
+    if not pick.groups_from:
+        return None
+    return next((item for item in feature.picks if item.id == pick.groups_from), None)
+
+
+def check_feature_choice_groups(
+    spec: CharacterSpec,
+    feature: Feature,
+    pick: FeaturePick,
+    values: Sequence[str],
+    given: Mapping[str, Sequence[str]],
+) -> None:
+    """Refuse an option outside the groups another pick of the same feature chose, such as a
+    Wizard spell for a Magic Initiate whose player chose the Cleric list."""
+    source = _feature_choice_source(feature, pick)
+    if source is None:
+        return
+    raw = given.get(f"{feature.id}:{source.id}", ())
+    chosen = {value for value in raw if isinstance(value, str)} if isinstance(raw, list) else set()
+    if not chosen:
+        if values:
+            raise CharacterError(f"{feature.name!r} needs its {source.label.lower()} chosen first")
+        return
+    for value in values:
+        option = spec.features.get(value)
+        if option is not None and not set(option.groups) & chosen:
+            raise CharacterError(
+                f"{option.name!r} is not on the chosen {source.label.lower()} for {feature.name!r}"
+            )
+
+
 def feature_choice_views(spec: CharacterSpec, feature: Feature) -> tuple[Mapping[str, Any], ...]:
-    """A feature's structured picks, with the names of the options each offers, for a form."""
+    """A feature's structured picks with a title and description for every option, so a form can
+    show what each choice does and offer only the choices the rule allows."""
     views: list[Mapping[str, Any]] = []
     for pick in feature.picks:
-        options = _feature_choice_options(spec, pick)
-        names = (
-            spec.stats
-            if pick.kind == "stat"
-            else spec.skills
-            if pick.kind == "skill"
-            else spec.features
-            if pick.kind in ("feature", "spell")
-            else {}
-        )
+        source = _feature_choice_source(feature, pick)
         views.append(
             {
                 "id": pick.id,
                 "kind": pick.kind,
                 "label": pick.label,
                 "count": pick.count,
-                "patterns": list(pick.patterns),
+                "empty": _choice_empty_label(pick),
+                "hint": _choice_hint(pick),
+                "groups_from": pick.groups_from,
+                "source_label": source.label if source is not None else "",
+                "source_hint": (
+                    f"Choose the {source.label.lower()} first; only its options are offered."
+                    if source is not None
+                    else ""
+                ),
+                "patterns": [
+                    {
+                        "value": str(index),
+                        "title": _pattern_title(pick, pattern),
+                        "detail": _pattern_detail(pick, pattern),
+                        "count": len(pattern),
+                    }
+                    for index, pattern in enumerate(pick.patterns)
+                ],
                 "options": [
-                    {"value": option, "title": names[option].name if option in names else option}
-                    for option in options
+                    _feature_choice_option_view(spec, pick, option)
+                    for option in _feature_choice_options(spec, pick)
                 ],
             }
         )
     return tuple(views)
+
+
+def _feature_choice_option_view(
+    spec: CharacterSpec, pick: FeaturePick, value: str
+) -> Mapping[str, Any]:
+    """One option a feature pick offers: what the player reads and the groups it belongs to."""
+    title = value
+    detail: str | None = None
+    icon = ""
+    rank = 0
+    groups: tuple[str, ...] = ()
+    if pick.kind == "stat" and value in spec.stats:
+        stat = spec.stats[value]
+        title = stat.name
+        detail = stat.description or None
+    elif pick.kind == "skill" and value in spec.skills:
+        skill = spec.skills[value]
+        title = skill.name
+        detail = skill.description or None
+        icon = skill.icon
+    elif pick.kind == "option":
+        option = next(
+            (item for item in spec.tables.get(pick.table, ()) if item.value == value), None
+        )
+        if option is not None:
+            title = option.name or option.description
+            detail = option.description if option.name is not None else None
+    elif value in spec.features:
+        feature = spec.features[value]
+        title = feature.name
+        detail = feature.description or None
+        icon = feature.icon or ""
+        rank = feature.rank
+        groups = feature.groups
+    if title == title.lower():
+        title = title[:1].upper() + title[1:]
+    return {
+        "value": value,
+        "title": title,
+        "detail": detail,
+        "icon": icon,
+        "rank": rank,
+        "groups": list(groups),
+    }
+
+
+def _choice_empty_label(pick: FeaturePick) -> str:
+    """The blank option in a pick's list, such as "Choose a cantrip" or "Choose cantrips"."""
+    label = pick.label.lower()
+    plural = label.endswith("s") and not label.endswith(("us", "ss", "is"))
+    article = "" if plural else ("an " if label[0] in "aeiou" else "a ")
+    return f"Choose {article}{label}"
+
+
+def _choice_hint(pick: FeaturePick) -> str:
+    """One line above a pick's options saying how many to choose."""
+    label = pick.label.lower()
+    if pick.patterns:
+        return f"Choose how the increases are split across the {label} below."
+    if pick.count > 1:
+        return f"Choose {pick.count} different {label}."
+    return f"Choose one {label}."
+
+
+def _pattern_title(pick: FeaturePick, amounts: tuple[int, ...]) -> str:
+    """A readable label for an ability-score pattern: "Each ability +1" or "One ability +2,
+    another +1" rather than a bare "1 / 1 / 1" or "2 / 1"."""
+    noun = pick.label.lower()
+    if noun.endswith("ies"):
+        noun = noun[:-3] + "y"
+    elif noun.endswith("s") and not noun.endswith("ss"):
+        noun = noun[:-1]
+    if len(set(amounts)) == 1 and len(amounts) > 1:
+        return f"Each {noun} +{amounts[0]}"
+    if len(amounts) == 1:
+        return f"One {noun} +{amounts[0]}"
+    if len(amounts) == 2:
+        return f"One {noun} +{amounts[0]}, another +{amounts[1]}"
+    parts = [f"+{amount}" for amount in amounts]
+    return f"One {noun} {', '.join(parts[:-1])}, another {parts[-1]}"
+
+
+def _pattern_detail(pick: FeaturePick, amounts: tuple[int, ...]) -> str:
+    return (
+        f"Choose {len(amounts)} different {pick.label.lower()} below; they are raised in this "
+        "order."
+    )
 
 
 def _grant_feature_pick(
