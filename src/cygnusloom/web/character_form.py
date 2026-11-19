@@ -95,6 +95,14 @@ def creation_view(spec: CharacterSpec, rolled: dict[str, int]) -> dict[str, Any]
             "skill_grants": dict(template.skills),
             "features": [granted.feature for granted in template.features],
             "grants": _template_grants(spec, template),
+            "grant_options": [
+                {
+                    "id": option.id,
+                    "label": option.label,
+                    "summary": _grant_summary(option.items, option.equip, option.silver),
+                }
+                for option in template.grant.options
+            ],
             "summary": " · ".join(_template_grants(spec, template)),
             "compatible_with": {
                 kind: list(template_ids) for kind, template_ids in template.compatible_with.items()
@@ -286,6 +294,16 @@ def submission_from_form(
                 continue
             raise InvalidInput(f"That {label.lower()} cannot be chosen with your other choices")
         templates[kind] = template_id
+    grant_choices: dict[str, str] = {}
+    for template_id in templates.values():
+        template = spec.templates.get(template_id)
+        if template is None or not template.grant.options:
+            continue
+        chosen = form_text(form, f"grant-{template_id}")
+        if chosen:
+            if chosen not in {option.id for option in template.grant.options}:
+                raise InvalidInput(f"Choose a starting kit for {template.name}")
+            grant_choices[template_id] = chosen
     fields = {}
     for field in spec.fields.values():
         if only_fields is not None and field.id not in only_fields:
@@ -361,6 +379,10 @@ def submission_from_form(
             ]
             if chosen:
                 feature_choices[f"{feature.id}:{pick.id}"] = chosen
+            if pick.patterns:
+                mode = form_text(form, f"feature-choice-{feature.id}-{pick.id}-mode")
+                if mode:
+                    feature_choices[f"{feature.id}:{pick.id}:pattern"] = [mode]
     submitted: dict[str, Any] = {"fields": fields}
     if stats:
         submitted["stats"] = stats
@@ -376,6 +398,8 @@ def submission_from_form(
         submitted["feature_repeats"] = feature_repeats
     if feature_choices:
         submitted["feature_choices"] = feature_choices
+    if grant_choices:
+        submitted["grant_choices"] = grant_choices
     progression = spec.skill_progression
     if progression is not None and progression.creation_replacements is not None:
         replacements: dict[str, list[str]] = {}
@@ -609,6 +633,14 @@ def _feature_choice_views(spec: CharacterSpec) -> list[dict[str, Any]]:
         for feature in spec.features.values()
         if feature.picks
     ]
+
+
+def _grant_summary(items: tuple[str, ...], equip: tuple[str, ...], silver: int) -> str:
+    """A starting kit in one line: what it carries and what it pays out."""
+    parts = [*equip, *items]
+    if silver:
+        parts.append(f"{silver // 10} GP" if silver % 10 == 0 else f"{silver / 10:g} GP")
+    return ", ".join(parts)
 
 
 def _template_grants(spec: CharacterSpec, template: Template) -> list[str]:

@@ -62,25 +62,46 @@ The live checks used a throwaway SQLite database, `CYGNUSLOOM_TEST_LOGIN=1`,
 - Generate correct Fighter/Monk saving-throw descriptions from SRD data.
 - Route first-level prepared casters to their spell/cantrip picks after creation.
 
-## Known gaps / next work
+## Closed in the SRD gap pass
 
-These are real SRD options that are not yet fully mechanical. They are documented so a
-later content pass can add them without re-discovering the gaps:
+These were previously listed as gaps and now have data, engine support, and tests:
 
-- Background ability scores offer three +1s; the SRD's +2/+1 mode is not selectable.
-- Origin feats are mostly prose. Magic Initiate does not yet choose cantrips, a level-1
-  spell, or a casting ability; Alert and Savage Attacker have no engine effect.
-- Starting equipment only grants the class A kit. The SRD's B/C gold alternatives and
-  background equipment packages are not offerable.
-- Species choices (Human Skillful/Versatile, Elf lineage, Dragonborn ancestry, and
-  similar) are text-only and do not grant skills, feats, cantrips, or resistances.
-- Versatile weapons always use their one-handed damage; there is no two-handed grip.
-- Conditions are recorded and shown but do not yet apply advantage/disadvantage or the
-  other numeric effects of blinded, frightened, poisoned, prone, restrained, and
+- Background ability scores offer the SRD's +2/+1 and +1/+1/+1 modes.
+- Backgrounds and classes offer their lettered equipment packages, including the 50 GP
+  background alternative and the class B/C gold options.
+- Origin feats: Magic Initiate chooses two cantrips, a level-1 spell, and its casting
+  ability and can cast that spell once without a slot per long rest; Alert adds the
+  proficiency bonus to Initiative; Savage Attacker rolls weapon damage dice twice.
+- Species: Human Skillful/Versatile, Dwarf toughness and poison resistance, Dragonborn
+  ancestry and damage resistance, Tiefling legacy and resistance, and the Elf, Gnome,
+  and Goliath lineage choices are structured creation choices.
+- Versatile weapons use their larger die in a two-handed grip.
+- Conditions apply their roll modes and numeric modifiers, including poisoned and
   exhaustion.
-- Armor training is not enforced, and the action/bonus-action/reaction split is
-  narrative rather than fully validated.
-- Weapon mastery, multiclassing, and some subclass-level 3 choices remain out of scope.
+- Armor categories and class armor training are enforced, including shields.
+- Turn resources expose Actions, Bonus Actions, and Reactions; attacks consume the
+  action budget, and spells spend their Action, Bonus Action, or Reaction while the
+  caster is taking a turn. A generic turn-resource tool covers other declared actions.
+- Class always-prepared spells appear as learned features and do not count against the
+  prepared limit; Circle of the Land spells are limited to the chosen land.
+- New class-feature choices at level-up are shown on the Advancement page and recorded
+  with the level, instead of being silently auto-filled.
+
+## Known limits / next work
+
+These remaining items are deliberate limits of the current model:
+
+- Weapon Mastery properties are recorded as class choices but do not yet change attack
+  resolution automatically.
+- Multiclassing is not supported.
+- Species lineage spells at levels 3 and 5 (Elf, Gnome, Tiefling) are described and the
+  level-1 resistance/choice is mechanical, but the later always-prepared spells are not
+  auto-learned. Goliath ancestry boons are recorded choices rather than automated
+  reactions.
+- Class features other than spells still spend turn resources through the generic
+  `use_turn_resource` tool rather than each feature declaring its own cost.
+- Some subclass level-3 choices beyond the generated Hunter/Evoker/Lore options remain
+  narrative.
 
 None of these block the core play loop: create a character, explore, start a fight,
 roll attacks and saves, cast spells, take damage, heal, rest, and level up.

@@ -630,6 +630,11 @@ class Encounter:
     # Attack actions the acting participant has used this turn. A statblock's multiattack is one
     # action, so its attacks per action all count here once.
     attacked: int = 0
+    # Actions, bonus actions, and reactions spent this turn. Reactions reset when a new round
+    # begins; the other two reset when the turn begins.
+    actions_used: int = 0
+    bonus_actions_used: int = 0
+    reactions_used: int = 0
     # The side each participant fights on, as given when they joined. Keys are name_key.
     sides: dict[str, str] = field(default_factory=dict)
     # Whether round one starts with each player character rolling initiative.
@@ -995,6 +1000,7 @@ def group_by_side(
 def _next_round(encounter: Encounter, state: CampaignState) -> None:
     encounter.up = 0
     encounter.round += 1
+    encounter.reactions_used = 0
     if encounter.side_initiative:
         # A side-initiative rule set fixes the order of the sides for the whole fight; only the
         # members of each side are kept together.

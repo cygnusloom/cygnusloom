@@ -96,9 +96,11 @@ from cygnusloom.services.events import (
     CharacterSaved,
     CheckMade,
     CurrencyChanged,
+    EncounterResourceUsed,
     ExecutionPrepared,
     ExecutionTaken,
     FeatureChoiceMade,
+    FeatureLearned,
     FeatureUsed,
     GrappleEnded,
     GrappleStarted,
@@ -705,6 +707,28 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 "shield_flat",
             }:
                 raise InvalidInput(f"{held.name} is not equippable armor or a shield")
+            if equipped:
+                armor_feature = next(
+                    (
+                        feature
+                        for feature in self.character.features.values()
+                        if same_item_name(feature.name, held.name)
+                    ),
+                    None,
+                )
+                category = armor_feature.armor_category if armor_feature is not None else ""
+                if category:
+                    trained = any(
+                        category in self.character.features[feature_id].armor_training
+                        or "all" in self.character.features[feature_id].armor_training
+                        for feature_id in found.features
+                        if feature_id in self.character.features
+                    )
+                    if not trained:
+                        raise InvalidInput(
+                            f"{found.name} is not trained with {category} armor and cannot "
+                            f"benefit from {held.name}"
+                        )
             if equipped and not held.ready:
                 raise InvalidInput(f"{held.name} is stowed; ready it before equipping it")
             is_shield = listed.armor_mode in {"shield", "shield_flat"}
@@ -2027,6 +2051,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
         force: bool = False,
         character: str = "",
         nonlethal: bool = False,
+        two_handed: bool = False,
         roll_mode: str = "normal",
     ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
@@ -2053,12 +2078,21 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 character=character,
                 cell_feet=self._cell_feet(),
                 nonlethal=nonlethal,
+                two_handed=two_handed,
                 roll_mode=roll_mode,
             )
 
-    def attack_dice(self, weapon: str, modifier: str = "") -> str:
+    def attack_dice(self, weapon: str, modifier: str = "", two_handed: bool = False) -> str:
         with session_scope(self.engine) as db:
-            return combat.attack_dice(db, self.campaign_id, weapon, self._rules(), modifier)
+            return combat.attack_dice(
+                db,
+                self.campaign_id,
+                weapon,
+                self._rules(),
+                modifier,
+                two_handed=two_handed,
+                spec=self.character,
+            )
 
     def player_attack_check(
         self,
@@ -2197,8 +2231,12 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
         self, name: str, feature: str, pick: str, choice: str
     ) -> dict[str, Any]:
         """Record a structured choice for a feature the character has, such as the attribute
-        for Developed Attribute. The choice is validated against the feature's pick."""
+        for Developed Attribute. The choice is validated against the feature's pick. A
+        `:pattern` suffix selects an ability-score allocation, and a feature or spell choice
+        learns the named definition."""
         spec = self.character
+        pattern_mode = pick.endswith(":pattern")
+        pick_id = pick.removesuffix(":pattern")
         found = next(
             (
                 item
@@ -2216,35 +2254,96 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 raise InvalidInput(f"there is no character named {name!r}")
             if character.features.get(found.id, 0) <= 0:
                 raise InvalidInput(f"{character.name} does not have {found.name}")
-            rule = next((item for item in found.picks if item.id == pick), None)
+            rule = next((item for item in found.picks if item.id == pick_id), None)
             if rule is None:
-                raise InvalidInput(f"{found.name} has no choice named {pick!r}")
+                raise InvalidInput(f"{found.name} has no choice named {pick_id!r}")
             choice = choice.strip()
             if not choice:
                 raise InvalidInput("a feature choice cannot be empty")
+            if pattern_mode:
+                if not rule.patterns:
+                    raise InvalidInput(f"{found.name} has no ability-score patterns")
+                try:
+                    mode = int(choice)
+                except ValueError:
+                    raise InvalidInput("an ability-score pattern must be a number") from None
+                if not 0 <= mode < len(rule.patterns):
+                    raise InvalidInput(f"there is no ability-score pattern {mode}")
+                record(
+                    db,
+                    self.campaign_id,
+                    FeatureChoiceMade(
+                        name=character.name,
+                        feature=found.id,
+                        pick=f"{pick_id}:pattern",
+                        choice=str(mode),
+                    ),
+                )
+                db.commit()
+                return {
+                    "character": character.name,
+                    "feature": found.id,
+                    "pick": f"{pick_id}:pattern",
+                    "choice": str(mode),
+                }
             if rule.kind == "stat" and choice not in spec.stats:
                 raise InvalidInput(f"{choice!r} is not an attribute")
             if rule.kind == "skill" and choice not in spec.skills:
                 raise InvalidInput(f"{choice!r} is not a skill")
+            if rule.kind in ("feature", "spell"):
+                target = spec.features.get(choice)
+                if target is None:
+                    raise InvalidInput(f"there is no feature named {choice!r}")
+                if rule.kind == "spell" and target.feature_type != "spell":
+                    raise InvalidInput(f"{target.name} is not a spell")
+                if rule.feature_type and target.feature_type != rule.feature_type:
+                    raise InvalidInput(f"{target.name} is not a {rule.feature_type}")
+                if rule.tags and target.tag not in rule.tags:
+                    raise InvalidInput(f"{target.name} is not one of {', '.join(rule.tags)}")
+                if rule.max_rank and target.rank > rule.max_rank:
+                    raise InvalidInput(f"{target.name} is above rank {rule.max_rank}")
             if rule.choices and choice not in rule.choices:
                 raise InvalidInput(f"{choice!r} is not one of {', '.join(rule.choices)}")
             if choice in rule.exclude:
                 raise InvalidInput(f"{choice!r} cannot be chosen for {found.name}")
-            key = f"{found.id}:{pick}"
+            key = f"{found.id}:{pick_id}"
             taken = character.feature_choices.get(key, [])
             allowed = rule.count * character.features.get(found.id, 0)
             if len(taken) >= allowed:
                 raise InvalidInput(f"{found.name} has no {rule.label} choice left")
             if rule.kind != "text" and choice in taken:
                 raise InvalidInput(f"{choice!r} is already chosen for {found.name}")
-            skill = choice if rule.grant == "trained" else ""
+            skill = choice if rule.grant in ("trained", "proficiency", "expertise") else ""
             skill_amount = 0
             if rule.grant == "skill":
                 skill = choice
                 skill_amount = rule.amount
+            elif rule.grant in ("proficiency", "expertise"):
+                current = character.skills.get(choice, 0)
+                proficiency = int(character.stats.get("attack_bonus", 2))
+                target = proficiency * (2 if rule.grant == "expertise" else 1)
+                skill_amount = max(0, target - current)
             stat = ""
             stat_amount = 0
             stat_raises: dict[str, int] = {}
+            if rule.kind in ("feature", "spell"):
+                record(
+                    db,
+                    self.campaign_id,
+                    FeatureLearned(
+                        name=character.name,
+                        feature=choice,
+                        feature_name=spec.features[choice].name,
+                        cause=found.name,
+                    ),
+                )
+                db.commit()
+                return {
+                    "character": character.name,
+                    "feature": found.id,
+                    "pick": pick_id,
+                    "choice": choice,
+                }
             if rule.grant == "modifier":
                 bonus = spec.modifier(character.stats, choice) + character.stat_modifiers.get(
                     choice, 0
@@ -2257,15 +2356,20 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 stat = choice
             elif rule.grant == "score":
                 score = character.stats.get(choice, 0)
-                if rule.max_value and score + rule.amount > rule.max_value:
+                amount = rule.amount
+                if rule.patterns:
+                    stored_mode = int(character.feature_choices.get(f"{found.id}:{pick_id}:pattern", ["0"])[0])
+                    amounts = rule.patterns[stored_mode]
+                    amount = amounts[min(len(taken), len(amounts) - 1)]
+                if rule.max_value and score + amount > rule.max_value:
                     raise InvalidInput(
                         f"{character.name}'s {spec.stats[choice].name} is already at "
                         f"{rule.max_value}; {found.name} cannot raise it further"
                     )
                 stat = choice
-                stat_amount = rule.amount
+                stat_amount = amount
                 before = spec.modifier(character.stats, choice)
-                after = spec.modifier({**character.stats, choice: score + rule.amount}, choice)
+                after = spec.modifier({**character.stats, choice: score + amount}, choice)
                 delta = after - before
                 if delta:
                     level = character.counters.get("level", 1)
@@ -2280,7 +2384,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 FeatureChoiceMade(
                     name=character.name,
                     feature=found.id,
-                    pick=pick,
+                    pick=pick_id,
                     choice=choice,
                     skill=skill,
                     skill_amount=skill_amount,
@@ -2293,7 +2397,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
             return {
                 "character": character.name,
                 "feature": found.id,
-                "pick": pick,
+                "pick": pick_id,
                 "choice": choice,
             }
 
@@ -2432,6 +2536,58 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 "armor": load_state(db, self.campaign_id)
                 .characters[name_key(character.name)]
                 .armor,
+            }
+
+    def use_turn_resource(
+        self, name: str, resource: str, cause: str = ""
+    ) -> dict[str, Any]:
+        """Spend one of the encounter's turn resources for the acting character. Rule sets
+        without a configured budget do not expose this tool."""
+        rules = self._rules()
+        if resource not in ("action", "bonus_action", "reaction"):
+            raise InvalidInput("resource must be action, bonus_action, or reaction")
+        with session_scope(self.engine) as db:
+            state = load_state(db, self.campaign_id)
+            character = state.characters.get(name_key(name))
+            if character is None:
+                raise InvalidInput(f"there is no character named {name!r}")
+            encounter = state.encounter
+            if encounter is None:
+                raise InvalidInput("turn resources are only spent in an encounter")
+            if encounter.acting is None or name_key(encounter.acting) != name_key(character.name):
+                raise InvalidInput(f"it is not {character.name}'s turn")
+            limit = (
+                rules.actions_per_turn
+                if resource == "action"
+                else rules.bonus_actions_per_turn
+                if resource == "bonus_action"
+                else rules.reactions_per_round
+            )
+            used = (
+                encounter.actions_used
+                if resource == "action"
+                else encounter.bonus_actions_used
+                if resource == "bonus_action"
+                else encounter.reactions_used
+            )
+            if limit <= 0:
+                raise InvalidInput(f"this rule set does not track {resource.replace('_', ' ')}s")
+            if used >= limit:
+                raise InvalidInput(
+                    f"{character.name} has no {resource.replace('_', ' ')} left this "
+                    f"{'round' if resource == 'reaction' else 'turn'}"
+                )
+            record(
+                db,
+                self.campaign_id,
+                EncounterResourceUsed(name=character.name, resource=resource),
+            )
+            db.commit()
+            return {
+                "character": character.name,
+                "resource": resource,
+                "remaining": limit - used - 1,
+                "cause": cause or f"spending a {resource.replace('_', ' ')}",
             }
 
     def recalculate_defense(self, name: str) -> dict[str, Any]:

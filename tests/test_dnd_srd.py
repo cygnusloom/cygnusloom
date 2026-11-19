@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 from cygnusloom.rules import dnd_srd_2024
 from cygnusloom.services import level_up as level_up_service
 from cygnusloom.services.common import InvalidInput
+from cygnusloom.services.conditions import condition_roll_mode
 
 from .factories import (
     character_named,
@@ -74,6 +75,21 @@ def test_the_srd_rule_set_loads_with_its_content() -> None:
     assert floor is not None and floor.requires_no_armor and floor.requires_no_shield
 
 
+def test_class_starting_kits_offer_the_srd_lettered_packages() -> None:
+    rules = _dnd_rules()
+    fighter = [option.id for option in rules.character.templates["fighter"].grant.options]
+    assert fighter == ["a", "b", "c"]
+    gold_only = rules.character.templates["wizard"].grant.options[-1]
+    assert gold_only.id == "b"
+    assert gold_only.silver == 550
+    assert not gold_only.items
+    acolyte = rules.character.templates["acolyte"].grant.options
+    assert [option.id for option in acolyte] == ["a", "b"]
+    assert acolyte[0].silver == 80
+    assert acolyte[0].items.count("Parchment") == 1
+    assert acolyte[1].silver == 500
+
+
 def test_a_fighter_is_created_with_srd_hit_points_and_saves(
     app: FastAPI, client_factory: Callable[[], TestClient]
 ) -> None:
@@ -89,6 +105,83 @@ def test_a_fighter_is_created_with_srd_hit_points_and_saves(
     tools = tools_for(client.app, campaign_id, rule_set="dnd-srd-2024")
     sheet = tools.get_statblock("Rook")["statblock"]
     assert "Strength Save" not in sheet
+
+
+def test_a_character_keeps_the_starting_kit_pick_and_its_gold(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    client = signed_in_client(client_factory)
+    campaign_id = create_campaign_direct(
+        client, world_template="testhollow", rule_set="dnd-srd-2024"
+    )
+    create_character_direct(
+        client,
+        campaign_id,
+        name="Rook",
+        fields={**_fields(), "grant-fighter": "c"},
+    )
+    pc = character_named(app, campaign_id, "Rook")
+    assert pc.fields["grant:fighter"] == "c"
+    assert pc.features.get("silver", 0) >= 1550
+    tools = tools_for(client.app, campaign_id, rule_set="dnd-srd-2024")
+    assert "grant:fighter" not in tools.get_statblock("Rook")["statblock"]
+
+
+def test_a_dragonborn_chooses_an_ancestry_and_gains_its_resistance(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    client = signed_in_client(client_factory)
+    campaign_id = create_campaign_direct(
+        client, world_template="testhollow", rule_set="dnd-srd-2024"
+    )
+    fields = {
+        **_fields(),
+        "template-species": "dragonborn",
+        "pick-feature-dragonborn-ancestry-0": "lineage-dragonborn-black",
+    }
+    create_character_direct(client, campaign_id, name="Ash", fields=fields)
+    pc = character_named(app, campaign_id, "Ash")
+    assert "lineage-dragonborn-black" in pc.features
+    rules = _dnd_rules()
+    ancestry = rules.character.features["lineage-dragonborn-black"]
+    assert ancestry.resistances == ("acid",)
+    assert ancestry.damage_type == "acid"
+
+
+def test_a_tiefling_chooses_a_legacy_and_gains_its_resistance(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    client = signed_in_client(client_factory)
+    campaign_id = create_campaign_direct(
+        client, world_template="testhollow", rule_set="dnd-srd-2024"
+    )
+    fields = {
+        **_fields(),
+        "template-species": "tiefling",
+        "pick-feature-tiefling-lineage-0": "lineage-tiefling-infernal",
+    }
+    create_character_direct(client, campaign_id, name="Ember", fields=fields)
+    pc = character_named(app, campaign_id, "Ember")
+    assert "lineage-tiefling-infernal" in pc.features
+    assert _dnd_rules().character.features["lineage-tiefling-infernal"].resistances == ("fire",)
+
+
+def test_alert_adds_proficiency_and_savage_attacker_rerolls_weapon_dice(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    client = signed_in_client(client_factory)
+    campaign_id = create_campaign_direct(
+        client, world_template="testhollow", rule_set="dnd-srd-2024"
+    )
+    fields = {
+        **_fields(),
+        "pick-feature-versatile-0": "feat-alert",
+    }
+    create_character_direct(client, campaign_id, name="Rook", fields=fields)
+    pc = character_named(app, campaign_id, "Rook")
+    assert dnd_srd_2024._initiative_bonus(pc, {}) == 4  # Dexterity +2 and PB +2
+    rules = _dnd_rules()
+    assert rules.character.features["feat-savage-attacker"].weapon_damage_reroll is True
 
 
 def test_levelling_a_fighter_grants_hit_points_and_features(
@@ -247,6 +340,7 @@ def test_casting_spends_a_slot_and_cantrips_are_free(
         },
         "Wren",
     )
+    assert _dnd_rules().character.features["spell-magic-missile"].turn_resource == "action"
     result = dnd_srd_2024.cast_spell("Wren", "magic-missile", ctx)
     assert result["slot_level"] == 1
     assert result["slots_left"] == 1
@@ -320,6 +414,71 @@ def test_concentration_moves_to_the_new_spell(
     assert character_named(app, campaign_id, "Wren").marks["concentration"] == "spell-detect-magic"
     dnd_srd_2024.cast_spell("Wren", "fog-cloud", ctx)
     assert character_named(app, campaign_id, "Wren").marks["concentration"] == "spell-fog-cloud"
+
+
+def test_a_level_up_shows_and_records_new_class_feature_choices(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    client = signed_in_client(client_factory)
+    campaign_id = create_campaign_direct(
+        client, world_template="testhollow", rule_set="dnd-srd-2024"
+    )
+    fields = {
+        **_fields(),
+        "template-class": "ranger",
+        "pick-skill-class_skills-0": "perception",
+        "pick-skill-class_skills-1": "stealth",
+        "pick-skill-class_skills-2": "survival",
+    }
+    create_character_direct(client, campaign_id, name="Rook", fields=fields)
+    level_up_service.debug_grant(
+        client.app.state.engine,
+        campaign_id,
+        _dnd_rules(),
+        client.app.state.content.world_content("testhollow", "dnd-srd-2024"),
+        "xp",
+        "Rook",
+        300,
+    )
+    page = client.get(f"/campaigns/{campaign_id}/advancement").text
+    assert "feature-choice-class-ranger-deft-explorer-expertise-0" in page
+    level_up_service.apply_page(
+        client.app.state.engine,
+        campaign_id,
+        _dnd_rules(),
+        client.app.state.content.world_content("testhollow", "dnd-srd-2024"),
+        {"feature-choice-class-ranger-deft-explorer-expertise-0": "stealth"},
+        "Rook",
+    )
+    pc = character_named(app, campaign_id, "Rook")
+    assert pc.feature_choices["class-ranger-deft-explorer:expertise"] == ["stealth"]
+
+
+def test_magic_initiate_casts_its_spell_once_without_a_slot(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    client = signed_in_client(client_factory)
+    campaign_id = create_campaign_direct(
+        client, world_template="testhollow", rule_set="dnd-srd-2024"
+    )
+    fields = {
+        **_fields(),
+        "pick-feature-versatile-0": "feat-magic-initiate",
+        "feature-choice-feat-magic-initiate-cantrips-0": "spell-fire-bolt",
+        "feature-choice-feat-magic-initiate-cantrips-1": "spell-light",
+        "feature-choice-feat-magic-initiate-spell-0": "spell-detect-magic",
+        "feature-choice-feat-magic-initiate-ability-0": "int",
+    }
+    create_character_direct(client, campaign_id, name="Rook", fields=fields)
+    rules = _dnd_rules()
+    world = client.app.state.content.world_content("testhollow", "dnd-srd-2024")
+    ctx = level_up_service.tool_context(client.app.state.engine, campaign_id, rules, world)
+    result = dnd_srd_2024.cast_spell("Rook", "detect-magic", ctx)
+    assert result["slot_level"] is None
+    pc = character_named(app, campaign_id, "Rook")
+    assert pc.marks["magic_initiate_free"] == "spell-detect-magic"
+    with pytest.raises(InvalidInput, match="no spell slot"):
+        dnd_srd_2024.cast_spell("Rook", "detect-magic", ctx)
 
 
 def test_a_save_uses_the_dc_and_reports_the_total(
@@ -549,6 +708,114 @@ def _class_campaign(
     world = client.app.state.content.world_content("testhollow", "dnd-srd-2024")
     ctx = level_up_service.tool_context(client.app.state.engine, campaign_id, rules, world)
     return client, campaign_id, ctx
+
+
+def test_a_background_can_use_the_plus_two_plus_one_ability_mode(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    fields = {
+        key: value
+        for key, value in _fields().items()
+        if not key.startswith("feature-choice-background-asi-soldier-scores-")
+    }
+    fields.update(
+        {
+            "feature-choice-background-asi-soldier-scores-mode": "1",
+            "feature-choice-background-asi-soldier-scores-0": "str",
+            "feature-choice-background-asi-soldier-scores-1": "dex",
+        }
+    )
+    client = signed_in_client(client_factory)
+    campaign_id = create_campaign_direct(
+        client, world_template="testhollow", rule_set="dnd-srd-2024"
+    )
+    create_character_direct(client, campaign_id, name="Rook", fields=fields)
+    fighter = character_named(app, campaign_id, "Rook")
+    assert fighter.stats["str"] == 17  # 15 +2
+    assert fighter.stats["dex"] == 15  # 14 +1
+
+
+def test_human_skillful_and_versatile_grant_a_skill_and_an_origin_feat(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    fields = {
+        **_fields(),
+        "pick-skill-skillful-0": "arcana",
+        "pick-feature-versatile-0": "feat-magic-initiate",
+        "feature-choice-feat-magic-initiate-cantrips-0": "spell-fire-bolt",
+        "feature-choice-feat-magic-initiate-cantrips-1": "spell-guidance",
+        "feature-choice-feat-magic-initiate-spell-0": "spell-bless",
+        "feature-choice-feat-magic-initiate-ability-0": "int",
+    }
+    client = signed_in_client(client_factory)
+    campaign_id = create_campaign_direct(
+        client, world_template="testhollow", rule_set="dnd-srd-2024"
+    )
+    create_character_direct(client, campaign_id, name="Rook", fields=fields)
+    fighter = character_named(app, campaign_id, "Rook")
+    assert fighter.skills["arcana"] == 2  # Human Skillful
+    assert fighter.features["feat-magic-initiate"] == 1
+    assert fighter.features["spell-fire-bolt"] == 1
+    assert fighter.features["spell-guidance"] == 1
+    assert fighter.features["spell-bless"] == 1
+
+
+def test_dwarven_toughness_adds_hit_points_at_creation_and_level_up(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    fields = {**_fields(), "template-species": "dwarf"}
+    client = signed_in_client(client_factory)
+    campaign_id = create_campaign_direct(
+        client, world_template="testhollow", rule_set="dnd-srd-2024"
+    )
+    create_character_direct(client, campaign_id, name="Rook", fields=fields)
+    initial = character_named(app, campaign_id, "Rook")
+    rules = _dnd_rules()
+    world = client.app.state.content.world_content("testhollow", "dnd-srd-2024")
+    ctx = level_up_service.tool_context(client.app.state.engine, campaign_id, rules, world)
+    tools = tools_for(client.app, campaign_id, rule_set="dnd-srd-2024")
+    tools.adjust_counter("Rook", "xp", 300)
+    dnd_srd_2024.apply_level_up("Rook", ctx)
+    levelled = character_named(app, campaign_id, "Rook")
+    assert levelled.stats["hp"] >= initial.stats["hp"] + 9  # d10 average 6 + Con 2 + Toughness 1
+
+
+def test_a_druid_always_has_speak_with_animals_prepared(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    _client, _campaign_id, ctx = _class_campaign(client_factory, "Sela", _druid_fields())
+    result = dnd_srd_2024.cast_spell("Sela", "spell-speak-with-animals", ctx)
+    assert result["spell"] == "Speak with Animals"
+
+
+def test_armor_training_refuses_armor_a_class_cannot_wear(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    client, campaign_id, _ctx = _class_campaign(client_factory, "Wren", _wizard_fields())
+    tools = tools_for(client.app, campaign_id, rule_set="dnd-srd-2024")
+    tools.give_item("Wren", "Chain Mail")
+    with pytest.raises(InvalidInput, match="not trained"):
+        tools.equip_armor("Wren", "Chain Mail")
+
+
+def test_a_poisoned_character_has_disadvantage_on_attacks_and_checks(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    client, campaign_id, _ctx = _class_campaign(client_factory, "Rook", _fields())
+    tools = tools_for(client.app, campaign_id, rule_set="dnd-srd-2024")
+    tools.add_condition("Rook", "poisoned", "a test poison")
+    fighter = character_named(app, campaign_id, "Rook")
+    conditions = tools.conditions
+    assert condition_roll_mode(fighter, conditions, "attack") == "disadvantage"
+    assert condition_roll_mode(fighter, conditions, "check") == "disadvantage"
+
+
+def test_a_longsword_can_be_used_two_handed_for_versatile_damage(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    rules = _dnd_rules()
+    longsword = rules.character.features["weapon-longsword"]
+    assert longsword.versatile_damage == "1d10"
 
 
 def test_class_resources_are_spent_and_refilled_by_rests(

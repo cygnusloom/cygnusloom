@@ -293,6 +293,10 @@ def page_view(
         ctx = tool_context(engine, campaign_id, rule_set, world)
         if level_ready(state, pc, level_rules, rule_set.counters):
             summary = level_rules.summary(pc.name, ctx) if level_rules.summary else {}
+            summary = {
+                **summary,
+                "feature_choices": _new_feature_choice_views(rule_set, summary),
+            }
             grants = {
                 str(counter): int(points) for counter, points in summary.get("grants", {}).items()
             }
@@ -531,6 +535,26 @@ def option_views(
     return tuple(views)
 
 
+def _new_feature_choice_views(
+    rule_set: RuleSet, summary: Mapping[str, Any]
+) -> list[dict[str, Any]]:
+    """The choices the features a level grants ask for, so the player can answer them then."""
+    views: list[dict[str, Any]] = []
+    spec = rule_set.character
+    for feature_id in summary.get("features", ()):
+        feature = spec.features.get(str(feature_id))
+        if feature is None or not feature.picks:
+            continue
+        views.append(
+            {
+                "id": feature.id,
+                "name": feature.name,
+                "picks": [dict(choice) for choice in feature_choice_views(spec, feature)],
+            }
+        )
+    return views
+
+
 def _new_level(pc: Character, rule_set: RuleSet, summary: Mapping[str, Any] | None) -> int:
     """The character's level after the pending level-up, or their current level."""
     rules = next(iter(rule_set.level_ups.values()), None)
@@ -583,8 +607,12 @@ def _apply_level(
     # Check every pick against the pools the page's projection says the new level grants, then
     # apply that same plan once the level has added those pools.
     changes = _plan_picks(view, engine, campaign_id, rule_set, ctx, form)
+    for entry in (view.summary or {}).get("feature_choices", ()):
+        _check_feature_choices(rule_set.character, entry["id"], form)
     view.level_up.apply_level(view.character, ctx)
     _apply_changes(view, changes, ctx, form)
+    for entry in (view.summary or {}).get("feature_choices", ()):
+        _apply_feature_choices(view.character, entry["id"], ctx, form)
     # While the campaign follows the owner's level, a new character joins at the level the
     # owner's own character has reached.
     with session_scope(engine) as db:
@@ -815,6 +843,11 @@ def _submitted_feature_choices(feature: Any, pick: Any, form: Mapping[str, Any])
     ]
 
 
+def _submitted_pattern(feature: Any, pick: Any, form: Mapping[str, Any]) -> str:
+    """The chosen ability-score pattern index, if the pick has patterns."""
+    return str(form.get(f"feature-choice-{feature.id}-{pick.id}-mode", "") or "")
+
+
 def _check_feature_choices(spec: Any, feature_id: str, form: Mapping[str, Any]) -> None:
     """Validate a learned feature's structured choices before any change is recorded."""
     feature = spec.features.get(feature_id)
@@ -850,6 +883,11 @@ def _apply_feature_choices(
         if not values and pick.kind != "text":
             options = feature_choice_options(spec, pick)
             values = [options[0]] if options else []
+        pattern = _submitted_pattern(feature, pick, form)
+        if pattern:
+            ctx.world.choose_feature_choice(  # type: ignore[attr-defined]
+                character, feature_id, f"{pick.id}:pattern", pattern
+            )
         for value in values:
             ctx.world.choose_feature_choice(character, feature_id, pick.id, value)  # type: ignore[attr-defined]
 

@@ -162,6 +162,13 @@
       </fieldset>
       {% endif %}
     {% endfor %}
+    {% if view.summary and view.summary.feature_choices %}
+    <section class="creation-panel">
+      <h2>New feature choices</h2>
+      <p class="panel-hint">This level grants features that ask you to choose. Choose them now, or leave a skill or attribute blank to take the first legal option.</p>
+      {% with feature_choices=view.summary.feature_choices %}{% include "_feature_choice_fields.html" %}{% endwith %}
+    </section>
+    {% endif %}
     <p class="muted" data-pick-budget hidden></p>
     <p class="form-error" data-budget-error hidden></p>
     <button type="submit">{% if view.kind == "level" %}Level up to {{ view.summary.new_level }}{% else %}Spend picks{% endif %}</button>
@@ -170,6 +177,13 @@
   <form method="post" action="/campaigns/{{ campaign.id }}/advancement" class="advancement-form" data-busy-label="Applying level {{ view.summary.new_level }}…">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="character" value="{{ view.character }}">
+    {% if view.summary.feature_choices %}
+    <section class="creation-panel">
+      <h2>New feature choices</h2>
+      <p class="panel-hint">This level grants features that ask you to choose. Choose them now, or leave a skill or attribute blank to take the first legal option.</p>
+      {% with feature_choices=view.summary.feature_choices %}{% include "_feature_choice_fields.html" %}{% endwith %}
+    </section>
+    {% endif %}
     <button type="submit">Level up to {{ view.summary.new_level }}</button>
   </form>
   {% else %}

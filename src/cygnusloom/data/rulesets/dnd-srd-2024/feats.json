@@ -50,7 +50,8 @@
     "feature_type": "feat",
     "description": "You gain the following benefits.\n\nWhen you roll Initiative, you can add your Proficiency Bonus to the roll.\n\nImmediately after you roll Initiative, you can swap your Initiative with the Initiative of one willing ally in the same combat. You can't make this swap if you or the ally has the Incapacitated condition.",
     "tag": "origin",
-    "rank": 1
+    "rank": 1,
+    "initiative_proficient": true
   },
   {
     "type": "feature",
@@ -159,7 +160,35 @@
     "feature_type": "feat",
     "description": "You gain the following benefits.\n\nYou learn two cantrips of your choice from the Cleric, Druid, or Wizard spell list. Intelligence, Wisdom, or Charisma is your spellcasting ability for this feat's spells (choose when you select this feat).\n\nChoose a level 1 spell from the same list you selected for this feat's cantrips. You always have that spell prepared. You can cast it once without a spell slot, and you regain the ability to cast it in that way when you finish a Long Rest. You can also cast the spell using any spell slots you have.\n\nWhenever you gain a new level, you can replace one of the spells you chose for this feat with a different spell of the same level from the chosen spell list.\n\nYou can take this feat more than once, but you must choose a different spell list each time.",
     "tag": "origin",
-    "rank": 1
+    "rank": 1,
+    "picks": [
+      {
+        "id": "cantrips",
+        "kind": "spell",
+        "label": "Cantrips",
+        "grant": "learn",
+        "count": 2,
+        "max_rank": 0
+      },
+      {
+        "id": "spell",
+        "kind": "spell",
+        "label": "Level 1 spell",
+        "grant": "learn",
+        "count": 1,
+        "max_rank": 1
+      },
+      {
+        "id": "ability",
+        "kind": "stat",
+        "label": "Casting ability",
+        "choices": [
+          "int",
+          "wis",
+          "cha"
+        ]
+      }
+    ]
   },
   {
     "type": "feature",
@@ -168,7 +197,8 @@
     "feature_type": "feat",
     "description": "You've trained to deal particularly damaging strikes. Once per turn when you hit a target with a weapon, you can roll the weapon's damage dice twice and use either roll against the target.",
     "tag": "origin",
-    "rank": 1
+    "rank": 1,
+    "weapon_damage_reroll": true
   },
   {
     "type": "feature",

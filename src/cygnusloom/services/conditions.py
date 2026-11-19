@@ -10,7 +10,7 @@ from collections.abc import Mapping, Sequence
 from sqlmodel import Session
 
 from cygnusloom.content.character import CharacterSpec
-from cygnusloom.content.library import ALWAYS_CONDITION_END, CombatRules, ConditionRules
+from cygnusloom.content.library import ALWAYS_CONDITION_END, ALL_STATS, CombatRules, ConditionRules
 from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.events import (
     Character,
@@ -45,6 +45,35 @@ def active_conditions(
         if rules.derived is not None and derived_holds(character, rules)
     ]
     return stored + derived
+
+
+def condition_roll_mode(
+    character: Character, conditions: Mapping[str, ConditionRules] | None, kind: str
+) -> str:
+    """The advantage or disadvantage a character's conditions impose on one kind of roll.
+    Opposing sources cancel, as the d20 rules do."""
+    if not conditions:
+        return "normal"
+    modes = [
+        rules.roll_modes.get(kind) or rules.roll_modes.get("all", "")
+        for rules in active_conditions(character, conditions)
+    ]
+    modes = [mode for mode in modes if mode]
+    if "advantage" in modes and "disadvantage" in modes:
+        return "normal"
+    return "advantage" if "advantage" in modes else "disadvantage" if "disadvantage" in modes else "normal"
+
+
+def condition_modifier(
+    character: Character, conditions: Mapping[str, ConditionRules] | None, kind: str
+) -> int:
+    """What active conditions add to one kind of roll, such as a save or an attack."""
+    if not conditions:
+        return 0
+    return sum(
+        rules.modifies.get(kind, 0) + rules.modifies.get(ALL_STATS, 0)
+        for rules in active_conditions(character, conditions)
+    )
 
 
 def add_condition(

@@ -10,6 +10,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
@@ -18,6 +19,7 @@ from cygnusloom.db.models import Event
 from cygnusloom.rules import dnd_srd_2024
 from cygnusloom.services import encounters
 from cygnusloom.services import level_up as level_up_service
+from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.events import EncounterTurnEnded, load_state, record
 
 from .factories import (
@@ -47,6 +49,24 @@ FIGHTER_FIELDS = {
     "feature-choice-background-asi-soldier-scores-0": "str",
     "feature-choice-background-asi-soldier-scores-1": "dex",
     "feature-choice-background-asi-soldier-scores-2": "con",
+}
+
+WIZARD_FIELDS = {
+    "campaign-xp_rate": "Standard",
+    "stat-str": "8",
+    "stat-dex": "14",
+    "stat-con": "13",
+    "stat-int": "15",
+    "stat-wis": "12",
+    "stat-cha": "10",
+    "template-species": "elf",
+    "template-background": "sage",
+    "template-class": "wizard",
+    "pick-skill-class_skills-0": "investigation",
+    "pick-skill-class_skills-1": "insight",
+    "feature-choice-background-asi-sage-scores-0": "int",
+    "feature-choice-background-asi-sage-scores-1": "wis",
+    "feature-choice-background-asi-sage-scores-2": "con",
 }
 
 BARBARIAN_FIELDS = {
@@ -174,6 +194,20 @@ def test_a_natural_twenty_is_a_critical_hit_and_doubles_dice(
     assert result["raw"] > 7  # the second set of 2d6 dice is added
 
 
+def test_a_versatile_weapon_uses_its_larger_die_in_two_hands(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    client, campaign_id, ctx = _campaign(client_factory)
+    tools, _ = _fight(client, campaign_id)
+    dnd_srd_2024.roll_initiative(ctx)
+    tools.adjust_encounter_order(["Rook", "Foe"], current="Rook")
+    tools.give_item("Rook", "Longsword")
+    tools.ready_item("Rook", "Longsword")
+    assert tools.attack_dice("Longsword", two_handed=True) == "1d10"
+    result = tools.player_attack("Foe", "Longsword", attack_roll=10, damage_roll=5, two_handed=True)
+    assert result["target"] == "Foe"
+
+
 def test_spell_attacks_use_the_spell_attack_bonus(
     app: FastAPI, client_factory: Callable[[], TestClient]
 ) -> None:
@@ -211,6 +245,62 @@ def test_healing_and_stabilizing_recover_a_dying_character(
     assert state.characters["rook"].stable is False
 
 
+def test_dnd_turn_resources_include_actions_bonus_actions_and_reactions(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    client, campaign_id, ctx = _campaign(client_factory)
+    tools = tools_for(client.app, campaign_id, rule_set="dnd-srd-2024")
+    tools.create_location("Cave", "A low cave.")
+    tools.create_encounter_map("Cave Yard", "Cave", 12, 12, "Open stone.")
+    tools.start_encounter("Cave Yard")
+    tools.create_monster("Foe", "Cave", template="monster-ogre")
+    tools.add_participant("Rook")
+    tools.add_participant("Foe")
+    dnd_srd_2024.roll_initiative(ctx)
+    tools.adjust_encounter_order(["Rook", "Foe"], current="Rook")
+    state = _state(app, campaign_id)
+    assert state.encounter is not None
+    assert state.encounter.actions_used == 0
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert "Actions left" in page
+    assert "Bonus actions left" in page
+    assert "Reactions left" in page
+    spent = tools.use_turn_resource("Rook", "action", "Dodge")
+    assert spent["remaining"] == 0
+    assert _state(app, campaign_id).encounter.actions_used == 1
+    with pytest.raises(InvalidInput, match="no action left"):
+        tools.player_attack("Foe", "Greatsword")
+    with pytest.raises(InvalidInput, match="no action left"):
+        tools.use_turn_resource("Rook", "action", "again")
+    tools.use_turn_resource("Rook", "bonus_action", "Second Wind")
+    assert _state(app, campaign_id).encounter.bonus_actions_used == 1
+    tools.use_turn_resource("Rook", "reaction", "an opportunity attack")
+    assert _state(app, campaign_id).encounter.reactions_used == 1
+
+
+def test_casting_a_spell_spends_the_casters_action(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    client, campaign_id, ctx = _campaign(client_factory, name="Wren", fields=WIZARD_FIELDS)
+    tools = tools_for(client.app, campaign_id, rule_set="dnd-srd-2024")
+    tools.create_location("Cave", "A low cave.")
+    tools.create_encounter_map("Cave Yard", "Cave", 12, 12, "Open stone.")
+    tools.start_encounter("Cave Yard")
+    tools.create_monster("Foe", "Cave", template="monster-ogre")
+    tools.add_participant("Wren")
+    tools.add_participant("Foe")
+    dnd_srd_2024.roll_initiative(ctx)
+    tools.adjust_encounter_order(["Wren", "Foe"], current="Wren")
+    dnd_srd_2024.learn_spell("Wren", "magic-missile", ctx)
+    dnd_srd_2024.prepare_spells("Wren", ["magic-missile"], ctx)
+    result = dnd_srd_2024.cast_spell("Wren", "magic-missile", ctx)
+    assert result["slot_level"] == 1
+    encounter = _state(app, campaign_id).encounter
+    assert encounter is not None and encounter.actions_used == 1
+    with pytest.raises(InvalidInput, match="no action left"):
+        dnd_srd_2024.cast_spell("Wren", "magic-missile", ctx)
+
+
 def test_class_save_proficiencies_and_hazard_dc(
     app: FastAPI, client_factory: Callable[[], TestClient]
 ) -> None:
@@ -231,7 +321,8 @@ def test_class_save_proficiencies_and_hazard_dc(
     )
     assert hazard["results"][0]["save"]["bonus"] == 2
     assert hazard["results"][0]["save"]["dc"] == 10
-    assert hazard["results"][0]["damage"] >= 1
+    # A successful save halves 1d6, and 1 halved rounds down to 0.
+    assert 0 <= hazard["results"][0]["damage"] <= 6
 
 
 def test_the_bestiary_keeps_multiattack_skills_and_cr(

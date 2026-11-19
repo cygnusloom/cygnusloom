@@ -579,6 +579,11 @@
           "default": false,
           "description": "Strike to subdue rather than kill: a target brought down is unconscious, not dead. Only an unarmed attack or a club or staff may be nonlethal."
         },
+        "two_handed": {
+          "type": "boolean",
+          "default": false,
+          "description": "Use a Versatile weapon in two hands, rolling its larger damage die."
+        },
         "force": {
           "type": "boolean",
           "default": false,
@@ -615,6 +620,30 @@
         }
       },
       "required": ["name", "stat", "reason"]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "use_turn_resource",
+    "requires": ["combat"],
+    "description": "Spend one of the acting character's turn resources: an action, a bonus action, or a reaction. Use it for a declared action that another tool does not already spend, such as Dash, Help, Hide, Search, an object interaction, or a bonus-action feature. Attacks spend an action by themselves. Refuse quietly when the resource is gone unless the story forces an exception.",
+    "parameters": {
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The acting character."
+        },
+        "resource": {
+          "type": "string",
+          "enum": ["action", "bonus_action", "reaction"],
+          "description": "The resource being spent."
+        },
+        "cause": {
+          "type": "string",
+          "description": "What the resource is spent on."
+        }
+      },
+      "required": ["name", "resource"]
     }
   }
 ]

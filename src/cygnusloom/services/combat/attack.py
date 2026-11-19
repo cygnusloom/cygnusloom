@@ -38,7 +38,7 @@ from cygnusloom.services.combat.damage import (
 from cygnusloom.services.combat.initiative import _no_initiative_pending
 from cygnusloom.services.combat.save import _save
 from cygnusloom.services.common import InvalidInput
-from cygnusloom.services.conditions import active_conditions
+from cygnusloom.services.conditions import active_conditions, condition_roll_mode
 from cygnusloom.services.encounters import (
     _participant,
 )
@@ -260,6 +260,7 @@ def _strike(
     shock_ac: int = 0,
     no_shock: bool = False,
     nonlethal: bool = False,
+    damage_type: str = "",
     spec: CharacterSpec | None = None,
     hit_breakdown: dict[str, Any] | None = None,
     damage_breakdown: dict[str, Any] | None = None,
@@ -286,6 +287,14 @@ def _strike(
         )
     if target.save_due is not None:
         raise InvalidInput(f"{target.name} must make their {target.save_due} save first")
+    if damage_type and spec is not None:
+        resisted = any(
+            damage_type.casefold() in (feature.resistances or ())
+            for feature_id in target.features
+            if (feature := spec.features.get(feature_id)) is not None
+        )
+        if resisted:
+            raw = max(0, raw // 2)
     defense = 0 if ignores_armor else target.armor
     # Total defense also turns aside Shock until the character's next turn; the source grants
     # the immunity alongside the AC bonus. A thrown or ranged attack never inflicts Shock.
@@ -496,6 +505,7 @@ def attack(
     _living(source, combat)
     struck = _participant(state, target)
     _living(struck, combat)
+    roll_mode = _attack_roll_mode(source, struck, conditions, roll_mode)
     name = _attack_named(source, attack_name)
     distance = ranges.check_attack(
         state,
@@ -560,6 +570,15 @@ def attack(
     lucky = spec is not None and reactions.has_trigger(source, spec, None, "damage")
     damage_rolls, rolled = roll_values(dice, rng, plus=plus)
     if lucky:
+        second_rolls, second = roll_values(dice, rng, plus=plus)
+        if second > rolled:
+            damage_rolls, rolled = second_rolls, second
+    # Savage Attacker rolls the weapon's damage dice twice and keeps the better roll.
+    if spec is not None and any(
+        feature.weapon_damage_reroll
+        for feature_id in source.features
+        if (feature := spec.features.get(feature_id)) is not None
+    ):
         second_rolls, second = roll_values(dice, rng, plus=plus)
         if second > rolled:
             damage_rolls, rolled = second_rolls, second
@@ -873,6 +892,7 @@ def resolve_attacks(
     state = load_state(db, campaign_id)
     _no_initiative_pending(state)
     struck = _living(_participant(state, target), combat)
+    roll_mode = _altitude_attack_mode(struck, conditions, roll_mode)
     if not attacks:
         raise InvalidInput("list at least one attack")
     encounter = state.encounter
@@ -1062,12 +1082,25 @@ def _strike_each(
 
 
 def attack_dice(
-    db: Session, campaign_id: int, weapon: str, combat: CombatRules, modifier: str = ""
+    db: Session,
+    campaign_id: int,
+    weapon: str,
+    combat: CombatRules,
+    modifier: str = "",
+    two_handed: bool = False,
+    spec: CharacterSpec | None = None,
 ) -> str:
     """The dice a player character's attack with `weapon` rolls: the modifier's dice when one is
     named, else the weapon's own. The weapon must be carried, or be unarmed."""
     state = load_state(db, campaign_id)
-    return _attack_dice(_player_character(state), _weapon_name(weapon), modifier, combat)
+    return _attack_dice(
+        _player_character(state),
+        _weapon_name(weapon),
+        modifier,
+        combat,
+        two_handed=two_handed,
+        spec=spec,
+    )
 
 
 def player_attack(
@@ -1094,6 +1127,7 @@ def player_attack(
     character: str = "",
     cell_feet: int | None = None,
     nonlethal: bool = False,
+    two_handed: bool = False,
     roll_mode: str = "normal",
 ) -> dict[str, Any]:
     """A player character's hit. The engine rolls the damage unless the player's roll is passed as
@@ -1131,8 +1165,10 @@ def player_attack(
         force=force,
         character=character,
         cell_feet=cell_feet,
+        two_handed=two_handed,
     )
     state, pc, struck = prepared.state, prepared.pc, prepared.struck
+    roll_mode = _attack_roll_mode(pc, struck, conditions, roll_mode)
     damage_note = ""
     damage_rolls: list[int] = []
     if damage_roll is not None:
@@ -1232,6 +1268,7 @@ def player_attack(
         shock=shock,
         shock_ac=shock_ac,
         nonlethal=nonlethal,
+        damage_type=weapon_feature.damage_type if weapon_feature is not None else "",
         spec=spec,
         hit_breakdown=hit_breakdown,
         damage_breakdown=damage_breakdown,
@@ -1314,6 +1351,7 @@ def _prepare_player_attack(
     force: bool = False,
     character: str = "",
     cell_feet: int | None = None,
+    two_handed: bool = False,
 ) -> _PreparedAttack:
     """Every check `player_attack` makes before it rolls: the attacker may act now, carries the
     weapon, and can reach the target. Both the attack and its prompt check share it, so the
@@ -1336,7 +1374,7 @@ def _prepare_player_attack(
     struck = _participant(state, target)
     _living(struck, combat)
     name = _weapon_name(weapon)
-    dice = _attack_dice(pc, name, modifier, combat)
+    dice = _attack_dice(pc, name, modifier, combat, two_handed=two_handed, spec=spec)
     _require_impaired(struck, modifier_name(modifier), combat)
     bonuses = _player_bonuses(combat, pc, name, spec, weapon_feature)
     distance = ranges.check_attack(
@@ -1376,6 +1414,40 @@ def _prepare_player_attack(
         dual_penalty=dual_penalty,
         dual_damage=dual_damage,
     )
+
+
+def _attack_roll_mode(
+    source: Character,
+    target: Character,
+    conditions: Mapping[str, ConditionRules] | None,
+    requested: str,
+) -> str:
+    """Choose the attack's roll mode from any explicit request and the conditions on both
+    sides. An explicit advantage or disadvantage wins; otherwise the conditions decide."""
+    if requested != "normal":
+        return requested
+    modes = [
+        condition_roll_mode(source, conditions, "attack"),
+        condition_roll_mode(target, conditions, "attack_against"),
+    ]
+    if "advantage" in modes and "disadvantage" in modes:
+        return "normal"
+    return (
+        "advantage"
+        if "advantage" in modes
+        else "disadvantage"
+        if "disadvantage" in modes
+        else "normal"
+    )
+
+
+def _altitude_attack_mode(
+    target: Character, conditions: Mapping[str, ConditionRules] | None, requested: str
+) -> str:
+    """The target-side condition mode for a combined resolution where each attacker may differ."""
+    if requested != "normal":
+        return requested
+    return condition_roll_mode(target, conditions, "attack_against")
 
 
 def _condition_attack_modifier(
@@ -1456,6 +1528,15 @@ def _require_attack(
     if force:
         return
     encounter = state.encounter
+    if (
+        encounter is not None
+        and combat.actions_per_turn
+        and encounter.attacked == 0
+        and encounter.actions_used >= combat.actions_per_turn
+    ):
+        raise InvalidInput(
+            f"{actor.name} has no action left this turn; end the turn before attacking again"
+        )
     limit = combat.attacks_per_turn_for(actor)
     if encounter is None or encounter.attacked < limit:
         return
@@ -1506,7 +1587,15 @@ def _weapon_name(weapon: str) -> str:
     return name
 
 
-def _attack_dice(pc: Character, weapon: str, modifier: str, combat: CombatRules) -> str:
+def _attack_dice(
+    pc: Character,
+    weapon: str,
+    modifier: str,
+    combat: CombatRules,
+    *,
+    two_handed: bool = False,
+    spec: CharacterSpec | None = None,
+) -> str:
     held = next((item for item in pc.items if same_item_name(item.name, weapon)), None)
     if held is not None:
         if not held.damage:
@@ -1514,6 +1603,17 @@ def _attack_dice(pc: Character, weapon: str, modifier: str, combat: CombatRules)
         if not held.ready:
             raise InvalidInput(f"{held.name} is stowed; ready it with ready_item before attacking")
         weapon_dice = held.damage
+        if two_handed and spec is not None:
+            feature = next(
+                (
+                    entry
+                    for entry in spec.features.values()
+                    if same_item_name(entry.name, held.name) and entry.versatile_damage
+                ),
+                None,
+            )
+            if feature is not None:
+                weapon_dice = feature.versatile_damage
     elif name_key(weapon) in combat.unarmed_names:
         weapon_dice = combat.unarmed_damage
     else:

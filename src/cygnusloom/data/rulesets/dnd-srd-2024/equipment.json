@@ -72,10 +72,12 @@
     "tag": "",
     "rank": 0,
     "damage": "1d8",
+    "damage_type": "slashing",
     "attributes": [
       "str"
     ],
-    "size": "normal"
+    "size": "normal",
+    "versatile_damage": "1d10"
   },
   {
     "type": "feature",
@@ -86,6 +88,7 @@
     "tag": "",
     "rank": 0,
     "damage": "1d1",
+    "damage_type": "piercing",
     "attributes": [
       "dex"
     ],
@@ -104,6 +107,7 @@
     "tag": "",
     "rank": 0,
     "damage": "1d4",
+    "damage_type": "bludgeoning",
     "attributes": [
       "str"
     ],
@@ -118,6 +122,7 @@
     "tag": "",
     "rank": 0,
     "damage": "1d4",
+    "damage_type": "piercing",
     "attributes": [
       "str",
       "dex"
@@ -137,6 +142,7 @@
     "tag": "",
     "rank": 0,
     "damage": "1d4",
+    "damage_type": "piercing",
     "attributes": [
       "str",
       "dex"
@@ -156,6 +162,7 @@
     "tag": "",
     "rank": 0,
     "damage": "1d8",
+    "damage_type": "bludgeoning",
     "attributes": [
       "str"
     ],
@@ -170,6 +177,7 @@
     "tag": "",
     "rank": 0,
     "damage": "1d10",
+    "damage_type": "slashing",
     "attributes": [
       "str"
     ],
@@ -185,6 +193,7 @@
     "tag": "",
     "rank": 0,
     "damage": "1d12",
+    "damage_type": "slashing",
     "attributes": [
       "str"
     ],
@@ -199,6 +208,7 @@
     "tag": "",
     "rank": 0,
     "damage": "1d8",
+    "damage_type": "bludgeoning",
     "attributes": [
       "str"
     ],
@@ -213,6 +223,7 @@
     "tag": "",
     "rank": 0,
     "damage": "2d6",
+    "damage_type": "slashing",
     "attributes": [
       "str"
     ],
@@ -227,6 +238,7 @@
     "tag": "",
     "rank": 0,
     "damage": "1d10",
+    "damage_type": "slashing",
     "attributes": [
       "str"
     ],
@@ -242,6 +254,7 @@
     "tag": "",
     "rank": 0,
     "damage": "1d6",
+    "damage_type": "piercing",
     "attributes": [
       "dex"
     ],
@@ -260,6 +273,7 @@
     "tag": "",
     "rank": 0,
     "damage": "1d6",
+    "damage_type": "slashing",
     "attributes": [
       "str",
       "dex"
@@ -279,6 +293,7 @@
     "tag": "",
     "rank": 0,
     "damage": "1d10",
+    "damage_type": "piercing",
     "attributes": [
       "dex"
     ],
@@ -297,6 +312,7 @@
     "tag": "",
     "rank": 0,
     "damage": "1d6",
+    "damage_type": "piercing",
     "attributes": [
       "str",
       "dex"
@@ -316,6 +332,7 @@
     "tag": "",
     "rank": 0,
     "damage": "1d10",
+    "damage_type": "piercing",
     "attributes": [
       "str"
     ],
@@ -331,6 +348,7 @@
     "tag": "",
     "rank": 0,
     "damage": "1d8",
+    "damage_type": "piercing",
     "attributes": [
       "dex"
     ],
@@ -349,6 +367,7 @@
     "tag": "",
     "rank": 0,
     "damage": "1d4",
+    "damage_type": "bludgeoning",
     "attributes": [
       "str",
       "dex"
@@ -368,6 +387,7 @@
     "tag": "",
     "rank": 0,
     "damage": "1d8",
+    "damage_type": "piercing",
     "attributes": [
       "dex"
     ],
@@ -386,10 +406,12 @@
     "tag": "",
     "rank": 0,
     "damage": "1d8",
+    "damage_type": "slashing",
     "attributes": [
       "str"
     ],
-    "size": "normal"
+    "size": "normal",
+    "versatile_damage": "1d10"
   },
   {
     "type": "feature",
@@ -400,6 +422,7 @@
     "tag": "",
     "rank": 0,
     "damage": "1d6",
+    "damage_type": "bludgeoning",
     "attributes": [
       "str"
     ],
@@ -414,6 +437,7 @@
     "tag": "",
     "rank": 0,
     "damage": "2d6",
+    "damage_type": "bludgeoning",
     "attributes": [
       "str"
     ],
@@ -428,6 +452,7 @@
     "tag": "",
     "rank": 0,
     "damage": "1d8",
+    "damage_type": "piercing",
     "attributes": [
       "str"
     ],
@@ -442,6 +467,7 @@
     "tag": "",
     "rank": 0,
     "damage": "1d12",
+    "damage_type": "piercing",
     "attributes": [
       "dex"
     ],
@@ -460,6 +486,7 @@
     "tag": "",
     "rank": 0,
     "damage": "1d10",
+    "damage_type": "piercing",
     "attributes": [
       "str"
     ],
@@ -475,6 +502,7 @@
     "tag": "",
     "rank": 0,
     "damage": "1d10",
+    "damage_type": "piercing",
     "attributes": [
       "dex"
     ],
@@ -493,10 +521,12 @@
     "tag": "",
     "rank": 0,
     "damage": "1d6",
+    "damage_type": "bludgeoning",
     "attributes": [
       "str"
     ],
-    "size": "normal"
+    "size": "normal",
+    "versatile_damage": "1d8"
   },
   {
     "type": "feature",
@@ -507,6 +537,7 @@
     "tag": "",
     "rank": 0,
     "damage": "1d8",
+    "damage_type": "piercing",
     "attributes": [
       "str",
       "dex"
@@ -522,6 +553,7 @@
     "tag": "",
     "rank": 0,
     "damage": "1d6",
+    "damage_type": "slashing",
     "attributes": [
       "str",
       "dex"
@@ -537,6 +569,7 @@
     "tag": "",
     "rank": 0,
     "damage": "1d6",
+    "damage_type": "piercing",
     "attributes": [
       "dex"
     ],
@@ -555,6 +588,7 @@
     "tag": "",
     "rank": 0,
     "damage": "1d6",
+    "damage_type": "piercing",
     "attributes": [
       "str",
       "dex"
@@ -570,6 +604,7 @@
     "tag": "",
     "rank": 0,
     "damage": "1d4",
+    "damage_type": "slashing",
     "attributes": [
       "str"
     ],
@@ -584,6 +619,7 @@
     "tag": "",
     "rank": 0,
     "damage": "1d4",
+    "damage_type": "bludgeoning",
     "attributes": [
       "dex"
     ],
@@ -602,11 +638,13 @@
     "tag": "",
     "rank": 0,
     "damage": "1d6",
+    "damage_type": "piercing",
     "attributes": [
       "str",
       "dex"
     ],
     "size": "normal",
+    "versatile_damage": "1d8",
     "ranges": {
       "normal": 20,
       "long": 60
@@ -621,11 +659,13 @@
     "tag": "",
     "rank": 0,
     "damage": "1d8",
+    "damage_type": "piercing",
     "attributes": [
       "str",
       "dex"
     ],
     "size": "normal",
+    "versatile_damage": "1d10",
     "ranges": {
       "normal": 20,
       "long": 60
@@ -640,10 +680,12 @@
     "tag": "",
     "rank": 0,
     "damage": "1d8",
+    "damage_type": "piercing",
     "attributes": [
       "str"
     ],
-    "size": "normal"
+    "size": "normal",
+    "versatile_damage": "1d10"
   },
   {
     "type": "feature",
@@ -654,10 +696,12 @@
     "tag": "",
     "rank": 0,
     "damage": "1d8",
+    "damage_type": "bludgeoning",
     "attributes": [
       "str"
     ],
-    "size": "normal"
+    "size": "normal",
+    "versatile_damage": "1d10"
   },
   {
     "type": "feature",
@@ -668,6 +712,7 @@
     "tag": "",
     "rank": 0,
     "damage": "1d4",
+    "damage_type": "slashing",
     "attributes": [
       "str",
       "dex"
@@ -685,7 +730,8 @@
     "rank": 0,
     "armor": 4,
     "size": "normal",
-    "defense_dex_cap": 2
+    "defense_dex_cap": 2,
+    "armor_category": "medium"
   },
   {
     "type": "feature",
@@ -697,7 +743,8 @@
     "rank": 0,
     "armor": 6,
     "size": "large",
-    "defense_dex_cap": 0
+    "defense_dex_cap": 0,
+    "armor_category": "heavy"
   },
   {
     "type": "feature",
@@ -709,7 +756,8 @@
     "rank": 0,
     "armor": 3,
     "size": "normal",
-    "defense_dex_cap": 2
+    "defense_dex_cap": 2,
+    "armor_category": "medium"
   },
   {
     "type": "feature",
@@ -721,7 +769,8 @@
     "rank": 0,
     "armor": 5,
     "size": "normal",
-    "defense_dex_cap": 2
+    "defense_dex_cap": 2,
+    "armor_category": "medium"
   },
   {
     "type": "feature",
@@ -733,7 +782,8 @@
     "rank": 0,
     "armor": 2,
     "size": "normal",
-    "defense_dex_cap": 2
+    "defense_dex_cap": 2,
+    "armor_category": "medium"
   },
   {
     "type": "feature",
@@ -745,7 +795,8 @@
     "rank": 0,
     "armor": 1,
     "size": "normal",
-    "defense_dex_cap": null
+    "defense_dex_cap": null,
+    "armor_category": "light"
   },
   {
     "type": "feature",
@@ -757,7 +808,8 @@
     "rank": 0,
     "armor": 1,
     "size": "normal",
-    "defense_dex_cap": null
+    "defense_dex_cap": null,
+    "armor_category": "light"
   },
   {
     "type": "feature",
@@ -769,7 +821,8 @@
     "rank": 0,
     "armor": 8,
     "size": "large",
-    "defense_dex_cap": 0
+    "defense_dex_cap": 0,
+    "armor_category": "heavy"
   },
   {
     "type": "feature",
@@ -781,7 +834,8 @@
     "rank": 0,
     "armor": 4,
     "size": "large",
-    "defense_dex_cap": 0
+    "defense_dex_cap": 0,
+    "armor_category": "heavy"
   },
   {
     "type": "feature",
@@ -793,7 +847,8 @@
     "rank": 0,
     "armor": 4,
     "size": "normal",
-    "defense_dex_cap": 2
+    "defense_dex_cap": 2,
+    "armor_category": "medium"
   },
   {
     "type": "feature",
@@ -804,7 +859,8 @@
     "tag": "",
     "rank": 0,
     "armor": 2,
-    "size": "small"
+    "size": "small",
+    "armor_category": "shield"
   },
   {
     "type": "feature",
@@ -816,7 +872,8 @@
     "rank": 0,
     "armor": 7,
     "size": "large",
-    "defense_dex_cap": 0
+    "defense_dex_cap": 0,
+    "armor_category": "heavy"
   },
   {
     "type": "feature",
@@ -828,7 +885,8 @@
     "rank": 0,
     "armor": 2,
     "size": "normal",
-    "defense_dex_cap": null
+    "defense_dex_cap": null,
+    "armor_category": "light"
   },
   {
     "type": "feature",
@@ -2360,7 +2418,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 4,
-    "defense_dex_cap": 2
+    "defense_dex_cap": 2,
+    "armor_category": "medium"
   },
   {
     "type": "feature",
@@ -2372,7 +2431,8 @@
     "rank": 0,
     "size": "large",
     "armor": 6,
-    "defense_dex_cap": 0
+    "defense_dex_cap": 0,
+    "armor_category": "heavy"
   },
   {
     "type": "feature",
@@ -2384,7 +2444,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 3,
-    "defense_dex_cap": 2
+    "defense_dex_cap": 2,
+    "armor_category": "medium"
   },
   {
     "type": "feature",
@@ -2396,7 +2457,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 5,
-    "defense_dex_cap": 2
+    "defense_dex_cap": 2,
+    "armor_category": "medium"
   },
   {
     "type": "feature",
@@ -2408,7 +2470,8 @@
     "rank": 0,
     "size": "large",
     "armor": 8,
-    "defense_dex_cap": 0
+    "defense_dex_cap": 0,
+    "armor_category": "heavy"
   },
   {
     "type": "feature",
@@ -2420,7 +2483,8 @@
     "rank": 0,
     "size": "large",
     "armor": 4,
-    "defense_dex_cap": 0
+    "defense_dex_cap": 0,
+    "armor_category": "heavy"
   },
   {
     "type": "feature",
@@ -2432,7 +2496,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 4,
-    "defense_dex_cap": 2
+    "defense_dex_cap": 2,
+    "armor_category": "medium"
   },
   {
     "type": "feature",
@@ -2444,7 +2509,8 @@
     "rank": 0,
     "size": "large",
     "armor": 7,
-    "defense_dex_cap": 0
+    "defense_dex_cap": 0,
+    "armor_category": "heavy"
   },
   {
     "type": "feature",
@@ -2686,7 +2752,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 4,
-    "defense_dex_cap": 2
+    "defense_dex_cap": 2,
+    "armor_category": "medium"
   },
   {
     "type": "feature",
@@ -2698,7 +2765,8 @@
     "rank": 0,
     "size": "large",
     "armor": 6,
-    "defense_dex_cap": 0
+    "defense_dex_cap": 0,
+    "armor_category": "heavy"
   },
   {
     "type": "feature",
@@ -2710,7 +2778,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 3,
-    "defense_dex_cap": 2
+    "defense_dex_cap": 2,
+    "armor_category": "medium"
   },
   {
     "type": "feature",
@@ -2722,7 +2791,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 5,
-    "defense_dex_cap": 2
+    "defense_dex_cap": 2,
+    "armor_category": "medium"
   },
   {
     "type": "feature",
@@ -2734,7 +2804,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 2,
-    "defense_dex_cap": 2
+    "defense_dex_cap": 2,
+    "armor_category": "medium"
   },
   {
     "type": "feature",
@@ -2746,7 +2817,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 1,
-    "defense_dex_cap": null
+    "defense_dex_cap": null,
+    "armor_category": "light"
   },
   {
     "type": "feature",
@@ -2758,7 +2830,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 1,
-    "defense_dex_cap": null
+    "defense_dex_cap": null,
+    "armor_category": "light"
   },
   {
     "type": "feature",
@@ -2770,7 +2843,8 @@
     "rank": 0,
     "size": "large",
     "armor": 8,
-    "defense_dex_cap": 0
+    "defense_dex_cap": 0,
+    "armor_category": "heavy"
   },
   {
     "type": "feature",
@@ -2782,7 +2856,8 @@
     "rank": 0,
     "size": "large",
     "armor": 4,
-    "defense_dex_cap": 0
+    "defense_dex_cap": 0,
+    "armor_category": "heavy"
   },
   {
     "type": "feature",
@@ -2794,7 +2869,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 4,
-    "defense_dex_cap": 2
+    "defense_dex_cap": 2,
+    "armor_category": "medium"
   },
   {
     "type": "feature",
@@ -2806,7 +2882,8 @@
     "rank": 0,
     "size": "large",
     "armor": 7,
-    "defense_dex_cap": 0
+    "defense_dex_cap": 0,
+    "armor_category": "heavy"
   },
   {
     "type": "feature",
@@ -2818,7 +2895,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 2,
-    "defense_dex_cap": null
+    "defense_dex_cap": null,
+    "armor_category": "light"
   },
   {
     "type": "feature",
@@ -2830,7 +2908,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 4,
-    "defense_dex_cap": 2
+    "defense_dex_cap": 2,
+    "armor_category": "medium"
   },
   {
     "type": "feature",
@@ -2842,7 +2921,8 @@
     "rank": 0,
     "size": "large",
     "armor": 6,
-    "defense_dex_cap": 0
+    "defense_dex_cap": 0,
+    "armor_category": "heavy"
   },
   {
     "type": "feature",
@@ -2854,7 +2934,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 3,
-    "defense_dex_cap": 2
+    "defense_dex_cap": 2,
+    "armor_category": "medium"
   },
   {
     "type": "feature",
@@ -2866,7 +2947,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 5,
-    "defense_dex_cap": 2
+    "defense_dex_cap": 2,
+    "armor_category": "medium"
   },
   {
     "type": "feature",
@@ -2878,7 +2960,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 2,
-    "defense_dex_cap": 2
+    "defense_dex_cap": 2,
+    "armor_category": "medium"
   },
   {
     "type": "feature",
@@ -2890,7 +2973,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 1,
-    "defense_dex_cap": null
+    "defense_dex_cap": null,
+    "armor_category": "light"
   },
   {
     "type": "feature",
@@ -2902,7 +2986,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 1,
-    "defense_dex_cap": null
+    "defense_dex_cap": null,
+    "armor_category": "light"
   },
   {
     "type": "feature",
@@ -2914,7 +2999,8 @@
     "rank": 0,
     "size": "large",
     "armor": 8,
-    "defense_dex_cap": 0
+    "defense_dex_cap": 0,
+    "armor_category": "heavy"
   },
   {
     "type": "feature",
@@ -2926,7 +3012,8 @@
     "rank": 0,
     "size": "large",
     "armor": 4,
-    "defense_dex_cap": 0
+    "defense_dex_cap": 0,
+    "armor_category": "heavy"
   },
   {
     "type": "feature",
@@ -2938,7 +3025,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 4,
-    "defense_dex_cap": 2
+    "defense_dex_cap": 2,
+    "armor_category": "medium"
   },
   {
     "type": "feature",
@@ -2950,7 +3038,8 @@
     "rank": 0,
     "size": "large",
     "armor": 7,
-    "defense_dex_cap": 0
+    "defense_dex_cap": 0,
+    "armor_category": "heavy"
   },
   {
     "type": "feature",
@@ -2962,7 +3051,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 2,
-    "defense_dex_cap": null
+    "defense_dex_cap": null,
+    "armor_category": "light"
   },
   {
     "type": "feature",
@@ -3310,7 +3400,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 4,
-    "defense_dex_cap": 2
+    "defense_dex_cap": 2,
+    "armor_category": "medium"
   },
   {
     "type": "feature",
@@ -3322,7 +3413,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 4,
-    "defense_dex_cap": 2
+    "defense_dex_cap": 2,
+    "armor_category": "medium"
   },
   {
     "type": "feature",
@@ -3334,7 +3426,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 4,
-    "defense_dex_cap": 2
+    "defense_dex_cap": 2,
+    "armor_category": "medium"
   },
   {
     "type": "feature",
@@ -3406,7 +3499,8 @@
     "rank": 0,
     "size": "large",
     "armor": 6,
-    "defense_dex_cap": 0
+    "defense_dex_cap": 0,
+    "armor_category": "heavy"
   },
   {
     "type": "feature",
@@ -3418,7 +3512,8 @@
     "rank": 0,
     "size": "large",
     "armor": 6,
-    "defense_dex_cap": 0
+    "defense_dex_cap": 0,
+    "armor_category": "heavy"
   },
   {
     "type": "feature",
@@ -3430,7 +3525,8 @@
     "rank": 0,
     "size": "large",
     "armor": 6,
-    "defense_dex_cap": 0
+    "defense_dex_cap": 0,
+    "armor_category": "heavy"
   },
   {
     "type": "feature",
@@ -3442,7 +3538,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 3,
-    "defense_dex_cap": 2
+    "defense_dex_cap": 2,
+    "armor_category": "medium"
   },
   {
     "type": "feature",
@@ -3454,7 +3551,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 3,
-    "defense_dex_cap": 2
+    "defense_dex_cap": 2,
+    "armor_category": "medium"
   },
   {
     "type": "feature",
@@ -3466,7 +3564,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 3,
-    "defense_dex_cap": 2
+    "defense_dex_cap": 2,
+    "armor_category": "medium"
   },
   {
     "type": "feature",
@@ -4406,7 +4505,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 4,
-    "defense_dex_cap": 2
+    "defense_dex_cap": 2,
+    "armor_category": "medium"
   },
   {
     "type": "feature",
@@ -4418,7 +4518,8 @@
     "rank": 0,
     "size": "large",
     "armor": 6,
-    "defense_dex_cap": 0
+    "defense_dex_cap": 0,
+    "armor_category": "heavy"
   },
   {
     "type": "feature",
@@ -4430,7 +4531,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 3,
-    "defense_dex_cap": 2
+    "defense_dex_cap": 2,
+    "armor_category": "medium"
   },
   {
     "type": "feature",
@@ -4442,7 +4544,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 5,
-    "defense_dex_cap": 2
+    "defense_dex_cap": 2,
+    "armor_category": "medium"
   },
   {
     "type": "feature",
@@ -4454,7 +4557,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 2,
-    "defense_dex_cap": 2
+    "defense_dex_cap": 2,
+    "armor_category": "medium"
   },
   {
     "type": "feature",
@@ -4466,7 +4570,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 1,
-    "defense_dex_cap": null
+    "defense_dex_cap": null,
+    "armor_category": "light"
   },
   {
     "type": "feature",
@@ -4478,7 +4583,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 1,
-    "defense_dex_cap": null
+    "defense_dex_cap": null,
+    "armor_category": "light"
   },
   {
     "type": "feature",
@@ -4490,7 +4596,8 @@
     "rank": 0,
     "size": "large",
     "armor": 8,
-    "defense_dex_cap": 0
+    "defense_dex_cap": 0,
+    "armor_category": "heavy"
   },
   {
     "type": "feature",
@@ -4502,7 +4609,8 @@
     "rank": 0,
     "size": "large",
     "armor": 4,
-    "defense_dex_cap": 0
+    "defense_dex_cap": 0,
+    "armor_category": "heavy"
   },
   {
     "type": "feature",
@@ -4514,7 +4622,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 4,
-    "defense_dex_cap": 2
+    "defense_dex_cap": 2,
+    "armor_category": "medium"
   },
   {
     "type": "feature",
@@ -4526,7 +4635,8 @@
     "rank": 0,
     "size": "large",
     "armor": 7,
-    "defense_dex_cap": 0
+    "defense_dex_cap": 0,
+    "armor_category": "heavy"
   },
   {
     "type": "feature",
@@ -4538,7 +4648,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 2,
-    "defense_dex_cap": null
+    "defense_dex_cap": null,
+    "armor_category": "light"
   },
   {
     "type": "feature",
@@ -4620,7 +4731,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 5,
-    "defense_dex_cap": 2
+    "defense_dex_cap": 2,
+    "armor_category": "medium"
   },
   {
     "type": "feature",
@@ -4632,7 +4744,8 @@
     "rank": 0,
     "size": "large",
     "armor": 8,
-    "defense_dex_cap": 0
+    "defense_dex_cap": 0,
+    "armor_category": "heavy"
   },
   {
     "type": "feature",
@@ -4684,7 +4797,8 @@
     "rank": 0,
     "size": "large",
     "armor": 6,
-    "defense_dex_cap": 0
+    "defense_dex_cap": 0,
+    "armor_category": "heavy"
   },
   {
     "type": "feature",
@@ -4696,7 +4810,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 3,
-    "defense_dex_cap": 2
+    "defense_dex_cap": 2,
+    "armor_category": "medium"
   },
   {
     "type": "feature",
@@ -6361,7 +6476,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 5,
-    "defense_dex_cap": 2
+    "defense_dex_cap": 2,
+    "armor_category": "medium"
   },
   {
     "type": "feature",
@@ -6373,7 +6489,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 5,
-    "defense_dex_cap": 2
+    "defense_dex_cap": 2,
+    "armor_category": "medium"
   },
   {
     "type": "feature",
@@ -6385,7 +6502,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 5,
-    "defense_dex_cap": 2
+    "defense_dex_cap": 2,
+    "armor_category": "medium"
   },
   {
     "type": "feature",
@@ -6397,7 +6515,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 5,
-    "defense_dex_cap": 2
+    "defense_dex_cap": 2,
+    "armor_category": "medium"
   },
   {
     "type": "feature",
@@ -6636,7 +6755,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 2,
-    "defense_dex_cap": 2
+    "defense_dex_cap": 2,
+    "armor_category": "medium"
   },
   {
     "type": "feature",
@@ -6648,7 +6768,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 2,
-    "defense_dex_cap": 2
+    "defense_dex_cap": 2,
+    "armor_category": "medium"
   },
   {
     "type": "feature",
@@ -6660,7 +6781,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 2,
-    "defense_dex_cap": 2
+    "defense_dex_cap": 2,
+    "armor_category": "medium"
   },
   {
     "type": "feature",
@@ -7412,7 +7534,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 1,
-    "defense_dex_cap": null
+    "defense_dex_cap": null,
+    "armor_category": "light"
   },
   {
     "type": "feature",
@@ -7424,7 +7547,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 1,
-    "defense_dex_cap": null
+    "defense_dex_cap": null,
+    "armor_category": "light"
   },
   {
     "type": "feature",
@@ -7436,7 +7560,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 1,
-    "defense_dex_cap": null
+    "defense_dex_cap": null,
+    "armor_category": "light"
   },
   {
     "type": "feature",
@@ -7956,7 +8081,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 4,
-    "defense_dex_cap": 2
+    "defense_dex_cap": 2,
+    "armor_category": "medium"
   },
   {
     "type": "feature",
@@ -7968,7 +8094,8 @@
     "rank": 0,
     "size": "large",
     "armor": 6,
-    "defense_dex_cap": 0
+    "defense_dex_cap": 0,
+    "armor_category": "heavy"
   },
   {
     "type": "feature",
@@ -7980,7 +8107,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 3,
-    "defense_dex_cap": 2
+    "defense_dex_cap": 2,
+    "armor_category": "medium"
   },
   {
     "type": "feature",
@@ -7992,7 +8120,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 5,
-    "defense_dex_cap": 2
+    "defense_dex_cap": 2,
+    "armor_category": "medium"
   },
   {
     "type": "feature",
@@ -8004,7 +8133,8 @@
     "rank": 0,
     "size": "large",
     "armor": 8,
-    "defense_dex_cap": 0
+    "defense_dex_cap": 0,
+    "armor_category": "heavy"
   },
   {
     "type": "feature",
@@ -8016,7 +8146,8 @@
     "rank": 0,
     "size": "large",
     "armor": 4,
-    "defense_dex_cap": 0
+    "defense_dex_cap": 0,
+    "armor_category": "heavy"
   },
   {
     "type": "feature",
@@ -8028,7 +8159,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 4,
-    "defense_dex_cap": 2
+    "defense_dex_cap": 2,
+    "armor_category": "medium"
   },
   {
     "type": "feature",
@@ -8040,7 +8172,8 @@
     "rank": 0,
     "size": "large",
     "armor": 7,
-    "defense_dex_cap": 0
+    "defense_dex_cap": 0,
+    "armor_category": "heavy"
   },
   {
     "type": "feature",
@@ -8777,7 +8910,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 1,
-    "defense_dex_cap": null
+    "defense_dex_cap": null,
+    "armor_category": "light"
   },
   {
     "type": "feature",
@@ -8789,7 +8923,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 1,
-    "defense_dex_cap": null
+    "defense_dex_cap": null,
+    "armor_category": "light"
   },
   {
     "type": "feature",
@@ -8801,7 +8936,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 1,
-    "defense_dex_cap": null
+    "defense_dex_cap": null,
+    "armor_category": "light"
   },
   {
     "type": "feature",
@@ -8967,7 +9103,8 @@
     "rank": 0,
     "size": "large",
     "armor": 8,
-    "defense_dex_cap": 0
+    "defense_dex_cap": 0,
+    "armor_category": "heavy"
   },
   {
     "type": "feature",
@@ -8979,7 +9116,8 @@
     "rank": 0,
     "size": "large",
     "armor": 8,
-    "defense_dex_cap": 0
+    "defense_dex_cap": 0,
+    "armor_category": "heavy"
   },
   {
     "type": "feature",
@@ -8991,7 +9129,8 @@
     "rank": 0,
     "size": "large",
     "armor": 8,
-    "defense_dex_cap": 0
+    "defense_dex_cap": 0,
+    "armor_category": "heavy"
   },
   {
     "type": "feature",
@@ -9003,7 +9142,8 @@
     "rank": 0,
     "size": "large",
     "armor": 8,
-    "defense_dex_cap": 0
+    "defense_dex_cap": 0,
+    "armor_category": "heavy"
   },
   {
     "type": "feature",
@@ -9282,7 +9422,8 @@
     "rank": 0,
     "size": "large",
     "armor": 4,
-    "defense_dex_cap": 0
+    "defense_dex_cap": 0,
+    "armor_category": "heavy"
   },
   {
     "type": "feature",
@@ -9294,7 +9435,8 @@
     "rank": 0,
     "size": "large",
     "armor": 4,
-    "defense_dex_cap": 0
+    "defense_dex_cap": 0,
+    "armor_category": "heavy"
   },
   {
     "type": "feature",
@@ -9306,7 +9448,8 @@
     "rank": 0,
     "size": "large",
     "armor": 4,
-    "defense_dex_cap": 0
+    "defense_dex_cap": 0,
+    "armor_category": "heavy"
   },
   {
     "type": "feature",
@@ -9658,7 +9801,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 4,
-    "defense_dex_cap": 2
+    "defense_dex_cap": 2,
+    "armor_category": "medium"
   },
   {
     "type": "feature",
@@ -9670,7 +9814,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 4,
-    "defense_dex_cap": 2
+    "defense_dex_cap": 2,
+    "armor_category": "medium"
   },
   {
     "type": "feature",
@@ -9682,7 +9827,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 4,
-    "defense_dex_cap": 2
+    "defense_dex_cap": 2,
+    "armor_category": "medium"
   },
   {
     "type": "feature",
@@ -9813,7 +9959,8 @@
     "tag": "",
     "rank": 0,
     "size": "small",
-    "armor": 2
+    "armor": 2,
+    "armor_category": "shield"
   },
   {
     "type": "feature",
@@ -9824,7 +9971,8 @@
     "tag": "",
     "rank": 0,
     "size": "small",
-    "armor": 2
+    "armor": 2,
+    "armor_category": "shield"
   },
   {
     "type": "feature",
@@ -9835,7 +9983,8 @@
     "tag": "",
     "rank": 0,
     "size": "small",
-    "armor": 2
+    "armor": 2,
+    "armor_category": "shield"
   },
   {
     "type": "feature",
@@ -10133,7 +10282,8 @@
     "rank": 0,
     "size": "large",
     "armor": 7,
-    "defense_dex_cap": 0
+    "defense_dex_cap": 0,
+    "armor_category": "heavy"
   },
   {
     "type": "feature",
@@ -10145,7 +10295,8 @@
     "rank": 0,
     "size": "large",
     "armor": 7,
-    "defense_dex_cap": 0
+    "defense_dex_cap": 0,
+    "armor_category": "heavy"
   },
   {
     "type": "feature",
@@ -10157,7 +10308,8 @@
     "rank": 0,
     "size": "large",
     "armor": 7,
-    "defense_dex_cap": 0
+    "defense_dex_cap": 0,
+    "armor_category": "heavy"
   },
   {
     "type": "feature",
@@ -10309,7 +10461,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 2,
-    "defense_dex_cap": null
+    "defense_dex_cap": null,
+    "armor_category": "light"
   },
   {
     "type": "feature",
@@ -10321,7 +10474,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 2,
-    "defense_dex_cap": null
+    "defense_dex_cap": null,
+    "armor_category": "light"
   },
   {
     "type": "feature",
@@ -10333,7 +10487,8 @@
     "rank": 0,
     "size": "normal",
     "armor": 2,
-    "defense_dex_cap": null
+    "defense_dex_cap": null,
+    "armor_category": "light"
   },
   {
     "type": "feature",

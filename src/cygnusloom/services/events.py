@@ -2858,6 +2858,8 @@ class EncounterTurnBegun(GameEvent):
         encounter.acting = character.name
         encounter.moved = 0
         encounter.attacked = 0
+        encounter.actions_used = 0
+        encounter.bonus_actions_used = 0
         if character.kind == NPC_KIND and state.turn is None:
             state.turn = Turn(opener=event_id, text=self.instruction, actor=character.name)
 
@@ -2883,10 +2885,40 @@ class EncounterAttacked(GameEvent):
         # A player character may attack while their turn is next but not yet opened. That is
         # still their action, so it counts; a forced strike during someone else's turn does not.
         if encounter.acting is None or name_key(encounter.acting) == name_key(self.name):
+            first_attack = encounter.attacked == 0
             encounter.attacked += 1
+            if first_attack:
+                encounter.actions_used += 1
 
     def render(self) -> str:
         return f"{self.name} attacks."
+
+
+@dataclass(frozen=True)
+class EncounterResourceUsed(GameEvent):
+    """A combatant spent a turn resource: an action, a bonus action, or a reaction."""
+
+    kind: ClassVar[str] = "encounter.resource_used"
+    hidden: ClassVar[bool] = True
+
+    name: str
+    resource: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        encounter = state.encounter
+        if encounter is None:
+            return
+        if encounter.acting is not None and name_key(encounter.acting) != name_key(self.name):
+            return
+        if self.resource == "action":
+            encounter.actions_used += 1
+        elif self.resource == "bonus_action":
+            encounter.bonus_actions_used += 1
+        elif self.resource == "reaction":
+            encounter.reactions_used += 1
+
+    def render(self) -> str:
+        return f"{self.name} spends a {self.resource.replace('_', ' ')}."
 
 
 @dataclass(frozen=True)
@@ -2905,6 +2937,8 @@ class EncounterTurnEnded(GameEvent):
         encounter.acting = None
         encounter.moved = 0
         encounter.attacked = 0
+        encounter.actions_used = 0
+        encounter.bonus_actions_used = 0
         encounter.up += 1
         if encounter.up >= len(encounter.order):
             _next_round(encounter, state)

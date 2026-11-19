@@ -1017,7 +1017,16 @@ ALWAYS_CONDITION_END = "gm"
 # The key of a condition's `modifies` that applies to every stat.
 ALL_STATS = "*"
 # Situational keys a condition may modify besides the rule set's stats: attack rolls and checks.
-SITUATIONAL_MODIFIERS = ("attack", "check")
+SITUATIONAL_MODIFIERS = (
+    "attack",
+    "attack_against",
+    "check",
+    "save",
+    "damage",
+    "initiative",
+    "speed",
+)
+CONDITION_ROLL_MODES = ("advantage", "disadvantage")
 # The `end_condition` id that ends every condition the character holds.
 ALL_CONDITIONS = "*"
 # `if_higher` compares the roll with the maximum; `if_above_current` compares it with the current score.
@@ -1067,6 +1076,8 @@ class ConditionRules:
     derived: DerivedRule | None = None
     # Amounts added to a move's total while the condition holds, by stat id or ALL_STATS.
     modifies: Mapping[str, int] = field(default_factory=dict)
+    # Advantage or disadvantage this condition imposes, keyed by the kind of roll.
+    roll_modes: Mapping[str, str] = field(default_factory=dict)
     dying: bool = False
     fatal: bool = False
 
@@ -1235,6 +1246,7 @@ class LevelGrants:
             "rate": self.rate,
             "attack_bonus": self.values.get("attack_bonus"),
             "castings": self.values.get("castings"),
+            "features": list(self.values.get("features", ())),
             "lines": list(self.lines),
             "grants": dict(self.pools),
         }
@@ -1547,6 +1559,11 @@ class CombatRules:
     # attack action, so its attacks per action all resolve inside this budget. Defaults to the
     # common one-attack-per-turn rule. A rule set module may vary it by character.
     attacks_per_turn: int = 1
+    # The turn-resource budgets a rule set exposes. A zero budget means that resource is not
+    # tracked, which keeps rule sets without an action economy unchanged.
+    actions_per_turn: int = 0
+    bonus_actions_per_turn: int = 0
+    reactions_per_round: int = 0
     # Whether a natural maximum on the attack die doubles the damage dice, as D&D's critical hit
     # does. Flat modifiers are never doubled.
     critical_dice: bool = False
@@ -3818,6 +3835,17 @@ CHARACTER_DEFINITION_KEYS: Mapping[str, frozenset[str]] = {
             "uses",
             "armor",
             "damage",
+            "damage_type",
+            "versatile_damage",
+            "resistances",
+            "casting_ability",
+            "flat_hp_bonus",
+            "initiative_bonus",
+            "initiative_proficient",
+            "weapon_damage_reroll",
+            "turn_resource",
+            "armor_training",
+            "armor_category",
             "rules",
             "tag",
             "rank",
@@ -3934,7 +3962,7 @@ FEAT_PICK_KEYS = frozenset(
     }
 )
 GRANTED_KEYS = frozenset({"feature", "quantity"})
-TEMPLATE_GRANT_KEYS = frozenset({"items", "silver", "equip"})
+TEMPLATE_GRANT_KEYS = frozenset({"items", "silver", "equip", "options"})
 
 
 def _check_character_definitions(definitions: Iterable[Definition], template: str) -> None:
@@ -3970,6 +3998,15 @@ def _check_template_keys(data: Mapping[str, Any], label: str) -> None:
     grant = data.get("grant")
     if isinstance(grant, Mapping):
         check_keys(grant, TEMPLATE_GRANT_KEYS, f"{label}: grant")
+        options = grant.get("options", [])
+        if isinstance(options, list):
+            for index, option in enumerate(options):
+                if isinstance(option, Mapping):
+                    check_keys(
+                        option,
+                        frozenset({"id", "label", "items", "silver", "equip"}),
+                        f"{label}: grant option {index}",
+                    )
     choose = data.get("choose")
     if isinstance(choose, Mapping):
         check_keys(choose, CHOOSE_KEYS, f"{label}: choose")
@@ -5319,6 +5356,9 @@ def _load_combat(
             "dual_wield_damage_bonus",
             "surprise_turns",
             "attacks_per_turn",
+            "actions_per_turn",
+            "bonus_actions_per_turn",
+            "reactions_per_round",
             "critical_dice",
             "heal_clears_defeat",
             "rest_requires_positive_hp",
@@ -5449,6 +5489,17 @@ def _load_combat(
         surprise_turns=_optional_whole(data, "surprise_turns", label) or 0,
         attacks_per_turn=(
             _whole(data, "attacks_per_turn", label, 1) if "attacks_per_turn" in data else 1
+        ),
+        actions_per_turn=(
+            _whole(data, "actions_per_turn", label, 0) if "actions_per_turn" in data else 0
+        ),
+        bonus_actions_per_turn=(
+            _whole(data, "bonus_actions_per_turn", label, 0)
+            if "bonus_actions_per_turn" in data
+            else 0
+        ),
+        reactions_per_round=(
+            _whole(data, "reactions_per_round", label, 0) if "reactions_per_round" in data else 0
         ),
         critical_dice=bool(data.get("critical_dice", False)),
         heal_clears_defeat=bool(data.get("heal_clears_defeat", False)),
@@ -7614,6 +7665,7 @@ def _load_conditions(
                 "on_end",
                 "derived",
                 "modifies",
+                "roll_modes",
                 "dying",
                 "fatal",
             },
@@ -7635,10 +7687,26 @@ def _load_conditions(
             on_end=on_end,
             derived=derived,
             modifies=_load_modifies(d.data.get("modifies", {}), character, label),
+            roll_modes=_load_roll_modes(d.data.get("roll_modes", {}), label),
             dying=_flag_default(d.data, "dying", label, False),
             fatal=_flag_default(d.data, "fatal", label, False),
         )
     return conditions
+
+
+def _load_roll_modes(value: object, label: str) -> dict[str, str]:
+    """The advantage or disadvantage keys a condition imposes on rolls."""
+    if not isinstance(value, Mapping):
+        raise ContentError(f"{label}: 'roll_modes' must be an object")
+    allowed = set(SITUATIONAL_MODIFIERS) | {"all"}
+    modes: dict[str, str] = {}
+    for key, mode in value.items():
+        if key not in allowed:
+            raise ContentError(f"{label}: 'roll_modes' names no roll ({key!r})")
+        if mode not in CONDITION_ROLL_MODES:
+            raise ContentError(f"{label}: 'roll_modes' {key!r} must be advantage or disadvantage")
+        modes[str(key)] = str(mode)
+    return modes
 
 
 def _load_modifies(value: object, character: CharacterSpec, label: str) -> dict[str, int]:

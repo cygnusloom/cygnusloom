@@ -317,6 +317,52 @@ CLASS_KITS = {
     },
 }
 
+CLASS_KIT_OPTIONS = {
+    "barbarian": [{"id": "b", "label": "B: 75 GP", "silver": 750}],
+    "bard": [{"id": "b", "label": "B: 90 GP", "silver": 900}],
+    "cleric": [{"id": "b", "label": "B: 110 GP", "silver": 1100}],
+    "druid": [{"id": "b", "label": "B: 50 GP", "silver": 500}],
+    "fighter": [
+        {
+            "id": "b",
+            "label": "B: light kit",
+            "items": [
+                "Scimitar",
+                "Shortsword",
+                "Longbow",
+                "Arrows (20)",
+                "Quiver",
+                "Dungeoneer's Pack",
+            ],
+            "equip": ["Studded Leather Armor"],
+            "silver": 110,
+        },
+        {"id": "c", "label": "C: 155 GP", "silver": 1550},
+    ],
+    "monk": [{"id": "b", "label": "B: 50 GP", "silver": 500}],
+    "paladin": [{"id": "b", "label": "B: 150 GP", "silver": 1500}],
+    "ranger": [{"id": "b", "label": "B: 150 GP", "silver": 1500}],
+    "rogue": [{"id": "b", "label": "B: 100 GP", "silver": 1000}],
+    "sorcerer": [{"id": "b", "label": "B: 50 GP", "silver": 500}],
+    "warlock": [{"id": "b", "label": "B: 100 GP", "silver": 1000}],
+    "wizard": [{"id": "b", "label": "B: 55 GP", "silver": 550}],
+}
+
+CLASS_ARMOR_TRAINING = {
+    "barbarian": ["light", "medium", "shield"],
+    "bard": ["light"],
+    "cleric": ["light", "medium", "shield"],
+    "druid": ["light", "medium", "shield"],
+    "fighter": ["light", "medium", "heavy", "shield"],
+    "monk": [],
+    "paladin": ["light", "medium", "heavy", "shield"],
+    "ranger": ["light", "medium", "shield"],
+    "rogue": ["light"],
+    "sorcerer": [],
+    "warlock": ["light"],
+    "wizard": [],
+}
+
 CLASS_ROLES = {
     "barbarian": "A furious warrior who trades armour for raw stamina and rage.",
     "bard": "A spellcaster whose music and wit inspire allies and unravel foes.",
@@ -745,20 +791,33 @@ def build_skills() -> None:
 
 def build_conditions() -> None:
     conditions = load("conditions")
+    effects = {
+        "blinded": {"roll_modes": {"attack": "disadvantage", "attack_against": "advantage"}},
+        "frightened": {"roll_modes": {"attack": "disadvantage", "check": "disadvantage"}},
+        "invisible": {"roll_modes": {"attack": "advantage", "attack_against": "disadvantage"}},
+        "paralyzed": {"roll_modes": {"attack_against": "advantage"}},
+        "petrified": {"roll_modes": {"attack_against": "advantage"}},
+        "poisoned": {"roll_modes": {"attack": "disadvantage", "check": "disadvantage"}},
+        "prone": {"roll_modes": {"attack": "disadvantage", "attack_against": "advantage"}},
+        "restrained": {"roll_modes": {"attack": "disadvantage", "attack_against": "advantage"}},
+        "stunned": {"roll_modes": {"attack_against": "advantage"}},
+        "unconscious": {"roll_modes": {"attack_against": "advantage"}},
+        "exhaustion": {"modifies": {"attack": -2, "check": -2, "save": -2}},
+    }
     out = []
     for condition in conditions:
         descriptions = condition.get("descriptions") or []
         text = descriptions[0]["desc"] if descriptions else condition["name"]
         ends = ["save", "time", "magic"] if condition["key"] != "exhaustion" else ["long_rest"]
-        out.append(
-            {
-                "type": "condition",
-                "id": condition["key"],
-                "label": condition["name"],
-                "description": text,
-                "ends": ends,
-            }
-        )
+        entry = {
+            "type": "condition",
+            "id": condition["key"],
+            "label": condition["name"],
+            "description": text,
+            "ends": ends,
+        }
+        entry.update(effects.get(condition["key"], {}))
+        out.append(entry)
     write("conditions.json", out)
 
 
@@ -1083,6 +1142,9 @@ def build_combat() -> None:
                 "range_bands": {"normal": 0, "long": 0},
                 "ranges": {"melee": 5, "sight_blocked_by": sight},
                 "attacks_per_turn": 1,
+                "actions_per_turn": 1,
+                "bonus_actions_per_turn": 1,
+                "reactions_per_round": 1,
                 "critical_dice": True,
                 "heal_clears_defeat": True,
                 "rest_requires_positive_hp": True,
@@ -1339,6 +1401,18 @@ def weapon_reach(record: dict[str, Any]) -> int:
     return 10 if "reach" in props else 5
 
 
+def weapon_versatile_damage(record: dict[str, Any]) -> str:
+    """The two-handed damage a Versatile weapon prints in its property detail."""
+    for entry in record.get("properties", []):
+        if entry["property"]["name"].casefold() != "versatile":
+            continue
+        detail = str(entry.get("detail") or "")
+        match = re.search(r"(\d*d\d+)", detail)
+        if match:
+            return match.group(1)
+    return ""
+
+
 def weapon_description(record: dict[str, Any]) -> str:
     kind = "Simple" if record.get("is_simple") else "Martial"
     damage_type = (record.get("damage_type") or {}).get("name", "")
@@ -1357,6 +1431,7 @@ def armor_feature_data(record: dict[str, Any]) -> dict[str, Any]:
             "armor": 2,
             "size": "small",
             "armor_mode": "shield_flat",
+            "armor_category": "shield",
             "description": "A shield. While you wield it, you gain a +2 bonus to Armor Class.",
         }
     base = int(record.get("ac_base") or 10)
@@ -1373,6 +1448,7 @@ def armor_feature_data(record: dict[str, Any]) -> dict[str, Any]:
         "size": "large" if record.get("category") == "heavy" else "normal",
         "defense_dex_cap": cap,
         "armor_mode": "max",
+        "armor_category": str(record.get("category") or ""),
         "description": text,
     }
 
@@ -1510,9 +1586,13 @@ def build_equipment() -> None:
         props = {entry["property"]["name"].casefold() for entry in record.get("properties", [])}
         extra: dict[str, Any] = {
             "damage": damage,
+            "damage_type": (record.get("damage_type") or {}).get("name", "").casefold(),
             "attributes": weapon_attributes(record),
             "size": weapon_size(record),
         }
+        versatile = weapon_versatile_damage(record)
+        if versatile:
+            extra["versatile_damage"] = versatile
         ranges = weapon_ranges(record)
         if ranges:
             extra["ranges"] = ranges
@@ -1661,6 +1741,7 @@ def build_spells() -> dict[str, dict[int, list[str]]]:
         "warlock",
         "wizard",
     }
+    cast_resources = {"action": "action", "bonus-action": "bonus_action", "reaction": "reaction"}
     for spell in spells:
         ident = f"spell-{key_id(spell['key'])}"
         definitions.append(
@@ -1671,6 +1752,7 @@ def build_spells() -> dict[str, dict[int, list[str]]]:
                 feature_type="spell",
                 tag=(spell.get("school") or {}).get("key", ""),
                 rank=int(spell.get("level") or 0),
+                turn_resource=cast_resources.get(str(spell.get("casting_time") or ""), ""),
             )
         )
         for class_ref in spell.get("classes", []):
@@ -1747,6 +1829,35 @@ def build_feats() -> list[dict[str, Any]]:
         extra: dict[str, Any] = {}
         if ident == "feat-defense":
             extra["defense_bonus"] = 1
+        if ident == "feat-alert":
+            extra["initiative_proficient"] = True
+        if ident == "feat-savage-attacker":
+            extra["weapon_damage_reroll"] = True
+        if ident == "feat-magic-initiate":
+            extra["picks"] = [
+                {
+                    "id": "cantrips",
+                    "kind": "spell",
+                    "label": "Cantrips",
+                    "grant": "learn",
+                    "count": 2,
+                    "max_rank": 0,
+                },
+                {
+                    "id": "spell",
+                    "kind": "spell",
+                    "label": "Level 1 spell",
+                    "grant": "learn",
+                    "count": 1,
+                    "max_rank": 1,
+                },
+                {
+                    "id": "ability",
+                    "kind": "stat",
+                    "label": "Casting ability",
+                    "choices": ["int", "wis", "cha"],
+                },
+            ]
         if ident == "feat-skilled":
             extra["picks"] = [
                 {
@@ -1790,6 +1901,186 @@ SPECIES_TRAIT_TAGS = {
 }
 
 
+DRAGON_ANCESTRIES = {
+    "Black": "acid",
+    "Blue": "lightning",
+    "Brass": "fire",
+    "Bronze": "lightning",
+    "Copper": "acid",
+    "Gold": "fire",
+    "Green": "poison",
+    "Red": "fire",
+    "Silver": "cold",
+    "White": "cold",
+}
+
+
+SPECIES_LINEAGE_FEATURES = {
+    "elf": [
+        (
+            "drow",
+            "Drow Lineage",
+            (
+                "The range of your Darkvision increases to 120 feet. You know the Dancing Lights "
+                "cantrip. At level 3 you learn Faerie Fire, and at level 5 you learn Darkness; each "
+                "is always prepared and can be cast once without a spell slot per Long Rest."
+            ),
+        ),
+        (
+            "high-elf",
+            "High Elf Lineage",
+            (
+                "You know the Prestidigitation cantrip, and you can replace it with another Wizard "
+                "cantrip whenever you finish a Long Rest. At level 3 you learn Detect Magic, and at "
+                "level 5 you learn Misty Step; each is always prepared and can be cast once without "
+                "a spell slot per Long Rest."
+            ),
+        ),
+        (
+            "wood-elf",
+            "Wood Elf Lineage",
+            (
+                "Your Speed increases to 35 feet. You know the Druidcraft cantrip. At level 3 you "
+                "learn Longstrider, and at level 5 you learn Pass without Trace; each is always "
+                "prepared and can be cast once without a spell slot per Long Rest."
+            ),
+        ),
+    ],
+    "gnome": [
+        (
+            "forest",
+            "Forest Gnome Lineage",
+            (
+                "You know the Minor Illusion cantrip and always have Speak with Animals prepared. "
+                "You can cast Speak with Animals without a spell slot a number of times equal to "
+                "your Proficiency Bonus, regaining the uses on a Long Rest."
+            ),
+        ),
+        (
+            "rock",
+            "Rock Gnome Lineage",
+            (
+                "You know the Mending and Prestidigitation cantrips. You can spend 10 minutes "
+                "casting Prestidigitation to create a Tiny clockwork device, with up to three "
+                "devices existing at once."
+            ),
+        ),
+    ],
+    "goliath": [
+        (
+            "cloud",
+            "Cloud Giant Ancestry",
+            (
+                "As a Bonus Action, you can magically teleport up to 30 feet to an unoccupied "
+                "space you can see. You can use this a number of times equal to your Proficiency "
+                "Bonus, regaining all uses on a Long Rest."
+            ),
+        ),
+        (
+            "fire",
+            "Fire Giant Ancestry",
+            (
+                "When you hit a target with an attack roll and deal damage, you can deal an extra "
+                "1d10 Fire damage. You can use this a number of times equal to your Proficiency "
+                "Bonus, regaining all uses on a Long Rest."
+            ),
+        ),
+        (
+            "frost",
+            "Frost Giant Ancestry",
+            (
+                "When you hit a target with an attack roll and deal damage, you can deal an extra "
+                "1d6 Cold damage and reduce its Speed by 10 feet until the start of your next turn. "
+                "You can use this a number of times equal to your Proficiency Bonus, regaining all "
+                "uses on a Long Rest."
+            ),
+        ),
+        (
+            "hill",
+            "Hill Giant Ancestry",
+            (
+                "When you hit a Large or smaller creature with an attack roll and deal damage, you "
+                "can give it the Prone condition. You can use this a number of times equal to your "
+                "Proficiency Bonus, regaining all uses on a Long Rest."
+            ),
+        ),
+        (
+            "stone",
+            "Stone Giant Ancestry",
+            (
+                "When you take damage, you can take a Reaction to roll 1d12, add your Constitution "
+                "modifier, and reduce the damage by that total. You can use this a number of times "
+                "equal to your Proficiency Bonus, regaining all uses on a Long Rest."
+            ),
+        ),
+        (
+            "storm",
+            "Storm Giant Ancestry",
+            (
+                "When you take damage from a creature within 60 feet, you can take a Reaction to "
+                "deal 1d8 Thunder damage to it. You can use this a number of times equal to your "
+                "Proficiency Bonus, regaining all uses on a Long Rest."
+            ),
+        ),
+    ],
+    "tiefling": [
+        (
+            "abyssal",
+            "Abyssal Legacy",
+            (
+                "You have Resistance to Poison damage and know the Poison Spray cantrip. At level 3 "
+                "you learn Ray of Sickness, and at level 5 you learn Hold Person; each is always "
+                "prepared and can be cast once without a spell slot per Long Rest."
+            ),
+            ["poison"],
+        ),
+        (
+            "chthonic",
+            "Chthonic Legacy",
+            (
+                "You have Resistance to Necrotic damage and know the Chill Touch cantrip. At level "
+                "3 you learn False Life, and at level 5 you learn Ray of Enfeeblement; each is "
+                "always prepared and can be cast once without a spell slot per Long Rest."
+            ),
+            ["necrotic"],
+        ),
+        (
+            "infernal",
+            "Infernal Legacy",
+            (
+                "You have Resistance to Fire damage and know the Fire Bolt cantrip. At level 3 you "
+                "learn Hellish Rebuke, and at level 5 you learn Darkness; each is always prepared "
+                "and can be cast once without a spell slot per Long Rest."
+            ),
+            ["fire"],
+        ),
+    ],
+}
+
+
+def species_lineage_features() -> list[dict[str, Any]]:
+    """The named lineage choices for the species whose SRD traits offer them."""
+    features: list[dict[str, Any]] = []
+    for species_id, entries in SPECIES_LINEAGE_FEATURES.items():
+        for entry in entries:
+            slug_id, name, description, *resistance = entry
+            extra: dict[str, Any] = {}
+            if resistance:
+                extra["resistances"] = resistance[0]
+            features.append(
+                feature(
+                    f"lineage-{species_id}-{slug_id}",
+                    f"{species_id.title()}: {name}",
+                    description,
+                    feature_type="trait",
+                    tag=f"lineage-{species_id}",
+                    rank=0,
+                    **extra,
+                )
+            )
+    return features
+
+
 def build_species() -> None:
     species = load("species")
     definitions: list[dict[str, Any]] = []
@@ -1799,49 +2090,107 @@ def build_species() -> None:
         for trait in record.get("traits", []):
             ident = f"species-{species_id}-{slug(trait['name'])}"
             extra: dict[str, Any] = {}
-            if trait["name"] in (
-                "Draconic Ancestry",
-                "Elven Lineage",
-                "Gnomish Lineage",
-                "Giant Ancestry",
-                "Fiendish Legacy",
-                "Versatile",
-            ):
+            name = trait["name"]
+            if species_id == "dragonborn" and name == "Draconic Ancestry":
+                pass
+            elif name == "Keen Senses":
                 extra["picks"] = [
                     {
-                        "id": "choice",
-                        "kind": "text",
-                        "label": trait["name"],
+                        "id": "skill",
+                        "kind": "skill",
+                        "label": "Skill",
+                        "choices": ["insight", "perception", "survival"],
+                        "grant": "proficiency",
                     }
                 ]
+            elif name == "Dwarven Toughness":
+                extra["level_hp_bonus"] = 1
+            elif name == "Dwarven Resilience":
+                extra["resistances"] = ["poison"]
+            rank = 5 if name in ("Draconic Flight", "Large Form") else 0
             definitions.append(
                 feature(
                     ident,
-                    f"{record['name']}: {trait['name']}",
+                    f"{record['name']}: {name}",
                     trait["desc"],
                     feature_type="trait",
                     tag="species",
-                    rank=0,
+                    rank=rank,
                     **extra,
                 )
             )
             trait_ids.append(ident)
+        if species_id == "dragonborn":
+            for dragon, damage_type in DRAGON_ANCESTRIES.items():
+                definitions.append(
+                    feature(
+                        f"lineage-dragonborn-{slug(dragon)}",
+                        f"Dragonborn: {dragon} Ancestry",
+                        f"Your draconic ancestor is a {dragon} dragon. Your Breath Weapon deals "
+                        f"{damage_type} damage, and you have Resistance to {damage_type} damage.",
+                        feature_type="trait",
+                        tag="lineage-dragonborn",
+                        rank=0,
+                        resistances=[damage_type],
+                        damage_type=damage_type,
+                    )
+                )
+        if species_id in SPECIES_LINEAGE_FEATURES:
+            definitions.extend(
+                item
+                for item in species_lineage_features()
+                if item["tag"] == f"lineage-{species_id}"
+            )
         size = next((t["desc"] for t in record["traits"] if t["name"] == "Size"), "Medium")
         speed = next((t["desc"] for t in record["traits"] if t["name"] == "Speed"), "30 feet")
-        definitions.append(
-            {
-                "type": "template",
-                "id": species_id,
-                "kind": "species",
-                "name": record["name"],
-                "icon": SPECIES_ICONS.get(species_id, "humanoid"),
-                "description": (
-                    f"{record['name']}. {size}. Speed {speed}. "
-                    + " ".join(t["name"] + "." for t in record["traits"])
-                ),
-                "features": trait_ids,
-            }
-        )
+        template: dict[str, Any] = {
+            "type": "template",
+            "id": species_id,
+            "kind": "species",
+            "name": record["name"],
+            "icon": SPECIES_ICONS.get(species_id, "humanoid"),
+            "description": (
+                f"{record['name']}. {size}. Speed {speed}. "
+                + " ".join(t["name"] + "." for t in record["traits"])
+            ),
+            "features": trait_ids,
+        }
+        if species_id == "human":
+            template["skill_picks"] = [
+                {"id": "skillful", "count": 1, "table": "all_skills", "max_level": 2}
+            ]
+            template["feat_picks"] = [
+                {
+                    "id": "versatile",
+                    "count": 1,
+                    "tag": "origin",
+                    "feature_type": "feat",
+                    "max_rank": 1,
+                }
+            ]
+        if species_id == "dwarf":
+            template["stats"] = {"hp": 1}
+        if species_id == "dragonborn":
+            template["feat_picks"] = [
+                {
+                    "id": "ancestry",
+                    "count": 1,
+                    "tag": "lineage-dragonborn",
+                    "feature_type": "trait",
+                    "max_rank": 0,
+                }
+            ]
+        if species_id in SPECIES_LINEAGE_FEATURES:
+            template["feat_picks"] = [
+                {
+                    "id": "lineage",
+                    "count": 1,
+                    "tag": f"lineage-{species_id}",
+                    "feature_type": "trait",
+                    "max_rank": 0,
+                }
+            ]
+        definitions.append(template)
     write("species.json", definitions)
 
 
@@ -1878,6 +2227,74 @@ def background_feat(record: dict[str, Any]) -> str:
     return ""
 
 
+BACKGROUND_EQUIPMENT_NAMES = {
+    "Calligrapher's Supplies": "Calligrapher's Supplies (10 GP)",
+    "Book": "Book",
+    "Holy Symbol": "Holy Symbol",
+    "Parchment": "Parchment",
+    "Robe": "Robe",
+    "Dagger": "Dagger",
+    "Daggers": "Dagger",
+    "Thieves' Tools": "Thieves' Tools",
+    "Crowbar": "Crowbar",
+    "Pouch": "Pouch",
+    "Pouches": "Pouch",
+    "Traveler's Clothes": "Clothes, Traveler's",
+    "Quarterstaff": "Quarterstaff",
+    "Spear": "Spear",
+    "Shortbow": "Shortbow",
+    "Arrows": "Arrows (20)",
+    "Gaming Set": "Gaming Set, Dice",
+    "Healer's Kit": "Healer's Kit",
+    "Quiver": "Quiver",
+}
+
+
+def background_equipment_grant(equipment: str) -> dict[str, Any]:
+    """The background's A/B starting package, parsed into catalogue names and silver."""
+    if not equipment:
+        return {}
+    match = re.search(r"\(A\)\s*(.*?);?\s*or\s*\(B\)\s*(\d+)\s*GP", equipment)
+    if match is None:
+        return {}
+    package, gold = match.groups()
+    items: list[str] = []
+    silver = 0
+    for part in package.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        money = re.fullmatch(r"(\d+)\s*GP", part)
+        if money:
+            silver += int(money.group(1)) * 10
+            continue
+        count = 1
+        quantity = re.match(r"^(\d+)\s+(.*)$", part)
+        if quantity:
+            count, part = int(quantity.group(1)), quantity.group(2)
+        name = re.sub(r"\s*\([^)]*\)$", "", part).strip()
+        catalogue = BACKGROUND_EQUIPMENT_NAMES.get(name)
+        if catalogue is None:
+            raise ValueError(f"background equipment {name!r} is not mapped to the catalogue")
+        # Arrows (20) is already one bundle in the catalogue, so "20 Arrows" is one item.
+        if name == "Arrows":
+            count = 1
+        items.extend([catalogue] * count)
+    return {
+        "items": items,
+        "silver": silver,
+        "options": [
+            {
+                "id": "a",
+                "label": "A: background kit",
+                "items": items,
+                "silver": silver,
+            },
+            {"id": "b", "label": f"B: {gold} GP", "silver": int(gold) * 10},
+        ],
+    }
+
+
 def build_backgrounds() -> None:
     records = load("backgrounds")
     definitions: list[dict[str, Any]] = []
@@ -1892,7 +2309,7 @@ def build_backgrounds() -> None:
                 asi_id,
                 f"{record['name']}: Ability Scores",
                 (
-                    "Increase the three abilities this background trains by 1 each: "
+                    "Increase one of these abilities by 2 and another by 1, or each of them by 1: "
                     + ", ".join(ABILITY_NAMES[ability] for ability in abilities)
                     + "."
                 ),
@@ -1906,7 +2323,9 @@ def build_backgrounds() -> None:
                         "grant": "score",
                         "amount": 1,
                         "count": 3,
+                        "max_value": 20,
                         "choices": abilities,
+                        "patterns": [[1, 1, 1], [2, 1]],
                     }
                 ],
             )
@@ -1950,10 +2369,17 @@ def build_backgrounds() -> None:
                 "description": description,
                 "skills": {skill: 1 for skill in skills},
                 "features": features,
+                "grant": background_equipment_grant(equipment),
             }
         )
     write("backgrounds.json", definitions)
 
+
+CLASS_ALWAYS_PREPARED = {
+    "druid": {1: ["Speak with Animals"]},
+    "paladin": {2: ["Divine Smite"], 5: ["Find Steed"]},
+    "ranger": {1: ["Hunter's Mark"]},
+}
 
 CLASS_SKIP_FEATURES = {
     "Ability Score Improvement",
@@ -2062,6 +2488,59 @@ def subclass_land_spells(
 def feature_choice_picks(name: str) -> list[dict[str, Any]]:
     if name in ("Weapon Mastery", "Pact Magic"):
         return [{"id": "choice", "kind": "text", "label": name}]
+    if name == "Deft Explorer":
+        return [
+            {
+                "id": "expertise",
+                "kind": "skill",
+                "label": "Expertise",
+                "grant": "expertise",
+                "choices": list(SKILLS),
+            },
+            {"id": "languages", "kind": "text", "label": "Languages", "count": 2},
+        ]
+    if name == "Scholar":
+        return [
+            {
+                "id": "expertise",
+                "kind": "skill",
+                "label": "Expertise",
+                "grant": "expertise",
+                "choices": ["arcana", "history", "investigation", "medicine", "nature", "religion"],
+            }
+        ]
+    if name == "Bonus Proficiencies":
+        return [
+            {
+                "id": "skills",
+                "kind": "skill",
+                "label": "Skills",
+                "grant": "proficiency",
+                "count": 3,
+            }
+        ]
+    if name == "Evocation Savant":
+        return [
+            {
+                "id": "spells",
+                "kind": "spell",
+                "label": "Evocation spells",
+                "grant": "learn",
+                "count": 2,
+                "max_rank": 2,
+                "tags": ["evocation"],
+            }
+        ]
+    if name == "Hunter's Prey":
+        return [
+            {
+                "id": "prey",
+                "kind": "feature",
+                "label": "Prey",
+                "grant": "learn",
+                "choices": ["hunter-prey-colossus-slayer", "hunter-prey-horde-breaker"],
+            }
+        ]
     return []
 
 
@@ -2153,6 +2632,26 @@ def option_features(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
             "Medium armor.",
             feature_type="feat",
             tag="primal-order",
+            rank=1,
+        ),
+        feature(
+            "hunter-prey-colossus-slayer",
+            "Colossus Slayer",
+            "Your tenacity can wear down the most potent foes. When you hit a creature with "
+            "a weapon, the creature takes an extra 1d8 damage if it is below its hit point "
+            "maximum. You can deal this extra damage only once per turn.",
+            feature_type="trait",
+            tag="hunter-prey",
+            rank=1,
+        ),
+        feature(
+            "hunter-prey-horde-breaker",
+            "Horde Breaker",
+            "Once on each of your turns when you make a weapon attack, you can make another "
+            "attack with the same weapon against a different creature within 5 feet of the "
+            "original target and within range.",
+            feature_type="trait",
+            tag="hunter-prey",
             rank=1,
         ),
     ]
@@ -2309,10 +2808,32 @@ def build_classes(spell_lists: dict[str, dict[int, list[str]]]) -> None:
             )
             for level in levels:
                 level_features[level].append(ident)
+        # A class's always-prepared spells are learned as class features, so the sheet lists
+        # them and they are castable without taking a prepared-spell slot.
+        for level, spell_names in CLASS_ALWAYS_PREPARED.get(class_id, {}).items():
+            for spell_name in spell_names:
+                spell_id = spells_by_name.get(spell_name.casefold())
+                if spell_id is not None:
+                    level_features[level].append(spell_id)
         if epic_levels:
             asi_levels.update(epic_levels)
         if class_id == "rogue":
             expertise_levels.discard(1)
+        armor_training = CLASS_ARMOR_TRAINING.get(class_id, [])
+        if armor_training:
+            armor_training_id = f"class-{class_id}-armor-training"
+            definitions.append(
+                feature(
+                    armor_training_id,
+                    "Armor Training",
+                    "You are trained with " + ", ".join(armor_training) + " armor.",
+                    feature_type="trait",
+                    tag=f"class:{class_id}",
+                    rank=1,
+                    armor_training=armor_training,
+                )
+            )
+            level_features[1].insert(0, armor_training_id)
         kits = CLASS_KITS[class_id]
         resources = class_resources(record, class_id)
         counters: dict[str, int] = {"hit_dice": 1}
@@ -2345,8 +2866,7 @@ def build_classes(spell_lists: dict[str, dict[int, list[str]]]) -> None:
                     for ability in CLASS_SAVES.get(
                         class_id,
                         tuple(
-                            ABILITIES[save["name"].casefold()]
-                            for save in record["saving_throws"]
+                            ABILITIES[save["name"].casefold()] for save in record["saving_throws"]
                         ),
                     )
                 )
@@ -2366,6 +2886,16 @@ def build_classes(spell_lists: dict[str, dict[int, list[str]]]) -> None:
                 "items": kits["items"],
                 "equip": kits["equip"],
                 "silver": kits["gold"] * 10,
+                "options": [
+                    {
+                        "id": "a",
+                        "label": "A: class kit",
+                        "items": kits["items"],
+                        "equip": kits["equip"],
+                        "silver": kits["gold"] * 10,
+                    },
+                    *CLASS_KIT_OPTIONS.get(class_id, []),
+                ],
             },
             "names": "names",
         }
@@ -2436,6 +2966,14 @@ def build_classes(spell_lists: dict[str, dict[int, list[str]]]) -> None:
                 else [0] * 20
             ),
             "features": {str(level): ids for level, ids in sorted(level_features.items())},
+            "always_prepared": {
+                str(level): [
+                    spells_by_name[name.casefold()]
+                    for name in names
+                    if name.casefold() in spells_by_name
+                ]
+                for level, names in CLASS_ALWAYS_PREPARED.get(class_id, {}).items()
+            },
         }
     progression_subclasses: dict[str, Any] = {}
     for record in subclass_records:
@@ -2460,6 +2998,7 @@ def build_classes(spell_lists: dict[str, dict[int, list[str]]]) -> None:
                     "requires_no_armor": True,
                 }
                 extra["level_hp_bonus"] = 1
+                extra["flat_hp_bonus"] = 3
             definitions.append(
                 feature(
                     ident,
@@ -2869,59 +3408,73 @@ def build_monsters() -> None:
 DND_RULES = [
     (
         "d20-tests",
-        "The d20 Test. Whenever a creature tries something that could fail, roll a d20, add "
-        "the relevant ability modifier, and add the proficiency bonus when the creature is "
-        "proficient. Compare the total to a Difficulty Class (DC): the check succeeds when the "
-        "total equals or exceeds the DC. A natural 20 is not an automatic success outside an "
-        "attack roll or death save, and a natural 1 is not an automatic failure.",
+        (
+            "The d20 Test. Whenever a creature tries something that could fail, roll a d20, add "
+            "the relevant ability modifier, and add the proficiency bonus when the creature is "
+            "proficient. Compare the total to a Difficulty Class (DC): the check succeeds when the "
+            "total equals or exceeds the DC. A natural 20 is not an automatic success outside an "
+            "attack roll or death save, and a natural 1 is not an automatic failure."
+        ),
         True,
     ),
     (
         "advantage",
-        "Advantage and Disadvantage. When a rule gives advantage, roll two d20s and use the "
-        "higher; when it gives disadvantage, roll two and use the lower. Advantage and "
-        "disadvantage cancel each other, however many of each apply. Pass advantage or "
-        "disadvantage to the roll as the roll_mode argument.",
+        (
+            "Advantage and Disadvantage. When a rule gives advantage, roll two d20s and use the "
+            "higher; when it gives disadvantage, roll two and use the lower. Advantage and "
+            "disadvantage cancel each other, however many of each apply. Pass advantage or "
+            "disadvantage to the roll as the roll_mode argument."
+        ),
         True,
     ),
     (
         "proficiency",
-        "Proficiency Bonus. A character's proficiency bonus is +2 at levels 1-4, +3 at 5-8, +4 "
-        "at 9-12, +5 at 13-16, and +6 at 17-20. It is added to attack rolls, ability checks, "
-        "and saving throws the character is proficient in. Expertise doubles it for a chosen "
-        "skill.",
+        (
+            "Proficiency Bonus. A character's proficiency bonus is +2 at levels 1-4, +3 at 5-8, +4 "
+            "at 9-12, +5 at 13-16, and +6 at 17-20. It is added to attack rolls, ability checks, "
+            "and saving throws the character is proficient in. Expertise doubles it for a chosen "
+            "skill."
+        ),
         True,
     ),
     (
         "armor-class",
-        "Armor Class. An attack hits when the attack roll total equals or exceeds the target's "
-        "Armor Class. Unarmored AC is 10 + Dexterity modifier. Body armor sets a base AC and "
-        "may cap the Dexterity added; a shield adds +2.",
+        (
+            "Armor Class. An attack hits when the attack roll total equals or exceeds the target's "
+            "Armor Class. Unarmored AC is 10 + Dexterity modifier. Body armor sets a base AC and "
+            "may cap the Dexterity added; a shield adds +2."
+        ),
         True,
     ),
     (
         "death-saves",
-        "Death Saving Throws. A player character at 0 hit points is unconscious and makes a "
-        "death save at the start of each of their turns: 10 or higher is a success, 9 or lower "
-        "a failure, a natural 1 counts as two failures, and a natural 20 restores 1 hit point. "
-        "Three successes stabilize the character; three failures kill them. Use the death_save "
-        "tool, never a normal ability save.",
+        (
+            "Death Saving Throws. A player character at 0 hit points is unconscious and makes a "
+            "death save at the start of each of their turns: 10 or higher is a success, 9 or lower "
+            "a failure, a natural 1 counts as two failures, and a natural 20 restores 1 hit point. "
+            "Three successes stabilize the character; three failures kill them. Use the death_save "
+            "tool, never a normal ability save."
+        ),
         True,
     ),
     (
         "spellcasting",
-        "Spellcasting. A spellcaster knows cantrips and leveled spells. Casting a leveled spell "
-        "spends a slot of its level or higher; a cantrip costs no slot. Use cast_spell with the "
-        "slot level when upcasting. A spell that requires concentration ends an earlier "
-        "concentration spell. Long rests restore all slots.",
+        (
+            "Spellcasting. A spellcaster knows cantrips and leveled spells. Casting a leveled spell "
+            "spends a slot of its level or higher; a cantrip costs no slot. Use cast_spell with the "
+            "slot level when upcasting. A spell that requires concentration ends an earlier "
+            "concentration spell. Long rests restore all slots."
+        ),
         True,
     ),
     (
         "rests",
-        "Rests. A short rest takes 1 hour; a character may spend Hit Point Dice to regain hit "
-        "points. A long rest takes 8 hours and restores all hit points, Hit Point Dice, and "
-        "spell slots. Use the rest tool with length short or long, then spend_hit_die for each "
-        "die a character spends.",
+        (
+            "Rests. A short rest takes 1 hour; a character may spend Hit Point Dice to regain hit "
+            "points. A long rest takes 8 hours and restores all hit points, Hit Point Dice, and "
+            "spell slots. Use the rest tool with length short or long, then spend_hit_die for each "
+            "die a character spends."
+        ),
         True,
     ),
 ]

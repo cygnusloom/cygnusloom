@@ -24,14 +24,7 @@
     "feature_type": "trait",
     "description": "Your lineage stems from a dragon progenitor. Choose the kind of dragon from the Draconic Ancestors table. Your choice affects your Breath Weapon and Damage Resistance traits as well as your appearance.\n\nTable: Draconic Ancestors\n\n| Dragon | Damage Type |\n|---|---|\n| Black | Acid |\n| Blue | Lightning |\n| Brass |Fire |\n| Bronze | Lightning |\n| Copper | Acid|\n|Gold|Fire|\n|Green|Poison|\n|Red|Fire|\n|Silver|Cold|\n|White|Cold|",
     "tag": "species",
-    "rank": 0,
-    "picks": [
-      {
-        "id": "choice",
-        "kind": "text",
-        "label": "Draconic Ancestry"
-      }
-    ]
+    "rank": 0
   },
   {
     "type": "feature",
@@ -67,7 +60,137 @@
     "feature_type": "trait",
     "description": "When you reach character level 5, you can channel draconic magic to give yourself temporary flight. As a Bonus Action, you sprout spectral wings on your back that last for 10 minutes or until you retract the wings (no action required) or have the Incapacitated condition. During that time, you have a Fly Speed equal to your Speed. Your wings appear to be made of the same energy as your Breath Weapon. Once you use this trait, you can't use it again until you finish a Long Rest.",
     "tag": "species",
-    "rank": 0
+    "rank": 5
+  },
+  {
+    "type": "feature",
+    "id": "lineage-dragonborn-black",
+    "name": "Dragonborn: Black Ancestry",
+    "feature_type": "trait",
+    "description": "Your draconic ancestor is a Black dragon. Your Breath Weapon deals acid damage, and you have Resistance to acid damage.",
+    "tag": "lineage-dragonborn",
+    "rank": 0,
+    "resistances": [
+      "acid"
+    ],
+    "damage_type": "acid"
+  },
+  {
+    "type": "feature",
+    "id": "lineage-dragonborn-blue",
+    "name": "Dragonborn: Blue Ancestry",
+    "feature_type": "trait",
+    "description": "Your draconic ancestor is a Blue dragon. Your Breath Weapon deals lightning damage, and you have Resistance to lightning damage.",
+    "tag": "lineage-dragonborn",
+    "rank": 0,
+    "resistances": [
+      "lightning"
+    ],
+    "damage_type": "lightning"
+  },
+  {
+    "type": "feature",
+    "id": "lineage-dragonborn-brass",
+    "name": "Dragonborn: Brass Ancestry",
+    "feature_type": "trait",
+    "description": "Your draconic ancestor is a Brass dragon. Your Breath Weapon deals fire damage, and you have Resistance to fire damage.",
+    "tag": "lineage-dragonborn",
+    "rank": 0,
+    "resistances": [
+      "fire"
+    ],
+    "damage_type": "fire"
+  },
+  {
+    "type": "feature",
+    "id": "lineage-dragonborn-bronze",
+    "name": "Dragonborn: Bronze Ancestry",
+    "feature_type": "trait",
+    "description": "Your draconic ancestor is a Bronze dragon. Your Breath Weapon deals lightning damage, and you have Resistance to lightning damage.",
+    "tag": "lineage-dragonborn",
+    "rank": 0,
+    "resistances": [
+      "lightning"
+    ],
+    "damage_type": "lightning"
+  },
+  {
+    "type": "feature",
+    "id": "lineage-dragonborn-copper",
+    "name": "Dragonborn: Copper Ancestry",
+    "feature_type": "trait",
+    "description": "Your draconic ancestor is a Copper dragon. Your Breath Weapon deals acid damage, and you have Resistance to acid damage.",
+    "tag": "lineage-dragonborn",
+    "rank": 0,
+    "resistances": [
+      "acid"
+    ],
+    "damage_type": "acid"
+  },
+  {
+    "type": "feature",
+    "id": "lineage-dragonborn-gold",
+    "name": "Dragonborn: Gold Ancestry",
+    "feature_type": "trait",
+    "description": "Your draconic ancestor is a Gold dragon. Your Breath Weapon deals fire damage, and you have Resistance to fire damage.",
+    "tag": "lineage-dragonborn",
+    "rank": 0,
+    "resistances": [
+      "fire"
+    ],
+    "damage_type": "fire"
+  },
+  {
+    "type": "feature",
+    "id": "lineage-dragonborn-green",
+    "name": "Dragonborn: Green Ancestry",
+    "feature_type": "trait",
+    "description": "Your draconic ancestor is a Green dragon. Your Breath Weapon deals poison damage, and you have Resistance to poison damage.",
+    "tag": "lineage-dragonborn",
+    "rank": 0,
+    "resistances": [
+      "poison"
+    ],
+    "damage_type": "poison"
+  },
+  {
+    "type": "feature",
+    "id": "lineage-dragonborn-red",
+    "name": "Dragonborn: Red Ancestry",
+    "feature_type": "trait",
+    "description": "Your draconic ancestor is a Red dragon. Your Breath Weapon deals fire damage, and you have Resistance to fire damage.",
+    "tag": "lineage-dragonborn",
+    "rank": 0,
+    "resistances": [
+      "fire"
+    ],
+    "damage_type": "fire"
+  },
+  {
+    "type": "feature",
+    "id": "lineage-dragonborn-silver",
+    "name": "Dragonborn: Silver Ancestry",
+    "feature_type": "trait",
+    "description": "Your draconic ancestor is a Silver dragon. Your Breath Weapon deals cold damage, and you have Resistance to cold damage.",
+    "tag": "lineage-dragonborn",
+    "rank": 0,
+    "resistances": [
+      "cold"
+    ],
+    "damage_type": "cold"
+  },
+  {
+    "type": "feature",
+    "id": "lineage-dragonborn-white",
+    "name": "Dragonborn: White Ancestry",
+    "feature_type": "trait",
+    "description": "Your draconic ancestor is a White dragon. Your Breath Weapon deals cold damage, and you have Resistance to cold damage.",
+    "tag": "lineage-dragonborn",
+    "rank": 0,
+    "resistances": [
+      "cold"
+    ],
+    "damage_type": "cold"
   },
   {
     "type": "template",
@@ -84,6 +207,15 @@
       "species-dragonborn-damage-resistance",
       "species-dragonborn-darkvision",
       "species-dragonborn-draconic-flight"
+    ],
+    "feat_picks": [
+      {
+        "id": "ancestry",
+        "count": 1,
+        "tag": "lineage-dragonborn",
+        "feature_type": "trait",
+        "max_rank": 0
+      }
     ]
   },
   {
@@ -120,7 +252,10 @@
     "feature_type": "trait",
     "description": "You have Resistance to Poison damage. You also have Advantage on saving throws you make to avoid or end the Poisoned condition.",
     "tag": "species",
-    "rank": 0
+    "rank": 0,
+    "resistances": [
+      "poison"
+    ]
   },
   {
     "type": "feature",
@@ -129,7 +264,8 @@
     "feature_type": "trait",
     "description": "Your Hit Point maximum increases by 1, and it increases by 1 again whenever you gain a level.",
     "tag": "species",
-    "rank": 0
+    "rank": 0,
+    "level_hp_bonus": 1
   },
   {
     "type": "feature",
@@ -154,7 +290,10 @@
       "species-dwarf-dwarven-resilience",
       "species-dwarf-dwarven-toughness",
       "species-dwarf-stonecunning"
-    ]
+    ],
+    "stats": {
+      "hp": 1
+    }
   },
   {
     "type": "feature",
@@ -190,14 +329,7 @@
     "feature_type": "trait",
     "description": "You are part of a lineage that grants you supernatural abilities. Choose a lineage from the Elven Lineages table. You gain the level 1 benefit of that lineage.\n\nWhen you reach character levels 3 and 5, you learn a higher-level spell, as shown on the table. You always have that spell prepared. You can cast it once without a spell slot, and you regain the ability to cast it in that way when you finish a Long Rest. You can also cast the spell using any spell slots you have of the appropriate level.\n\nTable: Elven Lineages\n\n|Lineage|Level 1|Level 3|Level 5|\n|---|---|---|---|\n|Drow|The range of your Darkvision increases to 120 feet. You also know the Dancing Lights cantrip.|Faerie Fire|Darkness|\n|High Elf|You know the Prestidigitation cantrip. Whenever you finish a Long Rest, you can replace that cantrip with a different cantrip from the Wizard spell list.|Detect Magic|Misty Step|\n|Wood Elf|Your Speed increases to 35 feet. You also know the Druidcraft cantrip.|Longstrider|Pass without Trace|\n\nIntelligence, Wisdom, or Charisma is your spellcasting ability for the spells you cast with this trait (choose the ability when you select the lineage).",
     "tag": "species",
-    "rank": 0,
-    "picks": [
-      {
-        "id": "choice",
-        "kind": "text",
-        "label": "Elven Lineage"
-      }
-    ]
+    "rank": 0
   },
   {
     "type": "feature",
@@ -215,7 +347,20 @@
     "feature_type": "trait",
     "description": "You have proficiency in the Insight, Perception, or Survival skill.",
     "tag": "species",
-    "rank": 0
+    "rank": 0,
+    "picks": [
+      {
+        "id": "skill",
+        "kind": "skill",
+        "label": "Skill",
+        "choices": [
+          "insight",
+          "perception",
+          "survival"
+        ],
+        "grant": "proficiency"
+      }
+    ]
   },
   {
     "type": "feature",
@@ -224,6 +369,33 @@
     "feature_type": "trait",
     "description": "You don't need to sleep, and magic can't put you to sleep. You can finish a Long Rest in 4 hours if you spend those hours in a trancelike meditation, during which you retain consciousness.",
     "tag": "species",
+    "rank": 0
+  },
+  {
+    "type": "feature",
+    "id": "lineage-elf-drow",
+    "name": "Elf: Drow Lineage",
+    "feature_type": "trait",
+    "description": "The range of your Darkvision increases to 120 feet. You know the Dancing Lights cantrip. At level 3 you learn Faerie Fire, and at level 5 you learn Darkness; each is always prepared and can be cast once without a spell slot per Long Rest.",
+    "tag": "lineage-elf",
+    "rank": 0
+  },
+  {
+    "type": "feature",
+    "id": "lineage-elf-high-elf",
+    "name": "Elf: High Elf Lineage",
+    "feature_type": "trait",
+    "description": "You know the Prestidigitation cantrip, and you can replace it with another Wizard cantrip whenever you finish a Long Rest. At level 3 you learn Detect Magic, and at level 5 you learn Misty Step; each is always prepared and can be cast once without a spell slot per Long Rest.",
+    "tag": "lineage-elf",
+    "rank": 0
+  },
+  {
+    "type": "feature",
+    "id": "lineage-elf-wood-elf",
+    "name": "Elf: Wood Elf Lineage",
+    "feature_type": "trait",
+    "description": "Your Speed increases to 35 feet. You know the Druidcraft cantrip. At level 3 you learn Longstrider, and at level 5 you learn Pass without Trace; each is always prepared and can be cast once without a spell slot per Long Rest.",
+    "tag": "lineage-elf",
     "rank": 0
   },
   {
@@ -241,6 +413,15 @@
       "species-elf-fey-ancestry",
       "species-elf-keen-senses",
       "species-elf-trance"
+    ],
+    "feat_picks": [
+      {
+        "id": "lineage",
+        "count": 1,
+        "tag": "lineage-elf",
+        "feature_type": "trait",
+        "max_rank": 0
+      }
     ]
   },
   {
@@ -286,14 +467,25 @@
     "feature_type": "trait",
     "description": "You are part of a lineage that grants you supernatural abilities. Choose one of the following options; whichever one you choose, Intelligence, Wisdom, or Charisma is your spellcasting ability for the spells you cast with this trait (choose the ability when you select the lineage):\n\n**Forest Gnome.** You know the *Minor Illusion* cantrip. You also always have the *Speak with Animals* spell prepared. You can cast it without a spell slot a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest. You can also use any spell slots you have to cast the spell.\n\n**Rock Gnome.** You know the *Mending* and *Prestidigitation* cantrips. In addition, you can spend 10 minutes casting *Prestidigitation* to create a Tiny clockwork device (AC 5, 1 HP), such as a toy, fire starter, or music box. When you create the device, you determine its function by choosing one effect from *Prestidigitation*; the device produces that effect whenever you or another creature takes a Bonus Action to activate it with a touch. If the chosen effect has options within it, you choose one of those options for the device when you create it. For example, if you choose the spell's ignite-extinguish effect, you determine whether the device ignites or extinguishes fire; the device doesn't do both. You can have three such devices in existence at a time, and each falls apart 8 hours after its creation or when you dismantle it with a touch as a Utilize action.",
     "tag": "species",
-    "rank": 0,
-    "picks": [
-      {
-        "id": "choice",
-        "kind": "text",
-        "label": "Gnomish Lineage"
-      }
-    ]
+    "rank": 0
+  },
+  {
+    "type": "feature",
+    "id": "lineage-gnome-forest",
+    "name": "Gnome: Forest Gnome Lineage",
+    "feature_type": "trait",
+    "description": "You know the Minor Illusion cantrip and always have Speak with Animals prepared. You can cast Speak with Animals without a spell slot a number of times equal to your Proficiency Bonus, regaining the uses on a Long Rest.",
+    "tag": "lineage-gnome",
+    "rank": 0
+  },
+  {
+    "type": "feature",
+    "id": "lineage-gnome-rock",
+    "name": "Gnome: Rock Gnome Lineage",
+    "feature_type": "trait",
+    "description": "You know the Mending and Prestidigitation cantrips. You can spend 10 minutes casting Prestidigitation to create a Tiny clockwork device, with up to three devices existing at once.",
+    "tag": "lineage-gnome",
+    "rank": 0
   },
   {
     "type": "template",
@@ -308,6 +500,15 @@
       "species-gnome-darkvision",
       "species-gnome-gnomish-cunning",
       "species-gnome-gnomish-lineage"
+    ],
+    "feat_picks": [
+      {
+        "id": "lineage",
+        "count": 1,
+        "tag": "lineage-gnome",
+        "feature_type": "trait",
+        "max_rank": 0
+      }
     ]
   },
   {
@@ -335,14 +536,7 @@
     "feature_type": "trait",
     "description": "You are descended from Giants. Choose one of the following benefits\u2014a supernatural boon from your ancestry; you can use the chosen benefit a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest:\n\n- **Cloud's Jaunt (Cloud Giant)**. As a Bonus Action, you magically teleport up to 30 feet to an unoccupied space you can see.\n- **Fire's Burn (Fire Giant)**. When you hit a target with an attack roll and deal damage to it, you can also deal 1d10 Fire damage to that target.\n- **Frost's Chill (Frost Giant)**. When you hit a target with an attack roll and deal damage to it, you can also deal 1d6 Cold damage to that target and reduce its Speed by 10 feet until the start of your next turn.\n- **Hill's Tumble (Hill Giant)**. When you hit a Large or smaller creature with an attack roll and deal damage to it, you can give that target the Prone condition.\n- **Stone's Endurance (Stone Giant)**. When you take damage, you can take a Reaction to roll 1d12. Add your Constitution modifier to the number rolled and reduce the damage by that total.\n- **Storm's Thunder (Storm Giant)**. When you take damage from a creature within 60 feet of you, you can take a Reaction to deal 1d8 Thunder damage to that creature.",
     "tag": "species",
-    "rank": 0,
-    "picks": [
-      {
-        "id": "choice",
-        "kind": "text",
-        "label": "Giant Ancestry"
-      }
-    ]
+    "rank": 0
   },
   {
     "type": "feature",
@@ -351,7 +545,7 @@
     "feature_type": "trait",
     "description": "Starting at character level 5, you can change your size to Large as a Bonus Action if you're in a big enough space. This transformation lasts for 10 minutes or until you end it (no action required). For that duration, you have Advantage on Strength checks, and your Speed increases by 10 feet. Once you use this trait, you can't use it again until you finish a Long Rest.",
     "tag": "species",
-    "rank": 0
+    "rank": 5
   },
   {
     "type": "feature",
@@ -360,6 +554,60 @@
     "feature_type": "trait",
     "description": "You have Advantage on any ability check you make to end the Grappled condition. You also count as one size larger when determining your carrying capacity.",
     "tag": "species",
+    "rank": 0
+  },
+  {
+    "type": "feature",
+    "id": "lineage-goliath-cloud",
+    "name": "Goliath: Cloud Giant Ancestry",
+    "feature_type": "trait",
+    "description": "As a Bonus Action, you can magically teleport up to 30 feet to an unoccupied space you can see. You can use this a number of times equal to your Proficiency Bonus, regaining all uses on a Long Rest.",
+    "tag": "lineage-goliath",
+    "rank": 0
+  },
+  {
+    "type": "feature",
+    "id": "lineage-goliath-fire",
+    "name": "Goliath: Fire Giant Ancestry",
+    "feature_type": "trait",
+    "description": "When you hit a target with an attack roll and deal damage, you can deal an extra 1d10 Fire damage. You can use this a number of times equal to your Proficiency Bonus, regaining all uses on a Long Rest.",
+    "tag": "lineage-goliath",
+    "rank": 0
+  },
+  {
+    "type": "feature",
+    "id": "lineage-goliath-frost",
+    "name": "Goliath: Frost Giant Ancestry",
+    "feature_type": "trait",
+    "description": "When you hit a target with an attack roll and deal damage, you can deal an extra 1d6 Cold damage and reduce its Speed by 10 feet until the start of your next turn. You can use this a number of times equal to your Proficiency Bonus, regaining all uses on a Long Rest.",
+    "tag": "lineage-goliath",
+    "rank": 0
+  },
+  {
+    "type": "feature",
+    "id": "lineage-goliath-hill",
+    "name": "Goliath: Hill Giant Ancestry",
+    "feature_type": "trait",
+    "description": "When you hit a Large or smaller creature with an attack roll and deal damage, you can give it the Prone condition. You can use this a number of times equal to your Proficiency Bonus, regaining all uses on a Long Rest.",
+    "tag": "lineage-goliath",
+    "rank": 0
+  },
+  {
+    "type": "feature",
+    "id": "lineage-goliath-stone",
+    "name": "Goliath: Stone Giant Ancestry",
+    "feature_type": "trait",
+    "description": "When you take damage, you can take a Reaction to roll 1d12, add your Constitution modifier, and reduce the damage by that total. You can use this a number of times equal to your Proficiency Bonus, regaining all uses on a Long Rest.",
+    "tag": "lineage-goliath",
+    "rank": 0
+  },
+  {
+    "type": "feature",
+    "id": "lineage-goliath-storm",
+    "name": "Goliath: Storm Giant Ancestry",
+    "feature_type": "trait",
+    "description": "When you take damage from a creature within 60 feet, you can take a Reaction to deal 1d8 Thunder damage to it. You can use this a number of times equal to your Proficiency Bonus, regaining all uses on a Long Rest.",
+    "tag": "lineage-goliath",
     "rank": 0
   },
   {
@@ -375,6 +623,15 @@
       "species-goliath-giant-ancestry",
       "species-goliath-large-form",
       "species-goliath-powerful-build"
+    ],
+    "feat_picks": [
+      {
+        "id": "lineage",
+        "count": 1,
+        "tag": "lineage-goliath",
+        "feature_type": "trait",
+        "max_rank": 0
+      }
     ]
   },
   {
@@ -490,14 +747,7 @@
     "feature_type": "trait",
     "description": "You gain an Origin feat of your choice (see \"Feats\"). Skilled is recommended.",
     "tag": "species",
-    "rank": 0,
-    "picks": [
-      {
-        "id": "choice",
-        "kind": "text",
-        "label": "Versatile"
-      }
-    ]
+    "rank": 0
   },
   {
     "type": "template",
@@ -512,6 +762,23 @@
       "species-human-resourceful",
       "species-human-skillful",
       "species-human-versatile"
+    ],
+    "skill_picks": [
+      {
+        "id": "skillful",
+        "count": 1,
+        "table": "all_skills",
+        "max_level": 2
+      }
+    ],
+    "feat_picks": [
+      {
+        "id": "versatile",
+        "count": 1,
+        "tag": "origin",
+        "feature_type": "feat",
+        "max_rank": 1
+      }
     ]
   },
   {
@@ -608,14 +875,7 @@
     "feature_type": "trait",
     "description": "You are the recipient of a legacy that grants you supernatural abilities. Choose a legacy from the Fiendish Legacies table. You gain the level 1 benefit of the chosen legacy.\n\nWhen you reach character levels 3 and 5, you learn a higher-level spell, as shown on the table. You always have that spell prepared. You can cast it once without a spell slot, and you regain the ability to cast it in that way when you finish a Long Rest. You can also cast the spell using any spell slots you have of the appropriate level.\n\nIntelligence, Wisdom, or Charisma is your spellcasting ability for the spells you cast with this trait (choose the ability when you select the legacy).\n\n**Table: Fiendish Legacies**\n\n|Legacy|Level 1|Level 3|Level 5|\n|---|---|---|---|\n|Abyssal|You have Resistance to Poison damage. You also know the Poison Spray cantrip.|Ray of Sickness|Hold Person|\n|Chthonic|You have Resistance to Necrotic damage. You also know the Chill Touch cantrip.|False Life|Ray of Enfeeblement|\n|Infernal|You have Resistance to Fire damage. You also know the Fire Bolt cantrip.|Hellish Rebuke|Darkness|",
     "tag": "species",
-    "rank": 0,
-    "picks": [
-      {
-        "id": "choice",
-        "kind": "text",
-        "label": "Fiendish Legacy"
-      }
-    ]
+    "rank": 0
   },
   {
     "type": "feature",
@@ -625,6 +885,42 @@
     "description": "You know the *Thaumaturgy* cantrip. When you cast it with this trait, the spell uses the same spellcasting ability you use for your Fiendish Legacy trait.",
     "tag": "species",
     "rank": 0
+  },
+  {
+    "type": "feature",
+    "id": "lineage-tiefling-abyssal",
+    "name": "Tiefling: Abyssal Legacy",
+    "feature_type": "trait",
+    "description": "You have Resistance to Poison damage and know the Poison Spray cantrip. At level 3 you learn Ray of Sickness, and at level 5 you learn Hold Person; each is always prepared and can be cast once without a spell slot per Long Rest.",
+    "tag": "lineage-tiefling",
+    "rank": 0,
+    "resistances": [
+      "poison"
+    ]
+  },
+  {
+    "type": "feature",
+    "id": "lineage-tiefling-chthonic",
+    "name": "Tiefling: Chthonic Legacy",
+    "feature_type": "trait",
+    "description": "You have Resistance to Necrotic damage and know the Chill Touch cantrip. At level 3 you learn False Life, and at level 5 you learn Ray of Enfeeblement; each is always prepared and can be cast once without a spell slot per Long Rest.",
+    "tag": "lineage-tiefling",
+    "rank": 0,
+    "resistances": [
+      "necrotic"
+    ]
+  },
+  {
+    "type": "feature",
+    "id": "lineage-tiefling-infernal",
+    "name": "Tiefling: Infernal Legacy",
+    "feature_type": "trait",
+    "description": "You have Resistance to Fire damage and know the Fire Bolt cantrip. At level 3 you learn Hellish Rebuke, and at level 5 you learn Darkness; each is always prepared and can be cast once without a spell slot per Long Rest.",
+    "tag": "lineage-tiefling",
+    "rank": 0,
+    "resistances": [
+      "fire"
+    ]
   },
   {
     "type": "template",
@@ -639,6 +935,15 @@
       "species-tiefling-darkvision",
       "species-tiefling-fiendish-legacy",
       "species-tiefling-otherworldly-presence"
+    ],
+    "feat_picks": [
+      {
+        "id": "lineage",
+        "count": 1,
+        "tag": "lineage-tiefling",
+        "feature_type": "trait",
+        "max_rank": 0
+      }
     ]
   }
 ]

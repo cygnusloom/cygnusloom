@@ -4,7 +4,7 @@
     "id": "background-asi-acolyte",
     "name": "Acolyte: Ability Scores",
     "feature_type": "trait",
-    "description": "Increase the three abilities this background trains by 1 each: Intelligence, Wisdom, Charisma.",
+    "description": "Increase one of these abilities by 2 and another by 1, or each of them by 1: Intelligence, Wisdom, Charisma.",
     "tag": "background",
     "rank": 0,
     "picks": [
@@ -15,10 +15,22 @@
         "grant": "score",
         "amount": 1,
         "count": 3,
+        "max_value": 20,
         "choices": [
           "int",
           "wis",
           "cha"
+        ],
+        "patterns": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            1
+          ]
         ]
       }
     ]
@@ -37,14 +49,43 @@
     "features": [
       "background-asi-acolyte",
       "feat-magic-initiate"
-    ]
+    ],
+    "grant": {
+      "items": [
+        "Calligrapher's Supplies (10 GP)",
+        "Book",
+        "Holy Symbol",
+        "Parchment",
+        "Robe"
+      ],
+      "silver": 80,
+      "options": [
+        {
+          "id": "a",
+          "label": "A: background kit",
+          "items": [
+            "Calligrapher's Supplies (10 GP)",
+            "Book",
+            "Holy Symbol",
+            "Parchment",
+            "Robe"
+          ],
+          "silver": 80
+        },
+        {
+          "id": "b",
+          "label": "B: 50 GP",
+          "silver": 500
+        }
+      ]
+    }
   },
   {
     "type": "feature",
     "id": "background-asi-criminal",
     "name": "Criminal: Ability Scores",
     "feature_type": "trait",
-    "description": "Increase the three abilities this background trains by 1 each: Dexterity, Constitution, Intelligence.",
+    "description": "Increase one of these abilities by 2 and another by 1, or each of them by 1: Dexterity, Constitution, Intelligence.",
     "tag": "background",
     "rank": 0,
     "picks": [
@@ -55,10 +96,22 @@
         "grant": "score",
         "amount": 1,
         "count": 3,
+        "max_value": 20,
         "choices": [
           "dex",
           "con",
           "int"
+        ],
+        "patterns": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            1
+          ]
         ]
       }
     ]
@@ -77,14 +130,47 @@
     "features": [
       "background-asi-criminal",
       "feat-alert"
-    ]
+    ],
+    "grant": {
+      "items": [
+        "Dagger",
+        "Dagger",
+        "Thieves' Tools",
+        "Crowbar",
+        "Pouch",
+        "Pouch",
+        "Clothes, Traveler's"
+      ],
+      "silver": 160,
+      "options": [
+        {
+          "id": "a",
+          "label": "A: background kit",
+          "items": [
+            "Dagger",
+            "Dagger",
+            "Thieves' Tools",
+            "Crowbar",
+            "Pouch",
+            "Pouch",
+            "Clothes, Traveler's"
+          ],
+          "silver": 160
+        },
+        {
+          "id": "b",
+          "label": "B: 50 GP",
+          "silver": 500
+        }
+      ]
+    }
   },
   {
     "type": "feature",
     "id": "background-asi-sage",
     "name": "Sage: Ability Scores",
     "feature_type": "trait",
-    "description": "Increase the three abilities this background trains by 1 each: Constitution, Intelligence, Wisdom.",
+    "description": "Increase one of these abilities by 2 and another by 1, or each of them by 1: Constitution, Intelligence, Wisdom.",
     "tag": "background",
     "rank": 0,
     "picks": [
@@ -95,10 +181,22 @@
         "grant": "score",
         "amount": 1,
         "count": 3,
+        "max_value": 20,
         "choices": [
           "con",
           "int",
           "wis"
+        ],
+        "patterns": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            1
+          ]
         ]
       }
     ]
@@ -117,14 +215,43 @@
     "features": [
       "background-asi-sage",
       "feat-magic-initiate"
-    ]
+    ],
+    "grant": {
+      "items": [
+        "Quarterstaff",
+        "Calligrapher's Supplies (10 GP)",
+        "Book",
+        "Parchment",
+        "Robe"
+      ],
+      "silver": 80,
+      "options": [
+        {
+          "id": "a",
+          "label": "A: background kit",
+          "items": [
+            "Quarterstaff",
+            "Calligrapher's Supplies (10 GP)",
+            "Book",
+            "Parchment",
+            "Robe"
+          ],
+          "silver": 80
+        },
+        {
+          "id": "b",
+          "label": "B: 50 GP",
+          "silver": 500
+        }
+      ]
+    }
   },
   {
     "type": "feature",
     "id": "background-asi-soldier",
     "name": "Soldier: Ability Scores",
     "feature_type": "trait",
-    "description": "Increase the three abilities this background trains by 1 each: Strength, Dexterity, Constitution.",
+    "description": "Increase one of these abilities by 2 and another by 1, or each of them by 1: Strength, Dexterity, Constitution.",
     "tag": "background",
     "rank": 0,
     "picks": [
@@ -135,10 +262,22 @@
         "grant": "score",
         "amount": 1,
         "count": 3,
+        "max_value": 20,
         "choices": [
           "str",
           "dex",
           "con"
+        ],
+        "patterns": [
+          [
+            1,
+            1,
+            1
+          ],
+          [
+            2,
+            1
+          ]
         ]
       }
     ]
@@ -157,6 +296,39 @@
     "features": [
       "background-asi-soldier",
       "feat-savage-attacker"
-    ]
+    ],
+    "grant": {
+      "items": [
+        "Spear",
+        "Shortbow",
+        "Arrows (20)",
+        "Gaming Set, Dice",
+        "Healer's Kit",
+        "Quiver",
+        "Clothes, Traveler's"
+      ],
+      "silver": 140,
+      "options": [
+        {
+          "id": "a",
+          "label": "A: background kit",
+          "items": [
+            "Spear",
+            "Shortbow",
+            "Arrows (20)",
+            "Gaming Set, Dice",
+            "Healer's Kit",
+            "Quiver",
+            "Clothes, Traveler's"
+          ],
+          "silver": 140
+        },
+        {
+          "id": "b",
+          "label": "B: 50 GP",
+          "silver": 500
+        }
+      ]
+    }
   }
 ]

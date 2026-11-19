@@ -8,7 +8,11 @@
       "save",
       "time",
       "magic"
-    ]
+    ],
+    "roll_modes": {
+      "attack": "disadvantage",
+      "attack_against": "advantage"
+    }
   },
   {
     "type": "condition",
@@ -39,7 +43,12 @@
     "description": "While you have the Exhaustion condition, you experience the following effects. \n* Exhaustion Levels. This condition is cumulative. Each time you receive it, you gain 1 Exhaustion level. You die if your Exhaustion level is 6.\n* D20 Tests Affected. When you make a D20 Test, the roll is reduced by 2 times your Exhaustion level.\n* Speed Reduced. Your Speed is reduced by a number of feet equal to 5 times your Exhaustion level.\n* Removing Exhaustion Levels. Finishing a Long Rest removes 1 of your Exhaustion levels. When your Exhaustion level reaches 0, the condition ends.",
     "ends": [
       "long_rest"
-    ]
+    ],
+    "modifies": {
+      "attack": -2,
+      "check": -2,
+      "save": -2
+    }
   },
   {
     "type": "condition",
@@ -50,7 +59,11 @@
       "save",
       "time",
       "magic"
-    ]
+    ],
+    "roll_modes": {
+      "attack": "disadvantage",
+      "check": "disadvantage"
+    }
   },
   {
     "type": "condition",
@@ -83,7 +96,11 @@
       "save",
       "time",
       "magic"
-    ]
+    ],
+    "roll_modes": {
+      "attack": "advantage",
+      "attack_against": "disadvantage"
+    }
   },
   {
     "type": "condition",
@@ -94,7 +111,10 @@
       "save",
       "time",
       "magic"
-    ]
+    ],
+    "roll_modes": {
+      "attack_against": "advantage"
+    }
   },
   {
     "type": "condition",
@@ -105,7 +125,10 @@
       "save",
       "time",
       "magic"
-    ]
+    ],
+    "roll_modes": {
+      "attack_against": "advantage"
+    }
   },
   {
     "type": "condition",
@@ -116,7 +139,11 @@
       "save",
       "time",
       "magic"
-    ]
+    ],
+    "roll_modes": {
+      "attack": "disadvantage",
+      "check": "disadvantage"
+    }
   },
   {
     "type": "condition",
@@ -127,7 +154,11 @@
       "save",
       "time",
       "magic"
-    ]
+    ],
+    "roll_modes": {
+      "attack": "disadvantage",
+      "attack_against": "advantage"
+    }
   },
   {
     "type": "condition",
@@ -138,7 +169,11 @@
       "save",
       "time",
       "magic"
-    ]
+    ],
+    "roll_modes": {
+      "attack": "disadvantage",
+      "attack_against": "advantage"
+    }
   },
   {
     "type": "condition",
@@ -149,7 +184,10 @@
       "save",
       "time",
       "magic"
-    ]
+    ],
+    "roll_modes": {
+      "attack_against": "advantage"
+    }
   },
   {
     "type": "condition",
@@ -160,6 +198,9 @@
       "save",
       "time",
       "magic"
-    ]
+    ],
+    "roll_modes": {
+      "attack_against": "advantage"
+    }
   }
 ]

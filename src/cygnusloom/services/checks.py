@@ -18,7 +18,7 @@ from cygnusloom.content.lookup import AmbiguousId, resolve_id
 from cygnusloom.rules.dice import ROLL_MODES, roll_mode_values
 from cygnusloom.services import reactions, resolution
 from cygnusloom.services.common import InvalidInput, whole_number
-from cygnusloom.services.conditions import active_conditions
+from cygnusloom.services.conditions import active_conditions, condition_roll_mode
 from cygnusloom.services.events import CheckMade, load_state, name_key, record, roll_breakdown
 
 
@@ -188,6 +188,8 @@ def roll_check(
     rolled_values: list[int] = list(dice_values or [])
     best = reactions.check_best(found, spec, features, skill_id) if skill_id else None
     best_die = _best_of_die(check.dice) if best is not None else ""
+    if roll_mode == "normal":
+        roll_mode = condition_roll_mode(found, conditions, "check")
     if roll_mode not in ROLL_MODES:
         raise InvalidInput(f"roll mode must be normal, advantage, or disadvantage, not {roll_mode!r}")
     if roll is None and best is not None and best_die:

@@ -183,6 +183,20 @@
     ]
   },
   {
+    "type": "feature",
+    "id": "class-barbarian-armor-training",
+    "name": "Armor Training",
+    "feature_type": "trait",
+    "description": "You are trained with light, medium, shield armor.",
+    "tag": "class:barbarian",
+    "rank": 1,
+    "armor_training": [
+      "light",
+      "medium",
+      "shield"
+    ]
+  },
+  {
     "type": "template",
     "id": "barbarian",
     "kind": "class",
@@ -202,6 +216,7 @@
       }
     ],
     "features": [
+      "class-barbarian-armor-training",
       "class-barbarian-rage",
       "class-barbarian-unarmored-defense",
       "class-barbarian-weapon-mastery"
@@ -216,7 +231,28 @@
         "Explorer's Pack"
       ],
       "equip": [],
-      "silver": 150
+      "silver": 150,
+      "options": [
+        {
+          "id": "a",
+          "label": "A: class kit",
+          "items": [
+            "Greataxe",
+            "Handaxe",
+            "Handaxe",
+            "Handaxe",
+            "Handaxe",
+            "Explorer's Pack"
+          ],
+          "equip": [],
+          "silver": 150
+        },
+        {
+          "id": "b",
+          "label": "B: 75 GP",
+          "silver": 750
+        }
+      ]
     },
     "names": "names",
     "counters": {
@@ -315,6 +351,18 @@
     "picks": []
   },
   {
+    "type": "feature",
+    "id": "class-bard-armor-training",
+    "name": "Armor Training",
+    "feature_type": "trait",
+    "description": "You are trained with light armor.",
+    "tag": "class:bard",
+    "rank": 1,
+    "armor_training": [
+      "light"
+    ]
+  },
+  {
     "type": "template",
     "id": "bard",
     "kind": "class",
@@ -334,6 +382,7 @@
       }
     ],
     "features": [
+      "class-bard-armor-training",
       "class-bard-bard-spell-list",
       "class-bard-bardic-inspiration",
       "class-bard-spellcasting"
@@ -348,7 +397,28 @@
       "equip": [
         "Leather Armor"
       ],
-      "silver": 190
+      "silver": 190,
+      "options": [
+        {
+          "id": "a",
+          "label": "A: class kit",
+          "items": [
+            "Dagger",
+            "Dagger",
+            "Entertainer's Pack",
+            "Musical Instrument"
+          ],
+          "equip": [
+            "Leather Armor"
+          ],
+          "silver": 190
+        },
+        {
+          "id": "b",
+          "label": "B: 90 GP",
+          "silver": 900
+        }
+      ]
     },
     "names": "names",
     "counters": {
@@ -450,6 +520,20 @@
     "picks": []
   },
   {
+    "type": "feature",
+    "id": "class-cleric-armor-training",
+    "name": "Armor Training",
+    "feature_type": "trait",
+    "description": "You are trained with light, medium, shield armor.",
+    "tag": "class:cleric",
+    "rank": 1,
+    "armor_training": [
+      "light",
+      "medium",
+      "shield"
+    ]
+  },
+  {
     "type": "template",
     "id": "cleric",
     "kind": "class",
@@ -469,6 +553,7 @@
       }
     ],
     "features": [
+      "class-cleric-armor-training",
       "class-cleric-cleric-spell-list",
       "class-cleric-divine-order",
       "class-cleric-spellcasting"
@@ -483,7 +568,28 @@
         "Chain Shirt",
         "Shield"
       ],
-      "silver": 70
+      "silver": 70,
+      "options": [
+        {
+          "id": "a",
+          "label": "A: class kit",
+          "items": [
+            "Mace",
+            "Holy Symbol",
+            "Priest's Pack"
+          ],
+          "equip": [
+            "Chain Shirt",
+            "Shield"
+          ],
+          "silver": 70
+        },
+        {
+          "id": "b",
+          "label": "B: 110 GP",
+          "silver": 1100
+        }
+      ]
     },
     "names": "names",
     "feat_picks": [
@@ -614,6 +720,20 @@
     "picks": []
   },
   {
+    "type": "feature",
+    "id": "class-druid-armor-training",
+    "name": "Armor Training",
+    "feature_type": "trait",
+    "description": "You are trained with light, medium, shield armor.",
+    "tag": "class:druid",
+    "rank": 1,
+    "armor_training": [
+      "light",
+      "medium",
+      "shield"
+    ]
+  },
+  {
     "type": "template",
     "id": "druid",
     "kind": "class",
@@ -633,10 +753,12 @@
       }
     ],
     "features": [
+      "class-druid-armor-training",
       "class-druid-druid-spell-list",
       "class-druid-druidic",
       "class-druid-primal-order",
-      "class-druid-spellcasting"
+      "class-druid-spellcasting",
+      "spell-speak-with-animals"
     ],
     "grant": {
       "items": [
@@ -649,7 +771,29 @@
         "Leather Armor",
         "Shield"
       ],
-      "silver": 90
+      "silver": 90,
+      "options": [
+        {
+          "id": "a",
+          "label": "A: class kit",
+          "items": [
+            "Sickle",
+            "Quarterstaff",
+            "Explorer's Pack",
+            "Herbalism Kit"
+          ],
+          "equip": [
+            "Leather Armor",
+            "Shield"
+          ],
+          "silver": 90
+        },
+        {
+          "id": "b",
+          "label": "B: 50 GP",
+          "silver": 500
+        }
+      ]
     },
     "names": "names",
     "feat_picks": [
@@ -786,6 +930,21 @@
     ]
   },
   {
+    "type": "feature",
+    "id": "class-fighter-armor-training",
+    "name": "Armor Training",
+    "feature_type": "trait",
+    "description": "You are trained with light, medium, heavy, shield armor.",
+    "tag": "class:fighter",
+    "rank": 1,
+    "armor_training": [
+      "light",
+      "medium",
+      "heavy",
+      "shield"
+    ]
+  },
+  {
     "type": "template",
     "id": "fighter",
     "kind": "class",
@@ -805,6 +964,7 @@
       }
     ],
     "features": [
+      "class-fighter-armor-training",
       "class-fighter-second-wind",
       "class-fighter-weapon-mastery"
     ],
@@ -825,7 +985,51 @@
       "equip": [
         "Chain Mail"
       ],
-      "silver": 40
+      "silver": 40,
+      "options": [
+        {
+          "id": "a",
+          "label": "A: class kit",
+          "items": [
+            "Greatsword",
+            "Flail",
+            "Javelin",
+            "Javelin",
+            "Javelin",
+            "Javelin",
+            "Javelin",
+            "Javelin",
+            "Javelin",
+            "Javelin",
+            "Dungeoneer's Pack"
+          ],
+          "equip": [
+            "Chain Mail"
+          ],
+          "silver": 40
+        },
+        {
+          "id": "b",
+          "label": "B: light kit",
+          "items": [
+            "Scimitar",
+            "Shortsword",
+            "Longbow",
+            "Arrows (20)",
+            "Quiver",
+            "Dungeoneer's Pack"
+          ],
+          "equip": [
+            "Studded Leather Armor"
+          ],
+          "silver": 110
+        },
+        {
+          "id": "c",
+          "label": "C: 155 GP",
+          "silver": 1550
+        }
+      ]
     },
     "names": "names",
     "feat_picks": [
@@ -1076,7 +1280,29 @@
         "Explorer's Pack"
       ],
       "equip": [],
-      "silver": 110
+      "silver": 110,
+      "options": [
+        {
+          "id": "a",
+          "label": "A: class kit",
+          "items": [
+            "Spear",
+            "Dagger",
+            "Dagger",
+            "Dagger",
+            "Dagger",
+            "Dagger",
+            "Explorer's Pack"
+          ],
+          "equip": [],
+          "silver": 110
+        },
+        {
+          "id": "b",
+          "label": "B: 50 GP",
+          "silver": 500
+        }
+      ]
     },
     "names": "names",
     "counters": {
@@ -1231,6 +1457,21 @@
     ]
   },
   {
+    "type": "feature",
+    "id": "class-paladin-armor-training",
+    "name": "Armor Training",
+    "feature_type": "trait",
+    "description": "You are trained with light, medium, heavy, shield armor.",
+    "tag": "class:paladin",
+    "rank": 1,
+    "armor_training": [
+      "light",
+      "medium",
+      "heavy",
+      "shield"
+    ]
+  },
+  {
     "type": "template",
     "id": "paladin",
     "kind": "class",
@@ -1250,6 +1491,7 @@
       }
     ],
     "features": [
+      "class-paladin-armor-training",
       "class-paladin-lay-on-hands",
       "class-paladin-spell-list",
       "class-paladin-spellcasting",
@@ -1271,7 +1513,34 @@
         "Chain Mail",
         "Shield"
       ],
-      "silver": 90
+      "silver": 90,
+      "options": [
+        {
+          "id": "a",
+          "label": "A: class kit",
+          "items": [
+            "Longsword",
+            "Javelin",
+            "Javelin",
+            "Javelin",
+            "Javelin",
+            "Javelin",
+            "Javelin",
+            "Holy Symbol",
+            "Priest's Pack"
+          ],
+          "equip": [
+            "Chain Mail",
+            "Shield"
+          ],
+          "silver": 90
+        },
+        {
+          "id": "b",
+          "label": "B: 150 GP",
+          "silver": 1500
+        }
+      ]
     },
     "names": "names",
     "counters": {
@@ -1290,7 +1559,40 @@
     "description": "Thanks to your travels, you gain the following benefits.\n\n**Expertise.** Choose one of your skill proficiencies with which you lack Expertise. You gain Expertise in that skill.\n\n**Languages.** You know two languages of your choice from the language tables in \"Character Creation.\"",
     "tag": "class:ranger",
     "rank": 2,
-    "picks": []
+    "picks": [
+      {
+        "id": "expertise",
+        "kind": "skill",
+        "label": "Expertise",
+        "grant": "expertise",
+        "choices": [
+          "acrobatics",
+          "animal_handling",
+          "arcana",
+          "athletics",
+          "deception",
+          "history",
+          "insight",
+          "intimidation",
+          "investigation",
+          "medicine",
+          "nature",
+          "perception",
+          "performance",
+          "persuasion",
+          "religion",
+          "sleight_of_hand",
+          "stealth",
+          "survival"
+        ]
+      },
+      {
+        "id": "languages",
+        "kind": "text",
+        "label": "Languages",
+        "count": 2
+      }
+    ]
   },
   {
     "type": "feature",
@@ -1419,6 +1721,20 @@
     ]
   },
   {
+    "type": "feature",
+    "id": "class-ranger-armor-training",
+    "name": "Armor Training",
+    "feature_type": "trait",
+    "description": "You are trained with light, medium, shield armor.",
+    "tag": "class:ranger",
+    "rank": 1,
+    "armor_training": [
+      "light",
+      "medium",
+      "shield"
+    ]
+  },
+  {
     "type": "template",
     "id": "ranger",
     "kind": "class",
@@ -1438,10 +1754,12 @@
       }
     ],
     "features": [
+      "class-ranger-armor-training",
       "class-ranger-favored-enemy",
       "class-ranger-spell-list",
       "class-ranger-spellcasting",
-      "class-ranger-weapon-mastery"
+      "class-ranger-weapon-mastery",
+      "spell-hunters-mark"
     ],
     "grant": {
       "items": [
@@ -1455,7 +1773,30 @@
       "equip": [
         "Studded Leather Armor"
       ],
-      "silver": 70
+      "silver": 70,
+      "options": [
+        {
+          "id": "a",
+          "label": "A: class kit",
+          "items": [
+            "Scimitar",
+            "Shortsword",
+            "Longbow",
+            "Arrows (20)",
+            "Quiver",
+            "Explorer's Pack"
+          ],
+          "equip": [
+            "Studded Leather Armor"
+          ],
+          "silver": 70
+        },
+        {
+          "id": "b",
+          "label": "B: 150 GP",
+          "silver": 1500
+        }
+      ]
     },
     "names": "names",
     "counters": {
@@ -1613,6 +1954,18 @@
     ]
   },
   {
+    "type": "feature",
+    "id": "class-rogue-armor-training",
+    "name": "Armor Training",
+    "feature_type": "trait",
+    "description": "You are trained with light armor.",
+    "tag": "class:rogue",
+    "rank": 1,
+    "armor_training": [
+      "light"
+    ]
+  },
+  {
     "type": "template",
     "id": "rogue",
     "kind": "class",
@@ -1632,6 +1985,7 @@
       }
     ],
     "features": [
+      "class-rogue-armor-training",
       "class-rogue-sneak-attack",
       "class-rogue-thieves-cant",
       "class-rogue-weapon-mastery"
@@ -1650,7 +2004,32 @@
       "equip": [
         "Leather Armor"
       ],
-      "silver": 80
+      "silver": 80,
+      "options": [
+        {
+          "id": "a",
+          "label": "A: class kit",
+          "items": [
+            "Dagger",
+            "Dagger",
+            "Shortsword",
+            "Shortbow",
+            "Arrows (20)",
+            "Quiver",
+            "Thieves' Tools",
+            "Burglar's Pack"
+          ],
+          "equip": [
+            "Leather Armor"
+          ],
+          "silver": 80
+        },
+        {
+          "id": "b",
+          "label": "B: 100 GP",
+          "silver": 1000
+        }
+      ]
     },
     "names": "names",
     "counters": {
@@ -1771,7 +2150,27 @@
         "Dungeoneer's Pack"
       ],
       "equip": [],
-      "silver": 280
+      "silver": 280,
+      "options": [
+        {
+          "id": "a",
+          "label": "A: class kit",
+          "items": [
+            "Spear",
+            "Dagger",
+            "Dagger",
+            "Arcane Focus",
+            "Dungeoneer's Pack"
+          ],
+          "equip": [],
+          "silver": 280
+        },
+        {
+          "id": "b",
+          "label": "B: 50 GP",
+          "silver": 500
+        }
+      ]
     },
     "names": "names",
     "counters": {
@@ -1859,6 +2258,18 @@
     "picks": []
   },
   {
+    "type": "feature",
+    "id": "class-warlock-armor-training",
+    "name": "Armor Training",
+    "feature_type": "trait",
+    "description": "You are trained with light armor.",
+    "tag": "class:warlock",
+    "rank": 1,
+    "armor_training": [
+      "light"
+    ]
+  },
+  {
     "type": "template",
     "id": "warlock",
     "kind": "class",
@@ -1878,6 +2289,7 @@
       }
     ],
     "features": [
+      "class-warlock-armor-training",
       "class-warlock-eldritch-invocations",
       "class-warlock-pact-magic",
       "class-warlock-warlock-spell-list"
@@ -1894,7 +2306,30 @@
       "equip": [
         "Leather Armor"
       ],
-      "silver": 150
+      "silver": 150,
+      "options": [
+        {
+          "id": "a",
+          "label": "A: class kit",
+          "items": [
+            "Sickle",
+            "Dagger",
+            "Dagger",
+            "Arcane Focus",
+            "Book",
+            "Scholar's Pack"
+          ],
+          "equip": [
+            "Leather Armor"
+          ],
+          "silver": 150
+        },
+        {
+          "id": "b",
+          "label": "B: 100 GP",
+          "silver": 1000
+        }
+      ]
     },
     "names": "names",
     "counters": {
@@ -1944,7 +2379,22 @@
     "description": "While studying magic, you also specialized in another field of study. Choose one of the following skills in which you have proficiency: Arcana, History, Investigation, Medicine, Nature, or Religion. You have Expertise in the chosen skill.",
     "tag": "class:wizard",
     "rank": 2,
-    "picks": []
+    "picks": [
+      {
+        "id": "expertise",
+        "kind": "skill",
+        "label": "Expertise",
+        "grant": "expertise",
+        "choices": [
+          "arcana",
+          "history",
+          "investigation",
+          "medicine",
+          "nature",
+          "religion"
+        ]
+      }
+    ]
   },
   {
     "type": "feature",
@@ -2021,7 +2471,28 @@
         "Scholar's Pack"
       ],
       "equip": [],
-      "silver": 50
+      "silver": 50,
+      "options": [
+        {
+          "id": "a",
+          "label": "A: class kit",
+          "items": [
+            "Dagger",
+            "Dagger",
+            "Arcane Focus",
+            "Robe",
+            "Spellbook",
+            "Scholar's Pack"
+          ],
+          "equip": [],
+          "silver": 50
+        },
+        {
+          "id": "b",
+          "label": "B: 55 GP",
+          "silver": 550
+        }
+      ]
     },
     "names": "names",
     "counters": {
@@ -2168,7 +2639,15 @@
     "description": "You gain proficiency with three skills of your choice.",
     "tag": "subclass:college-of-lore",
     "rank": 3,
-    "picks": []
+    "picks": [
+      {
+        "id": "skills",
+        "kind": "skill",
+        "label": "Skills",
+        "grant": "proficiency",
+        "count": 3
+      }
+    ]
   },
   {
     "type": "feature",
@@ -2225,7 +2704,8 @@
       ],
       "requires_no_armor": true
     },
-    "level_hp_bonus": 1
+    "level_hp_bonus": 1,
+    "flat_hp_bonus": 3
   },
   {
     "type": "feature",
@@ -2294,7 +2774,19 @@
     "description": "Choose two Wizard spells from the Evocation school, each of which must be no higher than level 2, and add them to your spellbook for free.\n\nIn addition, whenever you gain access to a new level of spell slots in this class, you can add one Wizard spell from the Evocation school to your spellbook for free. The chosen spell must be of a level for which you have spell slots.",
     "tag": "subclass:evoker",
     "rank": 3,
-    "picks": []
+    "picks": [
+      {
+        "id": "spells",
+        "kind": "spell",
+        "label": "Evocation spells",
+        "grant": "learn",
+        "count": 2,
+        "max_rank": 2,
+        "tags": [
+          "evocation"
+        ]
+      }
+    ]
   },
   {
     "type": "feature",
@@ -2422,7 +2914,18 @@
     "description": "You gain one of the following feature options of your choice. Whenever you finish a Short or Long Rest, you can replace the chosen option with the other one.\n\n**Colossus Slayer.** Your tenacity can wear down even the most resilient foes. When you hit a creature with a weapon, the weapon deals an extra 1d8 damage to the target if it's missing any of its Hit Points. You can deal this extra damage only once per turn.\n\n**Horde Breaker.** Once on each of your turns when you make an attack with a weapon, you can make another attack with the same weapon against a different creature that is within 5 feet of the original target, that is within the weapon's range, and that you haven't attacked this turn.",
     "tag": "subclass:hunter",
     "rank": 3,
-    "picks": []
+    "picks": [
+      {
+        "id": "prey",
+        "kind": "feature",
+        "label": "Prey",
+        "grant": "learn",
+        "choices": [
+          "hunter-prey-colossus-slayer",
+          "hunter-prey-horde-breaker"
+        ]
+      }
+    ]
   },
   {
     "type": "feature",
@@ -3142,6 +3645,24 @@
     "feature_type": "feat",
     "description": "Trained for battle, you gain proficiency with Martial weapons and training with Medium armor.",
     "tag": "primal-order",
+    "rank": 1
+  },
+  {
+    "type": "feature",
+    "id": "hunter-prey-colossus-slayer",
+    "name": "Colossus Slayer",
+    "feature_type": "trait",
+    "description": "Your tenacity can wear down the most potent foes. When you hit a creature with a weapon, the creature takes an extra 1d8 damage if it is below its hit point maximum. You can deal this extra damage only once per turn.",
+    "tag": "hunter-prey",
+    "rank": 1
+  },
+  {
+    "type": "feature",
+    "id": "hunter-prey-horde-breaker",
+    "name": "Horde Breaker",
+    "feature_type": "trait",
+    "description": "Once on each of your turns when you make a weapon attack, you can make another attack with the same weapon against a different creature within 5 feet of the original target and within range.",
+    "tag": "hunter-prey",
     "rank": 1
   }
 ]

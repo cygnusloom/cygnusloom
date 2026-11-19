@@ -143,6 +143,7 @@
         ],
         "features": {
           "1": [
+            "class-barbarian-armor-training",
             "class-barbarian-rage",
             "class-barbarian-unarmored-defense",
             "class-barbarian-weapon-mastery"
@@ -183,7 +184,8 @@
           "20": [
             "class-barbarian-primal-champion"
           ]
-        }
+        },
+        "always_prepared": {}
       },
       "bard": {
         "hit_die": 8,
@@ -301,6 +303,7 @@
         ],
         "features": {
           "1": [
+            "class-bard-armor-training",
             "class-bard-bard-spell-list",
             "class-bard-bardic-inspiration",
             "class-bard-spellcasting"
@@ -323,7 +326,8 @@
           "20": [
             "class-bard-words-of-creation"
           ]
-        }
+        },
+        "always_prepared": {}
       },
       "cleric": {
         "hit_die": 8,
@@ -438,6 +442,7 @@
         ],
         "features": {
           "1": [
+            "class-cleric-armor-training",
             "class-cleric-cleric-spell-list",
             "class-cleric-divine-order",
             "class-cleric-spellcasting"
@@ -460,7 +465,8 @@
           "20": [
             "class-cleric-greater-divine-intervention"
           ]
-        }
+        },
+        "always_prepared": {}
       },
       "druid": {
         "hit_die": 8,
@@ -575,10 +581,12 @@
         ],
         "features": {
           "1": [
+            "class-druid-armor-training",
             "class-druid-druid-spell-list",
             "class-druid-druidic",
             "class-druid-primal-order",
-            "class-druid-spellcasting"
+            "class-druid-spellcasting",
+            "spell-speak-with-animals"
           ],
           "2": [
             "class-druid-wild-companion",
@@ -598,6 +606,11 @@
           ],
           "20": [
             "class-druid-archdruid"
+          ]
+        },
+        "always_prepared": {
+          "1": [
+            "spell-speak-with-animals"
           ]
         }
       },
@@ -762,6 +775,7 @@
         ],
         "features": {
           "1": [
+            "class-fighter-armor-training",
             "class-fighter-second-wind",
             "class-fighter-weapon-mastery"
           ],
@@ -791,7 +805,8 @@
           "20": [
             "class-fighter-three-extra-attacks"
           ]
-        }
+        },
+        "always_prepared": {}
       },
       "monk": {
         "hit_die": 8,
@@ -952,7 +967,8 @@
           "20": [
             "class-monk-body-and-mind"
           ]
-        }
+        },
+        "always_prepared": {}
       },
       "paladin": {
         "hit_die": 10,
@@ -1091,20 +1107,23 @@
         ],
         "features": {
           "1": [
+            "class-paladin-armor-training",
             "class-paladin-lay-on-hands",
             "class-paladin-spell-list",
             "class-paladin-spellcasting",
             "class-paladin-weapon-mastery"
           ],
           "2": [
-            "class-paladin-paladins-smite"
+            "class-paladin-paladins-smite",
+            "spell-divine-smite"
           ],
           "3": [
             "class-paladin-channel-divinity"
           ],
           "5": [
             "class-paladin-extra-attack",
-            "class-paladin-faithful-steed"
+            "class-paladin-faithful-steed",
+            "spell-find-steed"
           ],
           "6": [
             "class-paladin-aura-of-protection"
@@ -1123,6 +1142,14 @@
           ],
           "18": [
             "class-paladin-aura-expansion"
+          ]
+        },
+        "always_prepared": {
+          "2": [
+            "spell-divine-smite"
+          ],
+          "5": [
+            "spell-find-steed"
           ]
         }
       },
@@ -1265,10 +1292,12 @@
         ],
         "features": {
           "1": [
+            "class-ranger-armor-training",
             "class-ranger-favored-enemy",
             "class-ranger-spell-list",
             "class-ranger-spellcasting",
-            "class-ranger-weapon-mastery"
+            "class-ranger-weapon-mastery",
+            "spell-hunters-mark"
           ],
           "2": [
             "class-ranger-deft-explorer"
@@ -1296,6 +1325,11 @@
           ],
           "20": [
             "class-ranger-foe-slayer"
+          ]
+        },
+        "always_prepared": {
+          "1": [
+            "spell-hunters-mark"
           ]
         }
       },
@@ -1392,6 +1426,7 @@
         ],
         "features": {
           "1": [
+            "class-rogue-armor-training",
             "class-rogue-sneak-attack",
             "class-rogue-thieves-cant",
             "class-rogue-weapon-mastery"
@@ -1425,7 +1460,8 @@
           "20": [
             "class-rogue-stroke-of-luck"
           ]
-        }
+        },
+        "always_prepared": {}
       },
       "sorcerer": {
         "hit_die": 6,
@@ -1568,7 +1604,8 @@
           "20": [
             "class-sorcerer-arcane-apotheosis"
           ]
-        }
+        },
+        "always_prepared": {}
       },
       "warlock": {
         "hit_die": 8,
@@ -1683,6 +1720,7 @@
         ],
         "features": {
           "1": [
+            "class-warlock-armor-training",
             "class-warlock-eldritch-invocations",
             "class-warlock-pact-magic",
             "class-warlock-warlock-spell-list"
@@ -1708,7 +1746,8 @@
           "20": [
             "class-warlock-eldritch-master"
           ]
-        }
+        },
+        "always_prepared": {}
       },
       "wizard": {
         "hit_die": 6,
@@ -1840,7 +1879,8 @@
           "20": [
             "class-wizard-signature-spells"
           ]
-        }
+        },
+        "always_prepared": {}
       }
     },
     "subclasses": {

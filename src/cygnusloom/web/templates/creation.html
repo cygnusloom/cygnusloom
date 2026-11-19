@@ -225,6 +225,20 @@
           </fieldset>
           {% for template in group.templates %}
             <div class="template-tables" data-template-group="{{ group.kind }}" data-template="{{ template.id }}" data-skill-grants='{{ template.skill_grants|tojson }}' hidden>
+              {% if template.grant_options %}
+                <fieldset class="creation-panel starting-kit">
+                  <h3>Starting kit</h3>
+                  <p class="panel-hint">Choose the equipment package this {{ group.label|lower }} starts with. The SRD lists these as lettered choices.</p>
+                  <label>
+                    Starting kit
+                    <select name="grant-{{ template.id }}">
+                      {% for option in template.grant_options %}
+                        <option value="{{ option.id }}">{{ option.label }}: {{ option.summary }}</option>
+                      {% endfor %}
+                    </select>
+                  </label>
+                </fieldset>
+              {% endif %}
               {% for table in template.tables %}
                 {{ choice_panel("field-" ~ table.id, table.label, table.options) }}
               {% endfor %}

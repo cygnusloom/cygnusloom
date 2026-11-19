@@ -273,6 +273,13 @@ class FeaturePick:
     keep: int = 0
     # The score a `score` grant adds to the chosen stat.
     amount: int = 1
+    # For a feature pick, the feature type and tags its options must match.
+    feature_type: str = ""
+    tags: tuple[str, ...] = ()
+    max_rank: int = 0
+    # An ability-score allocation with more than one valid shape, such as +2/+1 or
+    # +1/+1/+1. The player picks one index; the values are read in order.
+    patterns: tuple[tuple[int, ...], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -319,6 +326,29 @@ class Feature:
     armor: int
     # The weapon's damage dice, such as "1d6", or "1d6+1d6" for two weapons (keep the higher). Empty when the feature is not a weapon.
     damage: str = ""
+    # The damage type this weapon or spell deals, such as "slashing" or "fire". Empty when
+    # the source does not say or the feature deals no typed damage.
+    damage_type: str = ""
+    # A Versatile weapon's damage dice when it is held in two hands, such as "1d10".
+    versatile_damage: str = ""
+    # Damage types this feature makes its holder resistant to. A resistance halves the harm
+    # of a matching typed attack or effect when the engine applies it.
+    resistances: tuple[str, ...] = ()
+    # The ability a feature's spells use when it overrides the class's spellcasting ability.
+    casting_ability: str = ""
+    # A one-time increase to the character's maximum hit points when this feature is gained.
+    flat_hp_bonus: int = 0
+    # A flat bonus to initiative rolls, or proficiency when `initiative_proficient` is true.
+    initiative_bonus: int = 0
+    initiative_proficient: bool = False
+    # Roll weapon damage dice twice and use the higher result, as Savage Attacker does.
+    weapon_damage_reroll: bool = False
+    # The turn resource this feature spends, such as a spell's "action" or "reaction".
+    turn_resource: str = ""
+    # Armor categories this feature trains, such as "light", "medium", "heavy", or "shield".
+    armor_training: tuple[str, ...] = ()
+    # The armor category of an armor item, or "" when it is not armor.
+    armor_category: str = ""
     # The ids of rules attached to this feature. Their text reaches the GM while the item is carried.
     rules: tuple[str, ...] = ()
     # The rule set's label for the feature, such as the Year a spell belongs to. A template's
@@ -446,14 +476,27 @@ class TemplateRequirement:
 
 
 @dataclass(frozen=True)
+class GrantOption:
+    """One named starting kit, such as the SRD's A, B, or C equipment package."""
+
+    id: str
+    label: str
+    items: tuple[str, ...] = ()
+    silver: int = 0
+    equip: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
 class TemplateGrant:
     """What a template hands the character at creation beyond stats, skills, and features: items,
     money, and the equipment already worn or wielded. Names are the rule set's catalogue names, so
-    a starting kit reads the way the book's equipment list does."""
+    a starting kit reads the way the book's equipment list does. `options` are named alternatives;
+    the base fields are the default when none is chosen."""
 
     items: tuple[str, ...] = ()
     silver: int = 0
     equip: tuple[str, ...] = ()
+    options: tuple[GrantOption, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -1205,6 +1248,43 @@ def load_feature(
     damage = data.get("damage", "")
     if not isinstance(damage, str) or (damage and not is_formula(damage)):
         raise ContentError(f"{label}: 'damage' must be a dice formula such as 'd6'")
+    damage_type = data.get("damage_type", "")
+    if not isinstance(damage_type, str) or (damage_type and not damage_type.strip()):
+        raise ContentError(f"{label}: 'damage_type' must be a damage name")
+    versatile_damage = data.get("versatile_damage", "")
+    if not isinstance(versatile_damage, str) or (
+        versatile_damage and not is_formula(versatile_damage)
+    ):
+        raise ContentError(f"{label}: 'versatile_damage' must be a dice formula such as '1d10'")
+    if versatile_damage and not damage:
+        raise ContentError(f"{label}: 'versatile_damage' needs a 'damage' value")
+    resistances = _text_list(data.get("resistances", []), "resistances", label)
+    casting_ability = data.get("casting_ability", "")
+    if not isinstance(casting_ability, str):
+        raise ContentError(f"{label}: 'casting_ability' must be an ability id")
+    if casting_ability and casting_ability not in ("str", "dex", "con", "int", "wis", "cha"):
+        raise ContentError(f"{label}: 'casting_ability' names no ability ({casting_ability!r})")
+    flat_hp_bonus = data.get("flat_hp_bonus", 0)
+    if isinstance(flat_hp_bonus, bool) or not isinstance(flat_hp_bonus, int) or flat_hp_bonus < 0:
+        raise ContentError(f"{label}: 'flat_hp_bonus' must be a whole number, 0 or more")
+    initiative_bonus = data.get("initiative_bonus", 0)
+    if isinstance(initiative_bonus, bool) or not isinstance(initiative_bonus, int):
+        raise ContentError(f"{label}: 'initiative_bonus' must be a whole number")
+    initiative_proficient = data.get("initiative_proficient", False)
+    if not isinstance(initiative_proficient, bool):
+        raise ContentError(f"{label}: 'initiative_proficient' must be a boolean")
+    weapon_damage_reroll = data.get("weapon_damage_reroll", False)
+    if not isinstance(weapon_damage_reroll, bool):
+        raise ContentError(f"{label}: 'weapon_damage_reroll' must be a boolean")
+    turn_resource = data.get("turn_resource", "")
+    if turn_resource not in ("", "action", "bonus_action", "reaction"):
+        raise ContentError(
+            f"{label}: 'turn_resource' must be action, bonus_action, reaction, or empty"
+        )
+    armor_training = _text_list(data.get("armor_training", []), "armor_training", label)
+    armor_category = data.get("armor_category", "")
+    if not isinstance(armor_category, str):
+        raise ContentError(f"{label}: 'armor_category' must be text")
     tag = data.get("tag", "")
     if not isinstance(tag, str):
         raise ContentError(f"{label}: 'tag' must be text")
@@ -1272,6 +1352,17 @@ def load_feature(
         uses=uses,
         armor=armor,
         damage=damage,
+        damage_type=damage_type,
+        versatile_damage=versatile_damage,
+        resistances=resistances,
+        casting_ability=casting_ability,
+        flat_hp_bonus=flat_hp_bonus,
+        initiative_bonus=initiative_bonus,
+        initiative_proficient=initiative_proficient,
+        weapon_damage_reroll=weapon_damage_reroll,
+        turn_resource=turn_resource,
+        armor_training=armor_training,
+        armor_category=armor_category,
         rules=rule_ids(data, label),
         tag=tag,
         rank=rank,
@@ -1338,8 +1429,10 @@ def _feature_picks(
             raise ContentError(f"{label}: each pick must be an object")
         pick_id = required_text(entry, "id", f"{label}: pick")
         kind = required_text(entry, "kind", f"{label}: pick {pick_id}")
-        if kind not in ("stat", "skill", "text"):
-            raise ContentError(f"{label}: pick {pick_id!r} kind must be 'stat', 'skill', or 'text'")
+        if kind not in ("stat", "skill", "text", "feature", "spell"):
+            raise ContentError(
+                f"{label}: pick {pick_id!r} kind must be stat, skill, text, feature, or spell"
+            )
         label_text = required_text(entry, "label", f"{label}: pick {pick_id}")
         choices = _text_list(entry.get("choices", []), "choices", f"{label}: pick {pick_id}")
         exclude = _text_list(entry.get("exclude", []), "exclude", f"{label}: pick {pick_id}")
@@ -1353,18 +1446,58 @@ def _feature_picks(
         count = entry.get("count", 1)
         if isinstance(count, bool) or not isinstance(count, int) or count < 1:
             raise ContentError(f"{label}: pick {pick_id!r} 'count' must be at least 1")
+        feature_type = entry.get("feature_type", "")
+        if not isinstance(feature_type, str):
+            raise ContentError(f"{label}: pick {pick_id!r} 'feature_type' must be text")
+        tags = _text_list(entry.get("tags", []), "tags", f"{label}: pick {pick_id}")
+        max_rank = entry.get("max_rank", 0)
+        if isinstance(max_rank, bool) or not isinstance(max_rank, int) or max_rank < 0:
+            raise ContentError(f"{label}: pick {pick_id!r} 'max_rank' must be 0 or more")
+        raw_patterns = entry.get("patterns", [])
+        if not isinstance(raw_patterns, list):
+            raise ContentError(f"{label}: pick {pick_id!r} 'patterns' must be a list")
+        patterns: list[tuple[int, ...]] = []
+        for pattern in raw_patterns:
+            if (
+                not isinstance(pattern, list)
+                or not pattern
+                or any(isinstance(v, bool) or not isinstance(v, int) or v < 1 for v in pattern)
+            ):
+                raise ContentError(
+                    f"{label}: pick {pick_id!r} each pattern must be positive amounts"
+                )
+            if max(len(pattern) for pattern in [*raw_patterns]) > count:
+                raise ContentError(f"{label}: pick {pick_id!r} a pattern is longer than 'count'")
+            patterns.append(tuple(pattern))
+        if patterns and kind != "stat":
+            raise ContentError(f"{label}: pick {pick_id!r} patterns are only for stat picks")
         grant = entry.get("grant", "")
-        if grant not in ("", "trained", "skill", "modifier", "score", "check_best"):
+        allowed_grants = (
+            "",
+            "trained",
+            "skill",
+            "proficiency",
+            "expertise",
+            "modifier",
+            "score",
+            "check_best",
+            "learn",
+            "resistance",
+        )
+        if grant not in allowed_grants:
             raise ContentError(
-                f"{label}: pick {pick_id!r} 'grant' must be '', 'trained', 'skill', 'modifier', "
-                "'score', or 'check_best'"
+                f"{label}: pick {pick_id!r} 'grant' must be one of {', '.join(allowed_grants)}"
             )
-        if grant in ("trained", "skill") and kind != "skill":
+        if grant in ("trained", "skill", "proficiency", "expertise") and kind != "skill":
             raise ContentError(f"{label}: pick {pick_id!r} can grant {grant} only to a skill")
         if grant in ("modifier", "score") and kind != "stat":
             raise ContentError(f"{label}: pick {pick_id!r} can grant a {grant} only to a stat")
         if grant == "check_best" and kind != "skill":
             raise ContentError(f"{label}: pick {pick_id!r} can improve checks only with a skill")
+        if grant == "learn" and kind not in ("feature", "spell"):
+            raise ContentError(f"{label}: pick {pick_id!r} can learn only a feature or spell")
+        if grant == "resistance" and kind not in ("feature", "spell", "text"):
+            raise ContentError(f"{label}: pick {pick_id!r} can grant resistance only as text")
         amount = _pick_number(entry, "amount", label, pick_id)
         if grant in ("score", "skill") and "amount" not in entry:
             amount = 1
@@ -1394,6 +1527,10 @@ def _feature_picks(
                 dice=dice,
                 keep=keep,
                 amount=amount,
+                feature_type=feature_type,
+                tags=tags,
+                max_rank=max_rank,
+                patterns=tuple(patterns),
             )
         )
     return tuple(picks)
@@ -1859,16 +1996,47 @@ def _template_grant(value: object, label: str) -> TemplateGrant:
         return TemplateGrant()
     if not isinstance(value, Mapping):
         raise ContentError(f"{label}: 'grant' must be an object")
-    unknown = sorted(set(value) - {"items", "silver", "equip"})
+    unknown = sorted(set(value) - {"items", "silver", "equip", "options"})
     if unknown:
         raise ContentError(f"{label}: 'grant' has unknown keys: {', '.join(unknown)}")
     silver = value.get("silver", 0)
     if not isinstance(silver, int) or isinstance(silver, bool) or silver < 0:
         raise ContentError(f"{label}: 'grant.silver' must be a whole number of 0 or more")
+    raw_options = value.get("options", [])
+    if not isinstance(raw_options, list):
+        raise ContentError(f"{label}: 'grant.options' must be a list")
+    options: list[GrantOption] = []
+    for entry in raw_options:
+        if not isinstance(entry, Mapping):
+            raise ContentError(f"{label}: each 'grant.options' entry must be an object")
+        option_id = required_text(entry, "id", f"{label}: grant option")
+        option_label = required_text(entry, "label", f"{label}: grant option {option_id}")
+        unknown = sorted(set(entry) - {"id", "label", "items", "silver", "equip"})
+        if unknown:
+            raise ContentError(
+                f"{label}: grant option {option_id!r} has unknown keys: {', '.join(unknown)}"
+            )
+        option_silver = entry.get("silver", 0)
+        if (
+            not isinstance(option_silver, int)
+            or isinstance(option_silver, bool)
+            or option_silver < 0
+        ):
+            raise ContentError(f"{label}: grant option {option_id!r} silver must be 0 or more")
+        options.append(
+            GrantOption(
+                id=option_id,
+                label=option_label,
+                items=_text_items(entry.get("items", []), f"{label}: option items"),
+                silver=option_silver,
+                equip=_text_items(entry.get("equip", []), f"{label}: option equip"),
+            )
+        )
     return TemplateGrant(
         items=_text_items(value.get("items", []), f"{label}: 'grant.items'"),
         silver=silver,
         equip=_text_items(value.get("equip", []), f"{label}: 'grant.equip'"),
+        options=tuple(options),
     )
 
 
@@ -2511,6 +2679,22 @@ def character_schema(spec: CharacterSpec) -> dict[str, Any]:
                 for kind in spec.kinds()
             }
         )
+    kits = {
+        template.id: [option.id for option in template.grant.options]
+        for template in spec.templates.values()
+        if template.grant.options
+    }
+    if kits:
+        properties["grant_choices"] = _object(
+            {
+                template_id: {
+                    "type": "string",
+                    "enum": option_ids,
+                    "description": "The starting equipment package for this template",
+                }
+                for template_id, option_ids in kits.items()
+            }
+        )
     if spec.features:
         properties["features"] = {
             "type": "array",
@@ -2615,6 +2799,15 @@ def _feature_choice_schemas(spec: CharacterSpec) -> dict[str, Any]:
                 "uniqueItems": True,
                 "description": f"{feature.name}: {pick.label}",
             }
+            if pick.patterns:
+                schemas[f"{key}:pattern"] = {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "enum": [str(index) for index in range(len(pick.patterns))],
+                    },
+                    "description": f"{feature.name}: {pick.label} pattern",
+                }
     return schemas
 
 
@@ -3000,6 +3193,8 @@ def _check_feature_choices(spec: CharacterSpec, submitted: Mapping[str, Any]) ->
             possible.update(values)
     for key, values in given.items():
         feature_id, separator, pick_id = str(key).partition(":")
+        is_pattern = pick_id.endswith(":pattern")
+        pick_id = pick_id.removesuffix(":pattern")
         feature = spec.features.get(feature_id)
         pick = (
             next((pick for pick in feature.picks if pick.id == pick_id), None)
@@ -3012,6 +3207,11 @@ def _check_feature_choices(spec: CharacterSpec, submitted: Mapping[str, Any]) ->
             raise CharacterError(f"{feature.name!r} is not a feature this character may take")
         if not isinstance(values, list) or not all(isinstance(value, str) for value in values):
             raise CharacterError(f"feature choice {key!r} must be a list of choices")
+        if is_pattern:
+            allowed_modes = {str(index) for index in range(len(pick.patterns))}
+            if len(values) != 1 or values[0] not in allowed_modes:
+                raise CharacterError(f"{feature.name!r} has no ability-score pattern {values!r}")
+            continue
         options = _feature_choice_options(spec, pick)
         for value in values:
             if pick.kind != "text" and value not in options:
@@ -3252,6 +3452,7 @@ def resolve(
     given_feature_picks = _pick_object(submitted.get("feature_picks", {}), "feature_picks")
     given_feature_choices = _pick_object(submitted.get("feature_choices", {}), "feature_choices")
     given_feature_repeats = _pick_object(submitted.get("feature_repeats", {}), "feature_repeats")
+    given_grant_choices = _pick_object(submitted.get("grant_choices", {}), "grant_choices")
     _check_feature_repeats(spec, submitted)
     skill_replacements = _skill_replacement_choices(spec, submitted)
     fixed = fixed_stats(spec)
@@ -3279,6 +3480,11 @@ def resolve(
         for skill_id, amount in template.skills.items():
             increments[skill_id] = increments.get(skill_id, 0) + amount
         for granted in template.features:
+            feature = spec.features.get(granted.feature)
+            # A species trait with a level rank is gained later; the level-up rules add it
+            # when the character reaches that level.
+            if template.kind == "species" and feature is not None and feature.rank > 1:
+                continue
             count = (
                 int(granted.quantity)
                 if granted.quantity.isdigit()
@@ -3300,6 +3506,11 @@ def resolve(
             fields[field_spec.id] = _field_value(spec, field_spec, given_fields, fields, rng)
     for field_spec in restricted:
         fields[field_spec.id] = _field_value(spec, field_spec, given_fields, fields, rng)
+    for template_id, option_id in given_grant_choices.items():
+        options = spec.templates[template_id].grant.options
+        if option_id not in {option.id for option in options}:
+            raise CharacterError(f"unknown starting kit {option_id!r} for {template_id!r}")
+        fields[f"grant:{template_id}"] = option_id
     feat_picks: list[tuple[FeatPick, list[str]]] = []
     selected_by_pick: dict[str, list[str]] = {}
     for template_id in templates.values():
@@ -3462,7 +3673,7 @@ def resolve(
 
 def _feature_choice_values(
     spec: CharacterSpec,
-    features: Mapping[str, int],
+    features: dict[str, int],
     given: Mapping[str, list[str]],
     increments: dict[str, int],
     stat_modifiers: dict[str, int],
@@ -3471,7 +3682,7 @@ def _feature_choice_values(
     """Validate the choices the features the character holds ask for, filling in one when a
     rolled feature left the choice blank. A `trained` choice marks a level-0 skill as trained."""
     choices: dict[str, list[str]] = {}
-    for feature_id, count in features.items():
+    for feature_id, count in list(features.items()):
         feature = spec.features[feature_id]
         for pick in feature.picks:
             key = f"{feature_id}:{pick.id}"
@@ -3482,6 +3693,27 @@ def _feature_choice_values(
                     f"{feature.name!r} takes {allowed} {pick.label.lower()} choice"
                     f"{'' if allowed == 1 else 's'}; {len(values)} were given"
                 )
+            pattern_amounts: tuple[int, ...] = ()
+            if pick.patterns:
+                raw_mode = given.get(f"{key}:pattern", [])
+                try:
+                    mode = int(raw_mode[0]) if raw_mode else -1
+                except (TypeError, ValueError):
+                    mode = -1
+                if mode < 0:
+                    matching = [
+                        index
+                        for index, pattern in enumerate(pick.patterns)
+                        if len(pattern) == len(values)
+                    ]
+                    mode = matching[0] if matching else 0
+                if not 0 <= mode < len(pick.patterns):
+                    raise CharacterError(f"{feature.name!r} has no ability-score pattern {mode}")
+                pattern_amounts = pick.patterns[mode]
+                if len(values) != len(pattern_amounts):
+                    raise CharacterError(
+                        f"{feature.name!r} takes {len(pattern_amounts)} abilities for that pattern"
+                    )
             options = _feature_choice_options(spec, pick)
             if pick.kind == "text":
                 if values:
@@ -3506,9 +3738,14 @@ def _feature_choice_values(
                     f"{feature.name!r} chooses the same {pick.label.lower()} twice"
                 )
             choices[key] = values
-            if pick.grant == "trained":
+            if pattern_amounts:
+                choices[f"{key}:pattern"] = [str(pick.patterns.index(pattern_amounts))]
+            if pick.grant in ("trained", "proficiency"):
                 for value in values:
                     increments.setdefault(value, 0)
+            elif pick.grant == "expertise":
+                for value in values:
+                    increments[value] = max(1, increments.get(value, 0))
             elif pick.grant == "skill":
                 for value in values:
                     increments[value] = increments.get(value, 0) + pick.amount
@@ -3516,8 +3753,12 @@ def _feature_choice_values(
                 for value in values:
                     stat_modifiers[value] = stat_modifiers.get(value, 0) + 1
             elif pick.grant == "score":
+                amounts = pattern_amounts or (pick.amount,) * len(values)
+                for value, amount in zip(values, amounts):
+                    stat_bonuses[value] = stat_bonuses.get(value, 0) + amount
+            elif pick.grant == "learn":
                 for value in values:
-                    stat_bonuses[value] = stat_bonuses.get(value, 0) + pick.amount
+                    features[value] = features.get(value, 0) + 1
     return choices
 
 
@@ -3527,6 +3768,15 @@ def _feature_choice_options(spec: CharacterSpec, pick: FeaturePick) -> tuple[str
         options = [stat.id for stat in spec.stats.values() if stat.derived is None]
     elif pick.kind == "skill":
         options = list(spec.skills)
+    elif pick.kind in ("feature", "spell"):
+        options = [
+            feature.id
+            for feature in spec.features.values()
+            if (pick.kind != "spell" or feature.feature_type == "spell")
+            and (not pick.feature_type or feature.feature_type == pick.feature_type)
+            and (not pick.tags or feature.tag in pick.tags)
+            and (not pick.max_rank or feature.rank <= pick.max_rank)
+        ]
     else:
         return ()
     if pick.choices:
@@ -3544,14 +3794,26 @@ def feature_choice_views(spec: CharacterSpec, feature: Feature) -> tuple[Mapping
     views: list[Mapping[str, Any]] = []
     for pick in feature.picks:
         options = _feature_choice_options(spec, pick)
-        names = spec.stats if pick.kind == "stat" else spec.skills
+        names = (
+            spec.stats
+            if pick.kind == "stat"
+            else spec.skills
+            if pick.kind == "skill"
+            else spec.features
+            if pick.kind in ("feature", "spell")
+            else {}
+        )
         views.append(
             {
                 "id": pick.id,
                 "kind": pick.kind,
                 "label": pick.label,
                 "count": pick.count,
-                "options": [{"value": option, "title": names[option].name} for option in options],
+                "patterns": list(pick.patterns),
+                "options": [
+                    {"value": option, "title": names[option].name if option in names else option}
+                    for option in options
+                ],
             }
         )
     return tuple(views)
@@ -4245,7 +4507,9 @@ def describe(spec: CharacterSpec, sheet: Sheet, *, show_all_counters: bool = Tru
         if pick.id in remembered_picks
     }
     for field_id, value in sheet.fields.items():
-        if not value:
+        if not value or field_id.startswith("grant:"):
+            # The chosen starting kit is recorded as an internal field; the carried gear and
+            # silver already show what it gave.
             continue
         if field_id in spec.fields:
             label = spec.fields[field_id].name

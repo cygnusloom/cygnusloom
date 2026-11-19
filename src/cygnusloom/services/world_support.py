@@ -445,6 +445,14 @@ def _carry_granted_kit(
     silver = 0
     for template_id in sheet.templates.values():
         grant = spec.templates[template_id].grant
+        chosen_option = sheet.fields.get(f"grant:{template_id}")
+        if chosen_option:
+            match = next((option for option in grant.options if option.id == chosen_option), None)
+            if match is None:
+                raise InvalidInput(f"unknown starting kit {chosen_option!r}")
+            grant = grant.__class__(
+                items=match.items, silver=match.silver, equip=match.equip, options=grant.options
+            )
         if not (grant.items or grant.equip or grant.silver):
             continue
         if marketplace is None:

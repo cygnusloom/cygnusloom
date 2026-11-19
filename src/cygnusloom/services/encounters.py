@@ -204,6 +204,28 @@ def _attacks_left(
     return max(0, limit - encounter.attacked)
 
 
+def _resource_left(encounter: Encounter, combat: CombatRules | None, resource: str) -> int | None:
+    """How many of one turn resource the acting participant has left, or None when the rule
+    set does not track it or no turn is running."""
+    if combat is None or encounter.acting is None:
+        return None
+    if resource == "action":
+        return max(0, combat.actions_per_turn - encounter.actions_used) if combat.actions_per_turn else None
+    if resource == "bonus_action":
+        return (
+            max(0, combat.bonus_actions_per_turn - encounter.bonus_actions_used)
+            if combat.bonus_actions_per_turn
+            else None
+        )
+    if resource == "reaction":
+        return (
+            max(0, combat.reactions_per_round - encounter.reactions_used)
+            if combat.reactions_per_round
+            else None
+        )
+    return None
+
+
 def _id_list(known: Mapping[str, object]) -> str:
     ids = sorted(known)
     shown = ", ".join(ids[:MAX_LISTED_IDS])
@@ -1809,6 +1831,12 @@ def encounter_view(
             if combat is not None
             else None
         ),
+        "actions_left": _resource_left(encounter, combat, "action"),
+        "actions_per_turn": combat.actions_per_turn if combat is not None else None,
+        "bonus_actions_left": _resource_left(encounter, combat, "bonus_action"),
+        "bonus_actions_per_turn": combat.bonus_actions_per_turn if combat is not None else None,
+        "reactions_left": _resource_left(encounter, combat, "reaction"),
+        "reactions_per_round": combat.reactions_per_round if combat is not None else None,
         "moves_left": _moves_left(encounter, grid),
         "move_cells": grid.move_cells if grid is not None else None,
         "cell_feet": grid.cell_feet if grid is not None else None,

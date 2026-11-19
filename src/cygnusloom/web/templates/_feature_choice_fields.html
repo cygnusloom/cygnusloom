@@ -12,6 +12,16 @@
   </label>
   {% endfor %}
   {% else %}
+  {% if pick.patterns %}
+  <label>
+    {{ pick.label }} pattern
+    <select name="feature-choice-{{ feature.id }}-{{ pick.id }}-mode">
+      {% for pattern in pick.patterns %}
+      <option value="{{ loop.index0 }}">{{ pattern | join(' / ') }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  {% endif %}
   {% set pick_label = pick.label|lower %}
   {% set pick_plural = pick_label.endswith("s") and not (pick_label.endswith("us") or pick_label.endswith("ss") or pick_label.endswith("is")) %}
   {% set pick_article = "" if pick_plural else ("an " if pick_label[0] in "aeiou" else "a ") %}
