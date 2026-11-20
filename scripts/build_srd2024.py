@@ -2811,14 +2811,28 @@ def background_skills(record: dict[str, Any]) -> list[str]:
     return skills
 
 
-def background_feat(record: dict[str, Any]) -> str:
+def background_feat_name(record: dict[str, Any]) -> str:
+    """The feat a background grants as the source names it, such as "Magic Initiate (Cleric)"."""
     for benefit in record.get("benefits", []):
         if benefit.get("type") == "feat":
-            name = benefit.get("desc", "")
-            if name.startswith("Magic Initiate"):
-                return "feat-magic-initiate"
-            return f"feat-{slug(name)}"
+            return benefit.get("desc", "").strip()
     return ""
+
+
+def background_feat(record: dict[str, Any]) -> str:
+    name = background_feat_name(record)
+    if not name:
+        return ""
+    if name.startswith("Magic Initiate"):
+        return "feat-magic-initiate"
+    return f"feat-{slug(name)}"
+
+
+# The spell lists the source fixes for a background's Magic Initiate feat.
+BACKGROUND_FEAT_CHOICES = {
+    "acolyte": {"list": ["cleric"]},
+    "sage": {"list": ["wizard"]},
+}
 
 
 BACKGROUND_EQUIPMENT_NAMES = {
@@ -2938,7 +2952,8 @@ def build_backgrounds() -> None:
         )
         features = [asi_id]
         if feat_id:
-            features.append(feat_id)
+            fixed = BACKGROUND_FEAT_CHOICES.get(ident)
+            features.append({"feature": feat_id, "choices": fixed} if fixed else feat_id)
         equipment = next(
             (
                 benefit.get("desc", "")
@@ -2950,6 +2965,9 @@ def build_backgrounds() -> None:
         description = f"{record['name']}."
         if tool:
             description += f" Tool proficiency: {tool}."
+        feat_name = background_feat_name(record)
+        if feat_name:
+            description += f" Feat: {feat_name}."
         if equipment:
             description += f" Equipment: {equipment}"
         entries.append(
@@ -3145,6 +3163,7 @@ def feature_choice_picks(name: str, class_id: str = "") -> list[dict[str, Any]]:
             "kind": "feature",
             "label": "Weapons",
             "feature_type": "item",
+            "retrain": "rest",
             "tags": ["weapon"],
             "count": count,
         }

@@ -51,7 +51,8 @@
       "long_rest",
       "save",
       "time",
-      "magic"
+      "magic",
+      "turn start"
     ],
     "npc_hp_stat": "hp",
     "npc_hp": {

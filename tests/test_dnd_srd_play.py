@@ -21,7 +21,7 @@ from cygnusloom.rules import dnd_srd_2024
 from cygnusloom.services import encounters
 from cygnusloom.services import level_up as level_up_service
 from cygnusloom.services.common import InvalidInput
-from cygnusloom.services.events import EncounterTurnEnded, load_state, record
+from cygnusloom.services.events import ChatGM, EncounterTurnEnded, load_state, record
 
 from .factories import (
     Rolls,
@@ -510,6 +510,288 @@ def test_weapon_mastery_unlocks_graze_on_a_miss(
     assert result["hit"] is False
     assert result["graze"] == 3  # Strength 16
     assert result["harm"]["hp"] == 3
+
+
+@pytest.mark.parametrize(
+    ("weapon", "condition"),
+    [("Flail", "sapped"), ("Javelin", "slowed")],
+)
+def test_sap_and_slow_end_at_the_start_of_the_attackers_next_turn(
+    app: FastAPI,
+    client_factory: Callable[[], TestClient],
+    weapon: str,
+    condition: str,
+) -> None:
+    fields = {
+        **FIGHTER_FIELDS,
+        "feature-choice-class-fighter-weapon-mastery-weapons-0": "weapon-flail",
+        "feature-choice-class-fighter-weapon-mastery-weapons-1": "weapon-javelin",
+        "feature-choice-class-fighter-weapon-mastery-weapons-2": "weapon-longsword",
+    }
+    client, campaign_id, ctx = _campaign(client_factory, fields=fields)
+    tools, _ = _fight(client, campaign_id)
+    dnd_srd_2024.roll_initiative(ctx)
+    tools.adjust_encounter_order(["Rook", "Foe"], current="Rook")
+    tools.player_attack("Foe", weapon, attack_roll=20, damage_roll=3)
+    foe = character_named(app, campaign_id, "Foe")
+    assert condition in foe.conditions
+    assert foe.condition_until[condition] == "Rook"
+
+    # The target's own turn does not end it; the attacker's next turn does.
+    with Session(app.state.engine) as db:
+        record(db, campaign_id, EncounterTurnEnded(name="Rook"))
+        db.commit()
+    with Session(app.state.engine) as db:
+        encounters.begin_turn(db, campaign_id, "Foe")
+    assert condition in character_named(app, campaign_id, "Foe").conditions
+    with Session(app.state.engine) as db:
+        record(db, campaign_id, ChatGM(content="The foe's turn plays out.", model="test"))
+        record(db, campaign_id, EncounterTurnEnded(name="Foe"))
+        db.commit()
+    with Session(app.state.engine) as db:
+        encounters.begin_turn(db, campaign_id, "Rook")
+
+    foe = character_named(app, campaign_id, "Foe")
+    assert condition not in foe.conditions
+    assert condition not in foe.condition_until
+
+
+def test_tactical_master_can_replace_a_weapons_mastery(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    fields = {
+        **FIGHTER_FIELDS,
+        "feature-choice-class-fighter-weapon-mastery-weapons-0": "weapon-longsword",
+        "feature-choice-class-fighter-weapon-mastery-weapons-1": "weapon-greatsword",
+        "feature-choice-class-fighter-weapon-mastery-weapons-2": "weapon-dagger",
+    }
+    client, campaign_id, ctx = _campaign(client_factory, fields=fields)
+    rules = rules_for("dnd-srd-2024")
+    world = client.app.state.content.world_content("testhollow", "dnd-srd-2024")
+    level_up_service.debug_grant(
+        client.app.state.engine,
+        campaign_id,
+        rules,
+        world,
+        "feature",
+        "Rook",
+        feature="class-fighter-tactical-master",
+    )
+    tools, _ = _fight(client, campaign_id)
+    dnd_srd_2024.roll_initiative(ctx)
+    tools.adjust_encounter_order(["Rook", "Foe"], current="Rook")
+    tools.give_item("Rook", "Longsword")
+    tools.ready_item("Rook", "Longsword")
+
+    tools.player_attack("Foe", "Longsword", attack_roll=20, damage_roll=5, mastery="slow")
+
+    foe = character_named(app, campaign_id, "Foe")
+    assert "slowed" in foe.conditions
+    assert "sapped" not in foe.conditions
+
+
+def test_a_fighter_without_tactical_master_cannot_replace_a_mastery(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    fields = {
+        **FIGHTER_FIELDS,
+        "feature-choice-class-fighter-weapon-mastery-weapons-0": "weapon-longsword",
+        "feature-choice-class-fighter-weapon-mastery-weapons-1": "weapon-greatsword",
+        "feature-choice-class-fighter-weapon-mastery-weapons-2": "weapon-dagger",
+    }
+    client, campaign_id, ctx = _campaign(client_factory, fields=fields)
+    tools, _ = _fight(client, campaign_id)
+    dnd_srd_2024.roll_initiative(ctx)
+    tools.adjust_encounter_order(["Rook", "Foe"], current="Rook")
+    tools.give_item("Rook", "Longsword")
+    tools.ready_item("Rook", "Longsword")
+
+    with pytest.raises(InvalidInput, match="cannot replace Longsword's mastery"):
+        tools.player_attack("Foe", "Longsword", mastery="slow")
+    with pytest.raises(InvalidInput, match="no weapon mastery property named"):
+        tools.player_attack("Foe", "Longsword", mastery="banana")
+
+
+def test_cleave_hits_a_second_creature_without_the_ability_modifier(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    fields = {
+        **FIGHTER_FIELDS,
+        "feature-choice-class-fighter-weapon-mastery-weapons-0": "weapon-greataxe",
+        "feature-choice-class-fighter-weapon-mastery-weapons-1": "weapon-longsword",
+        "feature-choice-class-fighter-weapon-mastery-weapons-2": "weapon-dagger",
+    }
+    client, campaign_id, ctx = _campaign(client_factory, fields=fields)
+    tools, _ = _fight(client, campaign_id)
+    tools.create_monster("Second", "Cave", template="monster-goblin-warrior")
+    tools.add_participant("Second")
+    tools.give_item("Rook", "Greataxe")
+    tools.ready_item("Rook", "Greataxe")
+    dnd_srd_2024.roll_initiative(ctx)
+    tools.adjust_encounter_order(["Rook", "Foe", "Second"], current="Rook")
+    tools.place_participant("Rook", 1, 1)
+    tools.place_participant("Foe", 2, 1)
+    tools.place_participant("Second", 2, 2)
+
+    tools.player_attack("Foe", "Greataxe", attack_roll=15, damage_roll=5)
+    result = tools.player_attack(
+        "Second",
+        "Greataxe",
+        attack_roll=15,
+        damage_roll=5,
+        extra="cleave",
+        extra_from="Foe",
+    )
+
+    assert result["target"] == "Second"
+    assert result["raw"] == 5  # Strength 16 is left out of the second target's damage
+    with pytest.raises(InvalidInput, match="already made a cleave extra attack"):
+        tools.player_attack(
+            "Second",
+            "Greataxe",
+            attack_roll=15,
+            damage_roll=5,
+            extra="cleave",
+            extra_from="Foe",
+        )
+
+
+def test_cleave_needs_the_first_attack_to_hit(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    fields = {
+        **FIGHTER_FIELDS,
+        "feature-choice-class-fighter-weapon-mastery-weapons-0": "weapon-greataxe",
+        "feature-choice-class-fighter-weapon-mastery-weapons-1": "weapon-longsword",
+        "feature-choice-class-fighter-weapon-mastery-weapons-2": "weapon-dagger",
+    }
+    client, campaign_id, ctx = _campaign(client_factory, fields=fields)
+    tools, _ = _fight(client, campaign_id)
+    tools.create_monster("Second", "Cave", template="monster-goblin-warrior")
+    tools.add_participant("Second")
+    tools.give_item("Rook", "Greataxe")
+    tools.ready_item("Rook", "Greataxe")
+    dnd_srd_2024.roll_initiative(ctx)
+    tools.adjust_encounter_order(["Rook", "Foe", "Second"], current="Rook")
+
+    tools.player_attack("Foe", "Greataxe", attack_roll=1, damage_roll=5)
+    with pytest.raises(InvalidInput, match="has not hit with Greataxe"):
+        tools.player_attack(
+            "Second",
+            "Greataxe",
+            attack_roll=15,
+            damage_roll=5,
+            extra="cleave",
+            extra_from="Foe",
+        )
+
+
+def test_cleave_refuses_a_second_creature_more_than_five_feet_from_the_first(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    fields = {
+        **FIGHTER_FIELDS,
+        "feature-choice-class-fighter-weapon-mastery-weapons-0": "weapon-greataxe",
+        "feature-choice-class-fighter-weapon-mastery-weapons-1": "weapon-longsword",
+        "feature-choice-class-fighter-weapon-mastery-weapons-2": "weapon-dagger",
+    }
+    client, campaign_id, ctx = _campaign(client_factory, fields=fields)
+    tools, _ = _fight(client, campaign_id)
+    tools.create_monster("Second", "Cave", template="monster-goblin-warrior")
+    tools.add_participant("Second")
+    tools.give_item("Rook", "Greataxe")
+    tools.ready_item("Rook", "Greataxe")
+    dnd_srd_2024.roll_initiative(ctx)
+    tools.adjust_encounter_order(["Rook", "Foe", "Second"], current="Rook")
+    tools.place_participant("Rook", 1, 1)
+    tools.place_participant("Foe", 2, 1)
+    tools.place_participant("Second", 5, 5)
+
+    tools.player_attack("Foe", "Greataxe", attack_roll=15, damage_roll=5)
+    with pytest.raises(InvalidInput, match="within 5 feet of the first"):
+        tools.player_attack(
+            "Second",
+            "Greataxe",
+            attack_roll=15,
+            damage_roll=5,
+            extra="cleave",
+            extra_from="Foe",
+        )
+
+
+def test_a_light_weapon_extra_attack_with_nick_needs_no_bonus_action(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    fields = {
+        **FIGHTER_FIELDS,
+        "feature-choice-class-fighter-weapon-mastery-weapons-0": "weapon-dagger",
+        "feature-choice-class-fighter-weapon-mastery-weapons-1": "weapon-shortsword",
+        "feature-choice-class-fighter-weapon-mastery-weapons-2": "weapon-greataxe",
+    }
+    client, campaign_id, ctx = _campaign(client_factory, fields=fields)
+    tools, _ = _fight(client, campaign_id)
+    tools.give_item("Rook", "Dagger")
+    tools.give_item("Rook", "Shortsword")
+    tools.ready_item("Rook", "Dagger")
+    tools.ready_item("Rook", "Shortsword")
+    dnd_srd_2024.roll_initiative(ctx)
+    tools.adjust_encounter_order(["Rook", "Foe"], current="Rook")
+
+    tools.player_attack("Foe", "Shortsword", attack_roll=15, damage_roll=4)
+    result = tools.player_attack("Foe", "Dagger", attack_roll=15, damage_roll=4, extra="light")
+
+    assert result["raw"] == 4  # Nick leaves out the positive ability modifier
+    encounter = _state(app, campaign_id).encounter
+    assert encounter is not None
+    assert encounter.bonus_actions_used == 0
+    assert encounter.extra_attacks == ["light"]
+
+
+def test_a_light_weapon_extra_attack_without_nick_spends_a_bonus_action(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    fields = {
+        **FIGHTER_FIELDS,
+        "feature-choice-class-fighter-weapon-mastery-weapons-0": "weapon-dagger",
+        "feature-choice-class-fighter-weapon-mastery-weapons-1": "weapon-shortsword",
+        "feature-choice-class-fighter-weapon-mastery-weapons-2": "weapon-greataxe",
+    }
+    client, campaign_id, ctx = _campaign(client_factory, fields=fields)
+    tools, _ = _fight(client, campaign_id)
+    tools.give_item("Rook", "Dagger")
+    tools.give_item("Rook", "Shortsword")
+    tools.ready_item("Rook", "Dagger")
+    tools.ready_item("Rook", "Shortsword")
+    dnd_srd_2024.roll_initiative(ctx)
+    tools.adjust_encounter_order(["Rook", "Foe"], current="Rook")
+
+    tools.player_attack("Foe", "Dagger", attack_roll=15, damage_roll=4)
+    tools.player_attack("Foe", "Shortsword", attack_roll=15, damage_roll=4, extra="light")
+
+    encounter = _state(app, campaign_id).encounter
+    assert encounter is not None
+    assert encounter.bonus_actions_used == 1
+
+
+def test_a_light_weapon_extra_attack_needs_a_different_light_weapon(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    fields = {
+        **FIGHTER_FIELDS,
+        "feature-choice-class-fighter-weapon-mastery-weapons-0": "weapon-dagger",
+        "feature-choice-class-fighter-weapon-mastery-weapons-1": "weapon-shortsword",
+        "feature-choice-class-fighter-weapon-mastery-weapons-2": "weapon-greataxe",
+    }
+    client, campaign_id, ctx = _campaign(client_factory, fields=fields)
+    tools, _ = _fight(client, campaign_id)
+    tools.give_item("Rook", "Dagger")
+    tools.ready_item("Rook", "Dagger")
+    dnd_srd_2024.roll_initiative(ctx)
+    tools.adjust_encounter_order(["Rook", "Foe"], current="Rook")
+
+    tools.player_attack("Foe", "Dagger", attack_roll=15, damage_roll=4)
+    with pytest.raises(InvalidInput, match="different Light weapon"):
+        tools.player_attack("Foe", "Dagger", attack_roll=15, damage_roll=4, extra="light")
 
 
 def test_casting_a_spell_spends_the_casters_action(

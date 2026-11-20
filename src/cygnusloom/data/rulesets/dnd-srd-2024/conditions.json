@@ -209,6 +209,7 @@
     "label": "Sapped",
     "description": "Disadvantage on the next attack roll before the start of the attacker's next turn.",
     "ends": [
+      "turn start",
       "rest"
     ],
     "roll_modes": {
@@ -221,6 +222,7 @@
     "label": "Slowed",
     "description": "Speed reduced by 10 feet until the start of the attacker's next turn.",
     "ends": [
+      "turn start",
       "rest"
     ]
   }

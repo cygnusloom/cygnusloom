@@ -3912,6 +3912,7 @@ CHARACTER_DEFINITION_KEYS: Mapping[str, frozenset[str]] = {
             "armor_training",
             "weapon_training",
             "tool_training",
+            "mastery_options",
             "groups",
             "rules",
             "tag",
@@ -4020,7 +4021,7 @@ FEAT_PICK_KEYS = frozenset(
         "advance_repeated_rank",
     }
 )
-GRANTED_KEYS = frozenset({"feature", "quantity"})
+GRANTED_KEYS = frozenset({"feature", "quantity", "choices"})
 TEMPLATE_GRANT_KEYS = frozenset({"items", "silver", "equip", "options"})
 
 

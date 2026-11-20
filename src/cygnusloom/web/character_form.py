@@ -108,6 +108,11 @@ def creation_view(
             "feat_picks": _feat_picks_view(spec, template),
             "skill_grants": dict(template.skills),
             "features": [granted.feature for granted in template.features],
+            "feature_choice_defaults": {
+                granted.feature: {pick: list(values) for pick, values in granted.choices.items()}
+                for granted in template.features
+                if granted.choices
+            },
             "grants": _template_grants(spec, template),
             "grant_options": [
                 {

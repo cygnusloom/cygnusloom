@@ -101,6 +101,7 @@ from cygnusloom.services.events import (
     ExecutionPrepared,
     ExecutionTaken,
     FeatureChoiceMade,
+    FeatureChoiceReplaced,
     FeatureLearned,
     FeatureUsed,
     GrappleEnded,
@@ -2037,6 +2038,9 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
         nonlethal: bool = False,
         two_handed: bool = False,
         roll_mode: str = "normal",
+        mastery: str = "",
+        extra: str = "",
+        extra_from: str = "",
     ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return combat.player_attack(
@@ -2064,6 +2068,9 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 nonlethal=nonlethal,
                 two_handed=two_handed,
                 roll_mode=roll_mode,
+                mastery=mastery,
+                extra=extra,
+                extra_from=extra_from,
             )
 
     def attack_dice(self, weapon: str, modifier: str = "", two_handed: bool = False) -> str:
@@ -2087,6 +2094,9 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
         dual_wield: bool = False,
         force: bool = False,
         character: str = "",
+        mastery: str = "",
+        extra: str = "",
+        extra_from: str = "",
     ) -> None:
         """Refuse a player attack before its roll prompt is shown. It makes the same checks the
         attack itself does, so the GM hears about an attack outside the character's turn, or
@@ -2106,6 +2116,9 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 force=force,
                 character=character,
                 cell_feet=self._cell_feet(),
+                mastery=mastery,
+                extra=extra,
+                extra_from=extra_from,
             )
 
     def resolve_group_break(self, name: str, outcome: str) -> dict[str, Any]:
@@ -2212,12 +2225,13 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
             return {**result, "magic_item": item, "cost": cost, "currency": currency}
 
     def choose_feature_choice(
-        self, name: str, feature: str, pick: str, choice: str
+        self, name: str, feature: str, pick: str, choice: str, replace: str = ""
     ) -> dict[str, Any]:
         """Record a structured choice for a feature the character has, such as the attribute
         for Developed Attribute. The choice is validated against the feature's pick. A
         `:pattern` suffix selects an ability-score allocation, and a feature or spell choice
-        learns the named definition."""
+        learns the named definition. `replace` names a current choice to retrain for
+        `choice`, when the pick allows retraining such as a weapon mastery changed on a rest."""
         spec = self.character
         pattern_mode = pick.endswith(":pattern")
         pick_id = pick.removesuffix(":pattern")
@@ -2301,10 +2315,27 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 raise InvalidInput(f"{choice!r} cannot be chosen for {found.name}")
             key = f"{found.id}:{pick_id}"
             taken = character.feature_choices.get(key, [])
+            previous = replace.strip() if isinstance(replace, str) else ""
+            if replace and not previous:
+                raise InvalidInput("the choice to replace cannot be empty")
+            if previous:
+                if not rule.retrain:
+                    raise InvalidInput(f"{found.name}'s {rule.label.lower()} cannot be retrained")
+                if rule.kind != "feature" or rule.feature_type != "item":
+                    raise InvalidInput(
+                        f"{found.name}'s {rule.label.lower()} retraining is not supported"
+                    )
+                if previous not in taken:
+                    raise InvalidInput(
+                        f"{previous!r} is not one of {character.name}'s current "
+                        f"{rule.label.lower()} choices for {found.name}"
+                    )
+                if previous == choice:
+                    raise InvalidInput(f"{choice!r} is already chosen for {found.name}")
             allowed = rule.count * character.features.get(found.id, 0)
-            if len(taken) >= allowed:
+            if not previous and len(taken) >= allowed:
                 raise InvalidInput(f"{found.name} has no {rule.label} choice left")
-            if rule.kind != "text" and choice in taken:
+            if rule.kind != "text" and choice in taken and choice != previous:
                 raise InvalidInput(f"{choice!r} is already chosen for {found.name}")
             skill = choice if rule.grant in ("trained", "proficiency", "expertise") else ""
             skill_amount = 0
@@ -2373,6 +2404,31 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                             continue
                         steps = level if dependent.plus_modifier_per_level else 1
                         stat_raises[dependent.id] = delta * steps
+            if previous:
+                before = spec.items.get(previous)
+                after = spec.items.get(choice)
+                record(
+                    db,
+                    self.campaign_id,
+                    FeatureChoiceReplaced(
+                        name=character.name,
+                        feature=found.id,
+                        feature_name=found.name,
+                        pick=pick_id,
+                        previous=previous,
+                        previous_name=before.name if before is not None else previous,
+                        choice=choice,
+                        choice_name=after.name if after is not None else choice,
+                    ),
+                )
+                db.commit()
+                return {
+                    "character": character.name,
+                    "feature": found.id,
+                    "pick": pick_id,
+                    "previous": previous,
+                    "choice": choice,
+                }
             record(
                 db,
                 self.campaign_id,

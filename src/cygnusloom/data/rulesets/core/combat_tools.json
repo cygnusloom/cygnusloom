@@ -594,6 +594,19 @@
           "enum": ["normal", "advantage", "disadvantage"],
           "default": "normal",
           "description": "How the attack is rolled when the rules give advantage or disadvantage: normal keeps one d20, advantage keeps the higher of two, and disadvantage keeps the lower. The player's reported roll is used as given."
+        },
+        "mastery": {
+          "type": "string",
+          "description": "A mastery property to use in place of the weapon's own for this attack, when a feature such as the Fighter's Tactical Master allows it, such as 'push'."
+        },
+        "extra": {
+          "type": "string",
+          "enum": ["cleave", "light"],
+          "description": "Record this as an extra attack the rules grant this turn: cleave for a second creature after a hit with a Cleave weapon, or light for the Light property's attack with a different Light weapon. An extra attack is allowed once per turn and does not spend another attack action."
+        },
+        "extra_from": {
+          "type": "string",
+          "description": "For cleave, the first creature the same weapon hit this turn; the second target must be within 5 feet of it."
         }
       },
       "required": ["target", "weapon"]

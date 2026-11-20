@@ -321,6 +321,9 @@ class Character:
     timers: dict[str, Timer] = field(default_factory=dict)
     # The ids of the conditions the character has, and the names of their injuries, in the order gained.
     conditions: list[str] = field(default_factory=list)
+    # The creature whose turn start ends a condition, by condition id. A condition without an
+    # entry lasts until something else ends it.
+    condition_until: dict[str, str] = field(default_factory=dict)
     injuries: list[str] = field(default_factory=list)
     # The value of each counter the character keeps, by counter id. A counter not listed is at its initial value.
     counters: dict[str, int] = field(default_factory=dict)
@@ -640,6 +643,17 @@ class Encounter:
     # Attack actions the acting participant has used this turn. A statblock's multiattack is one
     # action, so its attacks per action all count here once.
     attacked: int = 0
+    # Weapons the acting participant attacked with this turn, by name_key. The Light property's
+    # extra attack needs a different light weapon.
+    attacked_with: list[str] = field(default_factory=list)
+    # Weapons the acting participant hit with this turn, by name_key. Cleave needs a hit with
+    # the same weapon.
+    hit_with: list[str] = field(default_factory=list)
+    # Creatures the acting participant hit this turn, by name_key. Cleave's first target must
+    # be one of them.
+    hit_targets: list[str] = field(default_factory=list)
+    # Extra attacks made this turn, tagged "cleave" or "light". Each is allowed once per turn.
+    extra_attacks: list[str] = field(default_factory=list)
     # Actions and bonus actions spent this turn. They reset when the turn begins.
     actions_used: int = 0
     bonus_actions_used: int = 0

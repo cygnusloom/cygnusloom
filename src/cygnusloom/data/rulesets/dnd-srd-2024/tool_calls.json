@@ -337,6 +337,36 @@
   },
   {
     "type": "tool_call",
+    "id": "choose_feature_choice",
+    "description": "Record a structured choice a feature requires, such as the spells for Magic Initiate or the weapons for Weapon Mastery. The choice is validated against the feature and appears on the character's sheet. After a Long Rest, a pick that lists retraining, such as Weapon Mastery, may replace one of its current choices by naming it in replace.",
+    "parameters": {
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The character making the choice."
+        },
+        "feature": {
+          "type": "string",
+          "description": "The feature's id or name."
+        },
+        "pick": {
+          "type": "string",
+          "description": "The pick's id, such as weapons, list, cantrips, or spell."
+        },
+        "choice": {
+          "type": "string",
+          "description": "The chosen item, feature, spell, stat, skill, or text."
+        },
+        "replace": {
+          "type": "string",
+          "description": "The current choice to retrain for choice, when the pick allows retraining on a rest. Leave it out to add a new choice."
+        }
+      },
+      "required": ["name", "feature", "pick", "choice"]
+    }
+  },
+  {
+    "type": "tool_call",
     "id": "attune_item",
     "python_module": "dnd_srd_2024",
     "function": "attune_item",

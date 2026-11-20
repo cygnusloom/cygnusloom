@@ -2881,6 +2881,10 @@ class EncounterTurnBegun(GameEvent):
         encounter.acting = character.name
         encounter.moved = 0
         encounter.attacked = 0
+        encounter.attacked_with = []
+        encounter.hit_with = []
+        encounter.hit_targets = []
+        encounter.extra_attacks = []
         encounter.actions_used = 0
         encounter.bonus_actions_used = 0
         if character.kind == NPC_KIND and state.turn is None:
@@ -2894,12 +2898,24 @@ class EncounterTurnBegun(GameEvent):
 class EncounterAttacked(GameEvent):
     """A combatant used one attack action this turn. An NPC's statblock resolves all its attacks
     per action inside that one action, so this is recorded once even when several strikes land.
-    An attack forced outside the turn order does not spend the acting character's action."""
+    An attack forced outside the turn order does not spend the acting character's action. An
+    extra attack, such as Cleave or the Light property, is recorded with `extra` instead and
+    does not spend another attack action."""
 
     kind: ClassVar[str] = "encounter.attacked"
     hidden: ClassVar[bool] = True
 
     name: str
+    # The weapon used, by name. An extra attack still records the weapon used with `extra`.
+    weapon: str = ""
+    # The creature the weapon hit, when the attack hit.
+    target: str = ""
+    # Whether the attack hit, for Cleave's requirement that the first attack hit.
+    hit: bool = True
+    # The extra attack this records, such as "cleave" or "light". Empty for a normal attack.
+    extra: str = ""
+    # Whether this extra attack spends the bonus action, as Light does without Nick.
+    bonus_action: bool = False
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         encounter = state.encounter
@@ -2908,6 +2924,17 @@ class EncounterAttacked(GameEvent):
         # A player character may attack while their turn is next but not yet opened. That is
         # still their action, so it counts; a forced strike during someone else's turn does not.
         if encounter.acting is None or name_key(encounter.acting) == name_key(self.name):
+            if self.extra:
+                encounter.extra_attacks.append(self.extra)
+                if self.bonus_action:
+                    encounter.bonus_actions_used += 1
+                return
+            if self.weapon:
+                encounter.attacked_with.append(name_key(self.weapon))
+                if self.hit:
+                    encounter.hit_with.append(name_key(self.weapon))
+                    if self.target:
+                        encounter.hit_targets.append(name_key(self.target))
             first_attack = encounter.attacked == 0
             encounter.attacked += 1
             if first_attack:
@@ -2964,6 +2991,10 @@ class EncounterTurnEnded(GameEvent):
         encounter.acting = None
         encounter.moved = 0
         encounter.attacked = 0
+        encounter.attacked_with = []
+        encounter.hit_with = []
+        encounter.hit_targets = []
+        encounter.extra_attacks = []
         encounter.actions_used = 0
         encounter.bonus_actions_used = 0
         encounter.up += 1
@@ -3190,6 +3221,37 @@ class FeatureChoiceMade(GameEvent):
 
     def render(self) -> str:
         return f"{self.name} chooses {self.choice} for {self.feature} ({self.pick})."
+
+
+@dataclass(frozen=True)
+class FeatureChoiceReplaced(GameEvent):
+    """A feature choice retrained for another, such as a weapon mastery changed on a rest."""
+
+    kind: ClassVar[str] = "character.feature_choice_replaced"
+
+    name: str
+    feature: str
+    feature_name: str
+    pick: str
+    previous: str
+    previous_name: str
+    choice: str
+    choice_name: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        character = state.characters[name_key(self.name)]
+        key = f"{self.feature}:{self.pick}"
+        choices = character.feature_choices.setdefault(key, [])
+        if self.previous in choices:
+            choices[choices.index(self.previous)] = self.choice
+        elif self.choice not in choices:
+            choices.append(self.choice)
+
+    def render(self) -> str:
+        return (
+            f"{self.name} retrains {self.feature_name}: {self.previous_name} becomes "
+            f"{self.choice_name} ({self.pick})."
+        )
 
 
 @dataclass(frozen=True)
@@ -3972,9 +4034,16 @@ class ConditionAdded(GameEvent):
     name: str
     condition: str
     cause: str = ""
+    # The creature whose next turn starts ends the condition, such as the attacker for Sap.
+    until: str = ""
 
     def apply(self, state: CampaignState, event_id: int) -> None:
-        state.characters[name_key(self.name)].conditions.append(self.condition)
+        character = state.characters[name_key(self.name)]
+        character.conditions.append(self.condition)
+        if self.until:
+            character.condition_until[self.condition] = self.until
+        else:
+            character.condition_until.pop(self.condition, None)
 
     def render(self) -> str:
         text = f"{self.name} gains the condition {self.condition}"
@@ -3990,9 +4059,10 @@ class ConditionEnded(GameEvent):
     how: str
 
     def apply(self, state: CampaignState, event_id: int) -> None:
-        conditions = state.characters[name_key(self.name)].conditions
-        if self.condition in conditions:
-            conditions.remove(self.condition)
+        character = state.characters[name_key(self.name)]
+        if self.condition in character.conditions:
+            character.conditions.remove(self.condition)
+        character.condition_until.pop(self.condition, None)
 
     def render(self) -> str:
         return f"{self.name} no longer has the condition {self.condition} (ended by {self.how})."

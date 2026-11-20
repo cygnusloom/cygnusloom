@@ -159,6 +159,7 @@
         "kind": "feature",
         "label": "Weapons",
         "feature_type": "item",
+        "retrain": "rest",
         "tags": [
           "weapon"
         ],

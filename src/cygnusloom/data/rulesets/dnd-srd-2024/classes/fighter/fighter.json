@@ -65,6 +65,11 @@
     "description": "When you attack with a weapon whose mastery property you can use, you can replace that property with the Push, Sap, or Slow property for that attack.",
     "tag": "class:fighter",
     "rank": 9,
+    "mastery_options": [
+      "push",
+      "sap",
+      "slow"
+    ],
     "picks": [],
     "turn_resource": ""
   },
@@ -126,6 +131,7 @@
         "kind": "feature",
         "label": "Weapons",
         "feature_type": "item",
+        "retrain": "rest",
         "tags": [
           "weapon"
         ],
@@ -148,6 +154,7 @@
         "kind": "feature",
         "label": "Weapons",
         "feature_type": "item",
+        "retrain": "rest",
         "tags": [
           "weapon"
         ],
@@ -169,6 +176,7 @@
         "kind": "feature",
         "label": "Weapons",
         "feature_type": "item",
+        "retrain": "rest",
         "tags": [
           "weapon"
         ],
@@ -190,6 +198,7 @@
         "kind": "feature",
         "label": "Weapons",
         "feature_type": "item",
+        "retrain": "rest",
         "tags": [
           "weapon"
         ],
