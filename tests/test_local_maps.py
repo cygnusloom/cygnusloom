@@ -276,7 +276,7 @@ def test_an_npc_move_is_left_to_the_narration(
     assert state.characters[name_key("Nib")].location == "Far Ledge"
 
 
-def test_old_token_placements_replay_without_filling_the_transcript(
+def test_a_quiet_token_placement_replays_without_filling_the_transcript(
     client_factory: Callable[[], TestClient],
 ):
     client, campaign_id = _campaign_id(client_factory)
@@ -292,7 +292,9 @@ def test_old_token_placements_replay_without_filling_the_transcript(
                 seq=(newest or 0) + 1,
                 channel="log",
                 kind="map.token_placed",
-                payload=json.dumps({"map": MAP, "name": "Ada", "column": 3, "row": 4}),
+                payload=json.dumps(
+                    {"map": MAP, "name": "Ada", "column": 3, "row": 4, "quiet": True}
+                ),
             )
         )
         db.commit()

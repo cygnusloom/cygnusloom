@@ -1,20 +1,22 @@
-"""One-way conversion of Cygnus Loom 3.x campaigns to the current campaign contract.
+"""Campaign contract migrations.
 
-This module is the only place that knows which event kinds 3.x wrote that the current engine no
-longer writes. It is imported lazily by the conversion route, never at application startup, and
-it does not register anything in the live event registry. Everything the current engine still
-knows is decoded and replayed by the live services, so the adapter does not become a second
-engine or a fork of 3.x.
+This package is the only place that knows how a campaign written for an older major
+version is upgraded. Each module moves one major version forward:
 
-An upgrade is refused when an event kind has no rewrite. The log stays untouched, so a later
-release can add a rewrite and try again. The replay gate runs the complete converted log and
-resolves every content reference before the campaign is stamped with the target major version.
+* ``v3`` rewrites Cygnus Loom 3 event kinds and payloads into the Cygnus Loom 4 shape.
+* ``v4`` rewrites Cygnus Loom 4 payloads and inventory into the Cygnus Loom 5 shape.
+
+``convert_campaign`` applies every step from the campaign's major version to the major
+version this server runs, in order. It then replays the fully converted log and resolves
+every content reference before stamping the campaign with the current major. The event
+registry and live services never need to understand an older major version.
 """
 
 from __future__ import annotations
 
 import json
 from collections.abc import Mapping
+from types import ModuleType
 from typing import Any
 
 from sqlalchemy import Engine, select
@@ -22,6 +24,7 @@ from sqlalchemy import Engine, select
 from cygnusloom import CAMPAIGN_MAJOR_VERSION, __version__
 from cygnusloom.content.library import ContentLibrary
 from cygnusloom.db.models import Campaign, Event
+from cygnusloom.services import encounters
 from cygnusloom.services.campaigns import _exclusive
 from cygnusloom.services.common import InvalidInput, NotFound, session_scope
 from cygnusloom.services.events import (
@@ -32,23 +35,29 @@ from cygnusloom.services.events import (
     record,
 )
 
-# The campaign contract this adapter reads and writes. A future major version gets its own
-# adapter rather than widening this one; the UI asks `supports` before offering an upgrade.
-FROM_MAJOR = 3
-TO_MAJOR = 5
+from . import v3, v4
 
-# Event kinds 3.x wrote that the current engine no longer writes, with the event that replaces
-# them. Every replacement is a current event so the converted log replays without this module.
-EVENT_REWRITES: Mapping[str, tuple[str, Mapping[str, Any]]] = {
-    # The upgrade marker opened an out-of-character turn so the turn.begun entry that follows
-    # could attach to it. turn.opening opens that turn under the current contract.
-    "campaign.upgraded": ("turn.opening", {"player_id": None}),
+STEPS: Mapping[int, ModuleType] = {
+    v3.FROM_MAJOR: v3,
+    v4.FROM_MAJOR: v4,
 }
+
+
+def _steps(major: int) -> tuple[ModuleType, ...]:
+    steps: list[ModuleType] = []
+    current = major
+    while current < CAMPAIGN_MAJOR_VERSION:
+        step = STEPS.get(current)
+        if step is None or step.TO_MAJOR != current + 1:
+            return ()
+        steps.append(step)
+        current = step.TO_MAJOR
+    return tuple(steps)
 
 
 def supports(major: int) -> bool:
     """Whether this server can upgrade a campaign of `major` to the contract it runs."""
-    return major == FROM_MAJOR and TO_MAJOR == CAMPAIGN_MAJOR_VERSION
+    return bool(_steps(major))
 
 
 def convert_campaign(
@@ -57,18 +66,13 @@ def convert_campaign(
     campaign_id: int,
     library: ContentLibrary,
 ) -> None:
-    """Upgrade one 3.x campaign in place, or raise without changing anything.
+    """Upgrade one older-major campaign in place, or raise without changing anything.
 
-    The campaign row, its id, its members, and its events stay in place. The events are
-    rewritten only after every kind has a current replacement, and the campaign is stamped with
-    the target major version only after the whole converted log replays and every content
-    reference resolves. There are no partial upgrades.
+    The campaign row, its id, its members, and its events stay in place. Each migration
+    step rewrites the event rows in order, and the campaign is stamped with the current
+    major only after the whole converted log replays and every content reference resolves.
+    There are no partial upgrades.
     """
-    if not supports(FROM_MAJOR):
-        raise InvalidInput(
-            f"this upgrader moves campaigns to Cygnus Loom {TO_MAJOR}, but this server runs "
-            f"Cygnus Loom {CAMPAIGN_MAJOR_VERSION}"
-        )
     with _exclusive(campaign_id), session_scope(engine) as db:
         campaign = db.get(Campaign, campaign_id)
         if campaign is None or campaign.owner_id != owner_id:
@@ -77,7 +81,8 @@ def convert_campaign(
             raise InvalidInput(
                 f"this campaign already plays on Cygnus Loom {CAMPAIGN_MAJOR_VERSION}"
             )
-        if campaign.major_version != FROM_MAJOR:
+        steps = _steps(campaign.major_version)
+        if not steps:
             raise InvalidInput(
                 f"Cygnus Loom {CAMPAIGN_MAJOR_VERSION} has no converter for campaigns made "
                 f"by Cygnus Loom {campaign.major_version}"
@@ -97,78 +102,55 @@ def convert_campaign(
         if not rows:
             raise InvalidInput("the campaign has no events to convert")
 
-        rewrites, source_version = _rewrites(rows)
+        original_major = campaign.major_version
+        source_version = ""
+        for step in steps:
+            found = step.rewrite(rows, library, campaign)
+            if found:
+                source_version = found
+
         for row in rows:
-            rewrite = rewrites.get(row.id)
-            if rewrite is None:
-                if row.kind not in EVENT_TYPES:
-                    raise InvalidInput(
-                        f"event {row.seq}: Cygnus Loom {TO_MAJOR} has no conversion for "
-                        f"event kind {row.kind!r}"
-                    )
-                continue
-            kind, payload, channel = rewrite
-            row.kind = kind
-            row.payload = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
-            row.channel = channel
+            if row.kind not in EVENT_TYPES:
+                raise InvalidInput(
+                    f"event {row.seq}: Cygnus Loom {CAMPAIGN_MAJOR_VERSION} has no conversion "
+                    f"for event kind {row.kind!r}"
+                )
         db.flush()
 
         try:
             state = load_state(db, campaign_id)
         except Exception as exc:
             raise InvalidInput(
-                f"the campaign log could not be replayed under Cygnus Loom {TO_MAJOR}: {exc}"
+                f"the campaign log could not be replayed under Cygnus Loom "
+                f"{CAMPAIGN_MAJOR_VERSION}: {exc}"
             ) from exc
 
         problems = _content_problems(state, library, campaign)
         if state.turn is not None:
             problems.append(
-                "the campaign ends in an open turn; finish or discard it on Cygnus Loom 3 "
-                "and export it again"
+                "the campaign ends in an open turn; finish or discard it on Cygnus Loom "
+                f"{original_major} and export it again"
             )
         if problems:
             raise InvalidInput("; ".join(problems))
 
-        campaign.major_version = TO_MAJOR
+        # A converted log follows the 5.x turn contract: a player character whose turn is
+        # next starts acting at once instead of waiting for an explicit Begin button.
+        if state.turn is None:
+            encounters.begin_player_turn_if_next(db, campaign_id)
+
+        campaign.major_version = CAMPAIGN_MAJOR_VERSION
         record(
             db,
             campaign_id,
             CampaignConverted(
-                from_major=FROM_MAJOR,
-                to_major=TO_MAJOR,
+                from_major=original_major,
+                to_major=CAMPAIGN_MAJOR_VERSION,
                 from_version=source_version,
                 to_version=__version__,
             ),
         )
         db.commit()
-
-
-def _rewrites(
-    rows: list[Event],
-) -> tuple[dict[int, tuple[str, dict[str, Any], str]], str]:
-    """The event rewrites to apply, keyed by stored event id, and the newest 3.x version the
-    log recorded in an upgrade marker."""
-    rewrites: dict[int, tuple[str, dict[str, Any], str]] = {}
-    source_version = ""
-    for row in rows:
-        rewrite = EVENT_REWRITES.get(row.kind)
-        if rewrite is None:
-            continue
-        kind, payload = rewrite
-        event_class = EVENT_TYPES.get(kind)
-        if event_class is None:
-            raise RuntimeError(
-                f"compat_v3 maps {row.kind!r} to {kind!r}, which is not a current event"
-            )
-        rewrites[row.id or 0] = (kind, dict(payload), event_class.channel.value)
-        if row.kind == "campaign.upgraded":
-            try:
-                upgrade = json.loads(row.payload)
-            except ValueError:
-                continue
-            if isinstance(upgrade, dict) and isinstance(upgrade.get("to_version"), str):
-                source_version = upgrade["to_version"]
-    return rewrites, source_version
 
 
 def _content_problems(
@@ -229,3 +211,16 @@ def _listed(ids: set[str]) -> str:
     if len(names) > 6:
         shown += f", and {len(names) - 6} more"
     return shown
+
+
+def payload(row: Event) -> dict[str, Any]:
+    """The decoded payload of a stored event row."""
+    raw = json.loads(row.payload)
+    if not isinstance(raw, dict):
+        raise InvalidInput(f"event {row.seq} has a payload that is not an object")
+    return raw
+
+
+def set_payload(row: Event, data: Mapping[str, Any]) -> None:
+    """Store a rewritten payload on an event row without changing its id or sequence."""
+    row.payload = json.dumps(data, ensure_ascii=False, separators=(",", ":"))

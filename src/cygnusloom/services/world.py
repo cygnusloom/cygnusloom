@@ -500,7 +500,6 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 character=character,
                 advance_clock=advance_clock,
                 needs_met_by=needs_met_by,
-                marketplace=self.marketplace,
             )
 
     def rest_history(self) -> dict[str, Any]:

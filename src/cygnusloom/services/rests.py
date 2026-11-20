@@ -16,7 +16,6 @@ from cygnusloom.content.library import (
     ConditionRules,
     Hooks,
     InventoryRules,
-    Marketplace,
     RestLength,
 )
 from cygnusloom.services import reactions
@@ -65,7 +64,6 @@ def take_rest(
     character: str = "",
     advance_clock: bool | None = None,
     needs_met_by: str = "",
-    marketplace: Marketplace | None = None,
 ) -> dict[str, Any]:
     """The party rests. An interrupted rest counts as the rule set's interrupted length. A rest
     with upkeep calls the before_rest hook first. `needs_met_by` names a village, host, or
@@ -112,7 +110,6 @@ def take_rest(
     )
     record(db, campaign_id, took)
     hc = HookContext(db, campaign_id, hooks, inventory, rule_data or {})
-    hc.marketplace = marketplace
     hc.needs_met_by = needs_met_by
     hc.survival_needs = survival_needs_enabled(db, campaign_id)
     result: dict[str, Any] = {

@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
 from cygnusloom.db.models import Campaign, Event
+from cygnusloom.services import encounters
 from cygnusloom.services.campaigns import campaign_log, list_messages
 from cygnusloom.services.events import (
     ChatPlayer,
@@ -28,7 +29,7 @@ from cygnusloom.services.events import (
 from tests.conftest import csrf_token
 from tests.factories import answer, send_message
 from tests.test_campaigns import _campaign_id, _pending, _send, _signed_in
-from tests.test_encounters import _encounter_with, _npc_turn_stream
+from tests.test_encounters import _encounter, _encounter_with, _npc_turn_stream
 from tests.test_tools import ROLL, _recording_provider, _script
 
 PLAYER_SAVE = {
@@ -138,13 +139,9 @@ def test_rollback_of_an_npc_reply_ends_the_turn_before_the_reply(
     assert state.encounter is not None
     assert state.encounter.acting is None
     # The rollback kept the turn end, so the next actor can start.
-    token = csrf_token(client, "/campaigns")
-    response = client.post(
-        f"/campaigns/{campaign_id}/encounter/turn/begin",
-        data={"csrf_token": token, "name": "Ada"},
-        follow_redirects=False,
-    )
-    assert response.status_code == 303
+    with Session(client.app.state.engine) as db:
+        encounters.begin_turn(db, campaign_id, "Ada")
+    assert _encounter(client.app, campaign_id).encounter.acting == "Ada"
 
 
 def test_a_prompt_paused_npc_turn_ends_when_it_is_resumed(

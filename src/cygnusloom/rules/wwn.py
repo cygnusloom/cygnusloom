@@ -37,8 +37,6 @@ from cygnusloom.services.events import (
     EffectNoted,
     FeatureLearned,
     Harmed,
-    ItemRemoved,
-    ItemUsesSet,
     MaxChanged,
     Recovered,
     current,
@@ -1326,35 +1324,14 @@ def _hook_int(hc: HookContext, key: str) -> int:
 
 
 def _carried_matching(hc: HookContext, character: str, names: Iterable[str]) -> Any | None:
-    """The first carried item whose name matches one of `names` and still has a use. An item
-    with no use count is a legacy item from before catalogue uses were tracked, so it is
-    returned when no counted item is left."""
+    """The first carried item whose name matches one of `names` and still has a use."""
     found = hc.character(character)
-    legacy: Any | None = None
     for item in found.items:
         if not any(inventory_service.same_item_name(item.name, name) for name in names):
             continue
-        if item.max_uses > 0:
-            if item.uses > 0:
-                return item
-        elif legacy is None:
-            legacy = item
-    return legacy
-
-
-def _listed_uses(hc: HookContext, name: str) -> int:
-    """The catalogue's use count for an item, or 0 when it is not listed."""
-    if hc.marketplace is None:
-        return 0
-    listed = next(
-        (
-            item
-            for item in hc.marketplace.items
-            if inventory_service.same_item_name(item.name, name)
-        ),
-        None,
-    )
-    return listed.uses if listed is not None else 0
+        if item.max_uses > 0 and item.uses > 0:
+            return item
+    return None
 
 
 def _spend_one(hc: HookContext, character: str, names: Iterable[str]) -> str:
@@ -1363,26 +1340,6 @@ def _spend_one(hc: HookContext, character: str, names: Iterable[str]) -> str:
     if item is None or hc.inventory is None:
         return ""
     db, campaign_id = hc.session()
-    if item.max_uses < 1:
-        # BACKWARDS-COMPATIBILITY: 5
-        # A campaign begun before catalogue uses were tracked carries rations with no use
-        # count. Restore the catalogue's count once, then spend a day's use. An unlisted
-        # item is one day's supply and is used up.
-        uses = _listed_uses(hc, item.name)
-        if uses < 1:
-            record(db, campaign_id, ItemRemoved(name=character, item=item.name))
-            return item.name
-        record(
-            db,
-            campaign_id,
-            ItemUsesSet(
-                name=character,
-                item=item.name,
-                uses=uses,
-                max_uses=uses,
-                cause="legacy item",
-            ),
-        )
     inventory_service.use_item(
         db,
         campaign_id,
@@ -1394,9 +1351,7 @@ def _spend_one(hc: HookContext, character: str, names: Iterable[str]) -> str:
     return item.name
 
 
-def _has_water_container(
-    hc: HookContext, character: str, containers: Iterable[str]
-) -> bool:
+def _has_water_container(hc: HookContext, character: str, containers: Iterable[str]) -> bool:
     found = hc.character(character)
     return any(
         any(inventory_service.same_item_name(item.name, name) for name in containers)
@@ -1496,10 +1451,7 @@ def before_rest(hc: HookContext, length: str, start: int, hours_per_part: int) -
             if food:
                 fed += 1
             day_water = bool(
-                food
-                and any(
-                    inventory_service.same_item_name(food, name) for name in water_items
-                )
+                food and any(inventory_service.same_item_name(food, name) for name in water_items)
             )
             if not day_water:
                 water = _spend_one(hc, character.name, water_items)

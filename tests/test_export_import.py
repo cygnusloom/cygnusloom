@@ -181,12 +181,12 @@ def _add_referenced_events(app: FastAPI, campaign_id: int, *, close: bool = True
         object_id = record(
             session,
             campaign_id,
-            ObjectPlaced(place="Mossbell Hollow", contents="A brass key."),
+            ObjectPlaced(place="Mossbell Hollow", contents="A brass key.", item_text=""),
         )
         record(
             session,
             campaign_id,
-            ObjectPlaced(place="The attic", contents="A dusty ledger."),
+            ObjectPlaced(place="The attic", contents="A dusty ledger.", item_text=""),
         )
         record(
             session,

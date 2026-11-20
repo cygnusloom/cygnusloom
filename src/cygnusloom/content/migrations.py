@@ -56,11 +56,18 @@ class MigrationReport:
     catalogued: int = 0
     standalone: int = 0
     template_grants: int = 0
+    hook_options: int = 0
     files: list[str] = field(default_factory=list)
 
     @property
     def changed(self) -> bool:
-        return bool(self.converted or self.catalogued or self.standalone or self.template_grants)
+        return bool(
+            self.converted
+            or self.catalogued
+            or self.standalone
+            or self.template_grants
+            or self.hook_options
+        )
 
     def summary(self) -> str:
         if not self.changed:
@@ -68,8 +75,9 @@ class MigrationReport:
         return (
             f"converted {self.converted} item feature(s), merged {self.catalogued} "
             f"catalogue entr{'y' if self.catalogued == 1 else 'ies'}, and added "
-            f"{self.standalone} standalone shop item(s) and moved "
-            f"{self.template_grants} template grant(s) to items"
+            f"{self.standalone} standalone shop item(s), moved "
+            f"{self.template_grants} template grant(s) to items, and renamed "
+            f"{self.hook_options} hook option(s)"
         )
 
 
@@ -220,6 +228,15 @@ def _migrate_bundle(bundle: Path) -> MigrationReport:
         changed = False
         for entry in entries:
             if not isinstance(entry, dict):
+                continue
+            if entry.get("type") == "hooks":
+                options = entry.get("options")
+                if isinstance(options, Mapping) and options.get("feature") in migrated_ids:
+                    renamed = dict(options)
+                    renamed["item"] = renamed.pop("feature")
+                    entry["options"] = renamed
+                    report.hook_options += 1
+                    changed = True
                 continue
             if entry.get("type") == "template":
                 grants = entry.get("features")

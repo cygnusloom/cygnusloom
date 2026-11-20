@@ -95,14 +95,10 @@ def _options(hc: HookContext) -> Mapping[str, Any]:
 
 
 def _held_ration(character: Any, item: str) -> Any:
-    """The first matching ration with a use left. An item with no use count is a legacy
-    ration from before its uses were tracked, so it still feeds the character."""
+    """The first matching ration with a use left."""
     for held in character.items:
-        if name_key(held.name) != name_key(item):
-            continue
-        if held.max_uses > 0 and held.uses < 1:
-            continue
-        return held
+        if name_key(held.name) == name_key(item) and held.uses > 0:
+            return held
     return None
 
 

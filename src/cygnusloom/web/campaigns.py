@@ -47,7 +47,6 @@ from cygnusloom.services.campaigns import (
     Status,
     TurnEvent,
     append_turn_reply,
-    begin_encounter_turn,
     campaign_spec,
     campaign_transcript,
     campaign_world,
@@ -1913,23 +1912,6 @@ async def post_encounter_turn_stream(request: Request, campaign_id: int) -> Resp
     )
 
 
-# BACKWARDS-COMPATIBILITY: 3 - old pages may still post to the explicit begin route.
-@router.post("/{campaign_id}/encounter/turn/begin")
-async def post_encounter_turn_begin(request: Request, campaign_id: int) -> Response:
-    """Start a player character's turn. The player then acts and ends it themselves."""
-    user = page_user(request)
-    await verify_csrf(request)
-    form = await request.form()
-    name = form_text(form, "name")
-    try:
-        begin_encounter_turn(request.app.state.engine, user.id, campaign_id, name)
-    except InvalidInput as exc:
-        return _campaign_page(request, user, campaign_id, 400, str(exc))
-    except Conflict as exc:
-        return _campaign_page(request, user, campaign_id, 409, str(exc))
-    return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
-
-
 @router.post("/{campaign_id}/encounter/turn/end")
 async def post_encounter_turn_end(request: Request, campaign_id: int) -> Response:
     user = page_user(request)
@@ -2032,9 +2014,9 @@ def _flash(request: Request, message: str, kind: str = "info") -> None:
 
 def _upgrade_adapter(major: int) -> ModuleType | None:
     """The adapter that upgrades a campaign of `major`, imported only when one is offered."""
-    from cygnusloom.services import compat_v3
+    from cygnusloom import campaign_migrations
 
-    return compat_v3 if compat_v3.supports(major) else None
+    return campaign_migrations if campaign_migrations.supports(major) else None
 
 
 def _new_form(

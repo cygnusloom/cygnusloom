@@ -272,14 +272,6 @@ def test_an_authored_route_matches_the_destination_location_id():
     assert _authored_route(state, origin, dest) == _route()
 
 
-@pytest.mark.parametrize("key", ["old-mill", "Old Mill"])
-def test_an_authored_route_falls_back_to_a_name_or_slug_key(key: str):
-    origin = replace(Place("Start", "The start."), routes={key: _route()})
-    dest = Place("Old Mill", "An older campaign's place.")
-    state = CampaignState(places={name_key(origin.name): origin, name_key(dest.name): dest})
-    assert _authored_route(state, origin, dest) == _route()
-
-
 def test_an_authored_route_is_used_when_the_gm_gives_no_route(
     client_factory: Callable[[], TestClient], monkeypatch: pytest.MonkeyPatch
 ):

@@ -3106,26 +3106,6 @@ async def start_encounter_turn(
             yield event
 
 
-# BACKWARDS-COMPATIBILITY: 3 - old pages may still post to the explicit begin route.
-def begin_encounter_turn(engine: Engine, owner_id: int, campaign_id: int, name: str) -> None:
-    """Start a player character's turn explicitly. The turn normally begins on its own when it
-    comes up; this remains for an older page and for a direct retry. The player then acts in chat
-    and presses End your turn. Refused while the GM's reply is still open."""
-    _campaigns().get_campaign(engine, owner_id, campaign_id)
-    with _campaigns()._exclusive(campaign_id):
-        state = _state(engine, campaign_id)
-        if state.turn is not None:
-            raise InvalidInput("the GM's reply is unfinished; finish it before starting a turn")
-        with session_scope(engine) as db:
-            character = encounters.begin_turn(db, campaign_id, name)
-        if character.kind != PC_KIND:
-            raise InvalidInput(
-                f"{character.name} is not a player character; start their turn from the page"
-            )
-        if not state.owned_by(character, owner_id):
-            raise InvalidInput(f"{character.name} is another player's character")
-
-
 def _end_turn_as(
     engine: Engine, owner_id: int, campaign_id: int, name: str, by_player: bool
 ) -> None:

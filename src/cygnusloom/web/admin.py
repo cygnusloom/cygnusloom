@@ -168,11 +168,10 @@ def _turn_price(form) -> int:
         raise InvalidInput("credits per turn must be a whole number")
 
 
-def _context_tokens(form, default: int = DEFAULT_MODEL_CONTEXT_TOKENS) -> int:
+def _context_tokens(form) -> int:
     raw = form_text(form, "context_tokens").strip()
     if not raw:
-        # BACKWARDS-COMPATIBILITY: 4 - old admin pages predate this field.
-        return default
+        raise InvalidInput("context tokens are required")
     try:
         return int(raw)
     except ValueError:
@@ -576,7 +575,6 @@ async def update_model(request: Request, row_id: int) -> Response:
     if form_text(form, "clear_api_key") == "1":
         api_key = ""
     try:
-        spec = request.app.state.catalog.get(row_id)
         updated = request.app.state.catalog.update(
             row_id,
             base_url=form_text(form, "base_url"),
@@ -586,7 +584,7 @@ async def update_model(request: Request, row_id: int) -> Response:
                 None if request.app.state.settings.single_player else _turn_price(form)
             ),
             stream_usage=form_text(form, "stream_usage") == "1",
-            context_tokens=_context_tokens(form, spec.context_tokens),
+            context_tokens=_context_tokens(form),
             enabled=form_text(form, "enabled") == "1",
             make_default=form_text(form, "is_default") == "1",
         )
@@ -607,7 +605,7 @@ async def update_model(request: Request, row_id: int) -> Response:
         },
         ip=client_ip(request),
     )
-    _flash(request, f"Saved {spec.model_id}.")
+    _flash(request, f"Saved {updated.model_id}.")
     return _back("/admin/models")
 
 

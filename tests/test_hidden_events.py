@@ -61,7 +61,10 @@ def test_gm_bookkeeping_is_hidden_and_what_the_pc_perceives_is_visible():
 
 def test_a_quiet_npc_move_has_no_log_line():
     assert ActorMoved(name="Pip", location="Far Ledge", quiet=True).render() is None
-    assert ActorMoved(name="Ada", location="Far Ledge").render() == "Ada moved to Far Ledge."
+    assert (
+        ActorMoved(name="Ada", location="Far Ledge", quiet=False).render()
+        == "Ada moved to Far Ledge."
+    )
     removed = MapTokenRemoved(map="Mossbell Green", name="Pip", quiet=True)
     assert removed.render() is None
 

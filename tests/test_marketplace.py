@@ -60,7 +60,7 @@ def _grant_gold(app: FastAPI, campaign_id: int, amount: int, name: str = PC) -> 
         record(
             db,
             campaign_id,
-            CurrencyChanged(name=name, feature=MARKET.currency, amount=amount, cause="a test"),
+            CurrencyChanged(name=name, item=MARKET.currency, amount=amount, cause="a test"),
         )
         db.commit()
 

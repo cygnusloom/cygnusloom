@@ -176,14 +176,6 @@
               <p class="muted">{{ actor.name }} is taking their turn.{% if actor.is_pc %} The player ends it when they are done.{% else %} The turn ends when the GM finishes it.{% endif %}</p>
             {% elif waiting_for %}
               <p class="muted">{{ waiting_for }}</p>
-            {% elif next.is_pc and not pending and not gm_busy %}
-              {# BACKWARDS-COMPATIBILITY: 3 - start a player turn saved before turns auto-started. #}
-              <p class="muted">Starting your turn...</p>
-              <form method="post" action="/campaigns/{{ campaign.id }}/encounter/turn/begin" data-auto-start-turn hidden>
-                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                <input type="hidden" name="name" value="{{ next.name }}">
-                <button type="submit">Begin the turn</button>
-              </form>
             {% endif %}
           </div>
           {% endif %}

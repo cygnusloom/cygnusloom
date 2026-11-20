@@ -120,3 +120,36 @@ def test_migrating_twice_changes_nothing(tmp_path):
     assert all(not report.changed for _, report in reports)
     after = {path.relative_to(bundle): path.read_bytes() for path in bundle.rglob("*.json")}
     assert after == before
+
+
+def test_legacy_hook_item_options_are_renamed(tmp_path):
+    root = content_tree(
+        tmp_path,
+        definitions=[
+            {"type": "item_size", "id": "normal", "slots": 1},
+            {
+                "type": "feature",
+                "id": "rations",
+                "name": "Rations",
+                "feature_type": "item",
+                "description": "A day's food.",
+                "uses": 3,
+            },
+            {
+                "type": "hooks",
+                "id": "test",
+                "python_module": "test",
+                "options": {"feature": "rations", "days": 1},
+            },
+        ],
+    )
+
+    reports = migrate_tree(root)
+
+    assert dict(reports)["testset"].hook_options == 1
+    hooks = [
+        entry
+        for entry in _entries(root / "rulesets" / "testset" / "rule_set.json")
+        if entry.get("type") == "hooks"
+    ]
+    assert hooks[0]["options"] == {"item": "rations", "days": 1}

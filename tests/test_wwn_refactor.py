@@ -199,7 +199,7 @@ def test_a_buy_is_measured_against_the_stat_based_capacity(
         record(
             db,
             campaign_id,
-            CurrencyChanged(name=WREN, feature="silver", amount=10, cause="a test"),
+            CurrencyChanged(name=WREN, item="silver", amount=10, cause="a test"),
         )
         db.commit()
         result = market.buy_item(db, campaign_id, marketplace, rules, WWN.item_sizes, WREN, "Rope")
@@ -648,7 +648,7 @@ def test_a_marketplace_can_trade_in_any_currency_feature(client_factory: Callabl
         record(
             db,
             campaign_id,
-            CurrencyChanged(name=WREN, feature="silver", amount=10, cause="a test"),
+            CurrencyChanged(name=WREN, item="silver", amount=10, cause="a test"),
         )
         db.commit()
         result = market.buy_item(
@@ -699,9 +699,7 @@ def test_shop_armor_can_add_set_or_keep_the_best(
         record(
             db,
             campaign_id,
-            CurrencyChanged(
-                name=PC, feature=CAIRN.marketplace.currency, amount=100, cause="a test"
-            ),
+            CurrencyChanged(name=PC, item=CAIRN.marketplace.currency, amount=100, cause="a test"),
         )
         db.commit()
         result = market.buy_item(

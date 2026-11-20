@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import json
 from collections.abc import Callable
-from types import SimpleNamespace
 
 import pytest
 from fastapi import FastAPI
@@ -11,7 +9,6 @@ from sqlmodel import Session
 
 from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.events import (
-    CampaignState,
     ObjectPlaced,
     ObjectTaken,
     decode,
@@ -237,28 +234,6 @@ def test_an_explicit_item_without_item_text_has_no_text(
     tools.take_object("reliquary niche", PC, "a test")
     held = next(item for item in _character(app, campaign_id, PC).items if item.name == "brass key")
     assert held.text == ""
-
-
-def test_an_object_placed_event_without_item_text_still_decodes():
-    payload = json.dumps(
-        {
-            "place": YARD,
-            "contents": NICHE,
-            "currency": 0,
-            "item": "brass key",
-            "item_size": "normal",
-            "item_slots": 1,
-            "hidden": False,
-            "cause": "a test",
-            "name": "reliquary niche",
-        }
-    )
-    event = decode(SimpleNamespace(kind=ObjectPlaced.kind, payload=payload))
-    state = CampaignState()
-    event.apply(state, 42)
-    placed = state.objects[42]
-    assert placed.item == "brass key"
-    assert placed.item_text == ""
 
 
 def test_an_object_is_taken_by_its_full_description(client_factory: Callable[[], TestClient]):

@@ -1750,7 +1750,6 @@ from cygnusloom.services.turns import (  # noqa: F401
     _tool_context,
     _turn_has_day_end,
     _without_draft,
-    begin_encounter_turn,
     campaign_log,
     discard_pending,
     edit_last_reply,

@@ -60,11 +60,11 @@ def test_a_roll_breakdown_names_every_modifier():
 
 def test_currency_lines_name_the_unit():
     assert (
-        CurrencyChanged(name="Wren", feature="gold_pieces", amount=-1, cause="a lantern").render()
+        CurrencyChanged(name="Wren", item="gold_pieces", amount=-1, cause="a lantern").render()
         == "Wren pays 1 gold piece for a lantern."
     )
     assert (
-        CurrencyChanged(name="Wren", feature="gold_pieces", amount=4, cause="a purse").render()
+        CurrencyChanged(name="Wren", item="gold_pieces", amount=4, cause="a purse").render()
         == "Wren gains 4 gold pieces from a purse."
     )
 

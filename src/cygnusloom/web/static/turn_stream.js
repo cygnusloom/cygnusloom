@@ -457,8 +457,6 @@
     transcript.scrollTop = wasAtBottom ? transcript.scrollHeight : transcriptTop;
     followBottom = wasAtBottom;
     updateJump();
-    // BACKWARDS-COMPATIBILITY: 3 - start a player turn saved before turns auto-started.
-    window.setTimeout(startPendingPlayerTurn, 0);
     return true;
   };
 
@@ -542,35 +540,6 @@
     // form in place, so it becomes pressable again with the server's reason beside it.
     await settle({ focusComposer: true, message });
     window.cygnusBusy?.clear(form);
-  }
-
-  // BACKWARDS-COMPATIBILITY: 3 - an old page may still render the Begin form for a player
-  // turn. Submit it without a page navigation and then take the fresh state.
-  async function startPlayerTurn(form) {
-    if (form.dataset.starting) return;
-    form.dataset.starting = "1";
-    try {
-      const response = await fetch(form.action, {
-        method: "POST",
-        body: new FormData(form),
-        credentials: "same-origin",
-      });
-      if (!response.ok && !response.redirected) {
-        form.hidden = false;
-        return;
-      }
-    } catch {
-      form.hidden = false;
-      return;
-    } finally {
-      delete form.dataset.starting;
-    }
-    await settle({ focusComposer: true });
-  }
-
-  function startPendingPlayerTurn() {
-    const form = document.querySelector("form[data-auto-start-turn]");
-    if (form) void startPlayerTurn(form);
   }
 
   // While a reply streams, ask the server whether the turn is still running. A stream can die
@@ -870,10 +839,5 @@
 
   // The campaign's opening starts on its own once the character exists: the player waits for it.
   const autoStart = document.querySelector("form[data-auto-start]");
-  if (autoStart) {
-    autoStart.requestSubmit();
-  } else {
-    // BACKWARDS-COMPATIBILITY: 3 - start an old page's waiting player turn.
-    startPendingPlayerTurn();
-  }
+  if (autoStart) autoStart.requestSubmit();
 })();

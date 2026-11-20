@@ -1194,8 +1194,7 @@ class ActorMoved(GameEvent):
     location: str | None
     # The player's Log shows their own move. Another character's move is left to the narration,
     # so the Log does not reveal where someone went when the player was not there.
-    # BACKWARDS-COMPATIBILITY: 4 -- older records have no flag and stay visible.
-    quiet: bool = False
+    quiet: bool
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         actor = state.characters[name_key(self.name)]
@@ -2374,12 +2373,11 @@ class MapTokenPlaced(GameEvent):
     name: str
     column: int
     row: int
+    # Whether this placement is left out of the transcript, such as a world's setup.
+    quiet: bool
     # The cell the token left, when this placement moves a token already on the map.
     from_column: int | None = None
     from_row: int | None = None
-    # Setup placements, such as the NPCs a world starts with, are recorded without a Log line.
-    # BACKWARDS-COMPATIBILITY: 4 -- older records have no flag and stay out of the transcript.
-    quiet: bool = True
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         encounter_map = state.maps.get(name_key(self.map))
@@ -2406,8 +2404,7 @@ class MapTokenRemoved(GameEvent):
 
     map: str
     name: str
-    # BACKWARDS-COMPATIBILITY: 4 -- older records have no flag and keep their Log line.
-    quiet: bool = False
+    quiet: bool
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         encounter_map = state.maps.get(name_key(self.map))
@@ -3818,20 +3815,15 @@ class DebugCurrencyAdded(GameEvent):
     channel: ClassVar[Channel] = Channel.INTERNAL
 
     name: str
-    item: str = ""
-    amount: int = 0
-    # Older events stored the currency as a feature count.
-    feature: str = ""
+    item: str
+    amount: int
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         character = state.characters[name_key(self.name)]
-        item = self.item or self.feature
-        character.currency[item] = character.currency.get(item, 0) + self.amount
+        character.currency[self.item] = character.currency.get(self.item, 0) + self.amount
 
     def render(self) -> str:
-        return (
-            f"{self.name} is given {self.amount} {self.item or self.feature} from the debug panel."
-        )
+        return f"{self.name} is given {self.amount} {self.item} from the debug panel."
 
 
 @dataclass(frozen=True)
@@ -5126,19 +5118,16 @@ class CurrencyChanged(GameEvent):
     name: str
     amount: int
     cause: str
-    # The currency item id. Older events called this `feature`; see the field below.
-    item: str = ""
-    # BACKWARDS-COMPATIBILITY: 5 - old events and exports carry `feature` instead of `item`.
-    feature: str = ""
+    # The currency item id.
+    item: str
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         character = state.characters[name_key(self.name)]
-        ident = self.item or self.feature
-        balance = character.currency.get(ident, 0) + self.amount
-        character.currency[ident] = max(0, balance)
+        balance = character.currency.get(self.item, 0) + self.amount
+        character.currency[self.item] = max(0, balance)
 
     def render(self) -> str:
-        unit = _currency_label(self.item or self.feature, self.amount)
+        unit = _currency_label(self.item, self.amount)
         if self.amount < 0:
             return f"{self.name} pays {-self.amount} {unit} for {self.cause}."
         return f"{self.name} gains {self.amount} {unit} from {self.cause}."
@@ -5217,10 +5206,9 @@ class ObjectPlaced(GameEvent):
 
     place: str
     contents: str
+    item_text: str
     currency: int = 0
     item: str = ""
-    # BACKWARDS-COMPATIBILITY: 3 - old object.placed events and exports have no item_text.
-    item_text: str = ""
     item_size: str = ""
     item_slots: int = 0
     hidden: bool = False
@@ -5273,10 +5261,7 @@ class ObjectTaken(GameEvent):
 
 @dataclass(frozen=True)
 class ItemUsesSet(GameEvent):
-    """Sets a charged item's uses left, after a use or a recharge. `cause` says which.
-
-    `max_uses` repairs a legacy item that was created before catalogue uses were tracked;
-    None leaves the item's maximum alone."""
+    """Sets a charged item's uses left, after a use or a recharge. `cause` says which."""
 
     kind: ClassVar[str] = "character.item_uses_set"
 
@@ -5284,17 +5269,13 @@ class ItemUsesSet(GameEvent):
     item: str
     uses: int
     cause: str = ""
-    max_uses: int | None = None
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         character = state.characters[name_key(self.name)]
         for index, held in enumerate(character.items):
             if name_key(held.name) == name_key(self.item):
                 spent_on = state.clock if self.cause == "used" else None
-                most = held.max_uses if self.max_uses is None else self.max_uses
-                character.items[index] = replace(
-                    held, uses=self.uses, max_uses=most, spent_on=spent_on
-                )
+                character.items[index] = replace(held, uses=self.uses, spent_on=spent_on)
                 return
 
     def render(self) -> str:

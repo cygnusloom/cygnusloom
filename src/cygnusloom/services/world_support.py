@@ -119,7 +119,7 @@ from cygnusloom.services.events import (
     record,
 )
 from cygnusloom.services.geometry import clearance, overlaps, polygon_problem, uncovered
-from cygnusloom.services.state import WORLD_MAP_PALETTES, alias_key, normalize_journal
+from cygnusloom.services.state import WORLD_MAP_PALETTES, normalize_journal
 from cygnusloom.services.tools import check_arguments
 from cygnusloom.services.views import (
     _character_named,
@@ -2213,11 +2213,6 @@ def _place_position(state: CampaignState, name: str | None) -> tuple[float, floa
     return (place.position.x, place.position.y)
 
 
-def _slug(name: str) -> str:
-    """A place name as a location id writes it: "Village Gate" becomes "village-gate"."""
-    return re.sub(r"[^a-z0-9]+", "-", name.casefold()).strip("-")
-
-
 def _authored_route(
     state: CampaignState, origin: Place | None, dest: Place
 ) -> Mapping[str, Any] | None:
@@ -2233,18 +2228,11 @@ def _authored_route(
         if dest_parent is not None:
             destinations.append(dest_parent)
     ids = {place.location_id for place in destinations if place.location_id is not None}
-    names = {key for place in destinations for key in (_slug(place.name), name_key(place.name))}
-    aliases = {alias_key(place.name) for place in destinations}
     for place in origins:
         if place is None:
             continue
         for key, route in place.routes.items():
             if key in ids:
-                return route
-        # BACKWARDS-COMPATIBILITY: 4 -- older campaigns keyed routes by destination name or
-        # slug, and older world data still does.
-        for key, route in place.routes.items():
-            if key in names or alias_key(key) in aliases:
                 return route
     return None
 
