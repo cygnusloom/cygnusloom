@@ -7,24 +7,24 @@
       <a class="button secondary" href="/campaigns">Back to campaigns</a>
     </div>
     <p class="muted">{{ campaign.world_template }} · {{ campaign.rule_set }}</p>
-    <div class="settings-section" role="alert">
+    <div class="settings-section" role="status">
       <p>
-        <strong>This campaign was made for Cygnus Loom {{ campaign.major_version }}.</strong>
-        Cygnus Loom {{ current_major }} cannot play it because the campaign contract changed.
-        The campaign is intact and can still be exported.
+        <strong>This campaign was made with Cygnus Loom {{ campaign.major_version }}.</strong>
+        Cygnus Loom {{ current_major }} uses a newer campaign format, so the campaign needs a one-time upgrade
+        before it can be played here. Upgrading is routine and keeps the campaign, its players, and its history.
       </p>
       {% if is_owner %}
       <p>
         <a class="button secondary" href="/campaigns/{{ campaign.id }}/export">Export this campaign as JSON</a>
       </p>
       {% if can_upgrade %}
-      <form method="post" action="/campaigns/{{ campaign.id }}/convert" class="inline" data-confirm="Upgrade this campaign to Cygnus Loom {{ current_major }}? The event log is rewritten in place. Export a copy first if you want to keep the original Cygnus Loom {{ campaign.major_version }} log.">
+      <form method="post" action="/campaigns/{{ campaign.id }}/convert" class="inline" data-confirm="Upgrade this campaign to Cygnus Loom {{ current_major }}? Upgrading is routine and keeps the campaign, its players, and its history. The event log is rewritten in place, so export a copy first if you want to keep the original Cygnus Loom {{ campaign.major_version }} log.">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <button class="button" type="submit">Upgrade to Cygnus Loom {{ current_major }}</button>
       </form>
-      <p class="muted">Upgrading is one-way. It keeps the campaign, its players, and its history, then replays the whole log before making it playable.</p>
+      <p class="muted">The upgrade is one-way and takes a moment while the whole log is replayed.</p>
       {% else %}
-      <p class="muted">This server has no upgrade path from Cygnus Loom {{ campaign.major_version }} to Cygnus Loom {{ current_major }}.</p>
+      <p class="muted">This server cannot upgrade this campaign to Cygnus Loom {{ current_major }}. Export it and import it on a server running Cygnus Loom {{ current_major }}.</p>
       {% endif %}
       {% endif %}
     </div>

@@ -166,8 +166,9 @@ def test_a_3x_campaign_converts_in_place_and_keeps_its_log(
     new_id = _import(target, json.dumps(document).encode())
     blocked = target.get(f"/campaigns/{new_id}")
     assert blocked.status_code == 200
-    assert "cannot play it" in blocked.text
-    assert "This campaign was made for Cygnus Loom 3." in blocked.text
+    assert "needs a one-time upgrade" in blocked.text
+    assert "cannot play it" not in blocked.text
+    assert "This campaign was made with Cygnus Loom 3." in blocked.text
     assert f"Upgrade to Cygnus Loom {CAMPAIGN_MAJOR_VERSION}" in blocked.text
     listing = target.get("/campaigns")
     assert "needs attention" in listing.text
@@ -179,7 +180,7 @@ def test_a_3x_campaign_converts_in_place_and_keeps_its_log(
 
     page = target.get(f"/campaigns/{new_id}")
     assert page.status_code == 200
-    assert "cannot play it" not in page.text
+    assert "needs a one-time upgrade" not in page.text
     assert (
         f"This campaign was upgraded from Cygnus Loom 3 to Cygnus Loom {CAMPAIGN_MAJOR_VERSION}."
     ) in page.text
@@ -407,7 +408,7 @@ def test_the_blocked_page_hides_the_upgrade_when_no_migration_chain_exists(
     page = target.get(f"/campaigns/{new_id}")
     assert page.status_code == 200
     assert f"Upgrade to Cygnus Loom {CAMPAIGN_MAJOR_VERSION}" not in page.text
-    assert "has no upgrade path" in page.text
+    assert "cannot upgrade this campaign" in page.text
 
 
 def _v4_document(client: TestClient, campaign_id: int) -> dict[str, Any]:
@@ -579,7 +580,7 @@ def test_the_v4_migration_restores_items_currency_and_newer_event_fields(
     assert _convert(target, new_id).status_code == 303
     page = target.get(f"/campaigns/{new_id}")
     assert page.status_code == 200, page.text
-    assert "cannot play it" not in page.text
+    assert "needs a one-time upgrade" not in page.text
 
     rows = _events(target.app, new_id)
     by_kind = {}

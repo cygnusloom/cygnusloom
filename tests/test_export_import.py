@@ -96,7 +96,8 @@ def test_another_major_imports_but_cannot_be_played(client_factory, tmp_path, se
 
     page = target.get(f"/campaigns/{imported_id}")
     assert page.status_code == 200
-    assert "cannot play it" in page.text
+    assert "needs a one-time upgrade" in page.text
+    assert "cannot play it" not in page.text
     assert (
         target.post(
             f"/campaigns/{imported_id}/messages",
