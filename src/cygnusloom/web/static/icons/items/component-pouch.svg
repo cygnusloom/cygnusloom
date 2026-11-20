@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Component Pouch</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10 9 L11.8 12.2 L15 14 L11.8 15.8 L10 19 L8.2 15.8 L5 14 L8.2 12.2 Z" fill="#e6b53a"/>
+    <path d="M54 7 L55.8 10.2 L59 12 L55.8 13.8 L54 17 L52.2 13.8 L49 12 L52.2 10.2 Z" fill="#e6b53a"/>
+    <path d="M46 1 L47.1 2.9 L49 4 L47.1 5.1 L46 7 L44.9 5.1 L43 4 L44.9 2.9 Z" fill="#e6b53a"/>
+    <rect x="27" y="6" width="10" height="14" rx="2" fill="#8b5e3c"/>
+    <path d="M16 26 Q16 18 24 18 H40 Q48 18 48 26 L52 44 Q54 54 40 56 H24 Q10 54 12 44 Z" fill="#8c5a4a"/>
+    <path d="M16 24 Q16 16 26 16 H38 Q48 16 48 24 Q32 30 16 24 Z" fill="#c9b08a"/>
+    <circle cx="32" cy="26" r="2.5" fill="#e6b53a"/>
+  </g>
+</svg>

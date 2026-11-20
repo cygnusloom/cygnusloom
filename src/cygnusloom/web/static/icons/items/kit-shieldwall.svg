@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Shieldwall Veteran</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8 10 H36 V32 Q36 46 22 56 Q8 46 8 32 Z" fill="#6b7fa3"/>
+    <path d="M22 12 V50"/>
+    <circle cx="22" cy="28" r="5" fill="#a7adb2"/>
+    <path d="M48 58 V18"/>
+    <path d="M48 4 L55 16 L48 21 L41 16 Z" fill="#a7adb2"/>
+  </g>
+</svg>

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Club</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M32 8 Q43 8 43 20 Q43 29 36 31 L36 54 Q36 58 32 58 Q28 58 28 54 L28 31 Q21 29 21 20 Q21 8 32 8 Z" fill="#8b5e3c"/><path d="M27 34 H37" stroke-width="1.5"/><path d="M26 17 Q32 13 38 17" stroke-width="1.5"/>
+  </g>
+</svg>

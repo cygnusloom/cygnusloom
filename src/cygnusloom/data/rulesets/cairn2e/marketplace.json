@@ -42,7 +42,7 @@
     "type": "shop_item",
     "id": "gambeson",
     "name": "Gambeson",
-    "looks_like": "armor",
+    "looks_like": "leather-armor",
     "category": "armor",
     "price": 15,
     "armor": 1,
@@ -60,7 +60,7 @@
     "type": "shop_item",
     "id": "chainmail",
     "name": "Chainmail",
-    "looks_like": "armor",
+    "looks_like": "chain-mail",
     "category": "armor",
     "price": 40,
     "size": "bulky",
@@ -71,7 +71,7 @@
     "type": "shop_item",
     "id": "plate",
     "name": "Plate",
-    "looks_like": "armor",
+    "looks_like": "plate-armor",
     "category": "armor",
     "price": 60,
     "size": "bulky",
@@ -100,7 +100,7 @@
     "type": "shop_item",
     "id": "halberd",
     "name": "Halberd",
-    "looks_like": "spear",
+    "looks_like": "halberd",
     "category": "weapons",
     "price": 20,
     "size": "bulky",
@@ -207,7 +207,7 @@
     "type": "shop_item",
     "id": "air-bladder",
     "name": "Air Bladder",
-    "looks_like": "tool",
+    "looks_like": "waterskin",
     "category": "gear",
     "price": 5,
     "description": "A sealed bladder of air for breathing underwater."
@@ -216,6 +216,7 @@
     "type": "shop_item",
     "id": "antitoxin",
     "name": "Antitoxin",
+    "looks_like": "potion",
     "category": "gear",
     "price": 20,
     "description": "A bitter draft that fights poison."
@@ -232,7 +233,7 @@
     "type": "shop_item",
     "id": "bathing-goods",
     "name": "Bathing Goods",
-    "looks_like": "tool",
+    "looks_like": "pouch",
     "category": "gear",
     "price": 5,
     "description": "Soap, Perfume, etc."
@@ -250,7 +251,7 @@
     "type": "shop_item",
     "id": "caltrops",
     "name": "Caltrops",
-    "looks_like": "tool",
+    "looks_like": "caltrops",
     "category": "gear",
     "price": 10,
     "description": "Spiked iron pieces scattered to lame pursuers."
@@ -259,7 +260,7 @@
     "type": "shop_item",
     "id": "card-deck",
     "name": "Card Deck",
-    "looks_like": "tool",
+    "looks_like": "gaming-set",
     "category": "gear",
     "price": 5,
     "description": "A worn deck for games of chance."
@@ -268,7 +269,7 @@
     "type": "shop_item",
     "id": "chain",
     "name": "Chain",
-    "looks_like": "rope",
+    "looks_like": "chain",
     "category": "gear",
     "price": 10,
     "description": "10ft"
@@ -296,7 +297,7 @@
     "type": "shop_item",
     "id": "chisel",
     "name": "Chisel",
-    "looks_like": "tool",
+    "looks_like": "carpenters-tools",
     "category": "gear",
     "price": 5,
     "description": "A chisel for cutting stone or wood."
@@ -305,7 +306,7 @@
     "type": "shop_item",
     "id": "common-agents",
     "name": "Common Agents",
-    "looks_like": "tool",
+    "looks_like": "alchemists-supplies",
     "category": "gear",
     "price": 10,
     "description": "Glue, Grease, etc."
@@ -330,7 +331,7 @@
     "type": "shop_item",
     "id": "complex-instruments",
     "name": "Complex Instruments",
-    "looks_like": "tool",
+    "looks_like": "musical-instrument",
     "category": "gear",
     "price": 50,
     "description": "Bagpipes, Fiddle, etc."
@@ -339,7 +340,7 @@
     "type": "shop_item",
     "id": "containers",
     "name": "Containers",
-    "looks_like": "tool",
+    "looks_like": "pouch",
     "category": "gear",
     "price": 10,
     "description": "Sack, Waterskin, etc."
@@ -348,7 +349,7 @@
     "type": "shop_item",
     "id": "cooking-gear",
     "name": "Cooking Gear",
-    "looks_like": "tool",
+    "looks_like": "cooks-utensils",
     "category": "gear",
     "price": 10,
     "description": "Pots, Utensils, etc."
@@ -366,7 +367,7 @@
     "type": "shop_item",
     "id": "dowsing-rod",
     "name": "Dowsing Rod",
-    "looks_like": "tool",
+    "looks_like": "rod",
     "category": "gear",
     "price": 15,
     "description": "A forked rod that twitches toward water."
@@ -375,7 +376,7 @@
     "type": "shop_item",
     "id": "expeditionary-gear",
     "name": "Expeditionary Gear",
-    "looks_like": "tool",
+    "looks_like": "grappling-hook",
     "category": "gear",
     "price": 10,
     "description": "Climbing Spikes, Pulley, etc."
@@ -384,7 +385,7 @@
     "type": "shop_item",
     "id": "fire-oil",
     "name": "Fire Oil",
-    "looks_like": "potion",
+    "looks_like": "oil-flask",
     "category": "gear",
     "price": 10,
     "description": "A flask of oil that catches fire easily."
@@ -393,7 +394,7 @@
     "type": "shop_item",
     "id": "fishing-rod",
     "name": "Fishing Rod",
-    "looks_like": "tool",
+    "looks_like": "rod",
     "category": "gear",
     "price": 10,
     "description": "A rod, line, and hook for catching fish."
@@ -402,7 +403,7 @@
     "type": "shop_item",
     "id": "games",
     "name": "Games",
-    "looks_like": "tool",
+    "looks_like": "gaming-set",
     "category": "gear",
     "price": 10,
     "description": "Cards, Dice, etc."
@@ -418,7 +419,7 @@
     "type": "shop_item",
     "id": "grappling-hook",
     "name": "Grappling Hook",
-    "looks_like": "tool",
+    "looks_like": "grappling-hook",
     "category": "gear",
     "price": 25,
     "description": "A hooked iron grapnel for climbing."
@@ -434,7 +435,7 @@
     "type": "shop_item",
     "id": "mirror",
     "name": "Mirror",
-    "looks_like": "tool",
+    "looks_like": "mirror",
     "category": "gear",
     "price": 5,
     "description": "A small hand mirror of polished silver."
@@ -443,7 +444,7 @@
     "type": "shop_item",
     "id": "net",
     "name": "Net",
-    "looks_like": "tool",
+    "looks_like": "net",
     "category": "gear",
     "price": 10,
     "description": "A weighted net for catching or tripping."
@@ -460,7 +461,7 @@
     "type": "shop_item",
     "id": "outdoor-comfort",
     "name": "Outdoor Comfort",
-    "looks_like": "tool",
+    "looks_like": "bedroll",
     "category": "gear",
     "price": 10,
     "description": "Blanket, Hammock, etc."
@@ -513,7 +514,7 @@
     "type": "shop_item",
     "id": "sewing-kit",
     "name": "Sewing Kit",
-    "looks_like": "tool",
+    "looks_like": "tinkers-tools",
     "category": "gear",
     "price": 20,
     "description": "Needles, thread, and a small pair of shears."
@@ -522,7 +523,7 @@
     "type": "shop_item",
     "id": "simple-instruments",
     "name": "Simple Instruments",
-    "looks_like": "tool",
+    "looks_like": "musical-instrument",
     "category": "gear",
     "price": 10,
     "description": "Pipes, Lute, etc."
@@ -531,7 +532,7 @@
     "type": "shop_item",
     "id": "smoking-pipe",
     "name": "Smoking Pipe",
-    "looks_like": "tool",
+    "looks_like": "pipe",
     "category": "gear",
     "price": 15,
     "size": "petty",
@@ -576,7 +577,7 @@
     "type": "shop_item",
     "id": "thieving-tools",
     "name": "Thieving Tools",
-    "looks_like": "tool",
+    "looks_like": "thieves-tools",
     "category": "gear",
     "price": 25,
     "description": "Lockpick, Metal File, etc."
@@ -593,7 +594,7 @@
     "type": "shop_item",
     "id": "trap",
     "name": "Trap",
-    "looks_like": "generic-item",
+    "looks_like": "caltrops",
     "category": "gear",
     "price": 35,
     "damage": "1d6",
@@ -603,7 +604,7 @@
     "type": "shop_item",
     "id": "whistle",
     "name": "Whistle",
-    "looks_like": "tool",
+    "looks_like": "musical-instrument",
     "category": "gear",
     "price": 15,
     "size": "petty",

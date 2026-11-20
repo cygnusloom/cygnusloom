@@ -36,7 +36,7 @@
     "type": "feature",
     "id": "bandages",
     "name": "Bandages",
-    "looks_like": "tool",
+    "looks_like": "herbalism-kit",
     "description": "Clean cloth strips for binding wounds.",
     "uses": 3
   },
@@ -66,7 +66,7 @@
     "type": "feature",
     "id": "boiled-leather",
     "name": "Boiled Leather",
-    "looks_like": "armor",
+    "looks_like": "leather-armor",
     "description": "Leather hardened in wax and water.",
     "armor": 1
   },
@@ -92,7 +92,7 @@
     "type": "feature",
     "id": "brigandine",
     "name": "Brigandine",
-    "looks_like": "armor",
+    "looks_like": "chain-mail",
     "description": "Cloth-backed plates riveted into a jacket.",
     "armor": 1,
     "size": "bulky"
@@ -126,14 +126,14 @@
     "type": "feature",
     "id": "chains",
     "name": "Chains",
-    "looks_like": "rope",
+    "looks_like": "chain",
     "description": "Ten feet of heavy iron chain."
   },
   {
     "type": "feature",
     "id": "compass",
     "name": "Compass",
-    "looks_like": "tool",
+    "looks_like": "navigators-tools",
     "description": "A brass compass for finding north."
   },
   {
@@ -147,7 +147,7 @@
     "type": "feature",
     "id": "crossbow",
     "name": "Crossbow",
-    "looks_like": "bow",
+    "looks_like": "crossbow",
     "description": "A crossbow cocked with a windlass.",
     "damage": "1d8",
     "size": "bulky",
@@ -165,7 +165,7 @@
     "type": "feature",
     "id": "fancy-hat",
     "name": "Fancy Hat",
-    "looks_like": "generic-item",
+    "looks_like": "cloak",
     "description": "A fine hat that says you matter.",
     "size": "petty"
   },
@@ -180,7 +180,7 @@
     "type": "feature",
     "id": "gloves",
     "name": "Gloves",
-    "looks_like": "tool",
+    "looks_like": "gloves",
     "description": "Sturdy gloves for rough work.",
     "size": "petty"
   },
@@ -195,7 +195,7 @@
     "type": "feature",
     "id": "hammer",
     "name": "Hammer",
-    "looks_like": "mace",
+    "looks_like": "warhammer",
     "description": "A smith's hammer, heavy enough to fight with.",
     "damage": "1d6"
   },
@@ -235,7 +235,7 @@
     "type": "feature",
     "id": "herbs-pouch",
     "name": "Herbs Pouch",
-    "looks_like": "tool",
+    "looks_like": "herbalism-kit",
     "description": "Dried herbs for poultices. Restores 1 STR; three uses.",
     "uses": 3
   },
@@ -251,7 +251,7 @@
     "type": "feature",
     "id": "iron-pot",
     "name": "Iron Pot",
-    "looks_like": "tool",
+    "looks_like": "cooks-utensils",
     "description": "A heavy iron cooking pot."
   },
   {
@@ -265,7 +265,7 @@
     "type": "feature",
     "id": "leather-jerkin",
     "name": "Leather Jerkin",
-    "looks_like": "armor",
+    "looks_like": "leather-armor",
     "description": "A supple leather jerkin.",
     "armor": 1
   },
@@ -273,7 +273,7 @@
     "type": "feature",
     "id": "leather-whip",
     "name": "Leather Whip",
-    "looks_like": "rope",
+    "looks_like": "whip",
     "description": "A long, cracking leather whip.",
     "damage": "1d6"
   },
@@ -289,7 +289,7 @@
     "type": "feature",
     "id": "lockpicks",
     "name": "Lockpicks",
-    "looks_like": "key",
+    "looks_like": "thieves-tools",
     "description": "Picks and tension tools for opening locks."
   },
   {
@@ -305,7 +305,7 @@
     "type": "feature",
     "id": "lucky-jerkin",
     "name": "Lucky Jerkin",
-    "looks_like": "armor",
+    "looks_like": "leather-armor",
     "description": "A much-patched jerkin that has seen luck.",
     "armor": 1
   },
@@ -335,7 +335,7 @@
     "type": "feature",
     "id": "oil-can",
     "name": "Oil Can",
-    "looks_like": "tool",
+    "looks_like": "oil-flask",
     "description": "A can of lamp oil for a lantern or a fire.",
     "uses": 6
   },
@@ -343,7 +343,7 @@
     "type": "feature",
     "id": "padded-leather",
     "name": "Padded Leather",
-    "looks_like": "armor",
+    "looks_like": "leather-armor",
     "description": "Quilted armor of layered cloth and leather.",
     "armor": 1
   },
@@ -351,14 +351,14 @@
     "type": "feature",
     "id": "pincers",
     "name": "Pincers",
-    "looks_like": "tool",
+    "looks_like": "smiths-tools",
     "description": "Pincers for gripping, pulling, and prying."
   },
   {
     "type": "feature",
     "id": "protective-gloves",
     "name": "Protective Gloves",
-    "looks_like": "tool",
+    "looks_like": "gloves",
     "description": "Thick gloves for handling hot or sharp things.",
     "size": "petty"
   },
@@ -366,14 +366,14 @@
     "type": "feature",
     "id": "quill-ink",
     "name": "Quill & Ink",
-    "looks_like": "tool",
+    "looks_like": "scroll",
     "description": "A quill and a pot of ink for writing."
   },
   {
     "type": "feature",
     "id": "rations",
     "name": "Rations",
-    "looks_like": "food",
+    "looks_like": "rations",
     "description": "Dried food for the road.",
     "uses": 3
   },
@@ -410,7 +410,7 @@
     "type": "feature",
     "id": "salt-pouch",
     "name": "Salt Pouch",
-    "looks_like": "tool",
+    "looks_like": "pouch",
     "description": "A pouch of salt for preserving or blessing."
   },
   {
@@ -449,14 +449,14 @@
     "type": "feature",
     "id": "simple-instrument",
     "name": "Simple Instrument",
-    "looks_like": "tool",
+    "looks_like": "musical-instrument",
     "description": "A small pipe, lute, or other portable instrument."
   },
   {
     "type": "feature",
     "id": "sling",
     "name": "Sling",
-    "looks_like": "bow",
+    "looks_like": "sling",
     "description": "A leather sling for throwing stones.",
     "damage": "1d6",
     "ranges": {"ranged": 0}
@@ -465,7 +465,7 @@
     "type": "feature",
     "id": "soporific-darts",
     "name": "Soporific Darts",
-    "looks_like": "bow",
+    "looks_like": "dart",
     "description": "Darts coated with a sleeping draft. STR save or fall asleep; six uses.",
     "uses": 6
   },
@@ -480,14 +480,14 @@
     "type": "feature",
     "id": "spring-loaded-trap",
     "name": "Spring-Loaded trap",
-    "looks_like": "generic-item",
+    "looks_like": "caltrops",
     "description": "A small spring-loaded trap. Deals 4 STR damage."
   },
   {
     "type": "feature",
     "id": "spyglass",
     "name": "Spyglass",
-    "looks_like": "tool",
+    "looks_like": "spyglass",
     "description": "A spyglass for seeing far things close."
   },
   {
@@ -527,7 +527,7 @@
     "type": "feature",
     "id": "trick-playing-cards",
     "name": "Trick Playing Cards",
-    "looks_like": "tool",
+    "looks_like": "gaming-set",
     "description": "A marked deck for cheating at cards."
   },
   {

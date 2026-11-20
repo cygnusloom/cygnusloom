@@ -22,7 +22,7 @@
     "type": "shop_item",
     "id": "candle",
     "name": "Candle",
-    "looks_like": "torch",
+    "looks_like": "torch-item",
     "category": "supply",
     "price": 1,
     "size": "tiny",
@@ -32,6 +32,7 @@
     "type": "shop_item",
     "id": "ink-and-pen",
     "name": "Ink and Pen",
+    "looks_like": "scroll",
     "category": "supply",
     "price": 2,
     "size": "tiny",
@@ -41,6 +42,7 @@
     "type": "shop_item",
     "id": "parchment-ten-sheets",
     "name": "Parchment, Ten Sheets",
+    "looks_like": "scroll",
     "category": "supply",
     "price": 3,
     "description": "Ten sheets of good parchment."
@@ -58,6 +60,7 @@
     "type": "shop_item",
     "id": "school-robe",
     "name": "School Robe",
+    "looks_like": "cloak",
     "category": "clothing",
     "price": 5,
     "description": "A plain robe in the school's colors."
@@ -66,6 +69,7 @@
     "type": "shop_item",
     "id": "potion-reagents",
     "name": "Potion Reagents",
+    "looks_like": "alchemists-supplies",
     "category": "supply",
     "price": 4,
     "description": "A packet of common alchemical reagents."
@@ -94,7 +98,7 @@
     "type": "shop_item",
     "id": "firewood",
     "name": "Firewood",
-    "looks_like": "torch",
+    "looks_like": "torch-item",
     "category": "supply",
     "price": 1,
     "description": "A bundle of dry firewood."
@@ -103,6 +107,7 @@
     "type": "shop_item",
     "id": "daily-ration",
     "name": "Daily Ration",
+    "looks_like": "rations",
     "category": "supply",
     "price": 1,
     "description": "A day's food and water for one person."

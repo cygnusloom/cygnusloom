@@ -30,7 +30,7 @@
   {
     "type": "skill",
     "id": "exert",
-    "icon": "rope",
+    "icon": "muscle",
     "name": "Exert",
     "description": "Run, swim, climb, jump, lift, throw, and otherwise push the body to its limit."
   },
@@ -44,7 +44,7 @@
   {
     "type": "skill",
     "id": "know",
-    "icon": "book",
+    "icon": "magnifier",
     "name": "Know",
     "description": "Recall history, geography, natural science, zoology, and other learned facts."
   },
@@ -65,7 +65,7 @@
   {
     "type": "skill",
     "id": "notice",
-    "icon": "eye",
+    "icon": "ear",
     "name": "Notice",
     "description": "Catch small details, ambushes, hidden features, and anything else that rewards a keen sense."
   },
@@ -114,7 +114,7 @@
   {
     "type": "skill",
     "id": "sneak",
-    "icon": "boots",
+    "icon": "footprints",
     "name": "Sneak",
     "description": "Move quietly, hide, pick pockets and locks, disguise yourself, and defeat traps and security."
   },

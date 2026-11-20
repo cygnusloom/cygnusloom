@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Tinker's Tools</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M30 3.5 L32.4 7.3 L36.7 6.3 L35.7 10.6 L39.5 13 L35.7 15.4 L36.7 19.7 L32.4 18.7 L30 22.5 L27.6 18.7 L23.3 19.7 L24.3 15.4 L20.5 13 L24.3 10.6 L23.3 6.3 L27.6 7.3 Z" fill="#a7adb2"/>
+    <circle cx="30" cy="13" r="2.5"/>
+    <rect x="8" y="44" width="12" height="12" rx="2" fill="#b05a5a"/>
+    <path d="M20 46 L33 27"/>
+    <path d="M31 25 L36 29"/>
+    <circle cx="48" cy="44" r="2.5" fill="#e6b53a"/>
+    <path d="M46 42 Q40 34 38 26"/>
+    <path d="M50 42 Q48 34 43 28"/>
+    <path d="M46 46 L38 58"/>
+    <path d="M50 46 L54 56"/>
+  </g>
+</svg>

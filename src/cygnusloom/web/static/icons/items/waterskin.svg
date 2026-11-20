@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Waterskin</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="26" y="4" width="12" height="7" rx="2" fill="#8b5e3c"/>
+    <path d="M28 11 H36 V20 H28 Z" fill="#8c5a4a"/>
+    <path d="M28 18 Q47 22 47 36 Q47 52 32 55 Q17 52 17 36 Q17 22 28 18 Z" fill="#8c5a4a"/>
+    <path d="M17 39 Q32 31 47 39"/>
+    <path d="M46 34 Q54 36 53 44 Q52 50 46 49"/>
+  </g>
+</svg>

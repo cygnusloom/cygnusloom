@@ -23,6 +23,7 @@
     "healing_stat": "hp",
     "hit_mode": "roll_vs_defense",
     "hit_bonus_stat": "attack_bonus",
+    "weapon_proficiency_stat": "attack_bonus",
     "attribute_damage": true,
     "defeat_at_zero": [
       "hp"

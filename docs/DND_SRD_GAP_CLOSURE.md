@@ -85,7 +85,8 @@ D&D-specific interpretation stays in `rules/dnd_srd_2024.py`.
 3. Origin feats: Magic Initiate, Alert, Savage Attacker, Skilled.
 4. Species: Human Skillful/Versatile, Elf/Dragonborn/Gnome/Goliath/Tiefling choices,
    level-gated flight/Large Form/lineage spells, Dwarven Toughness, Draconic Resilience.
-5. Armor training, armor categories, and shield training.
+5. Armor training, armor categories, shield training, class/order weapon training with
+   attack-roll enforcement, and structured tool training.
 6. Versatile weapons and two-handed attacks.
 7. Class always-prepared spells, Circle of the Land, and level 2-3 advancement picks
    (Deft Explorer, Scholar, College of Lore, Evocation Savant, Hunter's Prey).

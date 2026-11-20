@@ -264,26 +264,35 @@
     "id": "class-barbarian-armor-training",
     "name": "Armor Training",
     "feature_type": "trait",
-    "description": "You are trained with light, medium, shield armor.",
+    "description": "You gain training with light, medium, shield armor, proficiency with simple weapons and martial weapons.",
     "tag": "class:barbarian",
     "rank": 1,
     "armor_training": [
       "light",
       "medium",
       "shield"
-    ]
+    ],
+    "weapon_training": [
+      "simple",
+      "martial"
+    ],
+    "tool_training": []
   },
   {
     "type": "feature",
     "id": "class-barbarian-multiclass-training",
     "name": "Multiclass Training",
     "feature_type": "trait",
-    "description": "You gain training with shield armor.",
+    "description": "You gain training with shield armor, proficiency with martial weapons.",
     "tag": "class:barbarian",
     "rank": 1,
     "armor_training": [
       "shield"
-    ]
+    ],
+    "weapon_training": [
+      "martial"
+    ],
+    "tool_training": []
   },
   {
     "type": "template",
@@ -454,11 +463,17 @@
     "id": "class-bard-armor-training",
     "name": "Armor Training",
     "feature_type": "trait",
-    "description": "You are trained with light armor.",
+    "description": "You gain training with light armor, proficiency with Musical Instrument, proficiency with simple weapons.",
     "tag": "class:bard",
     "rank": 1,
     "armor_training": [
       "light"
+    ],
+    "weapon_training": [
+      "simple"
+    ],
+    "tool_training": [
+      "Musical Instrument"
     ]
   },
   {
@@ -471,6 +486,10 @@
     "rank": 1,
     "armor_training": [
       "light"
+    ],
+    "weapon_training": [],
+    "tool_training": [
+      "Musical Instrument"
     ]
   },
   {
@@ -645,14 +664,18 @@
     "id": "class-cleric-armor-training",
     "name": "Armor Training",
     "feature_type": "trait",
-    "description": "You are trained with light, medium, shield armor.",
+    "description": "You gain training with light, medium, shield armor, proficiency with simple weapons.",
     "tag": "class:cleric",
     "rank": 1,
     "armor_training": [
       "light",
       "medium",
       "shield"
-    ]
+    ],
+    "weapon_training": [
+      "simple"
+    ],
+    "tool_training": []
   },
   {
     "type": "feature",
@@ -666,7 +689,9 @@
       "light",
       "medium",
       "shield"
-    ]
+    ],
+    "weapon_training": [],
+    "tool_training": []
   },
   {
     "type": "template",
@@ -871,14 +896,18 @@
     "id": "class-druid-armor-training",
     "name": "Armor Training",
     "feature_type": "trait",
-    "description": "You are trained with light, medium, shield armor.",
+    "description": "You gain training with light, medium, shield armor, proficiency with simple weapons.",
     "tag": "class:druid",
     "rank": 1,
     "armor_training": [
       "light",
       "medium",
       "shield"
-    ]
+    ],
+    "weapon_training": [
+      "simple"
+    ],
+    "tool_training": []
   },
   {
     "type": "feature",
@@ -891,7 +920,9 @@
     "armor_training": [
       "light",
       "shield"
-    ]
+    ],
+    "weapon_training": [],
+    "tool_training": []
   },
   {
     "type": "template",
@@ -982,6 +1013,7 @@
     "tag": "class:fighter",
     "rank": 2,
     "picks": [],
+    "resource_counter": "action_surge",
     "turn_resource": ""
   },
   {
@@ -1004,6 +1036,7 @@
     "tag": "class:fighter",
     "rank": 9,
     "picks": [],
+    "resource_counter": "indomitable",
     "turn_resource": ""
   },
   {
@@ -1174,7 +1207,7 @@
     "id": "class-fighter-armor-training",
     "name": "Armor Training",
     "feature_type": "trait",
-    "description": "You are trained with light, medium, heavy, shield armor.",
+    "description": "You gain training with light, medium, heavy, shield armor, proficiency with simple weapons and martial weapons.",
     "tag": "class:fighter",
     "rank": 1,
     "armor_training": [
@@ -1182,21 +1215,30 @@
       "medium",
       "heavy",
       "shield"
-    ]
+    ],
+    "weapon_training": [
+      "simple",
+      "martial"
+    ],
+    "tool_training": []
   },
   {
     "type": "feature",
     "id": "class-fighter-multiclass-training",
     "name": "Multiclass Training",
     "feature_type": "trait",
-    "description": "You gain training with light, medium, shield armor.",
+    "description": "You gain training with light, medium, shield armor, proficiency with martial weapons.",
     "tag": "class:fighter",
     "rank": 1,
     "armor_training": [
       "light",
       "medium",
       "shield"
-    ]
+    ],
+    "weapon_training": [
+      "martial"
+    ],
+    "tool_training": []
   },
   {
     "type": "template",
@@ -1524,6 +1566,23 @@
     "turn_resource": ""
   },
   {
+    "type": "feature",
+    "id": "class-monk-armor-training",
+    "name": "Weapon Training",
+    "feature_type": "trait",
+    "description": "You gain proficiency with Artisan's Tools or Musical Instrument, proficiency with simple weapons and martial weapons with the light property.",
+    "tag": "class:monk",
+    "rank": 1,
+    "armor_training": [],
+    "weapon_training": [
+      "simple",
+      "martial:light"
+    ],
+    "tool_training": [
+      "Artisan's Tools or Musical Instrument"
+    ]
+  },
+  {
     "type": "template",
     "id": "monk",
     "kind": "class",
@@ -1543,6 +1602,7 @@
       }
     ],
     "features": [
+      "class-monk-armor-training",
       "class-monk-martial-arts",
       "class-monk-unarmored-defense"
     ],
@@ -1760,7 +1820,7 @@
     "id": "class-paladin-armor-training",
     "name": "Armor Training",
     "feature_type": "trait",
-    "description": "You are trained with light, medium, heavy, shield armor.",
+    "description": "You gain training with light, medium, heavy, shield armor, proficiency with simple weapons and martial weapons.",
     "tag": "class:paladin",
     "rank": 1,
     "armor_training": [
@@ -1768,21 +1828,30 @@
       "medium",
       "heavy",
       "shield"
-    ]
+    ],
+    "weapon_training": [
+      "simple",
+      "martial"
+    ],
+    "tool_training": []
   },
   {
     "type": "feature",
     "id": "class-paladin-multiclass-training",
     "name": "Multiclass Training",
     "feature_type": "trait",
-    "description": "You gain training with light, medium, shield armor.",
+    "description": "You gain training with light, medium, shield armor, proficiency with martial weapons.",
     "tag": "class:paladin",
     "rank": 1,
     "armor_training": [
       "light",
       "medium",
       "shield"
-    ]
+    ],
+    "weapon_training": [
+      "martial"
+    ],
+    "tool_training": []
   },
   {
     "type": "template",
@@ -2056,28 +2125,37 @@
     "id": "class-ranger-armor-training",
     "name": "Armor Training",
     "feature_type": "trait",
-    "description": "You are trained with light, medium, shield armor.",
+    "description": "You gain training with light, medium, shield armor, proficiency with simple weapons and martial weapons.",
     "tag": "class:ranger",
     "rank": 1,
     "armor_training": [
       "light",
       "medium",
       "shield"
-    ]
+    ],
+    "weapon_training": [
+      "simple",
+      "martial"
+    ],
+    "tool_training": []
   },
   {
     "type": "feature",
     "id": "class-ranger-multiclass-training",
     "name": "Multiclass Training",
     "feature_type": "trait",
-    "description": "You gain training with light, medium, shield armor, one skill of your choice from the class list.",
+    "description": "You gain training with light, medium, shield armor, proficiency with martial weapons, one skill of your choice from the class list.",
     "tag": "class:ranger",
     "rank": 1,
     "armor_training": [
       "light",
       "medium",
       "shield"
-    ]
+    ],
+    "weapon_training": [
+      "martial"
+    ],
+    "tool_training": []
   },
   {
     "type": "template",
@@ -2334,11 +2412,19 @@
     "id": "class-rogue-armor-training",
     "name": "Armor Training",
     "feature_type": "trait",
-    "description": "You are trained with light armor.",
+    "description": "You gain training with light armor, proficiency with Thieves' Tools, proficiency with simple weapons and martial weapons with the finesse property and martial weapons with the light property.",
     "tag": "class:rogue",
     "rank": 1,
     "armor_training": [
       "light"
+    ],
+    "weapon_training": [
+      "simple",
+      "martial:finesse",
+      "martial:light"
+    ],
+    "tool_training": [
+      "Thieves' Tools"
     ]
   },
   {
@@ -2351,6 +2437,10 @@
     "rank": 1,
     "armor_training": [
       "light"
+    ],
+    "weapon_training": [],
+    "tool_training": [
+      "Thieves' Tools"
     ]
   },
   {
@@ -2514,6 +2604,20 @@
     "turn_resource": ""
   },
   {
+    "type": "feature",
+    "id": "class-sorcerer-armor-training",
+    "name": "Weapon Training",
+    "feature_type": "trait",
+    "description": "You gain proficiency with simple weapons.",
+    "tag": "class:sorcerer",
+    "rank": 1,
+    "armor_training": [],
+    "weapon_training": [
+      "simple"
+    ],
+    "tool_training": []
+  },
+  {
     "type": "template",
     "id": "sorcerer",
     "kind": "class",
@@ -2533,6 +2637,7 @@
       }
     ],
     "features": [
+      "class-sorcerer-armor-training",
       "class-sorcerer-innate-sorcery",
       "class-sorcerer-sorcerer-spell-list",
       "class-sorcerer-spellcasting"
@@ -2665,12 +2770,16 @@
     "id": "class-warlock-armor-training",
     "name": "Armor Training",
     "feature_type": "trait",
-    "description": "You are trained with light armor.",
+    "description": "You gain training with light armor, proficiency with simple weapons.",
     "tag": "class:warlock",
     "rank": 1,
     "armor_training": [
       "light"
-    ]
+    ],
+    "weapon_training": [
+      "simple"
+    ],
+    "tool_training": []
   },
   {
     "type": "feature",
@@ -2682,7 +2791,9 @@
     "rank": 1,
     "armor_training": [
       "light"
-    ]
+    ],
+    "weapon_training": [],
+    "tool_training": []
   },
   {
     "type": "template",
@@ -2765,6 +2876,7 @@
     "tag": "class:wizard",
     "rank": 1,
     "picks": [],
+    "resource_counter": "arcane_recovery",
     "turn_resource": ""
   },
   {
@@ -2860,6 +2972,20 @@
     "turn_resource": ""
   },
   {
+    "type": "feature",
+    "id": "class-wizard-armor-training",
+    "name": "Weapon Training",
+    "feature_type": "trait",
+    "description": "You gain proficiency with simple weapons.",
+    "tag": "class:wizard",
+    "rank": 1,
+    "armor_training": [],
+    "weapon_training": [
+      "simple"
+    ],
+    "tool_training": []
+  },
+  {
     "type": "template",
     "id": "wizard",
     "kind": "class",
@@ -2879,6 +3005,7 @@
       }
     ],
     "features": [
+      "class-wizard-armor-training",
       "class-wizard-arcane-recovery",
       "class-wizard-ritual-adept",
       "class-wizard-spellcasting",
@@ -4104,7 +4231,13 @@
     "feature_type": "feat",
     "description": "Trained for battle, you gain proficiency with Martial weapons and training with Heavy armor.",
     "tag": "divine-order",
-    "rank": 1
+    "rank": 1,
+    "armor_training": [
+      "heavy"
+    ],
+    "weapon_training": [
+      "martial"
+    ]
   },
   {
     "type": "feature",
@@ -4131,7 +4264,13 @@
     "feature_type": "feat",
     "description": "Trained for battle, you gain proficiency with Martial weapons and training with Medium armor.",
     "tag": "primal-order",
-    "rank": 1
+    "rank": 1,
+    "armor_training": [
+      "medium"
+    ],
+    "weapon_training": [
+      "martial"
+    ]
   },
   {
     "type": "feature",

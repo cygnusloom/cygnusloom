@@ -7,6 +7,9 @@
     "description": "Increase one of these abilities by 2 and another by 1, or each of them by 1: Intelligence, Wisdom, Charisma.",
     "tag": "background",
     "rank": 0,
+    "tool_training": [
+      "Calligrapher's Supplies"
+    ],
     "picks": [
       {
         "id": "scores",
@@ -88,6 +91,9 @@
     "description": "Increase one of these abilities by 2 and another by 1, or each of them by 1: Dexterity, Constitution, Intelligence.",
     "tag": "background",
     "rank": 0,
+    "tool_training": [
+      "Thieves' Tools"
+    ],
     "picks": [
       {
         "id": "scores",
@@ -173,6 +179,9 @@
     "description": "Increase one of these abilities by 2 and another by 1, or each of them by 1: Constitution, Intelligence, Wisdom.",
     "tag": "background",
     "rank": 0,
+    "tool_training": [
+      "Calligrapher's Supplies"
+    ],
     "picks": [
       {
         "id": "scores",
@@ -254,6 +263,9 @@
     "description": "Increase one of these abilities by 2 and another by 1, or each of them by 1: Strength, Dexterity, Constitution.",
     "tag": "background",
     "rank": 0,
+    "tool_training": [
+      "Gaming Set"
+    ],
     "picks": [
       {
         "id": "scores",
@@ -288,7 +300,7 @@
     "kind": "background",
     "name": "Soldier",
     "icon": "sword",
-    "description": "Soldier. Tool proficiency: Choose one kind of Gaming Set. Equipment: *Choose A or B:* (A) Spear, Shortbow, 20 Arrows, Gaming Set (same as above), Healer's Kit, Quiver, Traveler's Clothes, 14 GP; or (B) 50 GP",
+    "description": "Soldier. Tool proficiency: Gaming Set. Equipment: *Choose A or B:* (A) Spear, Shortbow, 20 Arrows, Gaming Set (same as above), Healer's Kit, Quiver, Traveler's Clothes, 14 GP; or (B) 50 GP",
     "skills": {
       "athletics": 1,
       "intimidation": 1

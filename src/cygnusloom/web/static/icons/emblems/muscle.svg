@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Athletics</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 8 Q12 2 18 4 Q21 0 25 4 Q29 2 32 7 L34 14 Q46 18 51 29 Q57 37 51 45 Q47 50 43 49 Q28 54 12 56 Q6 57 6 51 Q8 40 20 37 Q31 35 36 42 Q38 36 34 30 L30 25 Q24 29 18 28 Q12 27 12 20 Z" fill="#c9b08a"/>
+    <path d="M18 7 V18 M24 6 V17"/>
+    <path d="M30 10 Q33 12 32 16"/>
+    <path d="M14 46 Q22 41 30 44"/>
+  </g>
+</svg>

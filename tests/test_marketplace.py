@@ -659,13 +659,13 @@ def test_bundled_cairn_items_keep_their_catalogue_fields():
         1,
         "1 Armor, bulky",
     )
-    assert (brigandine.icon, brigandine.looks_like) == ("armor", "armor")
+    assert (brigandine.icon, brigandine.looks_like) == ("chain-mail", "chain-mail")
 
     rations = items["rations"]
     assert (rations.uses, rations.icon, rations.looks_like, rations.description) == (
         3,
-        "food",
-        "food",
+        "rations",
+        "rations",
         "3 uses",
     )
 
@@ -689,7 +689,7 @@ def test_bundled_wwn_items_keep_their_catalogue_fields():
     assert plate.description == "Heavy armor, AC 17, Encumbrance 2; penalizes Sneak and Exert."
 
     ration = items["shop_daily_ration"]
-    assert (ration.icon, ration.looks_like) == ("tool", "tool")
+    assert (ration.icon, ration.looks_like) == ("rations", "rations")
     assert ration.description == "A day's food and water for one person. Encumbrance 1."
 
     axe = items["shop_axe_hand"]

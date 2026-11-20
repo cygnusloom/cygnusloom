@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Crowbar</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M44 8 Q46 2 52 4 Q58 6 56 12 L24 52 Q20 58 14 54 Q8 50 12 44 L14 42" stroke-width="10"/>
+    <path d="M44 8 Q46 2 52 4 Q58 6 56 12 L24 52 Q20 58 14 54 Q8 50 12 44 L14 42" stroke="#b05a5a" stroke-width="6"/>
+  </g>
+</svg>

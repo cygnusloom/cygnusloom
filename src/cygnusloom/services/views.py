@@ -15,6 +15,7 @@ from typing import Any
 from cygnusloom.content.character import (
     CampaignSpec,
     CharacterSpec,
+    Feature,
     Sheet,
     describe,
     reaction_effect_text,
@@ -170,6 +171,34 @@ class SheetResource:
 
 
 @dataclass(frozen=True)
+class SheetFeature:
+    """A feature on the sheet, with the action or resource that uses it."""
+
+    name: str
+    entry: str = ""
+    cost: str = ""
+
+
+@dataclass(frozen=True)
+class SheetSpell:
+    """A spell known or prepared, with the slot level it uses."""
+
+    name: str
+    level: int
+    entry: str = ""
+    prepared: bool = False
+
+
+@dataclass(frozen=True)
+class SheetSpellGroup:
+    """Spells of one slot level, and the slots the character has at that level."""
+
+    label: str
+    slots: int | None = None
+    spells: tuple[SheetSpell, ...] = ()
+
+
+@dataclass(frozen=True)
 class CharacterSheetView:
     """A character sheet the player can read: their own, or a hireling they play for."""
 
@@ -197,6 +226,10 @@ class CharacterSheetView:
     stats: tuple[SheetStat, ...] = ()
     skills: tuple[SheetSkill, ...] = ()
     resources: tuple[SheetResource, ...] = ()
+    active_features: tuple[SheetFeature, ...] = ()
+    passive_features: tuple[SheetFeature, ...] = ()
+    spell_groups: tuple[SheetSpellGroup, ...] = ()
+    tools: tuple[str, ...] = ()
     conditions: str = ""
     notes: tuple[str, ...] = ()
 
@@ -902,7 +935,10 @@ def scene_view(
     pc_sheet = None
     if pc is not None:
         points = hit_points(pc, hp_stat)
-        sections = _sheet_sections(spec, sheet, sheet_entries)
+        sections = {
+            **_sheet_sections(spec, sheet, sheet_entries),
+            **_sheet_ability_sections(spec, pc, ability_entries),
+        }
         pc_sheet = CharacterSheetView(
             name=pc.name,
             pronouns=pc.pronouns or "",
@@ -1759,6 +1795,112 @@ def _feature_links(
     return tuple(links)
 
 
+def _feature_counter_id(spec: CharacterSpec, feature: Feature) -> str:
+    """The counter a feature spends, named directly or by the feature's own name."""
+    if feature.resource_counter:
+        return feature.resource_counter
+    for counter_id, rules in spec.counters.items():
+        if rules.label.casefold() == feature.name.casefold():
+            return counter_id
+    return ""
+
+
+def _feature_cost(spec: CharacterSpec, feature: Feature) -> str:
+    """The action and resource cost a feature shows beside its name."""
+    labels: list[str] = []
+    if feature.turn_resource:
+        labels.append(feature.turn_resource.replace("_", " ").capitalize())
+    counter_id = _feature_counter_id(spec, feature)
+    if counter_id:
+        counter = spec.counters.get(counter_id)
+        label = counter.label if counter is not None else counter_id
+        if label.casefold() != feature.name.casefold():
+            labels.append(label)
+    if feature.uses:
+        labels.append(f"{feature.uses} use" + ("" if feature.uses == 1 else "s"))
+    if feature.reactions:
+        labels.append("Reaction")
+    return " · ".join(dict.fromkeys(labels))
+
+
+def _sheet_ability_sections(
+    spec: CharacterSpec,
+    character: Character,
+    ability_entries: Mapping[str, str],
+) -> dict[str, Any]:
+    """Split the character's features and spells into the parts a player reads first: spells by
+    slot level, active features, passive features, and tool training."""
+    effective = custom_features.merged_features(spec, character)
+    prepared = character.marks.get("prepared")
+    prepared_ids = {str(item) for item in prepared} if isinstance(prepared, list) else set()
+    active: list[SheetFeature] = []
+    passive: list[SheetFeature] = []
+    spells_by_level: dict[int, list[SheetSpell]] = {}
+    tools: list[str] = []
+    seen_tools: set[str] = set()
+    seen: set[str] = set()
+    for feature_id, feature in effective.items():
+        if feature_id not in character.features or feature.feature_type == "item":
+            continue
+        for tool in feature.tool_training:
+            key = tool.casefold()
+            if key not in seen_tools:
+                seen_tools.add(key)
+                tools.append(tool)
+        entry = ability_entries.get(feature_id) or ability_entries.get(name_key(feature.name)) or ""
+        if feature.feature_type == "spell":
+            spells_by_level.setdefault(feature.rank, []).append(
+                SheetSpell(
+                    name=feature.name,
+                    level=feature.rank,
+                    entry=entry,
+                    prepared=feature_id in prepared_ids or feature.always_prepared,
+                )
+            )
+            continue
+        if feature.name.endswith(": Ability Scores"):
+            continue
+        key = feature.name.casefold()
+        if key in seen:
+            continue
+        seen.add(key)
+        item = SheetFeature(name=feature.name, entry=entry, cost=_feature_cost(spec, feature))
+        if (
+            feature.turn_resource
+            or _feature_counter_id(spec, feature)
+            or feature.uses
+            or feature.reactions
+        ):
+            active.append(item)
+        else:
+            passive.append(item)
+    slots: dict[int, int] = {}
+    for counter_id in spec.counters:
+        if not counter_id.startswith("slot_"):
+            continue
+        try:
+            level = int(counter_id.removeprefix("slot_"))
+        except ValueError:
+            continue
+        rules = spec.counters[counter_id]
+        slots[level] = int(character.counters.get(counter_id, rules.initial))
+    groups = []
+    for level in sorted(spells_by_level):
+        groups.append(
+            SheetSpellGroup(
+                label="Cantrips" if level == 0 else f"Level {level}",
+                slots=slots.get(level) if level else None,
+                spells=tuple(spells_by_level[level]),
+            )
+        )
+    return {
+        "active_features": tuple(active),
+        "passive_features": tuple(passive),
+        "spell_groups": tuple(groups),
+        "tools": tuple(tools),
+    }
+
+
 def _prepared_links(
     spec: CharacterSpec, character: Character, ability_entries: Mapping[str, str]
 ) -> tuple[FeatureLink, ...]:
@@ -1841,7 +1983,10 @@ def _hireling_sheets(
         if conditions is not None:
             lines += _status_lines(character, conditions, None, None, None)
         points = hit_points(character, hp_stat)
-        sections = _sheet_sections(spec, lines, sheet_entries)
+        sections = {
+            **_sheet_sections(spec, lines, sheet_entries),
+            **_sheet_ability_sections(spec, character, ability_entries),
+        }
         sheets.append(
             CharacterSheetView(
                 name=character.name,
@@ -2053,7 +2198,7 @@ def _sheet_sections(
                 continue
             if counter_id in ("level", "xp"):
                 identity.append((label, value))
-            else:
+            elif not counter_id.startswith("slot_"):
                 entry = sheet_entries.get(label, "")
                 if amount != 0 or counter_id == "hit_dice":
                     resources.append(

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Navigator's Tools</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="26" cy="26" r="16" fill="#f5f0e4"/>
+    <path d="M26 12 L31 26 L26 40 L21 26 Z" fill="#b05a5a"/>
+    <circle cx="26" cy="26" r="2.5" fill="#2e2620"/>
+    <circle cx="50" cy="28" r="3" fill="#e6b53a"/>
+    <path d="M48 31 L40 54"/>
+    <path d="M52 31 L58 52"/>
+  </g>
+</svg>

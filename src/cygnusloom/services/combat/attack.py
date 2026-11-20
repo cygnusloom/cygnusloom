@@ -121,6 +121,26 @@ def _weapon_skill(combat: CombatRules, weapon: str, feature: Feature | None) -> 
     return ""
 
 
+def _weapon_trained(spec: CharacterSpec, character: Character, feature: Feature) -> bool:
+    """Whether the character's training covers a weapon feature. A weapon with no category is
+    not covered by these rules, so it keeps the rule set's full attack bonus."""
+    category = feature.weapon_category.casefold()
+    if not category:
+        return True
+    properties = {prop.casefold() for prop in feature.weapon_properties}
+    for feature_id in character.features:
+        held = spec.features.get(feature_id)
+        if held is None:
+            continue
+        for entry in held.weapon_training:
+            kind, _, property_name = entry.casefold().partition(":")
+            if kind == category and (not property_name or property_name in properties):
+                return True
+            if kind == "weapon" and property_name == feature.id.casefold():
+                return True
+    return False
+
+
 def _critical_threshold(
     spec: CharacterSpec | None, character: Character, combat: CombatRules
 ) -> int:
@@ -183,6 +203,15 @@ def _player_bonuses(
                 _stat_bonus(combat, character, combat.hit_bonus_stat),
             )
         )
+    if (
+        combat.weapon_proficiency_stat
+        and feature is not None
+        and feature.weapon_category
+        and not _weapon_trained(spec, character, feature)
+    ):
+        penalty = _stat_bonus(combat, character, combat.weapon_proficiency_stat)
+        if penalty:
+            to_hit_parts.append(("not proficient", -penalty))
     if attribute:
         to_hit_parts.append((_stat_label(spec, attribute_stat), attribute))
     if combat.damage_bonus_stat:

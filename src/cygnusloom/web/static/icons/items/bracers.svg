@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Bracers</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10 14 H26 L24 50 H14 Z" fill="#a7adb2"/><path d="M38 14 H54 L50 50 H40 Z" fill="#a7adb2"/><path d="M10 22 H25 M12 42 H24 M39 22 H53 M40 42 H52" stroke="#8b5e3c" stroke-width="3"/>
+  </g>
+</svg>

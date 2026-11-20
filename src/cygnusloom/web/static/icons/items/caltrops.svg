@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Caltrops</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="18" cy="24" r="3.5" fill="#a7adb2"/>
+    <path d="M16 22 L20 22 L18 7 Z" fill="#a7adb2"/>
+    <path d="M16 26 L19 28 L7 37 Z" fill="#a7adb2"/>
+    <path d="M20 26 L21 28 L31 36 Z" fill="#a7adb2"/>
+    <circle cx="45" cy="19" r="3" fill="#a7adb2"/>
+    <path d="M43 17 L47 17 L45 4 Z" fill="#a7adb2"/>
+    <path d="M43 21 L46 23 L35 31 Z" fill="#a7adb2"/>
+    <path d="M47 21 L48 23 L56 30 Z" fill="#a7adb2"/>
+    <circle cx="33" cy="46" r="3.5" fill="#a7adb2"/>
+    <path d="M31 44 L35 44 L33 29 Z" fill="#a7adb2"/>
+    <path d="M31 48 L34 50 L21 58 Z" fill="#a7adb2"/>
+    <path d="M35 48 L36 50 L45 57 Z" fill="#a7adb2"/>
+  </g>
+</svg>

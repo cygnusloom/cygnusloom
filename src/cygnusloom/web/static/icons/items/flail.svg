@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Flail</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 57 L25 44" stroke="#8b5e3c" stroke-width="5"/><circle cx="12" cy="57" r="2.5" fill="#e6b53a"/><circle cx="29" cy="38" r="3"/><circle cx="37" cy="29" r="3"/><circle cx="47" cy="17" r="11" fill="#a7adb2"/><path d="M58 17 H62 M55 9 L58 6 M47 6 V3 M39 9 L36 6 M36 17 H32 M39 25 L36 28 M55 25 L58 28"/>
+  </g>
+</svg>

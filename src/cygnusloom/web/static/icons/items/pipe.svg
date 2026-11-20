@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Pipe</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M9 45 C9 33 18 27 29 27 H38 C42 27 45 30 45 34 C45 43 38 49 28 49 H18 C12 49 9 47 9 45 Z" fill="#8b5e3c"/>
+    <path d="M45 34 H56 C59 34 60 37 60 40" stroke-width="4"/>
+    <path d="M18 27 V20 H40 V27" fill="#a7adb2"/>
+    <path d="M24 17 C21 12 27 10 24 5 M34 17 C31 12 37 10 34 5" stroke="#6c7c8c" stroke-width="2"/>
+  </g>
+</svg>

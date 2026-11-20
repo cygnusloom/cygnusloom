@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Pike</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M29 16 H35 V58 H29 Z" fill="#8b5e3c"/><path d="M32 4 L38 14 L32 19 L26 14 Z" fill="#a7adb2"/><rect x="26" y="16" width="12" height="4" rx="1" fill="#a7adb2"/><path d="M28 56 H36" stroke="#a7adb2"/>
+  </g>
+</svg>

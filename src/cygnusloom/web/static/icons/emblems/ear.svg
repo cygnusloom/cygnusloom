@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Perception</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M31 8 Q44 4 50 16 Q57 29 46 37 Q39 42 38 48 Q37 56 30 55 Q22 54 21 47 Q20 40 27 36 Q34 32 35 26 Q36 18 29 17 Q23 16 21 22"/>
+    <path d="M30 25 Q36 25 36 31 Q36 37 30 40 Q26 43 27 47"/>
+  </g>
+</svg>

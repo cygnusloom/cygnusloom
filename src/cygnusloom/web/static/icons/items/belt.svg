@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Belt</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="6" y="26" width="52" height="12" rx="3" fill="#8b5e3c"/><rect x="24" y="22" width="16" height="20" rx="2" fill="#e6b53a"/><rect x="28" y="26" width="8" height="12" rx="1" fill="#f5f0e4"/><path d="M10 32 H18" stroke-width="1.5"/><path d="M40 34 H56 V50 Q56 54 52 54 H44 Q40 54 40 50 Z" fill="#8c5a4a"/><path d="M40 42 H56" stroke-width="1.5"/>
+  </g>
+</svg>

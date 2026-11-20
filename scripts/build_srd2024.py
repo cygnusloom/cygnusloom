@@ -63,22 +63,245 @@ SKILL_ICONS = {
     "acrobatics": "boots",
     "animal_handling": "horse",
     "arcana": "book",
-    "athletics": "rope",
+    "athletics": "muscle",
     "deception": "speech",
     "history": "scroll",
     "insight": "eye",
     "intimidation": "fist",
-    "investigation": "eye",
+    "investigation": "magnifier",
     "medicine": "potion",
     "nature": "plant",
-    "perception": "eye",
+    "perception": "ear",
     "performance": "lute",
     "persuasion": "handshake",
     "religion": "altar",
     "sleight_of_hand": "ring",
-    "stealth": "boots",
+    "stealth": "footprints",
     "survival": "campfire",
 }
+WEAPON_ICONS = {
+    "battleaxe": "axe",
+    "blowgun": "blowgun",
+    "club": "club",
+    "dagger": "dagger",
+    "dart": "dart",
+    "flail": "flail",
+    "glaive": "halberd",
+    "greataxe": "axe",
+    "greatclub": "club",
+    "greatsword": "greatsword",
+    "halberd": "halberd",
+    "hand-crossbow": "crossbow",
+    "handaxe": "axe",
+    "heavy-crossbow": "crossbow",
+    "javelin": "javelin",
+    "lance": "lance",
+    "light-crossbow": "crossbow",
+    "light-hammer": "warhammer",
+    "longbow": "bow",
+    "longsword": "sword",
+    "mace": "mace",
+    "maul": "warhammer",
+    "morningstar": "mace",
+    "musket": "crossbow",
+    "net": "net",
+    "pike": "pike",
+    "pistol": "crossbow",
+    "quarterstaff": "staff",
+    "rapier": "rapier",
+    "scimitar": "scimitar",
+    "shortbow": "bow",
+    "shortsword": "sword",
+    "sickle": "dagger",
+    "sling": "sling",
+    "spear": "spear",
+    "trident": "trident",
+    "war-pick": "warhammer",
+    "warhammer": "warhammer",
+    "whip": "whip",
+}
+ARMOR_ICONS = {
+    "breastplate": "plate-armor",
+    "chain-mail": "chain-mail",
+    "chain-shirt": "chain-mail",
+    "half-plate-armor": "plate-armor",
+    "hide-armor": "leather-armor",
+    "leather-armor": "leather-armor",
+    "padded-armor": "leather-armor",
+    "plate-armor": "plate-armor",
+    "ring-mail": "chain-mail",
+    "scale-mail": "chain-mail",
+    "shield": "shield",
+    "splint-armor": "chain-mail",
+    "studded-leather-armor": "leather-armor",
+}
+ITEM_ICONS = {
+    "acid": "potion",
+    "alchemists-fire": "potion",
+    "alchemists-supplies": "alchemists-supplies",
+    "barrel": "barrel",
+    "basket": "pouch",
+    "bell": "bell",
+    "brewers-supplies": "alchemists-supplies",
+    "calligraphers-supplies": "scroll",
+    "cartographers-tools": "navigators-tools",
+    "climbers-kit": "rope",
+    "bedroll": "bedroll",
+    "blanket": "bedroll",
+    "block-and-tackle": "grappling-hook",
+    "bottle-glass": "potion",
+    "bucket": "pouch",
+    "candle": "torch-item",
+    "case-crossbow-bolt": "ammunition",
+    "chest": "chest",
+    "clothes-fine": "cloak",
+    "clothes-travelers": "cloak",
+    "costume": "disguise-kit",
+    "flask": "potion",
+    "hunting-trap": "caltrops",
+    "healers-kit": "herbalism-kit",
+    "ink": "scroll",
+    "ink-pen": "scroll",
+    "jug": "waterskin",
+    "ladder": "ladder",
+    "lamp": "lantern-item",
+    "lock": "key",
+    "magnifying-glass": "magnifier",
+    "net": "net",
+    "painters-supplies": "alchemists-supplies",
+    "perfume": "potion",
+    "pole": "staff",
+    "pot-iron": "pot",
+    "ram-portable": "tool",
+    "rope": "rope",
+    "saddle-exotic": "horse",
+    "saddle-military": "horse",
+    "saddle-riding": "horse",
+    "shovel": "shovel",
+    "signal-whistle": "musical-instrument",
+    "spikes-iron": "caltrops",
+    "string": "rope",
+    "tent": "tent",
+    "tinderbox": "torch-item",
+    "vial": "potion",
+    "airship": "boat",
+    "carriage": "cart",
+    "chariot": "cart",
+    "sled": "cart",
+    "galley": "boat",
+    "keelboat": "boat",
+    "longship": "boat",
+    "rowboat": "boat",
+    "sailing-ship": "boat",
+    "warship": "boat",
+    "arrows-20": "ammunition",
+    "backpack": "backpack",
+    "ball-bearings": "caltrops",
+    "bolts-20": "ammunition",
+    "bullets-firearm-10": "ammunition",
+    "bullets-sling-20": "ammunition",
+    "caltrops": "caltrops",
+    "carpenters-tools": "carpenters-tools",
+    "chain": "chain",
+    "component-pouch": "component-pouch",
+    "cooks-utensils": "cooks-utensils",
+    "crowbar": "crowbar",
+    "disguise-kit": "disguise-kit",
+    "forgery-kit": "forgery-kit",
+    "gaming-set-dice": "gaming-set",
+    "gaming-set-dragonchess": "gaming-set",
+    "gaming-set-playing-cards": "gaming-set",
+    "gaming-set-three-dragon-ante": "gaming-set",
+    "grappling-hook": "grappling-hook",
+    "herbalism-kit": "herbalism-kit",
+    "holy-symbol-amulet": "amulet",
+    "holy-symbol-emblem": "amulet",
+    "holy-symbol-reliquary": "amulet",
+    "holy-water": "potion",
+    "lantern-bullseye": "lantern-item",
+    "lantern-hooded": "lantern-item",
+    "manacles": "manacles",
+    "mirror": "mirror",
+    "musical-instrument-bagpipes": "musical-instrument",
+    "musical-instrument-drum": "musical-instrument",
+    "musical-instrument-dulcimer": "musical-instrument",
+    "musical-instrument-flute": "musical-instrument",
+    "musical-instrument-horn": "musical-instrument",
+    "musical-instrument-lute": "musical-instrument",
+    "musical-instrument-lyre": "musical-instrument",
+    "musical-instrument-pan-flute": "musical-instrument",
+    "musical-instrument-shawm": "musical-instrument",
+    "musical-instrument-viol": "musical-instrument",
+    "navigators-tools": "navigators-tools",
+    "needles-50": "ammunition",
+    "oil": "oil-flask",
+    "poison-basic": "poisoners-kit",
+    "poisoners-kit": "poisoners-kit",
+    "potion-of-giant-strength": "potion",
+    "potion-of-healing": "potion",
+    "potions-of-healing": "potion",
+    "pouch": "pouch",
+    "quiver": "quiver",
+    "rations": "rations",
+    "feed-per-day": "rations",
+    "robe": "cloak",
+    "sack": "pouch",
+    "smiths-tools": "smiths-tools",
+    "spell-scroll": "scroll",
+    "spyglass": "spyglass",
+    "thieves-tools": "thieves-tools",
+    "tinkers-tools": "tinkers-tools",
+    "torch": "torch-item",
+    "woodcarvers-tools": "carpenters-tools",
+    "waterskin": "waterskin",
+    "case-map-or-scroll": "scroll",
+    "map": "scroll",
+    "paper": "scroll",
+    "parchment": "scroll",
+    "book": "book",
+}
+MAGIC_CATEGORY_ICONS = {
+    "ammunition": "ammunition",
+    "armor": "armor",
+    "potion": "potion",
+    "ring": "ring",
+    "rod": "rod",
+    "scroll": "scroll",
+    "staff": "staff",
+    "wand": "wand",
+    "weapon": "weapon",
+    "wondrous-item": "wondrous-item",
+}
+MAGIC_NAME_ICONS = (
+    ("bracers", "bracers"),
+    ("belt", "belt"),
+    ("gloves", "gloves"),
+    ("gauntlets", "gloves"),
+    ("cloak", "cloak"),
+    ("boots", "boots"),
+    ("amulet", "amulet"),
+    ("necklace", "amulet"),
+    ("bag", "pouch"),
+    ("pouch", "pouch"),
+    ("mirror", "mirror"),
+    ("crystal", "crystal"),
+    ("orb", "crystal"),
+    ("instrument", "musical-instrument"),
+    ("horn", "musical-instrument"),
+    ("tome", "book"),
+    ("deck", "gaming-set"),
+    ("dice", "gaming-set"),
+    ("rope", "rope"),
+    ("chain", "chain"),
+    ("lantern", "lantern-item"),
+    ("torch", "torch-item"),
+    ("candle", "torch-item"),
+    ("bottle", "potion"),
+    ("flask", "potion"),
+    ("vial", "potion"),
+    ("helm", "helm"),
+    ("shield", "shield"),
+)
 CLASS_ICONS = {
     "barbarian": "axe",
     "bard": "lute",
@@ -363,6 +586,27 @@ CLASS_ARMOR_TRAINING = {
     "wizard": [],
 }
 
+CLASS_WEAPON_TRAINING = {
+    "barbarian": ["simple", "martial"],
+    "bard": ["simple"],
+    "cleric": ["simple"],
+    "druid": ["simple"],
+    "fighter": ["simple", "martial"],
+    "monk": ["simple", "martial:light"],
+    "paladin": ["simple", "martial"],
+    "ranger": ["simple", "martial"],
+    "rogue": ["simple", "martial:finesse", "martial:light"],
+    "sorcerer": ["simple"],
+    "warlock": ["simple"],
+    "wizard": ["simple"],
+}
+
+CLASS_TOOLS = {
+    "bard": ["Musical Instrument"],
+    "monk": ["Artisan's Tools or Musical Instrument"],
+    "rogue": ["Thieves' Tools"],
+}
+
 # The ability scores a class's Primary Ability line names. "Fighter" accepts either Strength
 # or Dexterity; every other multi-ability class requires both scores at 13 to multiclass.
 CLASS_PRIMARY = {
@@ -382,7 +626,7 @@ CLASS_PRIMARY = {
 CLASS_PRIMARY_ANY = {"fighter"}
 
 # What a class grants when it is gained after the character's first class: the SRD's
-# "As a Multiclass Character" traits. Weapon proficiency is descriptive in this engine.
+# "As a Multiclass Character" traits.
 MULTICLASS_ARMOR = {
     "barbarian": ["shield"],
     "bard": ["light"],
@@ -396,6 +640,12 @@ MULTICLASS_ARMOR = {
     "sorcerer": [],
     "warlock": ["light"],
     "wizard": [],
+}
+MULTICLASS_WEAPON_TRAINING = {
+    "barbarian": ["martial"],
+    "fighter": ["martial"],
+    "paladin": ["martial"],
+    "ranger": ["martial"],
 }
 MULTICLASS_SKILLS = {"bard": 1, "ranger": 1, "rogue": 1}
 MULTICLASS_TOOLS = {"bard": ["Musical Instrument"], "rogue": ["Thieves' Tools"]}
@@ -1210,6 +1460,7 @@ def build_combat() -> None:
                 "healing_stat": "hp",
                 "hit_mode": "roll_vs_defense",
                 "hit_bonus_stat": "attack_bonus",
+                "weapon_proficiency_stat": "attack_bonus",
                 "attribute_damage": True,
                 "defeat_at_zero": ["hp"],
                 "dying_hours": 0,
@@ -1578,6 +1829,53 @@ def weapon_mastery(record: dict[str, Any]) -> str:
     return ""
 
 
+def _record_key(record: dict[str, Any]) -> str:
+    return str(record.get("key") or "").removeprefix("srd-2024_")
+
+
+def weapon_icon(record: dict[str, Any]) -> str:
+    return WEAPON_ICONS.get(_record_key(record), "weapon")
+
+
+def armor_icon(record: dict[str, Any]) -> str:
+    return ARMOR_ICONS.get(_record_key(record), "armor")
+
+
+def item_icon(record: dict[str, Any]) -> str:
+    key = _record_key(record)
+    if key in ITEM_ICONS:
+        return ITEM_ICONS[key]
+    category = (record.get("category") or {}).get("key", "")
+    return {
+        "adventuring-gear": "generic-item",
+        "ammunition": "ammunition",
+        "equipment-pack": "backpack",
+        "land-vehicle": "cart",
+        "mount": "horse",
+        "potion": "potion",
+        "scroll": "scroll",
+        "spellcasting-focus": "component-pouch",
+        "tools": "tool",
+        "waterborne-vehicle": "boat",
+        "wondrous-item": "wondrous-item",
+    }.get(category, "generic-item")
+
+
+def magic_icon(record: dict[str, Any]) -> str:
+    if record.get("weapon"):
+        return weapon_icon(record["weapon"])
+    if record.get("armor"):
+        return armor_icon(record["armor"])
+    category = (record.get("category") or {}).get("key", "")
+    name = record.get("name", "").casefold()
+    if category == "weapon" and "ammunition" in name:
+        return "ammunition"
+    for keyword, icon in MAGIC_NAME_ICONS:
+        if keyword in name:
+            return icon
+    return MAGIC_CATEGORY_ICONS.get(category, "wondrous-item")
+
+
 def build_equipment() -> None:
     weapons = load("weapons")
     armor = load("armor")
@@ -1592,6 +1890,7 @@ def build_equipment() -> None:
             "Prices in the catalogue are given in silver.",
             feature_type="item",
             size="tiny",
+            icon="coin",
         ),
         feature(
             "encumbered",
@@ -1606,6 +1905,7 @@ def build_equipment() -> None:
             "A lute, flute, drum, or another instrument of the player's choosing.",
             feature_type="item",
             size="normal",
+            icon="musical-instrument",
         ),
         feature(
             "arcane-focus",
@@ -1613,6 +1913,7 @@ def build_equipment() -> None:
             "A crystal, orb, rod, staff, or wand that channels arcane magic.",
             feature_type="item",
             size="small",
+            icon="crystal",
         ),
         feature(
             "holy-symbol",
@@ -1620,6 +1921,7 @@ def build_equipment() -> None:
             "A divine emblem worn or held to channel a deity's power.",
             feature_type="item",
             size="tiny",
+            icon="amulet",
         ),
         feature(
             "spellbook",
@@ -1627,6 +1929,7 @@ def build_equipment() -> None:
             "A leather-bound book of spells, worth 50 gp to a wizard.",
             feature_type="item",
             size="normal",
+            icon="book",
         ),
     ]
     shop: list[dict[str, Any]] = [
@@ -1680,6 +1983,9 @@ def build_equipment() -> None:
             "damage_type": (record.get("damage_type") or {}).get("name", "").casefold(),
             "attributes": weapon_attributes(record),
             "size": weapon_size(record),
+            "weapon_category": "simple" if record.get("is_simple") else "martial",
+            "weapon_properties": sorted(props),
+            "icon": weapon_icon(record),
         }
         mastery = weapon_mastery(record)
         if mastery:
@@ -1729,6 +2035,7 @@ def build_equipment() -> None:
                 record["name"],
                 data.pop("description"),
                 feature_type="item",
+                icon=armor_icon(record),
                 **data,
             )
         )
@@ -1748,11 +2055,15 @@ def build_equipment() -> None:
             continue
         ident = f"item-{key_id(record['key'])}"
         category = (record.get("category") or {}).get("key", "gear")
-        extra: dict[str, Any] = {"size": item_size_for(record)}
+        extra: dict[str, Any] = {"size": item_size_for(record), "icon": item_icon(record)}
         if record.get("weapon") and record["weapon"].get("damage_dice"):
             weapon = record["weapon"]
             extra["damage"] = weapon_damage(weapon)
             extra["attributes"] = weapon_attributes(weapon)
+            extra["weapon_category"] = "simple" if weapon.get("is_simple") else "martial"
+            extra["weapon_properties"] = sorted(
+                entry["property"]["name"].casefold() for entry in weapon.get("properties", [])
+            )
         if record.get("armor") and record["armor"].get("ac_base") is not None:
             data = armor_feature_data(record["armor"])
             data.pop("armor_mode", None)
@@ -1779,13 +2090,20 @@ def build_equipment() -> None:
         )
     for record in magic:
         ident = f"magic-{key_id(record['key'])}"
-        extra: dict[str, Any] = {"size": item_size_for(record)}
+        extra: dict[str, Any] = {"size": item_size_for(record), "icon": magic_icon(record)}
+        if _record_key(record) == "bracers-of-archery":
+            # The SRD item makes its wearer proficient with these two bows.
+            extra["weapon_training"] = ["weapon-longbow", "weapon-shortbow"]
         mode = "max"
         if record.get("weapon"):
             weapon = record["weapon"]
             extra["damage"] = weapon_damage(weapon)
             extra["attributes"] = weapon_attributes(weapon)
             extra["size"] = weapon_size(weapon)
+            extra["weapon_category"] = "simple" if weapon.get("is_simple") else "martial"
+            extra["weapon_properties"] = sorted(
+                entry["property"]["name"].casefold() for entry in weapon.get("properties", [])
+            )
         if record.get("armor"):
             data = armor_feature_data(record["armor"])
             mode = data.pop("armor_mode", "max")
@@ -2514,6 +2832,16 @@ def build_backgrounds() -> None:
         skills = background_skills(record)
         feat_id = background_feat(record)
         asi_id = f"background-asi-{ident}"
+        tool = next(
+            (
+                benefit.get("desc", "")
+                for benefit in record.get("benefits", [])
+                if benefit.get("type") == "tool_proficiency"
+            ),
+            "",
+        )
+        if tool.casefold().startswith("choose one kind of "):
+            tool = tool[len("choose one kind of ") :]
         definitions.append(
             feature(
                 asi_id,
@@ -2525,6 +2853,7 @@ def build_backgrounds() -> None:
                 ),
                 feature_type="trait",
                 tag="background",
+                tool_training=[tool] if tool else [],
                 picks=[
                     {
                         "id": "scores",
@@ -2543,14 +2872,6 @@ def build_backgrounds() -> None:
         features = [asi_id]
         if feat_id:
             features.append(feat_id)
-        tool = next(
-            (
-                benefit.get("desc", "")
-                for benefit in record.get("benefits", [])
-                if benefit.get("type") == "tool_proficiency"
-            ),
-            "",
-        )
         equipment = next(
             (
                 benefit.get("desc", "")
@@ -2593,6 +2914,9 @@ CLASS_ALWAYS_PREPARED = {
 
 CLASS_FEATURE_USE = {
     "Rage": ("rage", "bonus_action"),
+    "Action Surge": ("action_surge", ""),
+    "Indomitable": ("indomitable", ""),
+    "Arcane Recovery": ("arcane_recovery", ""),
     "Second Wind": ("second_wind", "bonus_action"),
     "Bardic Inspiration": ("bardic_inspiration", "bonus_action"),
     "Channel Divinity": ("channel_divinity", "action"),
@@ -2868,6 +3192,8 @@ def option_features(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
             feature_type="feat",
             tag="divine-order",
             rank=1,
+            armor_training=["heavy"],
+            weapon_training=["martial"],
         ),
         feature(
             "divine-order-thaumaturge",
@@ -2897,6 +3223,8 @@ def option_features(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
             feature_type="feat",
             tag="primal-order",
             rank=1,
+            armor_training=["medium"],
+            weapon_training=["martial"],
         ),
         feature(
             "hunter-prey-colossus-slayer",
@@ -3127,27 +3455,48 @@ def build_classes(spell_lists: dict[str, dict[int, list[str]]]) -> None:
         if class_id == "rogue":
             expertise_levels.discard(1)
         armor_training = CLASS_ARMOR_TRAINING.get(class_id, [])
-        if armor_training:
+        weapon_training = CLASS_WEAPON_TRAINING.get(class_id, [])
+        tool_training = CLASS_TOOLS.get(class_id, [])
+        if armor_training or weapon_training or tool_training:
             armor_training_id = f"class-{class_id}-armor-training"
+            training_name = "Armor Training" if armor_training else "Weapon Training"
+            pieces = []
+            if armor_training:
+                pieces.append("training with " + ", ".join(armor_training) + " armor")
+            if tool_training:
+                pieces.append("proficiency with " + ", ".join(tool_training))
+            if weapon_training:
+                labels = []
+                for entry in weapon_training:
+                    category, _, prop = entry.partition(":")
+                    labels.append(
+                        category + " weapons" + (f" with the {prop} property" if prop else "")
+                    )
+                pieces.append("proficiency with " + " and ".join(labels))
             definitions.append(
                 feature(
                     armor_training_id,
-                    "Armor Training",
-                    "You are trained with " + ", ".join(armor_training) + " armor.",
+                    training_name,
+                    "You gain " + ", ".join(pieces) + ".",
                     feature_type="trait",
                     tag=f"class:{class_id}",
                     rank=1,
                     armor_training=armor_training,
+                    weapon_training=weapon_training,
+                    tool_training=tool_training,
                 )
             )
             level_features[1].insert(0, armor_training_id)
         multiclass_armor = MULTICLASS_ARMOR.get(class_id, [])
+        multiclass_weapon = MULTICLASS_WEAPON_TRAINING.get(class_id, [])
         multiclass_skills = MULTICLASS_SKILLS.get(class_id, 0)
         multiclass_tools = MULTICLASS_TOOLS.get(class_id, [])
-        if multiclass_armor or multiclass_tools or multiclass_skills:
+        if multiclass_armor or multiclass_weapon or multiclass_tools or multiclass_skills:
             pieces = []
             if multiclass_armor:
                 pieces.append("training with " + ", ".join(multiclass_armor) + " armor")
+            if multiclass_weapon:
+                pieces.append("proficiency with " + ", ".join(multiclass_weapon) + " weapons")
             if multiclass_tools:
                 pieces.append("proficiency with " + ", ".join(multiclass_tools))
             if multiclass_skills:
@@ -3161,6 +3510,8 @@ def build_classes(spell_lists: dict[str, dict[int, list[str]]]) -> None:
                     tag=f"class:{class_id}",
                     rank=1,
                     armor_training=multiclass_armor,
+                    weapon_training=multiclass_weapon,
+                    tool_training=multiclass_tools,
                 )
             )
         kits = CLASS_KITS[class_id]

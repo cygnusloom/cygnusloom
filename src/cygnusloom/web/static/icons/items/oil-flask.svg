@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Oil Flask</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M33 2 Q38 9 33 14 Q28 9 33 2 Z" fill="#e6b53a"/>
+    <rect x="29" y="14" width="8" height="10" fill="#f5f0e4"/>
+    <path d="M29 22 Q48 24 48 40 Q48 54 33 54 Q18 54 18 40 Q18 24 37 22 Z" fill="#f5f0e4"/>
+    <path d="M20 40 Q33 34 46 40 Q46 52 33 52 Q20 52 20 40 Z" fill="#e6b53a"/>
+  </g>
+</svg>

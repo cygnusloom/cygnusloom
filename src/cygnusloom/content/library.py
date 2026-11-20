@@ -1577,6 +1577,9 @@ class CombatRules:
     rest_requires_positive_hp: bool = False
     # Whether a defeated character at 0 hit points can be stabilized without a dying clock.
     stabilize_without_clock: bool = False
+    # The stat added to an attack only when the character is trained with its weapon. Empty
+    # when weapon training does not change the attack bonus.
+    weapon_proficiency_stat: str = ""
 
     def attacks_per_turn_for(self, character: object) -> int:
         """The attack-action budget for one character in this rule set."""
@@ -3864,7 +3867,11 @@ CHARACTER_DEFINITION_KEYS: Mapping[str, frozenset[str]] = {
             "critical_min",
             "active_mark",
             "armor_training",
+            "weapon_training",
+            "tool_training",
             "armor_category",
+            "weapon_category",
+            "weapon_properties",
             "rules",
             "tag",
             "rank",
@@ -5382,6 +5389,7 @@ def _load_combat(
             "heal_clears_defeat",
             "rest_requires_positive_hp",
             "stabilize_without_clock",
+            "weapon_proficiency_stat",
             "save",
             "initiative_mode",
             "groups",
@@ -5434,7 +5442,13 @@ def _load_combat(
     for stat_id in unarmed_attributes:
         if stat_id not in character.stats:
             raise ContentError(f"{label}: unarmed attribute {stat_id!r} names no stat")
-    for key in ("hit_bonus_stat", "damage_bonus_stat", "defense_modifier", "healing_stat"):
+    for key in (
+        "hit_bonus_stat",
+        "damage_bonus_stat",
+        "defense_modifier",
+        "healing_stat",
+        "weapon_proficiency_stat",
+    ):
         value = _optional_text(data, key, label)
         if value is not None and value not in character.stats:
             raise ContentError(f"{label}: {key!r} names no stat ({value!r})")
@@ -5524,6 +5538,7 @@ def _load_combat(
         heal_clears_defeat=bool(data.get("heal_clears_defeat", False)),
         rest_requires_positive_hp=bool(data.get("rest_requires_positive_hp", False)),
         stabilize_without_clock=bool(data.get("stabilize_without_clock", False)),
+        weapon_proficiency_stat=_optional_text(data, "weapon_proficiency_stat", label) or "",
         ranges=_load_ranges(data, label),
     )
 

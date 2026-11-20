@@ -155,7 +155,7 @@
   {
     "type": "template",
     "id": "pkg_armored_warrior",
-    "icon": "backpack",
+    "icon": "kit-shieldwall",
     "kind": "kit",
     "name": "Shieldwall Veteran",
     "description": "A line fighter's loadout: pieced armor and a large shield, a short sword for the press and a dagger for the gaps, with a pack, a night's food, and fire for the camp.",
@@ -178,7 +178,7 @@
   {
     "type": "template",
     "id": "pkg_mage_healer_scholar",
-    "icon": "backpack",
+    "icon": "kit-scholar",
     "kind": "kit",
     "name": "Candle Scholar",
     "description": "A reader's loadout: a staff and a pair of daggers, a lantern with oil, a writing kit and paper, a healer's pouch, and a week of food and water, with 80 silver kept back for books, bribes, and reagents.",
@@ -206,7 +206,7 @@
   {
     "type": "template",
     "id": "pkg_ranger_archer",
-    "icon": "backpack",
+    "icon": "kit-scout",
     "kind": "kit",
     "name": "Greenwood Scout",
     "description": "A woodsman's loadout: a buff coat, a large bow and a score of arrows, a dagger and a hand axe for close work, cooking gear and field rations, with 20 silver kept for the road.",
@@ -234,7 +234,7 @@
   {
     "type": "template",
     "id": "pkg_roguish_wanderer",
-    "icon": "backpack",
+    "icon": "kit-knife",
     "kind": "kit",
     "name": "Back-Alley Knife",
     "description": "A quiet entry loadout: a buff coat and small shield, a stiletto and a brace of throwing blades, rope and a grappling hook for the way in and the way out.",
@@ -263,7 +263,7 @@
   {
     "type": "template",
     "id": "pkg_adventuring_peasant",
-    "icon": "backpack",
+    "icon": "kit-levy",
     "kind": "kit",
     "name": "Village Levy",
     "description": "A villager called out to fight: a war shirt and a large shield, a light spear and a dagger, and a bundle of food and fire for the march.",
@@ -287,7 +287,7 @@
   {
     "type": "template",
     "id": "pkg_gentry_wayfarer",
-    "icon": "backpack",
+    "icon": "kit-envoy",
     "kind": "kit",
     "name": "Household Envoy",
     "description": "A messenger sent in a great house's name: a linothorax worn under fine clothes, a short sword, a writing kit and paper, and 20 silver for inns and gate fees.",

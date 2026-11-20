@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Alchemist's Supplies</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="27" y="4" width="10" height="6" rx="2" fill="#8b5e3c"/>
+    <rect x="29" y="10" width="6" height="8" fill="#f5f0e4"/>
+    <circle cx="32" cy="31" r="13" fill="#f5f0e4"/>
+    <path d="M20 34 Q32 28 44 34 Q44 41 32 44 Q20 41 20 34 Z" fill="#6b7fa3"/>
+    <path d="M32 45 Q36 50 32 55 Q28 50 32 45 Z" fill="#e6b53a"/>
+    <path d="M15 58 H49 M21 58 L25 48 M43 58 L39 48"/>
+  </g>
+</svg>

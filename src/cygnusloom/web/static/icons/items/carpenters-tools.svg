@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Carpenter's Tools</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M44 6 H54 V52 H18 V44 H44 Z" fill="#c9b08a"/>
+    <path d="M4 22 Q12 18 16 24 V36 Q12 42 4 38 Z" fill="#8b5e3c"/>
+    <path d="M16 24 H44 V34 H16 Z" fill="#a7adb2"/>
+    <path d="M16 34 L20 39 L24 33 L28 38 L32 32 L36 37 L40 31 L44 34"/>
+  </g>
+</svg>

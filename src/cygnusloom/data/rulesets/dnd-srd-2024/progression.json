@@ -997,6 +997,7 @@
         "multiclass_tools": [],
         "features": {
           "1": [
+            "class-monk-armor-training",
             "class-monk-martial-arts",
             "class-monk-unarmored-defense"
           ],
@@ -1702,6 +1703,7 @@
         "multiclass_tools": [],
         "features": {
           "1": [
+            "class-sorcerer-armor-training",
             "class-sorcerer-innate-sorcery",
             "class-sorcerer-sorcerer-spell-list",
             "class-sorcerer-spellcasting"
@@ -1996,6 +1998,7 @@
         "multiclass_tools": [],
         "features": {
           "1": [
+            "class-wizard-armor-training",
             "class-wizard-arcane-recovery",
             "class-wizard-ritual-adept",
             "class-wizard-spellcasting",

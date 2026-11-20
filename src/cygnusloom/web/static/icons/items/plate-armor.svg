@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Plate Armor</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 20 Q20 8 28 12 L26 24 Q18 26 12 22 Z" fill="#a7adb2"/><path d="M52 20 Q44 8 36 12 L38 24 Q46 26 52 22 Z" fill="#a7adb2"/><path d="M24 14 Q32 20 40 14 L46 20 V40 Q46 52 32 58 Q18 52 18 40 V20 Z" fill="#a7adb2"/><path d="M28 18 Q32 22 36 18" stroke-width="1.5"/><path d="M24 22 H40 M18 36 H46 M22 48 H42" stroke="#e6b53a" stroke-width="2"/><path d="M32 24 V54"/>
+  </g>
+</svg>

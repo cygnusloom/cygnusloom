@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Poisoner's Kit</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="26" y="3" width="12" height="6" rx="2" fill="#8b5e3c"/>
+    <path d="M27 9 H37 V16 H27 Z" fill="#f5f0e4"/>
+    <path d="M22 16 H42 Q47 18 47 24 V50 Q47 56 41 56 H23 Q17 56 17 50 V24 Q17 18 22 16 Z" fill="#f5f0e4"/>
+    <path d="M19 32 H45 V50 Q45 54 41 54 H23 Q19 54 19 50 Z" fill="#6f9a4a"/>
+    <circle cx="32" cy="39" r="6" fill="#f5f0e4"/>
+    <rect x="28.5" y="44" width="7" height="4" rx="1" fill="#f5f0e4"/>
+    <circle cx="29.5" cy="38" r="1.2" fill="#2e2620" stroke-width="1"/>
+    <circle cx="34.5" cy="38" r="1.2" fill="#2e2620" stroke-width="1"/>
+  </g>
+</svg>

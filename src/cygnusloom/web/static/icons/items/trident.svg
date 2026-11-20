@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Trident</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="29" y="30" width="6" height="28" rx="1" fill="#8b5e3c"/><rect x="16" y="27" width="32" height="6" rx="2" fill="#a7adb2"/><path d="M20 10 V28 M32 6 V28 M44 10 V28" stroke-width="3.5"/><path d="M20 10 L23 15 H17 Z M32 6 L35 12 H29 Z M44 10 L47 15 H41 Z" fill="#a7adb2"/><path d="M28 56 H36" stroke="#a7adb2"/>
+  </g>
+</svg>

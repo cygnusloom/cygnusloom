@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Thieves' Tools</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M26 40 H38 V45 H33 V56 H26 Z" fill="#a7adb2"/>
+    <circle cx="12" cy="54" r="5" fill="#6b7fa3"/>
+    <circle cx="52" cy="54" r="5" fill="#6b7fa3"/>
+    <path d="M15 51 L44 12"/>
+    <path d="M44 12 Q50 12 49 18"/>
+    <path d="M49 51 L24 14"/>
+    <path d="M24 14 Q18 14 19 20"/>
+  </g>
+</svg>

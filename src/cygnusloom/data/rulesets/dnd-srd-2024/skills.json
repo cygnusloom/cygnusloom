@@ -24,7 +24,7 @@
     "type": "skill",
     "id": "athletics",
     "name": "Athletics",
-    "icon": "rope",
+    "icon": "muscle",
     "description": "A Strength check to athletics. Add the proficiency bonus when the character is proficient."
   },
   {
@@ -59,7 +59,7 @@
     "type": "skill",
     "id": "investigation",
     "name": "Investigation",
-    "icon": "eye",
+    "icon": "magnifier",
     "description": "A Intelligence check to investigation. Add the proficiency bonus when the character is proficient."
   },
   {
@@ -80,7 +80,7 @@
     "type": "skill",
     "id": "perception",
     "name": "Perception",
-    "icon": "eye",
+    "icon": "ear",
     "description": "A Wisdom check to perception. Add the proficiency bonus when the character is proficient."
   },
   {
@@ -115,7 +115,7 @@
     "type": "skill",
     "id": "stealth",
     "name": "Stealth",
-    "icon": "boots",
+    "icon": "footprints",
     "description": "A Dexterity check to stealth. Add the proficiency bonus when the character is proficient."
   },
   {

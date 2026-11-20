@@ -458,6 +458,23 @@ def test_skill_pick_options_carry_icons():
     assert all(option["icon"] in _registry() for option in options)
 
 
+def test_dnd_catalogue_uses_specific_item_icons():
+    items = {
+        item.id: item for item in content_library().rule_sets["dnd-srd-2024"].marketplace.items
+    }
+    expected = {
+        "shop-longsword": "sword",
+        "shop-rapier": "rapier",
+        "shop-chain-mail": "chain-mail",
+        "shop-plate-armor": "plate-armor",
+        "shop-thieves-tools": "thieves-tools",
+        "shop-rations": "rations",
+        "shop-battleaxe-plus-1": "axe",
+        "shop-adamantine-armor-breastplate": "plate-armor",
+    }
+    assert {item_id: items[item_id].icon for item_id in expected} == expected
+
+
 def test_campaign_pack_draws_item_icons(client_factory: Callable[[], TestClient]):
     client, campaign_id, tools = _fight_client(client_factory, rolled=False)
     tools.give_item(PC, "Rope")

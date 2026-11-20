@@ -33,6 +33,7 @@ from .factories import (
     signed_in_client,
     tools_for,
 )
+from .test_combat import _struck_events
 
 FIGHTER_FIELDS = {
     "stat-str": "15",
@@ -76,6 +77,13 @@ BARBARIAN_FIELDS = {
     "template-class": "barbarian",
     "pick-skill-class_skills-0": "nature",
     "pick-skill-class_skills-1": "survival",
+}
+
+ROGUE_FIELDS = {
+    **{key: value for key, value in FIGHTER_FIELDS.items() if not key.startswith("pick-feature")},
+    "template-class": "rogue",
+    "pick-skill-class_skills-0": "stealth",
+    "pick-skill-class_skills-1": "sleight_of_hand",
 }
 
 
@@ -132,6 +140,33 @@ def test_the_character_sheet_shows_only_the_characters_relevant_resources(
     assert "Pact Magic Slots" not in panel
     assert "Death Save Failures" not in panel
     assert "Soldier: Ability Scores" not in panel
+
+
+def test_the_sheet_groups_spells_by_slot_level_and_marks_prepared_ones(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    from .test_dnd_srd import _prepared_wizard
+
+    client, campaign_id, ctx = _prepared_wizard(app, client_factory)
+    dnd_srd_2024.prepare_spells("Wren", ["magic-missile"], ctx)
+    page = client.get(f"/campaigns/{campaign_id}").text
+    panel = page.partition('id="panel-character"')[2].partition('id="panel-inventory"')[0]
+
+    assert 'id="sheet-spells"' in panel
+    assert "Cantrips" in panel
+    assert "Level 1" in panel and "2 slots" in panel
+    assert "Magic Missile" in panel and "prepared" in panel
+
+
+def test_the_sheet_shows_tool_training(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    client, campaign_id, _ctx = _campaign(client_factory, fields=ROGUE_FIELDS)
+    page = client.get(f"/campaigns/{campaign_id}").text
+    panel = page.partition('id="panel-character"')[2].partition('id="panel-inventory"')[0]
+
+    assert 'id="sheet-tools"' in panel
+    assert "Thieves&#39; Tools" in panel
 
 
 def test_roll_initiative_sets_a_numeric_order_and_unblocks_the_first_turn(
@@ -226,6 +261,40 @@ def test_a_versatile_weapon_uses_its_larger_die_in_two_hands(
     assert tools.attack_dice("Longsword", two_handed=True) == "1d10"
     result = tools.player_attack("Foe", "Longsword", attack_roll=10, damage_roll=5, two_handed=True)
     assert result["target"] == "Foe"
+
+
+def test_a_weapon_the_character_is_not_trained_with_loses_the_proficiency_bonus(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    client, campaign_id, ctx = _campaign(client_factory, fields=WIZARD_FIELDS)
+    tools, _ = _fight(client, campaign_id)
+    dnd_srd_2024.roll_initiative(ctx)
+    tools.adjust_encounter_order(["Rook", "Foe"], current="Rook")
+    tools.give_item("Rook", "Longsword")
+    tools.ready_item("Rook", "Longsword")
+
+    tools.player_attack("Foe", "Longsword", attack_roll=10, damage_roll=5)
+    event = _struck_events(app, campaign_id)[-1]
+    assert event.hit_breakdown is not None
+    modifiers = {item["label"]: item["value"] for item in event.hit_breakdown["modifiers"]}
+    assert modifiers["not proficient"] == -2
+
+
+def test_a_trained_weapon_keeps_the_proficiency_bonus(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    client, campaign_id, ctx = _campaign(client_factory)
+    tools, _ = _fight(client, campaign_id)
+    dnd_srd_2024.roll_initiative(ctx)
+    tools.adjust_encounter_order(["Rook", "Foe"], current="Rook")
+    tools.give_item("Rook", "Longsword")
+    tools.ready_item("Rook", "Longsword")
+
+    tools.player_attack("Foe", "Longsword", attack_roll=10, damage_roll=5)
+    event = _struck_events(app, campaign_id)[-1]
+    assert event.hit_breakdown is not None
+    modifiers = {item["label"]: item["value"] for item in event.hit_breakdown["modifiers"]}
+    assert "not proficient" not in modifiers
 
 
 def test_spell_attacks_use_the_spell_attack_bonus(

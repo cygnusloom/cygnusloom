@@ -76,26 +76,55 @@
 <p class="sheet-note">{{ note }}</p>
 {% endfor %}
 
-{% if sheet_view.abilities %}
-<section class="sheet-section" aria-labelledby="sheet-features">
-  <h3 id="sheet-features">Features &amp; spells</h3>
+{% if sheet_view.tools %}
+<section class="sheet-section" aria-labelledby="sheet-tools">
+  <h3 id="sheet-tools">Tools</h3>
   <p class="sheet-chips">
-    {% for ability in sheet_view.abilities %}
+    {% for tool in sheet_view.tools %}<span class="sheet-chip">{{ tool }}</span>{% endfor %}
+  </p>
+</section>
+{% endif %}
+
+{% if sheet_view.spell_groups %}
+<section class="sheet-section" aria-labelledby="sheet-spells">
+  <h3 id="sheet-spells">Spells</h3>
+  {% for group in sheet_view.spell_groups %}
+  <div class="sheet-spell-level">
+    <h4>{{ group.label }}{% if group.slots is not none %}<span class="muted"> · {{ group.slots }} slot{{ "s" if group.slots != 1 else "" }}</span>{% endif %}</h4>
+    <p class="sheet-chips">
+      {% for spell in group.spells %}
+      <span class="sheet-chip{% if not spell.prepared and group.label != "Cantrips" %} sheet-spell-unprepared{% endif %}">
+        {% if spell.entry %}<a href="#{{ spell.entry }}" data-view-link="compendium">{{ spell.name }}</a>{% else %}{{ spell.name }}{% endif %}
+        {% if spell.prepared %}<span class="sheet-badge">prepared</span>{% endif %}
+      </span>
+      {% endfor %}
+    </p>
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
+
+{% if sheet_view.active_features %}
+<section class="sheet-section" aria-labelledby="sheet-actions">
+  <h3 id="sheet-actions">Actions &amp; features</h3>
+  <p class="sheet-chips">
+    {% for feature in sheet_view.active_features %}
     <span class="sheet-chip">
-      {% if ability.entry %}<a href="#{{ ability.entry }}" data-view-link="compendium">{{ ability.name }}</a>{% else %}{{ ability.name }}{% endif %}
+      {% if feature.entry %}<a href="#{{ feature.entry }}" data-view-link="compendium">{{ feature.name }}</a>{% else %}{{ feature.name }}{% endif %}
+      {% if feature.cost %}<span class="sheet-badge">{{ feature.cost }}</span>{% endif %}
     </span>
     {% endfor %}
   </p>
 </section>
 {% endif %}
 
-{% if sheet_view.prepared %}
-<section class="sheet-section" aria-labelledby="sheet-prepared">
-  <h3 id="sheet-prepared">Prepared</h3>
+{% if sheet_view.passive_features %}
+<section class="sheet-section" aria-labelledby="sheet-passives">
+  <h3 id="sheet-passives">Passive features</h3>
   <p class="sheet-chips">
-    {% for spell in sheet_view.prepared %}
+    {% for feature in sheet_view.passive_features %}
     <span class="sheet-chip">
-      {% if spell.entry %}<a href="#{{ spell.entry }}" data-view-link="compendium">{{ spell.name }}</a>{% else %}{{ spell.name }}{% endif %}
+      {% if feature.entry %}<a href="#{{ feature.entry }}" data-view-link="compendium">{{ feature.name }}</a>{% else %}{{ feature.name }}{% endif %}
     </span>
     {% endfor %}
   </p>

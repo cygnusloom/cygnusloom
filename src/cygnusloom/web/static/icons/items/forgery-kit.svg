@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Forgery Kit</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8 10 L34 7 L40 48 L14 51 Z" fill="#f5f0e4"/>
+    <path d="M16 20 L32 18 M17 27 L33 25 M18 34 L30 32"/>
+    <circle cx="34" cy="50" r="7" fill="#b05a5a"/>
+    <circle cx="34" cy="50" r="3.5"/>
+    <path d="M30 55 L26 61 M38 55 L42 61"/>
+    <path d="M26 56 L50 14"/>
+    <path d="M48 8 Q56 14 52 24 Q48 34 40 36 Q36 22 42 14 Q44 10 48 8 Z" fill="#c9b08a"/>
+    <path d="M26 56 L21 62 L29 60 Z" fill="#2e2620"/>
+  </g>
+</svg>

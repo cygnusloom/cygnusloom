@@ -28,8 +28,8 @@ PYTHONPATH=$PWD/src /workspaces/cygnusloom/.venv/bin/python scripts/test.py \
 PYTHONPATH=$PWD/src /workspaces/cygnusloom/.venv/bin/python scripts/test.py -q
 ```
 
-The current full suite is **3829 passed**; the D&D rule, play, and multiclass files are
-**66 passed**; content validation reports **0 warnings**; `ruff check` is clean on the
+The current full suite is **3834 passed**; the D&D rule, play, and multiclass files are
+**70 passed**; content validation reports **0 warnings**; `ruff check` is clean on the
 changed source and test files.
 
 ## Live matrix
@@ -38,12 +38,12 @@ changed source and test files.
 | --- | --- | --- |
 | Campaign creation | Open New campaign | D&D and Unwritten World are selected by default; choose Standard experience and a Fighter |
 | Campaign creation | Choose D&D, a world, Standard experience, and a Fighter | Character is created with a class kit, background skills, Soldier ability scores, and Fighting Style |
-| Sheet | Open Character | Compact vitals, ability cards, trained skills, and only relevant resources are visible; zero counters and background ASI bookkeeping stay hidden |
-| Inventory | Open Inventory and click an item | Names and slot details only; the compendium entry opens in a dialog without leaving the play view |
+| Sheet | Open Character | Compact vitals, ability cards, trained skills, spells grouped by slot level, active actions, passive features, tools, and only relevant resources are visible; zero counters and background ASI bookkeeping stay hidden |
+| Inventory | Open Inventory and click an item | Each item shows its own icon, names and slot details only; the compendium entry opens in a dialog without leaving the play view |
 | Advancement | Award 300 XP from the debug panel | Level-up page opens; Fighter 2 gains +8 HP and Action Surge; the sheet updates |
 | Multiclass | On the next advancement, choose Wizard in the **Advance in** selector | The page shows Wizard 1; the level grants Intelligence 13 prerequisites, d6 Hit Dice, Wizard features, and multiclass slots; the sheet reads **Classes: Fighter 1 / Wizard 1** |
 | Initiative | Start an encounter with one PC and one monster | `roll_initiative` records every combatant and opens the first turn; the order is fixed across rounds |
-| Weapon combat | Move into reach and attack | The player rolls the d20; the engine adds attack and damage modifiers, logs the strike, and spends the attack action |
+| Weapon combat | Move into reach and attack | The player rolls the d20; the engine adds attack and damage modifiers, omits the proficiency bonus for an untrained weapon, logs the strike, and spends the attack action |
 | Spellcasting | Create a Cleric, pick spells/cantrips on the advancement page, then cast Guiding Bolt | Prepared list and slots show on the sheet; a spell attack prompts for the d20, logs the roll against AC, and spends the slot |
 | Recovery | Harm a PC, stabilize, then heal | Healing above 0 clears the defeated state; a stabilized character is no longer dying |
 | Monster special ability | A dragon breathes acid on an NPC ally and the PC | `resolve_hazard` rolls the NPC's save and damage, `player_save` prompts the PC, and `add_condition` stores the follow-up condition |
@@ -137,9 +137,11 @@ These were previously listed as gaps and now have data, engine support, and test
   Cleric's.
 - The multiclass skill choice is limited to the new class's skill table, as the SRD
   requires.
-- Remaining simplification: weapon and tool proficiencies are recorded as descriptive
-  training rather than gating equipment. The SRD 5.2.1 subclass set has no one-third
-  casters, so `_caster_level` only handles full, half, and Pact Magic classes.
+- Weapon training is structured on class and order features and checked on every player
+  attack: an untrained weapon loses the proficiency bonus. Tool training is recorded on
+  class and background features and shown in the sheet's Tools section. The SRD 5.2.1
+  subclass set has no one-third casters, so `_caster_level` only handles full, half, and
+  Pact Magic classes.
 
 None of these block the core play loop: create a character, explore, start a fight,
 roll attacks and saves, cast spells, take damage, heal, rest, and level up.

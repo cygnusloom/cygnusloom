@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Wondrous Item</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="32" cy="8" r="3" stroke="#e6b53a" stroke-width="2"/><path d="M32 12 L14 24 H50 Z" fill="#e6b53a"/><rect x="16" y="24" width="32" height="22" fill="#c9b08a"/><circle cx="32" cy="35" r="6" fill="#6b7fa3"/><path d="M32 31 L34 35 L32 39 L30 35 Z" fill="#f5f0e4"/><rect x="13" y="46" width="38" height="7" rx="2" fill="#e6b53a"/><path d="M12 30 Q8 35 12 40 M52 30 Q56 35 52 40" stroke="#e6b53a"/>
+  </g>
+</svg>

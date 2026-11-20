@@ -374,8 +374,17 @@ class Feature:
     resource_counter: str = ""
     # Armor categories this feature trains, such as "light", "medium", "heavy", or "shield".
     armor_training: tuple[str, ...] = ()
+    # Weapon training this feature grants: "simple", "martial", a category with a property
+    # such as "martial:finesse", or one weapon feature id such as "weapon:longbow".
+    weapon_training: tuple[str, ...] = ()
+    # Tool proficiencies this feature grants, such as "Thieves' Tools".
+    tool_training: tuple[str, ...] = ()
     # The armor category of an armor item, or "" when it is not armor.
     armor_category: str = ""
+    # The weapon category of a weapon item: "simple", "martial", or "".
+    weapon_category: str = ""
+    # Weapon properties such as "finesse" or "light".
+    weapon_properties: tuple[str, ...] = ()
     # The ids of rules attached to this feature. Their text reaches the GM while the item is carried.
     rules: tuple[str, ...] = ()
     # The rule set's label for the feature, such as the Year a spell belongs to. A template's
@@ -1382,9 +1391,17 @@ def load_feature(
     if not isinstance(active_mark, str):
         raise ContentError(f"{label}: 'active_mark' must be a mark name")
     armor_training = _text_list(data.get("armor_training", []), "armor_training", label)
+    weapon_training = _text_list(data.get("weapon_training", []), "weapon_training", label)
+    tool_training = _text_list(data.get("tool_training", []), "tool_training", label)
     armor_category = data.get("armor_category", "")
     if not isinstance(armor_category, str):
         raise ContentError(f"{label}: 'armor_category' must be text")
+    weapon_category = data.get("weapon_category", "")
+    if weapon_category not in ("", "simple", "martial"):
+        raise ContentError(f"{label}: 'weapon_category' must be simple, martial, or empty")
+    weapon_properties = _text_list(
+        data.get("weapon_properties", []), "weapon_properties", label
+    )
     tag = data.get("tag", "")
     if not isinstance(tag, str):
         raise ContentError(f"{label}: 'tag' must be text")
@@ -1477,7 +1494,11 @@ def load_feature(
         critical_min=critical_min,
         active_mark=active_mark,
         armor_training=armor_training,
+        weapon_training=weapon_training,
+        tool_training=tool_training,
         armor_category=armor_category,
+        weapon_category=weapon_category,
+        weapon_properties=weapon_properties,
         rules=rule_ids(data, label),
         tag=tag,
         rank=rank,

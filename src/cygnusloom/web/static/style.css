@@ -765,6 +765,10 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
   margin: 0 0 0.35rem; color: var(--muted); font-size: 0.72rem; font-weight: 700;
   letter-spacing: 0.09em; text-transform: uppercase;
 }
+.sheet-spell-level { margin-bottom: 0.45rem; }
+.sheet-spell-level h4 { margin: 0 0 0.25rem; color: var(--text); font-size: 0.8rem; font-weight: 600; }
+.sheet-spell-level h4 .muted { font-size: 0.75rem; font-weight: 400; }
+.sheet-spell-unprepared { opacity: 0.62; }
 .sheet-condition {
   display: inline-block; margin: 0 0 0.7rem; padding: 0.2rem 0.65rem;
   border: 1px solid var(--danger); border-radius: 999px; color: var(--danger);
