@@ -459,7 +459,7 @@ def _build(
             "field",
             (character_field.id, character_field.name, name_key(character_field.name)),
         )
-    for campaign_field in rule_set.campaign.fields.values():
+    for campaign_field in rule_set.campaign.offered_fields():
         add(
             "fields",
             f"campaign:{campaign_field.id}",
@@ -653,11 +653,19 @@ def _build(
     # Tables: every character-facing option table and every dice table in the rule set.
     table_fields = {
         field.table
-        for field in (*spec.fields.values(), *rule_set.campaign.fields.values())
+        for field in (*spec.fields.values(), *rule_set.campaign.offered_fields())
         if field.table
+    }
+    # A table that only backs a fixed campaign option is not a table anyone chooses from.
+    fixed_tables = {
+        field.table
+        for field in rule_set.campaign.fields.values()
+        if field.table and rule_set.campaign.fixed_value(field) is not None
     }
     template_tables = {table for template in spec.templates.values() for table in template.tables}
     for table_id, options in rule_set.tables.items():
+        if table_id in fixed_tables and table_id not in table_fields:
+            continue
         name = spec.table_names.get(table_id, table_id.replace("_", " ").title())
         group = "Character Tables" if table_id in table_fields | template_tables else "Tables"
         add(
@@ -1244,10 +1252,10 @@ def _character_creation_draft(spec: CharacterSpec, rule_set: RuleSet) -> _Draft:
         lines.append("Ranked feature tracks: " + ", ".join(spec.ordered_feature_tags))
     if rule_set.plus:
         lines.append(f"Dice plus mode: {rule_set.plus}.")
-    if rule_set.campaign.fields:
+    if rule_set.campaign.offered_fields():
         lines.append(
             "Campaign options: "
-            + ", ".join(field.name for field in rule_set.campaign.fields.values())
+            + ", ".join(field.name for field in rule_set.campaign.offered_fields())
         )
     return _Draft(
         name="Character Creation",

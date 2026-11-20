@@ -408,7 +408,7 @@ def test_gm_records_npc_pronouns_and_they_replay(client_factory: Callable[[], Te
     )
     assert npc["pronouns"] == "she/her"
     assert _actors(app, campaign_id)["Wren"].pronouns == "she/her"
-    text = world.world_state_text(_state(app, campaign_id), SPEC)
+    text = world.world_state_text(_state(app, campaign_id), NO_CAMPAIGN)
     assert "Pronouns: Wren, she/her." in text
     page = client.get(f"/campaigns/{campaign_id}").text
     card_start = page.index('<h4><a href="#" class="statblock-name" data-statblock-name="Wren">')
@@ -434,7 +434,7 @@ def test_npc_without_pronouns_still_works_and_omits_the_line(
     )
     assert npc["pronouns"] is None
     assert _actors(app, campaign_id)["Tobb"].pronouns is None
-    text = world.world_state_text(_state(app, campaign_id), SPEC)
+    text = world.world_state_text(_state(app, campaign_id), NO_CAMPAIGN)
     assert "Tobb" in text
     assert "Pronouns: Tobb" not in text
 
