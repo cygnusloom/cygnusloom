@@ -111,6 +111,7 @@
     {% for feature in sheet_view.active_features %}
     <span class="sheet-chip">
       {% if feature.entry %}<a href="#{{ feature.entry }}" data-view-link="compendium">{{ feature.name }}</a>{% else %}{{ feature.name }}{% endif %}
+      {% if feature.detail %}<span class="sheet-choice">· {{ feature.detail }}</span>{% endif %}
       {% if feature.cost %}<span class="sheet-badge">{{ feature.cost }}</span>{% endif %}
     </span>
     {% endfor %}
@@ -125,6 +126,7 @@
     {% for feature in sheet_view.passive_features %}
     <span class="sheet-chip">
       {% if feature.entry %}<a href="#{{ feature.entry }}" data-view-link="compendium">{{ feature.name }}</a>{% else %}{{ feature.name }}{% endif %}
+      {% if feature.detail %}<span class="sheet-choice">· {{ feature.detail }}</span>{% endif %}
     </span>
     {% endfor %}
   </p>

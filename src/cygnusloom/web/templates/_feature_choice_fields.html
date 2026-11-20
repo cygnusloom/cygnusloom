@@ -28,7 +28,7 @@
   {% else %}
   {% if pick.patterns %}
   <div class="pick-field" data-pick-field data-pattern-source data-pick-group="{{ feature.id }}-{{ pick.id }}" data-slot="-1">
-    {% call pick_control("feature-choice-" ~ feature.id ~ "-" ~ pick.id ~ "-mode", pick.label ~ " pattern", pick.hint, "", empty="", roll=false, clear=false) %}
+    {% call pick_control("feature-choice-" ~ feature.id ~ "-" ~ pick.id ~ "-mode", pick.slot_label ~ " pattern", pick.hint, "", empty="", roll=false, clear=false) %}
       {% for pattern in pick.patterns %}
       <option value="{{ pattern.value }}" data-title="{{ pattern.title }}" data-detail="{{ pattern.detail }}" data-count="{{ pattern.count }}"{% if loop.first %} selected{% endif %}>{{ pattern.title }}</option>
       {% endfor %}
@@ -37,7 +37,7 @@
   {% endif %}
   {% for index in range(pick.count) %}
   <div class="pick-field" data-pick-field data-pick-group="{{ feature.id }}-{{ pick.id }}" data-slot="{{ index }}"{% if pick.groups_from %} data-groups-from="{{ pick.groups_from }}"{% endif %}>
-    {% call pick_control("feature-choice-" ~ feature.id ~ "-" ~ pick.id ~ "-" ~ index, pick.label ~ (" " ~ (index + 1) if pick.count > 1 else ""), pick.hint, "", empty=pick.empty, roll=true, clear=true) %}
+    {% call pick_control("feature-choice-" ~ feature.id ~ "-" ~ pick.id ~ "-" ~ index, pick.slot_label ~ (" " ~ (index + 1) if pick.count > 1 else ""), pick.hint, "", empty=pick.empty, roll=true, clear=true) %}
       <option value="">{{ pick.empty }}</option>
       {% for option in pick.options %}
       <option value="{{ option.value }}" data-title="{{ option.title }}"{% if option.detail %} data-detail="{{ option.detail }}"{% endif %}{% if option.icon %} data-icon="{{ icon_path(option.icon) }}"{% endif %}{% if option.rank %} data-rank="{{ option.rank }}"{% endif %}{% if option.groups %} data-groups="{{ option.groups|join(',') }}"{% endif %}>{{ option.title }}</option>

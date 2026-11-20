@@ -6,6 +6,7 @@
     "name": "The Warrior",
     "icon": "sword",
     "name_suggestion": "Bram",
+    "pronouns": "he/him",
     "description": "A marchguard with a spear, a shield, and the discipline to hold a line. Cairn has no classes, so the background and gear carry the archetype.",
     "priority": ["str", "dex", "wil"],
     "templates": {
@@ -34,6 +35,7 @@
     "name": "The Witch",
     "icon": "cauldron",
     "name_suggestion": "Sela",
+    "pronouns": "she/her",
     "description": "A half-witch who bargains with small spirits and knows which herbs to burn. Magic in Cairn is rare, dangerous, and carried in the pack.",
     "priority": ["wil", "dex", "str"],
     "templates": {
@@ -62,6 +64,7 @@
     "name": "The Surgeon",
     "icon": "tool",
     "name_suggestion": "Wenna",
+    "pronouns": "she/her",
     "description": "A barber-surgeon with steady hands, a sharp knife, and a bag of useful things. The party's best chance of surviving a bad night.",
     "priority": ["wil", "dex", "str"],
     "templates": {

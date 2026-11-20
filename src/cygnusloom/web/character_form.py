@@ -185,6 +185,7 @@ def creation_view(
             "icon": preset.icon,
             "selections": {
                 "name": preset.suggested_name,
+                "pronouns": preset.pronouns,
                 "priority": list(preset.priority),
                 "stats": dict(preset.stats),
                 "templates": dict(preset.templates),
@@ -403,6 +404,8 @@ def campaign_submission_from_form(spec: CampaignSpec, form: FormData) -> dict[st
             options[field.id] = fixed
             continue
         value = form_text(form, CAMPAIGN_PREFIX + field.id)
+        if not value and len(spec.tables[field.table]) == 1:
+            value = spec.tables[field.table][0].value
         if not value:
             raise InvalidInput(f"Choose {field.name}")
         options[field.id] = value

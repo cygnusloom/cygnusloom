@@ -105,7 +105,7 @@
       <p class="muted">These options are shared by every character in the campaign, and they are chosen once. Each panel explains what it changes; use the dice button to roll one or the randomize buttons to fill the form.</p>
       <div class="creation-grid">
         {% for field in options.choice_fields %}
-          {{ choice_panel("campaign-" ~ field.id, field.name, field.options, field.description) }}
+          {{ choice_panel("campaign-" ~ field.id, field.name, field.options, field.description, selected=field.value) }}
         {% endfor %}
         {% for field in options.text_fields %}
           {{ text_panel("campaign-" ~ field.id, field.name, field.description) }}
@@ -206,7 +206,7 @@
       {% endif %}
       <p class="muted form-hint" data-choice-note role="status" hidden>Some earlier choices were cleared because they no longer fit this selection.</p>
       {% for section in character.sections %}
-      <section class="creation-category" aria-labelledby="category-{{ section.id }}">
+      <section class="creation-category" aria-labelledby="category-{{ section.id }}"{% if section.panels|length == 1 and section.panels[0].kind == "feature_choices" %} data-feature-choice-category hidden{% endif %}>
         <h3 id="category-{{ section.id }}">{{ section.label }}</h3>
         {% if section.description %}<p class="muted">{{ section.description }}</p>{% endif %}
         <div class="creation-grid">

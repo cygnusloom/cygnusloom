@@ -433,6 +433,18 @@
         control.disabled = !shown;
       }
     }
+    // The whole Feature choices panel is left out until a feature that asks for a choice is
+    // taken, so a fresh form does not show an empty section.
+    for (const section of document.querySelectorAll("[data-feature-choice-section]")) {
+      section.hidden = ![
+        ...section.querySelectorAll("[data-feature-choice-for]"),
+      ].some((panel) => !panel.hidden);
+    }
+    for (const category of document.querySelectorAll("[data-feature-choice-category]")) {
+      category.hidden = ![
+        ...category.querySelectorAll("[data-feature-choice-for]"),
+      ].some((panel) => !panel.hidden);
+    }
     refreshFeatureChoices();
   }
 
@@ -1369,6 +1381,14 @@
     refreshTemplateChoices();
     for (const kind of Object.keys(chosenTemplates)) revealTables(kind);
     for (const radio of templateRadios) refreshSummary(radio.name);
+    if (preset.pronouns) {
+      const radio = [...document.querySelectorAll('input[type="radio"][name="pronouns"]')]
+        .find((item) => item.value === preset.pronouns);
+      if (radio) {
+        radio.checked = true;
+        refreshSummary("pronouns");
+      }
+    }
     for (const [fieldId, value] of Object.entries(preset.fields || {})) {
       setFieldValue(fieldId, value);
     }

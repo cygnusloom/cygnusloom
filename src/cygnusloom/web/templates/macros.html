@@ -231,9 +231,9 @@
   {% endif %}
 {%- endmacro %}
 
-{% macro choice(name, value, title, detail=None, data_select=None, freeform=false, group=None, data_compatible_with=None, data_template_requirements=None, data_choice_key=None, summary=None, grants=None, icon=None, data_feature_grants=None) -%}
+{% macro choice(name, value, title, detail=None, data_select=None, freeform=false, group=None, data_compatible_with=None, data_template_requirements=None, data_choice_key=None, summary=None, grants=None, icon=None, data_feature_grants=None, checked=false) -%}
   <label class="choice"{% if data_compatible_with is not none %} data-compatible-with='{{ data_compatible_with|tojson }}'{% endif %}{% if data_template_requirements is not none %} data-template-requirements='{{ data_template_requirements|tojson }}'{% endif %}>
-    <input type="radio" name="{{ name }}" value="{{ value }}" data-title="{{ title }}"{% if icon %} data-icon="{{ icon_path(icon) }}"{% endif %}{% if summary %} data-summary="{{ summary }}"{% endif %}{% if data_select %} data-template-select="{{ data_select }}"{% endif %}{% if data_choice_key is not none %} data-choice-key="{{ data_choice_key }}"{% endif %}{% if data_feature_grants is not none %} data-feature-grants='{{ data_feature_grants|tojson }}'{% endif %}{% if freeform %} data-freeform{% endif %}{% if group %} data-group="{{ group }}"{% endif %}>
+    <input type="radio" name="{{ name }}" value="{{ value }}" data-title="{{ title }}"{% if icon %} data-icon="{{ icon_path(icon) }}"{% endif %}{% if summary %} data-summary="{{ summary }}"{% endif %}{% if data_select %} data-template-select="{{ data_select }}"{% endif %}{% if data_choice_key is not none %} data-choice-key="{{ data_choice_key }}"{% endif %}{% if data_feature_grants is not none %} data-feature-grants='{{ data_feature_grants|tojson }}'{% endif %}{% if freeform %} data-freeform{% endif %}{% if group %} data-group="{{ group }}"{% endif %}{% if checked %} checked{% endif %}>
     {% if icon %}<img class="choice-icon" src="{{ icon_path(icon) }}" alt="">{% endif %}
     <span>{{ title }}</span>
     {% if grants %}<span class="choice-grants">{% for grant in grants %}<span class="tag">{{ grant }}</span>{% endfor %}</span>{% endif %}
@@ -268,13 +268,13 @@
 {# A choice from a table, as a panel in the creation grid. The options open in a dialog. #}
 {# A restriction is {field, values, groups}: while the field takes one of the values, only options in the groups can be chosen. #}
 {# A flavor field also takes the player's own words, so it shows a write-in box under the choices. #}
-{% macro choice_panel(name, label, options, description=None, restriction=None, freeform=false) -%}
+{% macro choice_panel(name, label, options, description=None, restriction=None, freeform=false, selected=None) -%}
   <fieldset class="creation-panel" data-choice-panel="{{ name }}" data-choice-label="{{ label }}" aria-labelledby="panel-{{ name }}"{% if restriction %} data-restrict-field="field-{{ restriction.field }}" data-restrict-values='{{ restriction['values']|tojson }}' data-restrict-groups='{{ restriction['groups']|tojson }}'{% endif %}>
     <h3 id="panel-{{ name }}">{{ label }}</h3>
     {% if description %}<p class="muted panel-hint">{{ description }}</p>{% endif %}
     {% call choice_picker(name, label, description) %}
       {% for option in options %}
-        {{ choice(name, option.value, option.title, option.detail, group=option.group, summary=option.summary) }}
+        {{ choice(name, option.value, option.title, option.detail, group=option.group, summary=option.summary, checked=option.value == selected) }}
       {% endfor %}
     {% endcall %}
     {% if freeform %}

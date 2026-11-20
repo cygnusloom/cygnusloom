@@ -29,7 +29,7 @@ from cygnusloom.content.icons import (
     resolve_icon,
     template_fallback,
 )
-from cygnusloom.rules.dice import FORMULA, is_formula, roll_total
+from cygnusloom.rules.dice import FORMULA, is_formula, roll_total, roll_values
 
 # How freely a rolled swap group may rearrange its values: one trade of a pair, or any order.
 SWAP_MODES = ("one", "any")
@@ -237,6 +237,9 @@ class Stat:
     high: int
     # How freely a rolled swap group may rearrange its values: "one" trade of a pair, or "any".
     swap: str = "one"
+    # How many of the rolled dice are kept, highest first, such as 4d6 keep 3. Zero keeps them
+    # all. A kept roll still ranges from `keep` to `keep` times the die's sides.
+    keep: int = 0
     # The pool a stat with no formula is assigned from. Every stat in its group shares the pool.
     values: tuple[int, ...] = ()
     # The stat's value in the rule set's standard array. A rolled swap group gives every stat
@@ -759,6 +762,8 @@ class CharacterPreset:
     description: str
     icon: str = FALLBACK_TEMPLATE
     suggested_name: str = ""
+    # The pronouns the ready-made character uses, such as "she/her".
+    pronouns: str = ""
     priority: tuple[str, ...] = ()
     stats: Mapping[str, int] = field(default_factory=dict)
     templates: Mapping[str, str] = field(default_factory=dict)
@@ -1156,6 +1161,7 @@ PRESET_KEYS = {
     "icon",
     "looks_like",
     "name_suggestion",
+    "pronouns",
     "priority",
     "stats",
     "templates",
@@ -1234,10 +1240,12 @@ def _character_preset(
     name = data.get("name", definition.id)
     description = data.get("description", "")
     suggested_name = data.get("name_suggestion", "")
+    pronouns = data.get("pronouns", "")
     for key, text in (
         ("name", name),
         ("description", description),
         ("name_suggestion", suggested_name),
+        ("pronouns", pronouns),
     ):
         if not isinstance(text, str):
             raise ContentError(f"{label}: {key!r} must be text")
@@ -1248,6 +1256,7 @@ def _character_preset(
         description=description.strip(),
         icon=icon or FALLBACK_TEMPLATE,
         suggested_name=suggested_name.strip(),
+        pronouns=pronouns.strip(),
         priority=priority,
         stats=stats,
         templates=templates,
@@ -1551,6 +1560,13 @@ def _stat(definition: Definition, template: str) -> Stat:
     if match is None:
         raise ContentError(f"{label}: 'formula' must be a dice formula such as '3d6'")
     count, sides = int(match.group(1)), int(match.group(2))
+    keep = definition.data.get("keep", 0)
+    if isinstance(keep, bool) or not isinstance(keep, int) or not 0 <= keep <= count:
+        raise ContentError(f"{label}: 'keep' must be a whole number from 0 to {count}")
+    if keep == count:
+        keep = 0
+    low = keep or count
+    high = (keep or count) * sides
     standard = definition.data.get("standard")
     if standard is not None:
         if isinstance(standard, bool) or not isinstance(standard, int):
@@ -1559,10 +1575,8 @@ def _stat(definition: Definition, template: str) -> Stat:
             raise ContentError(f"{label}: a stat with 'standard' needs a 'swap_group'")
         if plus_modifier:
             raise ContentError(f"{label}: a stat with 'standard' cannot add a 'plus_modifier'")
-        if not count <= standard <= count * sides:
-            raise ContentError(
-                f"{label}: 'standard' must be within the stat's roll ({count}-{count * sides})"
-            )
+        if not low <= standard <= high:
+            raise ContentError(f"{label}: 'standard' must be within the stat's roll ({low}-{high})")
         if minimum is not None and standard < minimum:
             raise ContentError(f"{label}: 'standard' must be at least its 'minimum'")
     return Stat(
@@ -1570,9 +1584,10 @@ def _stat(definition: Definition, template: str) -> Stat:
         name=name,
         formula=formula,
         swap_group=swap,
-        low=count,
-        high=count * sides,
+        low=low,
+        high=high,
         swap=swap_mode,
+        keep=keep,
         standard=standard,
         modifier_bands=bands,
         plus_modifier=plus_modifier,
@@ -1627,6 +1642,7 @@ def _derived_stat(definition: Definition, label: str, name: str) -> Stat:
         "plus_modifier",
         "plus_modifier_per_level",
         "standard",
+        "keep",
     ):
         if key in data:
             raise ContentError(f"{label}: a stat with 'derived' takes no {key!r}")
@@ -1821,6 +1837,8 @@ def _assigned_stat(
 ) -> Stat:
     if "formula" in definition.data:
         raise ContentError(f"{label}: give 'formula' or 'values', not both")
+    if "keep" in definition.data:
+        raise ContentError(f"{label}: a stat with 'values' takes no 'keep'")
     if "standard" in definition.data:
         raise ContentError(f"{label}: a stat with 'values' takes no 'standard'")
     if "swap" in definition.data:
@@ -4346,12 +4364,23 @@ def roll_stats(spec: CharacterSpec, rng: random.Random, *, plus: str) -> dict[st
     has no value of its own, and is left out."""
     fixed = fixed_stats(spec)
     stats = {
-        s.id: fixed[s.id] if s.formula is None else roll_total(s.formula, rng, plus=plus)
+        s.id: fixed[s.id] if s.formula is None else _roll_stat(s, rng, plus)
         for s in spec.stats.values()
         if s.derived is None
     }
     _apply_plus_modifiers(spec, stats)
     return stats
+
+
+def _roll_stat(stat: Stat, rng: random.Random, plus: str) -> int:
+    """Roll one stat. A stat with `keep` rolls its dice and keeps the highest of them, as the
+    2024 D&D rules do for `4d6` keep 3."""
+    if stat.formula is None:
+        raise ValueError(f"stat {stat.id!r} has no formula to roll")
+    if not stat.keep:
+        return roll_total(stat.formula, rng, plus=plus)
+    values, _total = roll_values(stat.formula, rng, plus=plus)
+    return sum(sorted(values, reverse=True)[: stat.keep])
 
 
 def _apply_plus_modifiers(spec: CharacterSpec, stats: dict[str, int]) -> None:
@@ -4428,7 +4457,7 @@ def resolve(
         if s.id in given_stats
         else fixed[s.id]
         if s.formula is None
-        else roll_total(s.formula, rng, plus=plus)
+        else _roll_stat(s, rng, plus)
         for s in spec.stats.values()
         if s.derived is None
     }
@@ -4826,6 +4855,7 @@ def feature_choice_views(spec: CharacterSpec, feature: Feature) -> tuple[Mapping
                 "id": pick.id,
                 "kind": pick.kind,
                 "label": pick.label,
+                "slot_label": _singular(pick.label),
                 "count": pick.count,
                 "empty": _choice_empty_label(pick),
                 "hint": _choice_hint(pick),
@@ -4879,6 +4909,12 @@ def _feature_choice_option_view(
         if option is not None:
             title = option.name or option.description
             detail = option.description if option.name is not None else None
+    elif pick.kind == "feature" and pick.feature_type == "item" and value in spec.items:
+        item = spec.items[value]
+        title = item.name
+        detail = _item_option_detail(item)
+        icon = item.icon or ""
+        groups = item.groups
     elif value in spec.features:
         feature = spec.features[value]
         title = feature.name
@@ -4896,6 +4932,43 @@ def _feature_choice_option_view(
         "rank": rank,
         "groups": list(groups),
     }
+
+
+def _item_option_detail(item: ItemTemplate) -> str | None:
+    """A short line under a weapon or armor the player may choose, such as "Martial melee ·
+    1d8 slashing · Mastery: Topple" instead of a bare item id."""
+    parts: list[str] = []
+    if item.weapon_category:
+        kind = item.weapon_category.capitalize()
+        if "melee" in item.groups:
+            kind += " melee"
+        elif "ranged" in item.groups:
+            kind += " ranged"
+        parts.append(kind)
+    elif item.armor_category:
+        parts.append(f"{item.armor_category.capitalize()} armor")
+    elif item.category:
+        parts.append(item.category.capitalize())
+    if item.damage:
+        damage = item.damage
+        if item.damage_type:
+            damage += f" {item.damage_type}"
+        if item.versatile_damage:
+            damage += f" (versatile {item.versatile_damage})"
+        parts.append(damage)
+    if item.mastery:
+        parts.append(f"Mastery: {item.mastery.capitalize()}")
+    return " · ".join(parts) or None
+
+
+def _singular(label: str) -> str:
+    """A singular noun from a pick label, so a multi-slot pick reads "Weapon 1" and "Ability
+    2" rather than "Weapons 1"."""
+    if label.endswith("ies"):
+        return label[:-3] + "y"
+    if label.endswith("s") and not label.endswith(("ss", "us", "is")):
+        return label[:-1]
+    return label
 
 
 def _choice_empty_label(pick: FeaturePick) -> str:
@@ -4919,11 +4992,7 @@ def _choice_hint(pick: FeaturePick) -> str:
 def _pattern_title(pick: FeaturePick, amounts: tuple[int, ...]) -> str:
     """A readable label for an ability-score pattern: "Each ability +1" or "One ability +2,
     another +1" rather than a bare "1 / 1 / 1" or "2 / 1"."""
-    noun = pick.label.lower()
-    if noun.endswith("ies"):
-        noun = noun[:-3] + "y"
-    elif noun.endswith("s") and not noun.endswith("ss"):
-        noun = noun[:-1]
+    noun = _singular(pick.label.lower())
     if len(set(amounts)) == 1 and len(amounts) > 1:
         return f"Each {noun} +{amounts[0]}"
     if len(amounts) == 1:
@@ -5549,6 +5618,16 @@ def _skill_name(spec: CharacterSpec, skill: str) -> str:
     return found.name if found is not None else skill
 
 
+def choice_value_name(spec: CharacterSpec, value: str) -> str:
+    """The readable name of a feature-choice value: a skill, stat, item, or feature, or the id
+    itself when none of them define it."""
+    for source in (spec.skills, spec.stats, spec.items, spec.features):
+        found = source.get(value)
+        if found is not None:
+            return found.name
+    return value
+
+
 def kind_label(kind: str) -> str:
     """A readable label for a template kind. A trailing number names a later selection of the
     same kind, so `class2` reads as "Second Class"."""
@@ -5615,14 +5694,7 @@ def describe(spec: CharacterSpec, sheet: Sheet, *, show_all_counters: bool = Tru
                 for value in values
             ]
             if chosen:
-                chosen = [
-                    spec.skills[value].name
-                    if value in spec.skills
-                    else spec.stats[value].name
-                    if value in spec.stats
-                    else value
-                    for value in chosen
-                ]
+                chosen = [choice_value_name(spec, value) for value in chosen]
                 name += f" — {', '.join(chosen)}"
             notes = [
                 str(effect["text"])

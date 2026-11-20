@@ -6,6 +6,7 @@
     "name": "The Rebel",
     "icon": "dagger",
     "name_suggestion": "Cass",
+    "pronouns": "they/them",
     "description": "A third-year rebel who fights with Transfiguration and Warding, knows the back stairs, and is always ready to duel. The closest thing the academy has to a warrior.",
     "priority": ["cunning", "practice", "charm", "theory", "alchemy"],
     "templates": {
@@ -34,6 +35,7 @@
     "name": "The Prodigy",
     "icon": "rune-circle",
     "name_suggestion": "Elowen",
+    "pronouns": "she/her",
     "description": "A third-year prodigy whose magic comes easily and dangerously. Elemental and Charms spells, a deep practice trait, and the confidence to use both.",
     "priority": ["practice", "charm", "cunning", "theory", "alchemy"],
     "templates": {
@@ -62,6 +64,7 @@
     "name": "The Alchemist",
     "icon": "alchemy-table",
     "name_suggestion": "Tamsin",
+    "pronouns": "they/them",
     "description": "A third-year alchemist and healer with a portable lab, a shelf of careful notes, and the potions the party will be glad of later.",
     "priority": ["alchemy", "theory", "practice", "charm", "cunning"],
     "templates": {

@@ -3872,6 +3872,7 @@ CHARACTER_DEFINITION_KEYS: Mapping[str, frozenset[str]] = {
             "minimum",
             "values",
             "formula",
+            "keep",
             "standard",
             "hidden",
             "sheet_hidden",

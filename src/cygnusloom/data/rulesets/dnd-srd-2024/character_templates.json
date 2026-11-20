@@ -6,6 +6,7 @@
     "name": "The Paladin",
     "icon": "shield",
     "name_suggestion": "Aelric",
+    "pronouns": "he/him",
     "description": "A human soldier sworn to a sacred oath: heavy armour, a longsword, and divine magic that mends and smites. The simplest sturdy warrior to learn the rules with.",
     "priority": ["str", "cha", "con", "wis", "dex", "int"],
     "templates": {
@@ -20,7 +21,9 @@
     },
     "feature_choices": {
       "background-asi-soldier:scores:pattern": ["1"],
-      "background-asi-soldier:scores": ["str", "con"]
+      "background-asi-soldier:scores": ["str", "con"],
+      "species-human-size:size": ["Medium"],
+      "class-paladin-weapon-mastery:weapons": ["weapon-longsword", "weapon-javelin"]
     },
     "grants": {
       "soldier": "a",
@@ -38,6 +41,7 @@
     "name": "The Wizard",
     "icon": "staff",
     "name_suggestion": "Ilyana",
+    "pronouns": "she/her",
     "description": "A high elf scholar with a spellbook, a handful of cantrips, and the best spell list in the game. Fragile at first level, but every level adds more answers.",
     "priority": ["int", "dex", "con", "wis", "cha", "str"],
     "templates": {
@@ -74,6 +78,7 @@
     "name": "The Cleric",
     "icon": "altar",
     "name_suggestion": "Hesta",
+    "pronouns": "she/her",
     "description": "A dwarf acolyte who heals, blesses, and turns the tide without hogging the spotlight. Divine Order: Protector adds martial weapons and heavy armour.",
     "priority": ["wis", "con", "cha", "str", "dex", "int"],
     "templates": {

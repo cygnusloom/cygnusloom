@@ -8,6 +8,14 @@
     "tag": "species",
     "rank": 0,
     "min_level": 0,
+    "picks": [
+      {
+        "id": "size",
+        "kind": "option",
+        "label": "Size",
+        "table": "human_size"
+      }
+    ],
     "turn_resource": ""
   },
   {

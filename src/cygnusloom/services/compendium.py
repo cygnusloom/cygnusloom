@@ -1272,7 +1272,8 @@ def _stat_draft(stat: Stat) -> _Draft:
         lines.append(f"Derived: {_derived_text(stat.derived)}")
     else:
         if stat.formula:
-            lines.append(f"Roll: {stat.formula}")
+            kept = f", keep the highest {stat.keep}" if stat.keep else ""
+            lines.append(f"Roll: {stat.formula}{kept}")
         if stat.values:
             lines.append("Assigned values: " + ", ".join(str(value) for value in stat.values))
         lines.append(f"Range: {stat.low}-{stat.high}")

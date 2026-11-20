@@ -6,6 +6,7 @@
     "name": "The Warrior",
     "icon": "sword",
     "name_suggestion": "Aldric",
+    "pronouns": "he/him",
     "description": "A soldier turned adventurer with a shield, a short sword, and the Armsmaster focus. Straightforward, durable, and good at hitting things.",
     "priority": ["str", "dex", "con", "wis", "cha", "int"],
     "templates": {
@@ -35,6 +36,7 @@
     "name": "The Mage",
     "icon": "wand",
     "name_suggestion": "Sable",
+    "pronouns": "she/her",
     "description": "A scholar of the High Mage tradition with a staff, a dagger, and a handful of spells. Armored Magic keeps them standing when the line breaks.",
     "priority": ["int", "con", "dex", "wis", "cha", "str"],
     "templates": {
@@ -70,6 +72,7 @@
     "name": "The Healer",
     "icon": "potion",
     "name_suggestion": "Maren",
+    "pronouns": "she/her",
     "description": "A partial Healer paired with a partial Expert: the party's physician, negotiator, and steady hand. Empowered Healer keeps a fallen companion in the fight.",
     "priority": ["int", "con", "dex", "wis", "cha", "str"],
     "templates": {

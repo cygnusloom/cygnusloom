@@ -43,6 +43,20 @@
   },
   {
     "type": "table",
+    "id": "human_size",
+    "options": [
+      {
+        "name": "Medium",
+        "description": "About 4–7 feet tall. You occupy a 5-foot square."
+      },
+      {
+        "name": "Small",
+        "description": "About 2–4 feet tall. You occupy a 5-foot square."
+      }
+    ]
+  },
+  {
+    "type": "table",
     "id": "names",
     "options": [
       "Aelric",
