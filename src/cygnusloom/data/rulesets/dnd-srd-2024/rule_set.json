@@ -3,10 +3,10 @@
     "type": "rule_set",
     "id": "dnd-srd-2024",
     "icon": "sword",
-    "name": "Dungeons & Dragons 5.5e (SRD 5.2)",
-    "blurb": "The 2024 D&D rules from the System Reference Document: d20 checks, twelve classes, nine species, spells, and a bestiary of monsters.",
+    "name": "SRD 5.2.1 (5E compatible)",
+    "blurb": "A 2024 fifth-edition-compatible fantasy d20 ruleset: d20 checks, twelve classes, nine species, spells, and a bestiary of monsters.",
     "third_party": true,
-    "description": "Character creation and play for the 2024 edition of the world's best-known fantasy roleplaying game, using the System Reference Document 5.2.1. Abilities are assigned from the standard array, species and background shape the character, and one of twelve classes carries them from level 1 to 20. Checks and saves are d20 plus an ability modifier and the proficiency bonus; spellcasters track slots level by level. The full SRD spell list, bestiary, and magic item catalogue are included. Text adapted from the System Reference Document 5.2.1, licensed under CC BY 4.0.",
+    "description": "Character creation and play for a 2024 fifth-edition-compatible fantasy d20 ruleset, built from the System Reference Document 5.2.1. Abilities are assigned from the standard array, species and background shape the character, and one of twelve classes carries them from level 1 to 20. Checks and saves are d20 plus an ability modifier and the proficiency bonus; spellcasters track slots level by level. The full SRD spell list, bestiary, and magic item catalogue are included. Text adapted from the System Reference Document 5.2.1, licensed under CC BY 4.0. See content credits for attribution.",
     "capabilities": {
       "magic": "prepared",
       "travel": "none",

@@ -1,4 +1,4 @@
-# D&D 5.5e (SRD 5.2) playtest
+# SRD 5.2.1 (5E compatible) playtest
 
 This is the test plan and record for the bundled `dnd-srd-2024` rule set. The source of
 truth is the shipped `SRD_CC_v5.2.1.pdf`; all content is regenerated with
