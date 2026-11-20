@@ -131,7 +131,9 @@
     "looks_like": "chain-mail",
     "size": "normal",
     "armor": 4,
-    "encumbrance_checks": ["sneak"],
+    "encumbrance_checks": [
+      "sneak"
+    ],
     "description": "Medium armor: AC 14. Encumbrance 1; not discreet, and the load penalizes physical Sneak checks."
   },
   {
@@ -141,7 +143,9 @@
     "looks_like": "chain-mail",
     "size": "large",
     "armor": 5,
-    "encumbrance_checks": ["sneak"],
+    "encumbrance_checks": [
+      "sneak"
+    ],
     "description": "Medium armor: AC 15. Encumbrance 2; not discreet, and the load penalizes physical Sneak checks."
   },
   {
@@ -151,7 +155,9 @@
     "looks_like": "chain-mail",
     "size": "huge",
     "armor": 6,
-    "encumbrance_checks": ["sneak"],
+    "encumbrance_checks": [
+      "sneak"
+    ],
     "description": "Medium armor: AC 16. Encumbrance 3; not discreet, and the load penalizes physical Sneak checks."
   },
   {
@@ -161,7 +167,10 @@
     "looks_like": "chain-mail",
     "size": "large",
     "armor": 6,
-    "encumbrance_checks": ["sneak", "exert"],
+    "encumbrance_checks": [
+      "sneak",
+      "exert"
+    ],
     "description": "Heavy armor: AC 16. Encumbrance 2; the load penalizes Sneak and Exert checks."
   },
   {
@@ -171,7 +180,10 @@
     "looks_like": "plate-armor",
     "size": "large",
     "armor": 7,
-    "encumbrance_checks": ["sneak", "exert"],
+    "encumbrance_checks": [
+      "sneak",
+      "exert"
+    ],
     "description": "Heavy armor: AC 17. Encumbrance 2; the load penalizes Sneak and Exert checks."
   },
   {
@@ -181,7 +193,10 @@
     "looks_like": "plate-armor",
     "size": "huge",
     "armor": 9,
-    "encumbrance_checks": ["sneak", "exert"],
+    "encumbrance_checks": [
+      "sneak",
+      "exert"
+    ],
     "description": "Heavy armor: AC 19. Encumbrance 3; the load penalizes Sneak and Exert checks."
   },
   {
@@ -191,7 +206,10 @@
     "looks_like": "plate-armor",
     "size": "huge",
     "armor": 6,
-    "encumbrance_checks": ["sneak", "exert"],
+    "encumbrance_checks": [
+      "sneak",
+      "exert"
+    ],
     "description": "Heavy armor: AC 16, but proof against ordinary weapons. Non-magical melee and thrown attacks cannot hurt the wearer unless the weapon is two-handed, has Shock AC 16 or more, or the wearer is grappled. Encumbrance 3."
   },
   {
@@ -201,7 +219,9 @@
     "looks_like": "shield",
     "size": "normal",
     "armor": 3,
-    "flags": ["shield"],
+    "flags": [
+      "shield"
+    ],
     "description": "Shield: AC 13 when no better armor is worn; with armor of equal or better AC it adds +1 instead. Encumbrance 1. It also stops the first Shock each round."
   },
   {
@@ -211,7 +231,9 @@
     "looks_like": "shield",
     "size": "normal",
     "armor": 4,
-    "flags": ["shield"],
+    "flags": [
+      "shield"
+    ],
     "description": "Shield: AC 14 when no better armor is worn; with armor of equal or better AC it adds +1 instead. Encumbrance 1. It also stops the first Shock each round."
   },
   {
@@ -222,10 +244,16 @@
     "size": "normal",
     "damage": "1d6",
     "skill": "stab",
-    "attributes": ["str", "dex"],
+    "attributes": [
+      "str",
+      "dex"
+    ],
     "shock": 1,
     "shock_ac": 15,
-    "ranges": {"short": 10, "long": 30},
+    "ranges": {
+      "short": 10,
+      "long": 30
+    },
     "description": "One-handed axe. 1d6 damage, Shock 1 against AC 15 or less. Throwable to 10/30 feet. Encumbrance 1."
   },
   {
@@ -236,7 +264,9 @@
     "size": "large",
     "damage": "1d10",
     "skill": "stab",
-    "attributes": ["str"],
+    "attributes": [
+      "str"
+    ],
     "shock": 3,
     "shock_ac": 15,
     "description": "Two-handed war axe. 1d10 damage, Shock 3 against AC 15 or less. Encumbrance 2."
@@ -249,7 +279,10 @@
     "size": "normal",
     "damage": "1d4",
     "skill": "stab",
-    "attributes": ["str", "dex"],
+    "attributes": [
+      "str",
+      "dex"
+    ],
     "shock": 0,
     "shock_ac": 0,
     "description": "Small weighted club. 1d4 damage, no Shock, subtle, and easily used to leave a foe alive. Encumbrance 1."
@@ -262,10 +295,15 @@
     "size": "large",
     "damage": "1d8",
     "skill": "shoot",
-    "attributes": ["dex"],
+    "attributes": [
+      "dex"
+    ],
     "shock": 0,
     "shock_ac": 0,
-    "ranges": {"short": 100, "long": 600},
+    "ranges": {
+      "short": 100,
+      "long": 600
+    },
     "description": "Two-handed warbow. 1d8 damage, range 100/600 feet, no Shock. Encumbrance 2."
   },
   {
@@ -276,10 +314,15 @@
     "size": "normal",
     "damage": "1d6",
     "skill": "shoot",
-    "attributes": ["dex"],
+    "attributes": [
+      "dex"
+    ],
     "shock": 0,
     "shock_ac": 0,
-    "ranges": {"short": 50, "long": 300},
+    "ranges": {
+      "short": 50,
+      "long": 300
+    },
     "description": "Two-handed hunting bow. 1d6 damage, range 50/300 feet, no Shock. Encumbrance 1."
   },
   {
@@ -290,7 +333,10 @@
     "size": "normal",
     "damage": "1d6",
     "skill": "stab",
-    "attributes": ["str", "dex"],
+    "attributes": [
+      "str",
+      "dex"
+    ],
     "shock": 2,
     "shock_ac": 13,
     "description": "Strapped claw weapons. 1d6 damage, Shock 2 against AC 13 or less, easily concealed. Encumbrance 1."
@@ -303,7 +349,10 @@
     "size": "normal",
     "damage": "1d4",
     "skill": "stab",
-    "attributes": ["str", "dex"],
+    "attributes": [
+      "str",
+      "dex"
+    ],
     "shock": 0,
     "shock_ac": 0,
     "description": "A length of wood. 1d4 damage, no Shock, throwable to 10/30 feet, easily used to leave a foe alive. Encumbrance 1."
@@ -316,7 +365,9 @@
     "size": "large",
     "damage": "1d10",
     "skill": "stab",
-    "attributes": ["str"],
+    "attributes": [
+      "str"
+    ],
     "shock": 2,
     "shock_ac": 15,
     "description": "A heavy two-handed club. 1d10 damage, Shock 2 against AC 15 or less. Encumbrance 2."
@@ -324,28 +375,41 @@
   {
     "type": "feature",
     "id": "crossbow",
-    "ranges": {"short": 100, "long": 300},
+    "ranges": {
+      "short": 100,
+      "long": 300
+    },
     "name": "Crossbow",
     "looks_like": "crossbow",
     "size": "normal",
     "damage": "1d10",
     "skill": "shoot",
-    "attributes": ["dex"],
+    "attributes": [
+      "dex"
+    ],
     "shock": 0,
     "shock_ac": 0,
-    "flags": ["no_unskilled_penalty"],
+    "flags": [
+      "no_unskilled_penalty"
+    ],
     "description": "Two-handed crossbow. 1d10 damage, range 100/300 feet, no Shock. Reloading takes a Main Action. Encumbrance 1."
   },
   {
     "type": "feature",
     "id": "dagger",
-    "ranges": {"short": 30, "long": 60},
+    "ranges": {
+      "short": 30,
+      "long": 60
+    },
     "name": "Dagger",
     "looks_like": "dagger",
     "size": "normal",
     "damage": "1d4",
     "skill": "stab",
-    "attributes": ["str", "dex"],
+    "attributes": [
+      "str",
+      "dex"
+    ],
     "shock": 1,
     "shock_ac": 15,
     "description": "A short blade. 1d4 damage, Shock 1 against AC 15 or less, throwable to 30/60 feet. Encumbrance 1."
@@ -359,7 +423,9 @@
     "size": "large",
     "damage": "1d10",
     "skill": "stab",
-    "attributes": ["str"],
+    "attributes": [
+      "str"
+    ],
     "shock": 2,
     "shock_ac": 15,
     "description": "Two-handed polearm. 1d10 damage, Shock 2 against AC 15 or less, and reaches targets up to 10 feet away. Encumbrance 2."
@@ -372,7 +438,9 @@
     "size": "large",
     "damage": "1d10",
     "skill": "stab",
-    "attributes": ["str"],
+    "attributes": [
+      "str"
+    ],
     "shock": 2,
     "shock_ac": 18,
     "description": "Two-handed maul. 1d10 damage, Shock 2 against AC 18 or less. Encumbrance 2."
@@ -385,7 +453,9 @@
     "size": "normal",
     "damage": "1d8",
     "skill": "stab",
-    "attributes": ["str"],
+    "attributes": [
+      "str"
+    ],
     "shock": 1,
     "shock_ac": 18,
     "description": "One-handed war hammer. 1d8 damage, Shock 1 against AC 18 or less. Encumbrance 1."
@@ -393,13 +463,18 @@
   {
     "type": "feature",
     "id": "hurlant_great",
-    "ranges": {"short": 600, "long": 2400},
+    "ranges": {
+      "short": 600,
+      "long": 2400
+    },
     "name": "Hurlant, Great",
     "looks_like": "wand",
     "size": "massive",
     "damage": "3d10",
     "skill": "shoot",
-    "attributes": ["dex"],
+    "attributes": [
+      "dex"
+    ],
     "shock": 0,
     "shock_ac": 0,
     "description": "A siege hurlant. 3d10 damage, range 600/2400 feet, no Shock. It must be fixed in place and entrenched for five minutes before firing. Encumbrance 15."
@@ -407,13 +482,18 @@
   {
     "type": "feature",
     "id": "hurlant_hand",
-    "ranges": {"short": 30, "long": 60},
+    "ranges": {
+      "short": 30,
+      "long": 60
+    },
     "name": "Hurlant, Hand",
     "looks_like": "wand",
     "size": "normal",
     "damage": "1d12",
     "skill": "shoot",
-    "attributes": ["dex"],
+    "attributes": [
+      "dex"
+    ],
     "shock": 0,
     "shock_ac": 0,
     "description": "A hand-held energy weapon. 1d12 damage, range 30/60 feet, no Shock. Reloading takes ten rounds. Encumbrance 1."
@@ -421,13 +501,18 @@
   {
     "type": "feature",
     "id": "hurlant_long",
-    "ranges": {"short": 200, "long": 600},
+    "ranges": {
+      "short": 200,
+      "long": 600
+    },
     "name": "Hurlant, Long",
     "looks_like": "wand",
     "size": "large",
     "damage": "2d8",
     "skill": "shoot",
-    "attributes": ["dex"],
+    "attributes": [
+      "dex"
+    ],
     "shock": 0,
     "shock_ac": 0,
     "description": "A two-handed long hurlant. 2d8 damage, range 200/600 feet, no Shock. Reloading takes ten rounds. Encumbrance 2."
@@ -440,7 +525,9 @@
     "size": "normal",
     "damage": "1d6",
     "skill": "stab",
-    "attributes": ["str"],
+    "attributes": [
+      "str"
+    ],
     "shock": 1,
     "shock_ac": 18,
     "description": "A one-handed mace. 1d6 damage, Shock 1 against AC 18 or less, easily used to leave a foe alive. Encumbrance 1."
@@ -454,7 +541,9 @@
     "size": "large",
     "damage": "1d8",
     "skill": "stab",
-    "attributes": ["str"],
+    "attributes": [
+      "str"
+    ],
     "shock": 1,
     "shock_ac": 18,
     "description": "A long two-handed spear. 1d8 damage, Shock 1 against AC 18 or less, reaching targets up to 10 feet away. Encumbrance 2."
@@ -467,7 +556,9 @@
     "size": "tiny",
     "damage": "1d6",
     "skill": "stab",
-    "attributes": ["str"],
+    "attributes": [
+      "str"
+    ],
     "shock": 1,
     "shock_ac": 13,
     "description": "A blow with a large shield. 1d6 damage, Shock 1 against AC 13 or less, and easily non-lethal."
@@ -480,7 +571,10 @@
     "size": "tiny",
     "damage": "1d4",
     "skill": "stab",
-    "attributes": ["str", "dex"],
+    "attributes": [
+      "str",
+      "dex"
+    ],
     "shock": 0,
     "shock_ac": 0,
     "description": "A blow with a small shield. 1d4 damage, no Shock, and easily non-lethal."
@@ -493,7 +587,9 @@
     "size": "large",
     "damage": "1d10",
     "skill": "stab",
-    "attributes": ["str"],
+    "attributes": [
+      "str"
+    ],
     "shock": 2,
     "shock_ac": 15,
     "description": "A two-handed spear. 1d10 damage, Shock 2 against AC 15 or less. Encumbrance 2."
@@ -501,13 +597,19 @@
   {
     "type": "feature",
     "id": "spear_light",
-    "ranges": {"short": 30, "long": 60},
+    "ranges": {
+      "short": 30,
+      "long": 60
+    },
     "name": "Light Spear",
     "looks_like": "spear",
     "size": "normal",
     "damage": "1d6",
     "skill": "stab",
-    "attributes": ["str", "dex"],
+    "attributes": [
+      "str",
+      "dex"
+    ],
     "shock": 2,
     "shock_ac": 13,
     "description": "A one-handed spear that can be thrown. 1d6 damage, Shock 2 against AC 13 or less, range 30/60 feet. Encumbrance 1."
@@ -515,13 +617,18 @@
   {
     "type": "feature",
     "id": "throwing_blade",
-    "ranges": {"short": 30, "long": 60},
+    "ranges": {
+      "short": 30,
+      "long": 60
+    },
     "name": "Throwing Blade",
     "looks_like": "dagger",
     "size": "normal",
     "damage": "1d4",
     "skill": "shoot",
-    "attributes": ["dex"],
+    "attributes": [
+      "dex"
+    ],
     "shock": 0,
     "shock_ac": 0,
     "description": "A balanced throwing knife. 1d4 damage, no Shock, range 30/60 feet. Five count as one Readied item. Encumbrance 1."
@@ -534,7 +641,10 @@
     "size": "normal",
     "damage": "1d6",
     "skill": "stab",
-    "attributes": ["str", "dex"],
+    "attributes": [
+      "str",
+      "dex"
+    ],
     "shock": 1,
     "shock_ac": 13,
     "description": "A two-handed staff. 1d6 damage, Shock 1 against AC 13 or less, easily used to leave a foe alive. Encumbrance 1."
@@ -547,7 +657,10 @@
     "size": "normal",
     "damage": "1d6",
     "skill": "stab",
-    "attributes": ["str", "dex"],
+    "attributes": [
+      "str",
+      "dex"
+    ],
     "shock": 1,
     "shock_ac": 13,
     "description": "A two-handed staff. 1d6 damage, Shock 1 against AC 13 or less, easily used to leave a foe alive. Encumbrance 1."
@@ -560,7 +673,9 @@
     "size": "normal",
     "damage": "1d4",
     "skill": "stab",
-    "attributes": ["dex"],
+    "attributes": [
+      "dex"
+    ],
     "shock": 1,
     "shock_ac": 18,
     "description": "A narrow thrusting blade. 1d4 damage, Shock 1 against AC 18 or less, easily concealed, and good for Execution Attacks. Encumbrance 1."
@@ -573,7 +688,9 @@
     "size": "large",
     "damage": "1d12",
     "skill": "stab",
-    "attributes": ["str"],
+    "attributes": [
+      "str"
+    ],
     "shock": 2,
     "shock_ac": 15,
     "description": "A two-handed greatsword. 1d12 damage, Shock 2 against AC 15 or less. Encumbrance 2."
@@ -586,7 +703,10 @@
     "size": "normal",
     "damage": "1d8",
     "skill": "stab",
-    "attributes": ["str", "dex"],
+    "attributes": [
+      "str",
+      "dex"
+    ],
     "shock": 2,
     "shock_ac": 13,
     "description": "A one-handed longsword. 1d8 damage, Shock 2 against AC 13 or less. Encumbrance 1."
@@ -599,7 +719,10 @@
     "size": "normal",
     "damage": "1d6",
     "skill": "stab",
-    "attributes": ["str", "dex"],
+    "attributes": [
+      "str",
+      "dex"
+    ],
     "shock": 2,
     "shock_ac": 15,
     "description": "A one-handed short sword. 1d6 damage, Shock 2 against AC 15 or less. Encumbrance 1."
@@ -612,7 +735,10 @@
     "size": "tiny",
     "damage": "1d2",
     "skill": "punch",
-    "attributes": ["str", "dex"],
+    "attributes": [
+      "str",
+      "dex"
+    ],
     "shock": 0,
     "shock_ac": 0,
     "description": "Fists, feet, and natural weapons. 1d2 damage plus your Punch skill, no Shock by default, and easily non-lethal."

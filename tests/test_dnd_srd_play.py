@@ -579,9 +579,7 @@ def test_the_gm_rolls_feature_dice_with_the_engine(
     from cygnusloom.services.events import _decode_event
 
     client, campaign_id, _ctx = _campaign(client_factory)
-    tools = replace(
-        tools_for(client.app, campaign_id, rule_set="dnd-srd-2024"), rng=Rolls(7)
-    )
+    tools = replace(tools_for(client.app, campaign_id, rule_set="dnd-srd-2024"), rng=Rolls(7))
     rolled = tools.roll_dice("1d12", "Stone's Endurance")
     assert rolled == {
         "dice": "1d12",

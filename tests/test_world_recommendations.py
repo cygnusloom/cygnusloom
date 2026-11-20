@@ -160,7 +160,7 @@ def test_the_new_campaign_form_groups_recommended_worlds_first(
     assert '<option value="unwritten-world"' in group
     assert '<option value="twin-lakes"' not in group
     assert '<option value="unwritten-academy"' not in group
-    assert "data-recommended-for='[\"dnd-srd-2024\", \"worldswithoutnumber\"]'" in group
+    assert 'data-recommended-for=\'["dnd-srd-2024", "worldswithoutnumber"]\'' in group
 
 
 def test_the_campaign_pickers_open_from_the_summary(

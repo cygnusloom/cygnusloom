@@ -1223,7 +1223,11 @@
           "description": "Allow a field the rule set does not define."
         }
       },
-      "required": ["name", "field", "value"]
+      "required": [
+        "name",
+        "field",
+        "value"
+      ]
     }
   },
   {
@@ -2495,7 +2499,10 @@
         },
         "action": {
           "type": "string",
-          "enum": ["start", "end"],
+          "enum": [
+            "start",
+            "end"
+          ],
           "default": "start",
           "description": "Start or refresh the timer, or end it early."
         },
@@ -2519,7 +2526,10 @@
           "description": "Replace a different timer under the same key, or tolerate ending a timer that is not running."
         }
       },
-      "required": ["name", "item"]
+      "required": [
+        "name",
+        "item"
+      ]
     }
   },
   {

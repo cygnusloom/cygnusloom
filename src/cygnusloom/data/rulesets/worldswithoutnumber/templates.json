@@ -7,8 +7,19 @@
     "choice_key": "warrior",
     "name": "Second Partial Class: Warrior",
     "description": "The martial half of an Adventurer. It adds a Warrior's hit points and attack bonus and one martial Focus. A second partial class is always paired with the character's first partial class.",
-    "compatible_with": { "class": ["healer", "vowed"], "tradition": ["no_tradition"] },
-    "stats": { "hp": 2, "attack_bonus": 1 },
+    "compatible_with": {
+      "class": [
+        "healer",
+        "vowed"
+      ],
+      "tradition": [
+        "no_tradition"
+      ]
+    },
+    "stats": {
+      "hp": 2,
+      "attack_bonus": 1
+    },
     "feat_picks": [
       {
         "id": "second_class_focus_warrior",
@@ -52,8 +63,19 @@
     "choice_key": "expert",
     "name": "Second Partial Class: Expert",
     "description": "The skilled half of an Adventurer. It adds an Expert's training and one non-combat Focus. A second partial class is always paired with the character's first partial class.",
-    "compatible_with": { "class": ["healer", "vowed"], "tradition": ["no_tradition"] },
-    "stats": { "hp": 0, "attack_bonus": 0 },
+    "compatible_with": {
+      "class": [
+        "healer",
+        "vowed"
+      ],
+      "tradition": [
+        "no_tradition"
+      ]
+    },
+    "stats": {
+      "hp": 0,
+      "attack_bonus": 0
+    },
     "feat_picks": [
       {
         "id": "second_class_focus_expert",
@@ -91,10 +113,20 @@
     "name": "Second Partial Class: Mage",
     "description": "The magical half of an Adventurer. It adds a partial magical tradition, chosen from the partial traditions. A second partial class is always paired with the character's first partial class.",
     "compatible_with": {
-      "class": ["healer", "vowed"],
-      "tradition": ["high_mage_partial", "necromancer_partial", "elementalist_partial"]
+      "class": [
+        "healer",
+        "vowed"
+      ],
+      "tradition": [
+        "high_mage_partial",
+        "necromancer_partial",
+        "elementalist_partial"
+      ]
     },
-    "stats": { "hp": 0, "attack_bonus": 0 },
+    "stats": {
+      "hp": 0,
+      "attack_bonus": 0
+    },
     "names": "names"
   },
   {
@@ -105,17 +137,36 @@
     "choice_key": "healer",
     "name": "Second Partial Class: Healer",
     "description": "The curative half of an Adventurer. It grants Heal as a bonus skill, the Healing Touch art, and one more healer art. A second partial class is always paired with the character's first partial class.",
-    "compatible_with": { "class": ["healer", "vowed"], "tradition": ["no_tradition"] },
-    "stats": { "hp": -1, "attack_bonus": 0 },
-    "skills": { "heal": 1 },
-    "features": ["art_healing_touch"],
+    "compatible_with": {
+      "class": [
+        "healer",
+        "vowed"
+      ],
+      "tradition": [
+        "no_tradition"
+      ]
+    },
+    "stats": {
+      "hp": -1,
+      "attack_bonus": 0
+    },
+    "skills": {
+      "heal": 1
+    },
+    "features": [
+      "art_healing_touch"
+    ],
     "feat_picks": [
       {
         "id": "second_class_art_healer",
         "count": 1,
         "tag": "healer",
         "max_rank": 0,
-        "exclude": ["art_healing_touch", "art_limb_restoration", "art_revive_the_fallen"]
+        "exclude": [
+          "art_healing_touch",
+          "art_limb_restoration",
+          "art_revive_the_fallen"
+        ]
       }
     ],
     "names": "names"
@@ -128,8 +179,19 @@
     "choice_key": "vowed",
     "name": "Second Partial Class: Vowed",
     "description": "The bodily-adept half of an Adventurer. It grants an order skill, Martial Style, Unarmed Might, Unarmored Defense, and one more vowed art. A second partial class is always paired with the character's first partial class.",
-    "compatible_with": { "class": ["healer", "vowed"], "tradition": ["no_tradition"] },
-    "stats": { "hp": 0, "attack_bonus": 0 },
+    "compatible_with": {
+      "class": [
+        "healer",
+        "vowed"
+      ],
+      "tradition": [
+        "no_tradition"
+      ]
+    },
+    "stats": {
+      "hp": 0,
+      "attack_bonus": 0
+    },
     "skill_picks": [
       {
         "id": "second_order_skill",
@@ -137,17 +199,29 @@
         "count": 1,
         "table": "all_skills",
         "max_level": 1,
-        "exclude": ["punch", "shoot", "stab"]
+        "exclude": [
+          "punch",
+          "shoot",
+          "stab"
+        ]
       }
     ],
-    "features": ["art_martial_style", "art_unarmed_might", "art_unarmored_defense"],
+    "features": [
+      "art_martial_style",
+      "art_unarmed_might",
+      "art_unarmored_defense"
+    ],
     "feat_picks": [
       {
         "id": "second_class_art_vowed",
         "count": 1,
         "tag": "vowed",
         "max_rank": 0,
-        "exclude": ["art_martial_style", "art_unarmed_might", "art_unarmored_defense"]
+        "exclude": [
+          "art_martial_style",
+          "art_unarmed_might",
+          "art_unarmored_defense"
+        ]
       }
     ],
     "names": "names"
@@ -171,7 +245,10 @@
         "Torch",
         "Torch"
       ],
-      "equip": ["Pieced Armor", "Large Shield"]
+      "equip": [
+        "Pieced Armor",
+        "Large Shield"
+      ]
     },
     "names": "names"
   },
@@ -227,7 +304,9 @@
         "Rope, 50 ft"
       ],
       "silver": 20,
-      "equip": ["Buff Coat"]
+      "equip": [
+        "Buff Coat"
+      ]
     },
     "names": "names"
   },
@@ -256,7 +335,10 @@
         "Grappling Hook",
         "Rope, 50 ft"
       ],
-      "equip": ["Buff Coat", "Small Shield"]
+      "equip": [
+        "Buff Coat",
+        "Small Shield"
+      ]
     },
     "names": "names"
   },
@@ -280,7 +362,10 @@
         "Torch",
         "Torch"
       ],
-      "equip": ["War Shirt", "Large Shield"]
+      "equip": [
+        "War Shirt",
+        "Large Shield"
+      ]
     },
     "names": "names"
   },
@@ -305,7 +390,9 @@
         "Torch"
       ],
       "silver": 20,
-      "equip": ["Linothorax"]
+      "equip": [
+        "Linothorax"
+      ]
     },
     "names": "names"
   }

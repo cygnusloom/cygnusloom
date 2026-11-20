@@ -175,12 +175,8 @@ def test_each_caster_class_keeps_its_own_prepared_spells(
         {"character": "Rook", "class": "cleric"},
         "Rook",
     )
-    dnd_srd_2024.prepare_spells(
-        "Rook", ["spell-cure-wounds", "spell-entangle"], ctx, "druid"
-    )
-    dnd_srd_2024.prepare_spells(
-        "Rook", ["spell-bless", "spell-guiding-bolt"], ctx, "cleric"
-    )
+    dnd_srd_2024.prepare_spells("Rook", ["spell-cure-wounds", "spell-entangle"], ctx, "druid")
+    dnd_srd_2024.prepare_spells("Rook", ["spell-bless", "spell-guiding-bolt"], ctx, "cleric")
     pc = character_named(app, campaign_id, "Rook")
     assert set(pc.marks["prepared_by_class"]["druid"]) == {
         "spell-cure-wounds",
@@ -199,10 +195,7 @@ def test_each_caster_class_keeps_its_own_prepared_spells(
     before_slots = pc.counters["slot_1"]
     cast = dnd_srd_2024.cast_spell("Rook", "spell-cure-wounds", ctx)
     assert cast["slot_level"] == 1
-    assert (
-        character_named(app, campaign_id, "Rook").counters["slot_1"]
-        == before_slots - 1
-    )
+    assert character_named(app, campaign_id, "Rook").counters["slot_1"] == before_slots - 1
 
 
 def test_a_banked_spell_pick_uses_the_class_the_player_names(
@@ -223,9 +216,7 @@ def test_a_banked_spell_pick_uses_the_class_the_player_names(
         {"character": "Rook", "class": "wizard"},
         "Rook",
     )
-    page = level_up_service.page_view(
-        client.app.state.engine, campaign_id, rules, world, "Rook"
-    )
+    page = level_up_service.page_view(client.app.state.engine, campaign_id, rules, world, "Rook")
     assert page is not None and page.kind == level_up_service.PICKS
     assert {option["id"] for option in page.class_options} == {"fighter", "wizard"}
     wizard_page = level_up_service.page_view(
@@ -298,9 +289,7 @@ def test_a_multiclass_skill_pick_trains_a_new_skill(
     )
     pc = character_named(app, campaign_id, "Rook")
     assert pc.counters["multiclass_skill_picks"] == 1
-    page = level_up_service.page_view(
-        client.app.state.engine, campaign_id, rules, world, "Rook"
-    )
+    page = level_up_service.page_view(client.app.state.engine, campaign_id, rules, world, "Rook")
     assert page is not None and page.kind == level_up_service.PICKS
     skill_pick = next(pick for pick in page.picks if pick["id"] == "multiclass_skills")
     rogue = rules.character.templates["rogue"].skill_picks[0]

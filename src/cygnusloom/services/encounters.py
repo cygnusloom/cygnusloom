@@ -216,7 +216,11 @@ def _resource_left(
     if combat is None or encounter.acting is None:
         return None
     if resource == "action":
-        return max(0, combat.actions_per_turn - encounter.actions_used) if combat.actions_per_turn else None
+        return (
+            max(0, combat.actions_per_turn - encounter.actions_used)
+            if combat.actions_per_turn
+            else None
+        )
     if resource == "bonus_action":
         return (
             max(0, combat.bonus_actions_per_turn - encounter.bonus_actions_used)

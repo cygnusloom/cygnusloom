@@ -340,9 +340,7 @@ def parse_progression(data: Mapping[str, Any], label: str = "progression") -> Dn
                 ).items()
             },
             primary=_texts(entry.get("primary", []), f"{class_label}.primary"),
-            primary_any=_boolean(
-                entry.get("primary_any", False), f"{class_label}.primary_any"
-            ),
+            primary_any=_boolean(entry.get("primary_any", False), f"{class_label}.primary_any"),
             multiclass_armor=_texts(
                 entry.get("multiclass_armor", []), f"{class_label}.multiclass_armor"
             ),
@@ -545,9 +543,7 @@ def subclass_id(
     return ""
 
 
-def _class_rules(
-    found: Any, progression: DndProgression, chosen: str = ""
-) -> DndClass:
+def _class_rules(found: Any, progression: DndProgression, chosen: str = "") -> DndClass:
     found_class = str(chosen).strip().casefold() or class_id(found)
     rules = progression.classes.get(found_class)
     if rules is None:
@@ -645,9 +641,7 @@ def class_hit_dice_pools(found: Any, progression: DndProgression) -> dict[str, i
     return pools
 
 
-def _spell_max_rank(
-    found: Any, progression: DndProgression, chosen: str = ""
-) -> int:
+def _spell_max_rank(found: Any, progression: DndProgression, chosen: str = "") -> int:
     """The highest spell rank a class can prepare at its class level."""
     rules = _class_rules(found, progression, chosen)
     level = max(1, min(_class_level(found, rules), progression.max_level))
@@ -674,9 +668,7 @@ def _slot_counts(found: Any, progression: DndProgression) -> dict[int, int]:
         table = progression.slots.get(rules.slot_table, ())
         if not table:
             return {}
-        return {
-            index: count for index, count in enumerate(table[level - 1], start=1) if count > 0
-        }
+        return {index: count for index, count in enumerate(table[level - 1], start=1) if count > 0}
     caster = _caster_level(found, progression)
     table = progression.slots.get("full", ())
     if not caster or not table:
@@ -690,9 +682,7 @@ def _class_spells(progression: DndProgression, class_id: str) -> tuple[str, ...]
     return tuple(spell for spells in ranks.values() for spell in spells)
 
 
-def _spell_class_rules(
-    found: Any, feature: Any, progression: DndProgression
-) -> DndClass:
+def _spell_class_rules(found: Any, feature: Any, progression: DndProgression) -> DndClass:
     """The class whose list contains a spell, so its ability and casting rules apply. A spell
     on more than one list uses the class that prepared it, then the first class in the
     character's class order."""
@@ -724,9 +714,7 @@ def level_up_summary(character: str, ctx: ToolContext) -> dict[str, Any]:
     return level_up_summary_class(character, ctx, "")
 
 
-def level_up_summary_class(
-    character: str, ctx: ToolContext, chosen: str = ""
-) -> dict[str, Any]:
+def level_up_summary_class(character: str, ctx: ToolContext, chosen: str = "") -> dict[str, Any]:
     """The next level's projection for the class the player chose, with the classes open to
     advance in."""
     progression = require_progression(ctx.world)
@@ -919,9 +907,7 @@ def apply_level_up(character: str, ctx: ToolContext) -> dict[str, Any]:
     return apply_level_up_class(character, ctx, "")
 
 
-def apply_level_up_class(
-    character: str, ctx: ToolContext, chosen: str = ""
-) -> dict[str, Any]:
+def apply_level_up_class(character: str, ctx: ToolContext, chosen: str = "") -> dict[str, Any]:
     """Raise the character one level in the chosen class and grant everything automatic.
 
     The player's choices (spells, ASI, subclass, fighting style, expertise) are spent on the
@@ -948,8 +934,7 @@ def apply_level_up_class(
     die = f"d{rules.hit_die}"
     pools[die] = pools.get(die, 0) + 1
     class_names = {
-        key: (spec.templates[key].name if key in spec.templates else key.title())
-        for key in levels
+        key: (spec.templates[key].name if key in spec.templates else key.title()) for key in levels
     }
 
     def record_levels(hc: HookContext) -> None:
@@ -1061,8 +1046,7 @@ def apply_level_up_class(
                 ctx.world.set_stat_max(
                     character,
                     "hp",
-                    int(_read_character(character, ctx).stats.get("hp", 0))
-                    + feature.flat_hp_bonus,
+                    int(_read_character(character, ctx).stats.get("hp", 0)) + feature.flat_hp_bonus,
                     cause=f"{feature.name} at level {new_class_level}",
                 )
         _learn_always_prepared(ctx, character, subclass, new_class_level)
@@ -1364,18 +1348,14 @@ def apply_spell_pick(
     """Learn the chosen spell, assign it to the class the level was taken in, and spend one
     spell pick."""
     result = _learn_spell(character, choice, ctx, class_choice)
-    remaining = ctx.world.adjust_counter(
-        character, pick.counter, -1, reason="spending a pick"
-    )
+    remaining = ctx.world.adjust_counter(character, pick.counter, -1, reason="spending a pick")
     return {**result, pick.counter: remaining["value"]}
 
 
 def apply_feat_pick(character: str, pick: Any, choice: str, ctx: ToolContext) -> dict[str, Any]:
     """Learn the chosen feat and spend one feat pick."""
     result = _learn(ctx, character, choice, cause=pick.label)
-    remaining = ctx.world.adjust_counter(
-        character, pick.counter, -1, reason="spending a pick"
-    )
+    remaining = ctx.world.adjust_counter(character, pick.counter, -1, reason="spending a pick")
     return {**result, pick.counter: remaining["value"]}
 
 
@@ -1384,9 +1364,7 @@ def apply_fighting_style_pick(
 ) -> dict[str, Any]:
     """Learn the chosen fighting style and spend one pick."""
     result = _learn(ctx, character, choice, cause="fighting style")
-    remaining = ctx.world.adjust_counter(
-        character, pick.counter, -1, reason="spending a pick"
-    )
+    remaining = ctx.world.adjust_counter(character, pick.counter, -1, reason="spending a pick")
     return {**result, pick.counter: remaining["value"]}
 
 
@@ -1439,9 +1417,7 @@ def apply_subclass_pick(character: str, pick: Any, choice: str, ctx: ToolContext
             for feature_id in feature_ids:
                 _learn(ctx, character, feature_id, cause=f"{subclass.id} level {feature_level}")
     _learn_always_prepared(ctx, character, subclass, level)
-    remaining = ctx.world.adjust_counter(
-        character, pick.counter, -1, reason="spending a pick"
-    )
+    remaining = ctx.world.adjust_counter(character, pick.counter, -1, reason="spending a pick")
     return {**result, pick.counter: remaining["value"]}
 
 
@@ -1460,9 +1436,7 @@ def apply_expertise_pick(
         current_level + bonus, spec.skill_progression.maximum if spec.skill_progression else 20
     )
     result = ctx.world.raise_skill(character, skill_id, new_level, cause="expertise")
-    remaining = ctx.world.adjust_counter(
-        character, pick.counter, -1, reason="spending a pick"
-    )
+    remaining = ctx.world.adjust_counter(character, pick.counter, -1, reason="spending a pick")
     return {**result, pick.counter: remaining["value"]}
 
 
@@ -1671,9 +1645,7 @@ def _reset_death_saves(ctx: ToolContext, name: str) -> None:
             ctx.world.adjust_counter(name, counter, -value)
 
 
-def spend_hit_die(
-    name: str, ctx: ToolContext, die: str = ""
-) -> dict[str, Any]:
+def spend_hit_die(name: str, ctx: ToolContext, die: str = "") -> dict[str, Any]:
     """Spend one Hit Point Die on a short rest and heal its roll plus Constitution."""
     progression = require_progression(ctx.world)
     spec = ctx.world.character
@@ -1695,9 +1667,7 @@ def spend_hit_die(
             wanted = f"d{wanted}"
         if wanted not in pools or pools[wanted] < 1:
             options = ", ".join(sorted(key for key, count in pools.items() if count > 0)) or "none"
-            raise InvalidInput(
-                f"{found.name} has no {wanted} Hit Point Dice; available: {options}"
-            )
+            raise InvalidInput(f"{found.name} has no {wanted} Hit Point Dice; available: {options}")
         chosen_die = wanted
     else:
         primary = progression.classes.get(class_id(found))
@@ -2182,9 +2152,7 @@ def use_feature(character: str, feature: str, ctx: ToolContext, cause: str = "")
         raise InvalidInput(f"{found.name} does not have {source.name}")
     remaining: int | None = None
     if source.resource_counter and int(found.counters.get(source.resource_counter, 0)) < 1:
-        raise InvalidInput(
-            f"{found.name} has no {source.resource_counter.replace('_', ' ')} left"
-        )
+        raise InvalidInput(f"{found.name} has no {source.resource_counter.replace('_', ' ')} left")
     _spend_turn_resource(found, source, ctx, cause=cause or f"using {source.name}")
     if source.resource_counter:
         changed = ctx.world.adjust_counter(character, source.resource_counter, -1)
@@ -2255,9 +2223,7 @@ def cast_spell(
     levels = class_levels_of(found)
     warlock_level = levels.get("warlock", 0)
     pact_count = int(found.counters.get("pact_slots", 0))
-    pact_level = (
-        progression.pact_slots[warlock_level - 1][1] if warlock_level else 0
-    )
+    pact_level = progression.pact_slots[warlock_level - 1][1] if warlock_level else 0
     used = 0
     if available.get(chosen_slot, 0) > 0:
         used = chosen_slot
@@ -2266,12 +2232,7 @@ def cast_spell(
         if candidates:
             used = max(candidates)
     pact_used = 0
-    if (
-        not used
-        and len(levels) > 1
-        and pact_count > 0
-        and pact_level >= rank
-    ):
+    if not used and len(levels) > 1 and pact_count > 0 and pact_level >= rank:
         pact_used = pact_level
     if not used and not pact_used:
         # A lineage spell or similar feature can be cast once without a slot between long rests.
@@ -2385,9 +2346,7 @@ def prepare_spells(
             by_class = dict(found.marks.get(PREPARED_BY_CLASS_MARK) or {})
             by_class[class_key] = list(chosen)
             union = list(
-                dict.fromkeys(
-                    str(item) for spells in by_class.values() for item in spells
-                )
+                dict.fromkeys(str(item) for spells in by_class.values() for item in spells)
             )
             hc.set_mark(
                 found.name,
@@ -2632,9 +2591,7 @@ def _remember_prepared(ctx: ToolContext, character: str, spell_id: str) -> None:
         prepared = list(stored_list)
         if spell_id in current and spell_id not in prepared:
             prepared.append(spell_id)
-        if prepared == stored_list and by_class == (
-            found.marks.get(PREPARED_BY_CLASS_MARK) or {}
-        ):
+        if prepared == stored_list and by_class == (found.marks.get(PREPARED_BY_CLASS_MARK) or {}):
             return
 
         def write_multiclass(hc: HookContext) -> None:
@@ -2690,9 +2647,7 @@ def learn_spell(name: str, spell: str, ctx: ToolContext) -> dict[str, Any]:
     return _learn_spell(name, spell, ctx)
 
 
-def _learn_spell(
-    name: str, spell: str, ctx: ToolContext, class_name: str = ""
-) -> dict[str, Any]:
+def _learn_spell(name: str, spell: str, ctx: ToolContext, class_name: str = "") -> dict[str, Any]:
     """Learn a spell, optionally recording which class's list it came from before the
     prepared list is updated."""
     spec = ctx.world.character
@@ -2704,9 +2659,7 @@ def _learn_spell(
     return result
 
 
-def _set_spell_class(
-    character: str, feature: Feature, ctx: ToolContext, class_name: str
-) -> None:
+def _set_spell_class(character: str, feature: Feature, ctx: ToolContext, class_name: str) -> None:
     """Record a spell's class so its ability, prepared limit, and marks agree."""
 
     def write(hc: HookContext) -> None:
@@ -2846,9 +2799,7 @@ def after_rest(
             count, slot_level = progression.pact_slots[level - 1]
             targets[slot_level] = count
         elif rules.slot_table != "none":
-            for index, count in enumerate(
-                progression.slots[rules.slot_table][level - 1], start=1
-            ):
+            for index, count in enumerate(progression.slots[rules.slot_table][level - 1], start=1):
                 targets[index] = count
     else:
         for index, count in _slot_counts(character, progression).items():

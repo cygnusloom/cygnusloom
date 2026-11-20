@@ -2380,7 +2380,9 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 score = character.stats.get(choice, 0)
                 amount = rule.amount
                 if rule.patterns:
-                    stored_mode = int(character.feature_choices.get(f"{found.id}:{pick_id}:pattern", ["0"])[0])
+                    stored_mode = int(
+                        character.feature_choices.get(f"{found.id}:{pick_id}:pattern", ["0"])[0]
+                    )
                     amounts = rule.patterns[stored_mode]
                     amount = amounts[min(len(taken), len(amounts) - 1)]
                 if rule.max_value and score + amount > rule.max_value:
@@ -2560,9 +2562,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 .armor,
             }
 
-    def use_turn_resource(
-        self, name: str, resource: str, cause: str = ""
-    ) -> dict[str, Any]:
+    def use_turn_resource(self, name: str, resource: str, cause: str = "") -> dict[str, Any]:
         """Spend one of the encounter's turn resources for the acting character. Rule sets
         without a configured budget do not expose this tool."""
         rules = self._rules()
@@ -2581,9 +2581,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 # there is no acting check; only a participant of the encounter may spend one.
                 if character.name not in encounter.order:
                     raise InvalidInput(f"{character.name} is not in the encounter")
-            elif encounter.acting is None or name_key(encounter.acting) != name_key(
-                character.name
-            ):
+            elif encounter.acting is None or name_key(encounter.acting) != name_key(character.name):
                 raise InvalidInput(f"it is not {character.name}'s turn")
             limit = (
                 rules.actions_per_turn

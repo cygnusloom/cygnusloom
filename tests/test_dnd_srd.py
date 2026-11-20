@@ -856,9 +856,7 @@ def test_inventory_links_items_to_the_compendium_without_dumping_descriptions(
     page = client.get(f"/campaigns/{campaign_id}").text
     start = page.index("data-inventory")
     panel = page[start : page.index("</ul>", start)]
-    assert (
-        'data-view-link="compendium"><strong>Longsword</strong></a>' in panel
-    )
+    assert 'data-view-link="compendium"><strong>Longsword</strong></a>' in panel
     assert "Sap. If you hit" not in panel
 
 

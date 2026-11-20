@@ -1399,9 +1399,7 @@ def load_feature(
     weapon_category = data.get("weapon_category", "")
     if weapon_category not in ("", "simple", "martial"):
         raise ContentError(f"{label}: 'weapon_category' must be simple, martial, or empty")
-    weapon_properties = _text_list(
-        data.get("weapon_properties", []), "weapon_properties", label
-    )
+    weapon_properties = _text_list(data.get("weapon_properties", []), "weapon_properties", label)
     tag = data.get("tag", "")
     if not isinstance(tag, str):
         raise ContentError(f"{label}: 'tag' must be text")

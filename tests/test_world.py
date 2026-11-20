@@ -411,9 +411,7 @@ def test_gm_records_npc_pronouns_and_they_replay(client_factory: Callable[[], Te
     text = world.world_state_text(_state(app, campaign_id), SPEC)
     assert "Pronouns: Wren, she/her." in text
     page = client.get(f"/campaigns/{campaign_id}").text
-    card_start = page.index(
-        '<h4><a href="#" class="statblock-name" data-statblock-name="Wren">'
-    )
+    card_start = page.index('<h4><a href="#" class="statblock-name" data-statblock-name="Wren">')
     card = page[card_start : page.index("</article>", card_start)]
     assert "Pronouns: she/her" in card
 

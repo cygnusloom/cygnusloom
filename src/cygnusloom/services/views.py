@@ -2201,9 +2201,7 @@ def _sheet_sections(
             elif not counter_id.startswith("slot_"):
                 entry = sheet_entries.get(label, "")
                 if amount != 0 or counter_id == "hit_dice":
-                    resources.append(
-                        SheetResource(label=label, value=amount, entry=entry)
-                    )
+                    resources.append(SheetResource(label=label, value=amount, entry=entry))
             continue
         if separator and len(value) <= 120:
             identity.append((label, value))

@@ -828,7 +828,7 @@ def write(name: str, data: Any) -> None:
     print(f"wrote {name} ({len(data)} definitions)")
 
 
-def gp_to_sp(value: str | int | float | None) -> int:
+def gp_to_sp(value: str | float | None) -> int:
     if value in (None, ""):
         return 0
     try:
@@ -2993,8 +2993,7 @@ def class_feature_levels(record: dict[str, Any], default: int = 1) -> list[int]:
 def class_feature_id(class_id: str, record: dict[str, Any]) -> str:
     key = key_id(record["key"])
     prefix = f"{class_id}_"
-    if key.startswith(prefix):
-        key = key[len(prefix) :]
+    key = key.removeprefix(prefix)
     return f"class-{class_id}-{slug(key)}"
 
 

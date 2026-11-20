@@ -335,9 +335,7 @@ def page_view(
             )
         classes = _class_choices(pc, rule_set)
         picked_class = class_choice or (str(classes[-1]["id"]) if classes else "")
-        picks = pick_views(
-            pc, rule_set, level_rules, None, {}, ctx, class_choice=picked_class
-        )
+        picks = pick_views(pc, rule_set, level_rules, None, {}, ctx, class_choice=picked_class)
         if picks:
             return AdvancementPage(
                 kind=PICKS,
@@ -401,9 +399,7 @@ def pick_views(
             # A banked pick has no level projection; its options fall back to the class's
             # current level, so a low-level class does not offer high-level spells.
             level = (
-                class_level or _new_level(pc, rule_set, summary)
-                if summary is not None
-                else None
+                class_level or _new_level(pc, rule_set, summary) if summary is not None else None
             )
             options = (
                 pick.options(pc.name, pick, ctx, level, class_choice=class_choice)
@@ -501,9 +497,7 @@ def _allowed_skills(
     if pick.options is None or ctx is None:
         return None
     if class_choice:
-        options = pick.options(
-            pc.name, pick, ctx, level, class_choice=class_choice
-        )
+        options = pick.options(pc.name, pick, ctx, level, class_choice=class_choice)
     else:
         options = pick.options(pc.name, pick, ctx, level)
     return {str(option) for option in options}
@@ -635,9 +629,7 @@ def _new_feature_choice_views(
     return views
 
 
-def _class_choices(
-    pc: Character, rule_set: RuleSet
-) -> tuple[Mapping[str, Any], ...]:
+def _class_choices(pc: Character, rule_set: RuleSet) -> tuple[Mapping[str, Any], ...]:
     """A multiclass character's classes, for a banked pick's class selector."""
     levels = getattr(pc, "class_levels", None) or {}
     if len(levels) < 2:
@@ -706,9 +698,7 @@ def _apply_level(
     assert view.level_up is not None
     # Check every pick against the pools the page's projection says the new level grants, then
     # apply that same plan once the level has added those pools.
-    changes = _plan_picks(
-        view, engine, campaign_id, rule_set, ctx, form, class_choice
-    )
+    changes = _plan_picks(view, engine, campaign_id, rule_set, ctx, form, class_choice)
     for entry in (view.summary or {}).get("feature_choices", ()):
         _check_feature_choices(rule_set.character, entry["id"], form)
     if view.level_up.apply_level_class is not None:
@@ -798,9 +788,7 @@ def _plan_picks(
             grants.get(pick.counter, 0)
         )
         if pick.kind == "skill":
-            picked = _skill_changes(
-                pc, rule_set, pick, form, level, ctx, class_choice
-            )
+            picked = _skill_changes(pc, rule_set, pick, form, level, ctx, class_choice)
             cost = sum(change["cost"] for change in picked)
             if cost > available:
                 raise InvalidInput(f"{pick.label} cost {cost} points; {available} are available")
@@ -825,9 +813,7 @@ def _plan_picks(
                 {
                     option["id"]: option
                     for option in (
-                        pick.options(
-                            pc.name, pick, ctx, option_level, class_choice=class_choice
-                        )
+                        pick.options(pc.name, pick, ctx, option_level, class_choice=class_choice)
                         if class_choice
                         else pick.options(pc.name, pick, ctx, option_level)
                     )
@@ -900,18 +886,13 @@ def _skill_changes(
         {
             "skill": skill,
             "level": target,
-            "cost": _skill_cost(
-                pick, spec.skill_level(pc.skills, skill), target, first
-            )
-            or 0,
+            "cost": _skill_cost(pick, spec.skill_level(pc.skills, skill), target, first) or 0,
         }
         for skill, target in raised.items()
     ]
 
 
-def _skill_cost(
-    pick: LevelUpPick, current: int, target: int, first_level: int = 1
-) -> int | None:
+def _skill_cost(pick: LevelUpPick, current: int, target: int, first_level: int = 1) -> int | None:
     """The total cost to raise a skill from `current` to `target`, or None when a step has
     none. An untrained skill starts at the rule set's first trained level, so a progression
     that begins at level 2 charges that level's cost once."""
