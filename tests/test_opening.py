@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ssl
 from collections.abc import Callable
+from typing import Any
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -11,7 +12,8 @@ from cygnusloom.llm.base import LLMError
 from cygnusloom.llm.fake import FakeProvider
 from cygnusloom.llm.registry import ProviderFactory
 from cygnusloom.services.events import load_state
-from cygnusloom.services.prompts import OPENING_PROMPT, opening_prompt
+from cygnusloom.services.prompts import OPENING_PROMPT, OPENING_REPLY_INSTRUCTION, opening_prompt
+from cygnusloom.services.turns import OPENING_REPLY_RETRY
 from tests.conftest import bundled_library, csrf_token
 from tests.test_campaigns import (
     _answer,
@@ -22,6 +24,7 @@ from tests.test_campaigns import (
     _send,
     _signed_in,
 )
+from tests.test_tools import _recording_provider, _saved, _script
 
 
 def test_opening_starts_the_world_at_its_start_location_with_its_hooks():
@@ -171,3 +174,107 @@ def test_an_opening_whose_provider_cannot_start_reports_the_reason(
     page = client.get(f"/campaigns/{campaign_id}").text
     assert "could not start" in page
     assert "data-auto-start" not in page
+
+
+SHORT_OPENING = "I'm **Cygnus**, your game master."
+FULL_OPENING = (
+    "I'm **Cygnus**, your game master.\n"
+    "The **Twin Lakes** lie a hard day's walk west of the pass.\n"
+    "**Ada**, a hollow-born scout, has come back to their shore.\n"
+    "Morning lies over the water, and the far bank is quiet.\n"
+    "What do you do?"
+)
+
+
+def _use_opening_script(recorder: Any, script: str) -> None:
+    """The opening is sent without a player message, so the script rides on its instruction."""
+    chat, stream = recorder.chat, recorder.stream
+
+    def with_script(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        return [
+            {**m, "content": f"{m['content']}\n{script}"}
+            if m["role"] == "user" and OPENING_PROMPT in m["content"]
+            else m
+            for m in messages
+        ]
+
+    async def scripted_chat(model, messages, tools=None):
+        return await chat(model, with_script(messages), tools)
+
+    async def scripted_stream(model, messages, tools=None):
+        async for item in stream(model, with_script(messages), tools):
+            yield item
+
+    recorder.chat = scripted_chat
+    recorder.stream = scripted_stream
+
+
+def test_a_short_opening_reply_is_written_again(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    client = _signed_in(client_factory)
+    campaign_id = int(_new_campaign(client).headers["location"].rsplit("/", 1)[1])
+    assert _create_character(client, campaign_id).status_code == 303
+    recorder = _recording_provider()
+    app.state.providers = lambda model_id: (recorder, model_id)
+    _use_opening_script(
+        recorder,
+        _script(
+            {
+                "rounds": [[{"name": "ooc", "arguments": {"no_narration": True}}]],
+                "ooc": SHORT_OPENING,
+                "ooc_retry": FULL_OPENING,
+            }
+        ),
+    )
+
+    events = _answer(client, campaign_id, "continue")
+
+    assert _saved(app, campaign_id)[-1] == ("assistant", FULL_OPENING)
+    kinds = [event["type"] for event in events]
+    assert "retract" in kinds
+    retracted_at = kinds.index("retract")
+    shown_before = "".join(e["text"] for e in events[:retracted_at] if e["type"] == "delta")
+    shown_after = "".join(e["text"] for e in events[retracted_at:] if e["type"] == "delta")
+    assert shown_before.strip() == SHORT_OPENING
+    assert shown_after.strip() == FULL_OPENING
+    prompts = [
+        str(message.get("content"))
+        for call in recorder.calls
+        for message in call["messages"]
+        if message["role"] == "system"
+    ]
+    assert prompts.count(OPENING_REPLY_INSTRUCTION) == 2
+    assert any(OPENING_REPLY_RETRY in prompt for prompt in prompts)
+
+
+def test_a_complete_opening_reply_is_not_written_again(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    client = _signed_in(client_factory)
+    campaign_id = int(_new_campaign(client).headers["location"].rsplit("/", 1)[1])
+    assert _create_character(client, campaign_id).status_code == 303
+    recorder = _recording_provider()
+    app.state.providers = lambda model_id: (recorder, model_id)
+    _use_opening_script(
+        recorder,
+        _script(
+            {
+                "rounds": [[{"name": "ooc", "arguments": {"no_narration": True}}]],
+                "ooc": FULL_OPENING,
+            }
+        ),
+    )
+
+    events = _answer(client, campaign_id, "continue")
+
+    assert _saved(app, campaign_id)[-1] == ("assistant", FULL_OPENING)
+    assert "retract" not in [event["type"] for event in events]
+    prompts = [
+        str(message.get("content"))
+        for call in recorder.calls
+        for message in call["messages"]
+        if message["role"] == "system"
+    ]
+    assert prompts.count(OPENING_REPLY_INSTRUCTION) == 1
+    assert all(OPENING_REPLY_RETRY not in prompt for prompt in prompts)

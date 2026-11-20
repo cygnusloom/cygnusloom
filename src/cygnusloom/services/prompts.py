@@ -386,10 +386,13 @@ OOC_INSTRUCTION = (
     "right away. The state step already decided whether the story continues after this reply."
 )
 OPENING_REPLY_INSTRUCTION = (
-    "Opening reply. This is the campaign's introduction, not an out-of-character question. Follow "
-    "the opening instruction above: write the introduction it asks for, one sentence per item, and "
-    "nothing else. Do not answer rules questions, describe a scene beyond the introduction, or "
-    "speak or act for the player character."
+    "Opening reply. This is the campaign's introduction, not an out-of-character question. Write "
+    "the introduction the opening instruction asks for: one sentence for each of these, in this "
+    "order, and nothing else: introducing yourself as Cygnus, the game master; each important "
+    "detail the player must know before they act; each player character; setting the scene; and "
+    "prompting the player to begin acting. Bold any keywords or core concepts, use line breaks to "
+    "separate the sentences, and do not answer rules questions, describe a scene beyond the "
+    "introduction, or speak or act for the player character."
 )
 _NUMBER_WORDS = ("one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten")
 JOURNAL_INTRO = (
