@@ -31,7 +31,8 @@
     "stat_presets": {
       "abilities": {
         "formula": "3d6",
-        "swap_group": "abilities"
+        "swap_group": "abilities",
+        "swap": "any"
       }
     },
     "table_genres": [

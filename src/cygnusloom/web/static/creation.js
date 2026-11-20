@@ -878,8 +878,9 @@
   };
 
   // Stats are stored in hidden inputs so the cards can show the roll and its modifier. A rolled
-  // group may trade one pair of values; an assigned group may be arranged in any order. Reset
-  // restores the rolled values, which the server also uses to validate the submission.
+  // group may trade one pair of values, or any number when it is marked `data-stat-swap="any"`;
+  // an assigned group may be arranged in any order. Reset restores the rolled values, which the
+  // server also uses to validate the submission.
   const statCards = [...document.querySelectorAll("[data-stat-card]")];
   const statGroups = new Map();
   for (const card of statCards) {
@@ -931,6 +932,14 @@
   };
   const statGroupIsAssigned = (members) =>
     members.some((card) => card.hasAttribute("data-stat-assigned"));
+  const statGroupIsFree = (members) =>
+    statGroupIsAssigned(members) || members[0]?.dataset.statSwap === "any";
+  const anyFreeStatGroup = () =>
+    [...statGroups.values()].some((members) => statGroupIsFree(members));
+  const statSelectionHint = (members) =>
+    statGroupIsFree(members)
+      ? "Now choose the attribute to trade with. This group may be arranged in any order."
+      : "Now choose the attribute to trade with.";
   const defaultStatHint = () => statHintDefault;
   const resetStats = () => {
     clearStatSelection();
@@ -948,15 +957,15 @@
     }
     if (!selectedStat) {
       selectStat(card);
-      setStatHint("Now choose the attribute to trade with.");
+      setStatHint(statSelectionHint(members));
       return;
     }
     if (selectedStat.dataset.statGroup !== group) {
       selectStat(card);
-      setStatHint("Now choose the attribute to trade with.");
+      setStatHint(statSelectionHint(members));
       return;
     }
-    if (!statGroupIsAssigned(members) && changedStatGroups.get(group)) {
+    if (!statGroupIsFree(members) && changedStatGroups.get(group)) {
       clearStatSelection();
       setStatHint("This group allows one swap. Reset stats to try another.");
       return;
@@ -965,10 +974,10 @@
     const right = statValueOf(card);
     setStatValue(selectedStat, right);
     setStatValue(card, left);
-    if (!statGroupIsAssigned(members)) changedStatGroups.set(group, true);
+    if (!statGroupIsFree(members)) changedStatGroups.set(group, true);
     clearStatSelection();
     setStatHint(
-      statGroupIsAssigned(members)
+      statGroupIsFree(members)
         ? "Values can be arranged in any order."
         : "One swap used. Reset restores the rolled values.",
     );
@@ -979,7 +988,7 @@
     for (const [group, members] of statGroups) {
       const rolled = members.map((card) => Number(card.dataset.statRolled));
       let values = [...rolled];
-      if (statGroupIsAssigned(members)) {
+      if (statGroupIsFree(members)) {
         values = shuffle(values);
       } else if (values.length > 1 && Math.random() < 0.5) {
         const first = Math.floor(Math.random() * values.length);
@@ -993,11 +1002,15 @@
         members.some((card, index) => Number(card.dataset.statRolled) !== values[index]),
       );
     }
-    setStatHint("Random swap applied. Reset restores the rolled values.");
+    setStatHint(
+      anyFreeStatGroup()
+        ? "Random arrangement applied. Reset restores the rolled values."
+        : "Random swap applied. Reset restores the rolled values.",
+    );
   };
 
   // A rule set's source material may give a standard array. It replaces each of its groups in
-  // stat order, and the same one swap still applies.
+  // stat order; the group's swap rule then decides how freely it may be rearranged.
   const standardStats = () => {
     clearStatSelection();
     changedStatGroups.clear();
@@ -1005,7 +1018,11 @@
       if (!members.every((card) => card.dataset.statStandard !== undefined)) continue;
       for (const card of members) setStatValue(card, Number(card.dataset.statStandard));
     }
-    setStatHint("Standard array applied. Randomize rolls new values; Reset restores the roll.");
+    setStatHint(
+      anyFreeStatGroup()
+        ? "Standard array applied. Arrange the values as you like; Reset restores the roll."
+        : "Standard array applied. Randomize rolls new values; Reset restores the roll.",
+    );
   };
 
   // Randomize asks the server for a fresh roll, which the session keeps so the submission is
@@ -1047,7 +1064,11 @@
         return;
       }
       applyRoll(payload.stats);
-      setStatHint("New stats rolled. Random swap trades a pair; Reset restores this roll.");
+      setStatHint(
+        anyFreeStatGroup()
+          ? "New stats rolled. Arrange the values as you like; Reset restores this roll."
+          : "New stats rolled. Random swap trades a pair; Reset restores this roll.",
+      );
     } catch {
       setStatHint("The stats could not be rolled again. Reload the page to try.");
     } finally {

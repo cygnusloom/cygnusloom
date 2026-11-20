@@ -9,6 +9,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from cygnusloom.content.character import check_swaps
 from cygnusloom.rules import dnd_srd_2024
 from cygnusloom.services import level_up as level_up_service
 from cygnusloom.services.common import InvalidInput
@@ -58,6 +59,48 @@ def _campaign(
     )
     create_character_direct(client, campaign_id, name="Rook", fields=_fields())
     return client, campaign_id
+
+
+def test_every_ability_can_be_arranged_freely():
+    spec = _dnd_rules().character
+    abilities = ("str", "dex", "con", "int", "wis", "cha")
+    assert all(spec.stats[ability].swap == "any" for ability in abilities)
+    # The standard array may be placed in any order, not just one traded pair.
+    check_swaps(
+        spec,
+        {ability: 10 for ability in abilities},
+        {"str": 8, "dex": 15, "con": 10, "int": 14, "wis": 12, "cha": 13},
+    )
+
+
+def test_creation_accepts_a_freely_arranged_standard_array(
+    client_factory: Callable[[], TestClient],
+):
+    client = signed_in_client(client_factory)
+    campaign_id = create_campaign_direct(
+        client, world_template="testhollow", rule_set="dnd-srd-2024"
+    )
+    fields = _fields()
+    fields.update(
+        {
+            "stat-str": "8",
+            "stat-dex": "15",
+            "stat-con": "10",
+            "stat-int": "14",
+            "stat-wis": "12",
+            "stat-cha": "13",
+        }
+    )
+    create_character_direct(
+        client,
+        campaign_id,
+        name="Free",
+        fields=fields,
+        rolled={"str": 10, "dex": 10, "con": 10, "int": 10, "wis": 10, "cha": 10},
+    )
+    pc = character_named(client.app, campaign_id, "Free")
+    # The background raises Strength and Dexterity; the rest keep the chosen arrangement.
+    assert (pc.stats["int"], pc.stats["wis"], pc.stats["cha"]) == (14, 12, 13)
 
 
 def test_class_starting_kits_offer_the_srd_lettered_packages() -> None:

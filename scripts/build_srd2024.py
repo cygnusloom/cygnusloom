@@ -954,6 +954,7 @@ def build_rule_set() -> None:
                     "abilities": {
                         "formula": "3d6",
                         "swap_group": "abilities",
+                        "swap": "any",
                     }
                 },
                 "table_genres": ["generic", "fantasy"],

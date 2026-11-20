@@ -3824,6 +3824,7 @@ CHARACTER_DEFINITION_KEYS: Mapping[str, frozenset[str]] = {
             "name",
             "derived",
             "swap_group",
+            "swap",
             "modifier",
             "plus_modifier",
             "plus_modifier_per_level",

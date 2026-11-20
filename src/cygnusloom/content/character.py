@@ -31,6 +31,9 @@ from cygnusloom.content.icons import (
 )
 from cygnusloom.rules.dice import FORMULA, is_formula, roll_total
 
+# How freely a rolled swap group may rearrange its values: one trade of a pair, or any order.
+SWAP_MODES = ("one", "any")
+
 
 def _icon_fields(
     data: Mapping[str, Any],
@@ -184,11 +187,13 @@ class Stat:
     name: str
     # The dice a stat is rolled with, or None when it is assigned from `values` or derived.
     formula: str | None
-    # Stats that share a swap group may trade values. A rolled group allows one swap; a group
-    # with `values` may be assigned in any order.
+    # Stats that share a swap group may trade values. A rolled group allows one swap, unless the
+    # group's `swap` is "any"; a group with `values` may be assigned in any order.
     swap_group: str | None
     low: int
     high: int
+    # How freely a rolled swap group may rearrange its values: "one" trade of a pair, or "any".
+    swap: str = "one"
     # The pool a stat with no formula is assigned from. Every stat in its group shares the pool.
     values: tuple[int, ...] = ()
     # The stat's value in the rule set's standard array. A rolled swap group gives every stat
@@ -911,6 +916,11 @@ def _stat(definition: Definition, template: str) -> Stat:
     swap = definition.data.get("swap_group")
     if swap is not None and (not isinstance(swap, str) or not swap.strip()):
         raise ContentError(f"{label}: 'swap_group' must be non-empty text")
+    swap_mode = definition.data.get("swap", "one")
+    if swap_mode not in SWAP_MODES:
+        raise ContentError(f"{label}: 'swap' must be 'one' or 'any'")
+    if "swap" in definition.data and swap is None:
+        raise ContentError(f"{label}: 'swap' needs a 'swap_group'")
     bands = _modifier_bands(definition.data.get("modifier"), label)
     plus_modifier = definition.data.get("plus_modifier", "")
     if not isinstance(plus_modifier, str) or (plus_modifier and not plus_modifier.strip()):
@@ -953,6 +963,7 @@ def _stat(definition: Definition, template: str) -> Stat:
         swap_group=swap,
         low=count,
         high=count * sides,
+        swap=swap_mode,
         standard=standard,
         modifier_bands=bands,
         plus_modifier=plus_modifier,
@@ -993,6 +1004,7 @@ def _derived_stat(definition: Definition, label: str, name: str) -> Stat:
         "formula",
         "values",
         "swap_group",
+        "swap",
         "modifier",
         "plus_modifier",
         "plus_modifier_per_level",
@@ -1193,6 +1205,8 @@ def _assigned_stat(
         raise ContentError(f"{label}: give 'formula' or 'values', not both")
     if "standard" in definition.data:
         raise ContentError(f"{label}: a stat with 'values' takes no 'standard'")
+    if "swap" in definition.data:
+        raise ContentError(f"{label}: a stat with 'values' already arranges freely")
     values = definition.data["values"]
     if (
         not isinstance(values, list)
@@ -1231,6 +1245,9 @@ def _check_groups(stats: Mapping[str, Stat], template: str) -> None:
         if len(assigned) > 1:
             raise ContentError(f"{template}: stats in swap group {group!r} mix rolled and assigned")
         if not members[0].values:
+            modes = {m.swap for m in members}
+            if len(modes) > 1:
+                raise ContentError(f"{template}: swap group {group!r} must use one 'swap' mode")
             standards = [m.standard for m in members]
             if any(standard is not None for standard in standards) and any(
                 standard is None for standard in standards
@@ -3537,9 +3554,9 @@ def _apply_plus_modifiers(spec: CharacterSpec, stats: dict[str, int]) -> None:
 
 
 def check_swaps(spec: CharacterSpec, rolled: Mapping[str, int], chosen: Mapping[str, int]) -> None:
-    """A player keeps the rolled stats, or a group's standard array, except that each swap group
-    may swap one pair of values. Stats outside a group must keep their rolled value. A derived
-    stat is computed, not chosen."""
+    """A player keeps the rolled stats, or a group's standard array. Each swap group may swap one
+    pair of values, or arrange the whole group when its stats say `"swap": "any"`. Stats
+    outside a group must keep their rolled value. A derived stat is computed, not chosen."""
     groups: dict[str | None, list[Stat]] = {}
     for stat in spec.stats.values():
         if stat.derived is None and not stat.hidden:
@@ -3568,7 +3585,9 @@ def check_swaps(spec: CharacterSpec, rolled: Mapping[str, int], chosen: Mapping[
             raise CharacterError(
                 f"stats in group {group!r} must be the rolled values{choices}, reordered"
             )
-        if not any(sum(b != a for b, a in zip(option, after)) <= 2 for option in options):
+        if members[0].swap != "any" and not any(
+            sum(b != a for b, a in zip(option, after)) <= 2 for option in options
+        ):
             raise CharacterError(f"stats in group {group!r} allow one swap")
 
 

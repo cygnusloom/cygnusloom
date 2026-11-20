@@ -1219,8 +1219,16 @@ def _character_creation_draft(spec: CharacterSpec, rule_set: RuleSet) -> _Draft:
     kinds = spec.kinds()
     if kinds:
         lines.append("Template kinds: " + ", ".join(kind_label(kind) for kind in kinds))
+    free_groups = {
+        stat.swap_group
+        for stat in spec.stats.values()
+        if stat.swap_group is not None and (stat.values or stat.swap == "any")
+    }
     for group, values in _standard_arrays(spec).items():
-        lines.append(f"Standard array ({group}): " + ", ".join(str(value) for value in values))
+        order = " (assign in any order)" if group in free_groups else ""
+        lines.append(
+            f"Standard array ({group}): " + ", ".join(str(value) for value in values) + order
+        )
     if spec.optional_kinds:
         lines.append(
             "Optional selections: " + ", ".join(kind_label(kind) for kind in spec.optional_kinds)
@@ -1260,7 +1268,8 @@ def _stat_draft(stat: Stat) -> _Draft:
             lines.append("Assigned values: " + ", ".join(str(value) for value in stat.values))
         lines.append(f"Range: {stat.low}-{stat.high}")
     if stat.swap_group:
-        lines.append(f"Swap group: {stat.swap_group}")
+        free = stat.values or stat.swap == "any"
+        lines.append(f"Swap group: {stat.swap_group}" + (" (any order)" if free else ""))
     if stat.standard is not None:
         lines.append(f"Standard array value: {stat.standard}")
     if stat.plus_modifier:

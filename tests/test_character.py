@@ -190,6 +190,105 @@ def test_values_that_match_neither_the_roll_nor_the_standard_array_are_rejected(
         )
 
 
+def _free_swap_spec() -> CharacterSpec:
+    definitions = [
+        Definition(
+            "stat",
+            ident,
+            {
+                "type": "stat",
+                "id": ident,
+                "name": ident.title(),
+                "formula": "3d6",
+                "swap_group": "abilities",
+                "swap": "any",
+                "standard": standard,
+            },
+        )
+        for ident, standard in (("str", 15), ("dex", 14), ("con", 13))
+    ]
+    return build_character(definitions, {}, {}, "free-swap-test")
+
+
+def test_a_free_swap_group_accepts_any_arrangement_of_the_roll():
+    check_swaps(
+        _free_swap_spec(),
+        {"str": 8, "dex": 9, "con": 10},
+        {"str": 10, "dex": 8, "con": 9},
+    )
+
+
+def test_a_free_swap_group_accepts_any_arrangement_of_the_standard_array():
+    check_swaps(
+        _free_swap_spec(),
+        {"str": 8, "dex": 9, "con": 10},
+        {"str": 13, "dex": 15, "con": 14},
+    )
+
+
+def test_a_free_swap_group_still_keeps_its_values():
+    with pytest.raises(CharacterError, match="reordered"):
+        check_swaps(
+            _free_swap_spec(),
+            {"str": 8, "dex": 9, "con": 10},
+            {"str": 15, "dex": 15, "con": 13},
+        )
+
+
+@pytest.mark.parametrize(
+    "definition, message",
+    [
+        (
+            {
+                "id": "str",
+                "name": "Str",
+                "formula": "3d6",
+                "swap_group": "attributes",
+                "swap": "many",
+            },
+            "must be 'one' or 'any'",
+        ),
+        (
+            {"id": "str", "name": "Str", "formula": "3d6", "swap": "any"},
+            "needs a 'swap_group'",
+        ),
+        (
+            {
+                "id": "str",
+                "name": "Str",
+                "values": [1, 2],
+                "swap_group": "attributes",
+                "swap": "any",
+            },
+            "already arranges freely",
+        ),
+    ],
+)
+def test_a_bad_swap_mode_is_rejected(definition, message):
+    with pytest.raises(ContentError, match=message):
+        build_character([Definition("stat", "str", {"type": "stat", **definition})], {}, {}, "test")
+
+
+def test_a_swap_group_must_use_one_swap_mode():
+    definitions = [
+        Definition(
+            "stat",
+            ident,
+            {
+                "type": "stat",
+                "id": ident,
+                "name": ident.title(),
+                "formula": "3d6",
+                "swap_group": "attributes",
+                **({"swap": "any"} if ident == "str" else {}),
+            },
+        )
+        for ident in ("str", "dex")
+    ]
+    with pytest.raises(ContentError, match="one 'swap' mode"):
+        build_character(definitions, {}, {}, "test")
+
+
 @pytest.mark.parametrize(
     "definition, message",
     [

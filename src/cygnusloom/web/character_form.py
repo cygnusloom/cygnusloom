@@ -65,6 +65,9 @@ def creation_view(spec: CharacterSpec, rolled: dict[str, int]) -> dict[str, Any]
             "value": rolled[stat.id],
             "group": stat.swap_group,
             "assigned": stat.formula is None,
+            "swap": ("any" if stat.values or stat.swap == "any" else "one")
+            if stat.swap_group is not None
+            else None,
             "standard": stat.standard,
             "options": [
                 {"value": value, "modifier": stat.modifier(value)}
@@ -169,6 +172,11 @@ def creation_view(spec: CharacterSpec, rolled: dict[str, int]) -> dict[str, Any]
         # A rule set whose source material gives a standard array may fill it in place of a roll.
         "can_standard": any(
             stat.standard is not None and stat.derived is None for stat in spec.stats.values()
+        ),
+        # A rolled group may be arranged in any order, as 5E compatible sets assign their scores.
+        "free_swap": any(
+            stat.swap_group is not None and stat.formula is not None and stat.swap == "any"
+            for stat in spec.stats.values()
         ),
         "kinds": kinds,
         "choice_fields": choice_fields,

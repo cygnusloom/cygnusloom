@@ -156,7 +156,7 @@ def _skill_spec():
     )
 
 
-def _standard_spec():
+def _standard_spec(*, swap: str | None = None):
     return build_character(
         [
             Definition(
@@ -169,6 +169,7 @@ def _standard_spec():
                     "formula": "3d6",
                     "swap_group": "attributes",
                     "standard": standard,
+                    **({"swap": swap} if swap else {}),
                 },
             )
             for ident, standard in (("str", 15), ("dex", 14), ("con", 13))
@@ -195,7 +196,16 @@ def test_creation_view_exposes_a_standard_array_in_stat_order():
 
     assert view["can_reroll"] is True
     assert view["can_standard"] is True
+    assert view["free_swap"] is False
     assert [stat["standard"] for stat in view["stats"]] == [15, 14, 13]
+    assert [stat["swap"] for stat in view["stats"]] == ["one", "one", "one"]
+
+
+def test_creation_view_exposes_a_free_swap_group():
+    view = creation_view(_standard_spec(swap="any"), {"str": 8, "dex": 9, "con": 10})
+
+    assert view["free_swap"] is True
+    assert [stat["swap"] for stat in view["stats"]] == ["any", "any", "any"]
 
 
 def test_creation_view_exposes_generic_compatibility_requirements_and_choice_keys():
@@ -615,7 +625,20 @@ def test_creation_page_renders_stats_as_swap_cards(
     page = client.get(f"/campaigns/{campaign_id}").text
 
     assert 'data-stat-group="attributes"' in page
+    assert 'data-stat-swap="one"' in page
     assert "data-stat-bands=" in page
     assert "data-stat-modifier" in page
     assert "data-reset-stats" in page
     assert '<input type="hidden" name="stat-str"' in page
+
+
+def test_the_dnd_creation_page_lets_players_arrange_abilities_freely(
+    client_factory: Callable[[], TestClient],
+):
+    client = _signed_in(client_factory)
+    response = _new_campaign(client, world_template="unwritten-world", rule_set="dnd-srd-2024")
+    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
+    page = client.get(f"/campaigns/{campaign_id}").text
+
+    assert page.count('data-stat-swap="any"') == 6
+    assert "You may arrange them in any order." in page
