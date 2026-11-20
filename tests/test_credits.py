@@ -436,6 +436,30 @@ def test_rollback_refunds_the_charges_for_removed_replies(client_factory, app: F
     assert [entry.delta for entry in refunds] == [5]
 
 
+def test_a_reset_refunds_the_charges_for_removed_replies(client_factory, app: FastAPI):
+    client, campaign_id = campaign_ready_fast(client_factory)
+    _set_price(app, "fake/scripted", 5)
+    owner = _user(app, "ada@example.com")
+    credits.set_balance(app.state.engine, owner.id, 10, reason=credits.ADMIN_REASON)
+    assert send_message(client, campaign_id, REPLY).status_code == 303
+    assert _balance(app, "ada@example.com") == 5
+
+    token = csrf_token(client, f"/campaigns/{campaign_id}")
+    response = client.post(
+        f"/campaigns/{campaign_id}/reset",
+        data={"csrf_token": token, "confirm": "reset"},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    assert _balance(app, "ada@example.com") == 10
+    with Session(app.state.engine) as session:
+        refunds = session.exec(
+            select(CreditEntry).where(CreditEntry.reason == credits.REFUND_REASON)
+        ).all()
+    assert [entry.delta for entry in refunds] == [5]
+
+
 def test_an_administrator_sets_an_account_balance(settings: Settings):
     app = make_app(replace(settings, test_login_admin=True))
     client = TestClient(app)

@@ -136,6 +136,15 @@
         <button type="submit" class="danger">Delete campaign</button>
       </form>
     </details>
+    <details>
+      <summary>Reset this campaign</summary>
+      <form method="post" action="/campaigns/{{ campaign.id }}/reset" class="campaign-reset-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <p class="muted">This removes the opening and everything played since, so the campaign returns to its starting party just before the opening. Characters keep their sheets and gear, and the campaign's own settings stay as they are. Anyone who joined after the opening will need to create their character again. Type <strong>reset</strong> to confirm.</p>
+        <label>Confirmation <input type="text" name="confirm" required autocomplete="off"></label>
+        <button type="submit" class="danger">Reset campaign</button>
+      </form>
+    </details>
   </section>
   {% else %}
   <section class="settings-section" aria-labelledby="settings-game-summary-title">

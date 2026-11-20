@@ -97,6 +97,9 @@ from cygnusloom.services.campaigns import (
 from cygnusloom.services.campaigns import (
     discard_pending as discard_pending_turn,
 )
+from cygnusloom.services.campaigns import (
+    reset_campaign as reset_campaign_service,
+)
 from cygnusloom.services.common import Conflict, InvalidInput, NotFound, session_scope
 from cygnusloom.services.compendium import compendium_view
 from cygnusloom.services.encounters import encounter_view, local_map_view
@@ -414,6 +417,28 @@ async def delete_campaign(request: Request, campaign_id: int) -> Response:
         return RedirectResponse("/campaigns", status_code=303)
     _flash(request, "Campaign deleted.")
     return RedirectResponse("/campaigns", status_code=303)
+
+
+@router.post("/{campaign_id}/reset")
+async def reset_campaign(request: Request, campaign_id: int) -> Response:
+    """Start one of the player's own campaigns over from just before its opening, after they
+    type reset to confirm. The starting party and the campaign's options stay."""
+    user = page_user(request)
+    await verify_csrf(request)
+    form = await request.form()
+    get_owned_campaign(request.app.state.engine, user.id, campaign_id)
+    if form_text(form, "confirm").strip().lower() != "reset":
+        _flash(request, 'Type "reset" to confirm starting the campaign over.', "error")
+        return RedirectResponse(f"/campaigns/{campaign_id}#view-settings", status_code=303)
+    try:
+        reset_campaign_service(
+            request.app.state.engine, request.app.state.content, user.id, campaign_id
+        )
+    except (InvalidInput, Conflict) as exc:
+        _flash(request, str(exc), "error")
+        return RedirectResponse(f"/campaigns/{campaign_id}#view-settings", status_code=303)
+    _flash(request, "Campaign reset to just before the opening.")
+    return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
 
 
 @router.post("/{campaign_id}/character/reroll")
