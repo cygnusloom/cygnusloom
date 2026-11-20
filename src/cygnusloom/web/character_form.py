@@ -368,7 +368,8 @@ def _pronoun_options() -> list[dict[str, Any]]:
 
 def campaign_view(spec: CampaignSpec, values: Mapping[str, Any] | None = None) -> dict[str, Any]:
     """What the campaign options form shows: each campaign option as a panel. `values` are the
-    options in force, so a settings page can show and change them."""
+    options in force, so a settings page can show and change them. An option whose table lists
+    one value is fixed, so it is not shown: there is nothing to choose."""
     current = values or {}
     choice_fields = [
         {
@@ -376,10 +377,9 @@ def campaign_view(spec: CampaignSpec, values: Mapping[str, Any] | None = None) -
             "name": field.name,
             "description": field.description,
             "value": current.get(field.id, ""),
-            "options": _option_views(spec, spec.tables[field.table]),
+            "options": _option_views(spec, spec.table_options(field)),
         }
-        for field in spec.fields.values()
-        if field.table is not None
+        for field in spec.choice_fields()
     ]
     text_fields = [
         {
@@ -388,17 +388,20 @@ def campaign_view(spec: CampaignSpec, values: Mapping[str, Any] | None = None) -
             "description": field.description,
             "value": current.get(field.id, ""),
         }
-        for field in spec.fields.values()
-        if field.table is None
+        for field in spec.text_fields()
     ]
     return {"choice_fields": choice_fields, "text_fields": text_fields}
 
 
 def campaign_submission_from_form(spec: CampaignSpec, form: FormData) -> dict[str, Any]:
     """The campaign options a form stands for, keyed by option id as the schema expects.
-    Every option must be given."""
+    Every visible option must be given; a fixed option is filled with its only value."""
     options: dict[str, Any] = {}
     for field in spec.fields.values():
+        fixed = spec.fixed_value(field)
+        if fixed is not None:
+            options[field.id] = fixed
+            continue
         value = form_text(form, CAMPAIGN_PREFIX + field.id)
         if not value:
             raise InvalidInput(f"Choose {field.name}")

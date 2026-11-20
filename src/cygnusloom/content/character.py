@@ -4217,6 +4217,28 @@ class CampaignSpec:
     tables: Mapping[str, tuple[TableOption, ...]]
     table_names: Mapping[str, str]
 
+    def table_options(self, field: Field) -> tuple[TableOption, ...]:
+        """The values a field offers. A field without a table is free text, so it offers none."""
+        return self.tables.get(field.table, ()) if field.table is not None else ()
+
+    def choice_fields(self) -> tuple[Field, ...]:
+        """The campaign options that offer the players a choice. A table with one option is
+        not a choice but a fixed value, so nothing asks for it and no page shows it."""
+        return tuple(field for field in self.fields.values() if len(self.table_options(field)) > 1)
+
+    def text_fields(self) -> tuple[Field, ...]:
+        """The campaign options the players write themselves."""
+        return tuple(field for field in self.fields.values() if field.table is None)
+
+    def offered_fields(self) -> tuple[Field, ...]:
+        """Every campaign option a page shows: the real choices and the free-text options."""
+        return (*self.choice_fields(), *self.text_fields())
+
+    def fixed_value(self, field: Field) -> str | None:
+        """The only value a choice field offers, or None when the field offers a real choice."""
+        options = self.table_options(field)
+        return options[0].value if len(options) == 1 else None
+
 
 def build_campaign(
     definitions: list[Definition],

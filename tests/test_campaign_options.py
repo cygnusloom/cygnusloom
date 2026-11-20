@@ -16,7 +16,9 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session
+from starlette.datastructures import FormData
 
+from cygnusloom.content.character import CampaignSpec, Field, TableOption
 from cygnusloom.db.models import Campaign
 from cygnusloom.services import campaign_files
 from cygnusloom.services.common import InvalidInput
@@ -26,6 +28,8 @@ from cygnusloom.services.events import (
     decode,
     events_since,
 )
+from cygnusloom.services.views import world_state_text
+from cygnusloom.web.character_form import campaign_submission_from_form, campaign_view
 from tests.conftest import content_library, csrf_token, remember_csrf_token
 from tests.factories import (
     campaign_ready_fast,
@@ -47,6 +51,7 @@ from tests.test_character_creation import (
     _picks,
     _rolled_stats,
 )
+from tests.test_dnd_srd_play import FIGHTER_FIELDS
 from tests.test_multiplayer import _joined_campaign
 from tests.test_start_level import _submit as _submit_advancement
 from tests.test_wwn_advancement import CLASS_PICKS, NAME, _counter
@@ -153,6 +158,72 @@ def test_the_settings_page_shows_the_rule_sets_campaign_options(
     assert 'name="table_genres_present" value="1"' in page
     assert 'name="table_tones_present" value="1"' in page
     assert "Let players respec their characters" in page
+
+
+def test_a_campaign_option_with_one_value_is_fixed_and_not_asked():
+    """The SRD has one experience track, so the engine fills it in rather than offering a
+    choice. A rule set with a real track choice still asks, and a fixed value is still set."""
+    dnd = content_library().rule_sets["dnd-srd-2024"].campaign
+    xp = dnd.fields["xp_rate"]
+
+    assert campaign_view(dnd)["choice_fields"] == []
+    assert dnd.fixed_value(xp) == "Standard"
+    assert campaign_submission_from_form(dnd, FormData([])) == {"xp_rate": "Standard"}
+
+    wwn = content_library().rule_sets["worldswithoutnumber"].campaign
+    assert [field.id for field in wwn.choice_fields()] == ["xp_rate"]
+    assert wwn.fixed_value(wwn.fields["xp_rate"]) is None
+
+
+def test_a_fixed_campaign_option_is_not_shown_but_is_still_recorded(
+    client_factory: Callable[[], TestClient],
+):
+    client = signed_in_client(client_factory)
+    campaign_id = create_campaign_direct(
+        client, world_template="testhollow", rule_set="dnd-srd-2024"
+    )
+
+    creation = client.get(f"/campaigns/{campaign_id}").text
+    assert 'id="panel-campaign-xp_rate"' not in creation
+    assert "These options are shared by every character" not in creation
+
+    create_character_direct(
+        client,
+        campaign_id,
+        name="Rook",
+        fields={key: value for key, value in FIGHTER_FIELDS.items() if key != "campaign-xp_rate"},
+    )
+    close_opening(client, campaign_id)
+
+    settings = client.get(f"/campaigns/{campaign_id}").text
+    assert 'name="campaign-xp_rate"' not in settings
+    assert '<h4 class="settings-subheading">Campaign options</h4>' not in settings
+    state = open_campaign(client.app, campaign_id)
+    assert state.options == {"xp_rate": "Standard"}
+    orientation = world_state_text(state, content_library().rule_sets["dnd-srd-2024"].campaign)
+    assert "Campaign experience" not in orientation
+
+
+def test_a_form_fills_a_fixed_option_while_the_player_chooses_the_others():
+    spec = CampaignSpec(
+        fields={
+            "track": Field(id="track", name="Track", description="", table="track"),
+            "mood": Field(id="mood", name="Mood", description="", table="mood"),
+        },
+        tables={
+            "track": (TableOption(name="One", description="The only track."),),
+            "mood": (
+                TableOption(name="Calm", description="A calm tale."),
+                TableOption(name="Grim", description="A grim tale."),
+            ),
+        },
+        table_names={},
+    )
+
+    assert [field["id"] for field in campaign_view(spec)["choice_fields"]] == ["mood"]
+    options = campaign_submission_from_form(spec, FormData([("campaign-mood", "Grim")]))
+
+    assert options == {"track": "One", "mood": "Grim"}
 
 
 def test_the_owner_changes_the_campaign_options_brief_and_genres(
