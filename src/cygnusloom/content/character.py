@@ -343,6 +343,9 @@ class FeaturePick:
     # An ability-score allocation with more than one valid shape, such as +2/+1 or
     # +1/+1/+1. The player picks one index; the values are read in order.
     patterns: tuple[tuple[int, ...], ...] = ()
+    # When this pick may be swapped for another choice, such as a weapon mastery retrained on
+    # a rest. Empty when the choice is fixed once made.
+    retrain: str = ""
 
 
 @dataclass(frozen=True)
@@ -432,6 +435,9 @@ class Feature:
     # Weapon training this feature grants: "simple", "martial", a category with a property
     # such as "martial:finesse", or one weapon id such as "weapon:longbow".
     weapon_training: tuple[str, ...] = ()
+    # Mastery properties this feature lets its holder use in place of a weapon's own, such as
+    # the Fighter's Tactical Master.
+    mastery_options: tuple[str, ...] = ()
     # Tool proficiencies this feature grants, such as "Thieves' Tools".
     tool_training: tuple[str, ...] = ()
     # The ids of rules attached to this feature. Their text reaches the GM while the character
@@ -549,10 +555,13 @@ class ItemTemplate:
 
 @dataclass(frozen=True)
 class Granted:
-    """A feature a template gives, with its count: a whole number or a dice formula."""
+    """A feature a template gives, with its count: a whole number or a dice formula. `choices`
+    fixes picks the feature asks for, so a background can grant Magic Initiate with its spell
+    list already decided."""
 
     feature: str
     quantity: str
+    choices: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -1023,6 +1032,7 @@ def build_character(
         starting_silver=starting_silver,
         feature_types=feature_types,
     )
+    _check_granted_choices(spec, template)
     layouts = _each(definitions, "character_layout", lambda d: _screen_layout(d, spec, template))
     presets = _each(
         definitions,
@@ -1869,6 +1879,53 @@ def _assigned_stat(
     )
 
 
+def _check_granted_choices(spec: CharacterSpec, template: str) -> None:
+    """Check the picks a template's granted features fix. Each value must be one the pick
+    offers, and a fixed pick cannot take more values than it has slots."""
+    for found in spec.templates.values():
+        for granted in found.features:
+            feature = spec.features[granted.feature]
+            for pick_id, values in granted.choices.items():
+                pick = next((item for item in feature.picks if item.id == pick_id), None)
+                assert pick is not None
+                if len(values) > pick.count:
+                    raise ContentError(
+                        f"{template}: template {found.id!r} fixes {len(values)} "
+                        f"{pick.label.lower()} for {feature.name!r}, which takes {pick.count}"
+                    )
+                options = set(_feature_choice_options(spec, pick))
+                for value in values:
+                    if value not in options:
+                        raise ContentError(
+                            f"{template}: template {found.id!r} fixes {value!r} for "
+                            f"{feature.name!r}, which is not an offered {pick.label.lower()}"
+                        )
+
+
+def _template_granted_choices(
+    spec: CharacterSpec, templates: Mapping[str, str]
+) -> dict[str, tuple[str, ...]]:
+    """The feature choices a character's selected templates fix, keyed `feature:pick`. Two
+    selected templates that fix the same pick differently make the character impossible."""
+    fixed: dict[str, tuple[str, ...]] = {}
+    for template_id in templates.values():
+        found = spec.templates.get(template_id)
+        if found is None:
+            continue
+        for granted in found.features:
+            feature = spec.features[granted.feature]
+            for pick_id, values in granted.choices.items():
+                key = f"{granted.feature}:{pick_id}"
+                if key in fixed and fixed[key] != values:
+                    pick = next(item for item in feature.picks if item.id == pick_id)
+                    raise CharacterError(
+                        f"the chosen templates fix {feature.name!r} {pick.label.lower()} "
+                        "differently"
+                    )
+                fixed[key] = values
+    return fixed
+
+
 def _check_groups(stats: Mapping[str, Stat], template: str) -> None:
     """Every stat in a swap group must be rolled, or every one assigned from the same pool with a
     pool as big as the group. A rolled group gives either every stat a standard array value or
@@ -2021,6 +2078,12 @@ def load_feature(
     armor_training = _text_list(data.get("armor_training", []), "armor_training", label)
     weapon_training = _text_list(data.get("weapon_training", []), "weapon_training", label)
     tool_training = _text_list(data.get("tool_training", []), "tool_training", label)
+    mastery_options = _text_list(data.get("mastery_options", []), "mastery_options", label)
+    for property_name in mastery_options:
+        if property_name not in MASTERY_PROPERTIES:
+            raise ContentError(
+                f"{label}: 'mastery_options' names no mastery property ({property_name!r})"
+            )
     tag = data.get("tag", "")
     if not isinstance(tag, str):
         raise ContentError(f"{label}: 'tag' must be text")
@@ -2087,6 +2150,7 @@ def load_feature(
         armor_training=armor_training,
         weapon_training=weapon_training,
         tool_training=tool_training,
+        mastery_options=mastery_options,
         rules=rule_ids(data, label),
         tag=tag,
         rank=rank,
@@ -2348,6 +2412,13 @@ def _feature_picks(
             patterns.append(tuple(pattern))
         if patterns and kind != "stat":
             raise ContentError(f"{label}: pick {pick_id!r} patterns are only for stat picks")
+        retrain = entry.get("retrain", "")
+        if not isinstance(retrain, str):
+            raise ContentError(f"{label}: pick {pick_id!r} 'retrain' must be text")
+        if retrain and not (kind == "feature" and feature_type == "item"):
+            raise ContentError(
+                f"{label}: pick {pick_id!r} 'retrain' is only for item feature picks"
+            )
         grant = entry.get("grant", "")
         allowed_grants = (
             "",
@@ -2414,6 +2485,7 @@ def _feature_picks(
                 groups_from=groups_from,
                 table=table,
                 patterns=tuple(patterns),
+                retrain=retrain,
             )
         )
     return tuple(picks)
@@ -3564,7 +3636,8 @@ def _granted_item(item: object, items: Mapping[str, ItemTemplate], label: str) -
 
 
 def _granted(item: object, features: Mapping[str, Feature], label: str) -> Granted:
-    """A grant is a feature id, or an object naming a feature and a quantity other than one."""
+    """A grant is a feature id, or an object naming a feature, a quantity other than one, and
+    any choices that feature takes."""
     if isinstance(item, str):
         item = {"feature": item}
     if not isinstance(item, dict):
@@ -3577,7 +3650,24 @@ def _granted(item: object, features: Mapping[str, Feature], label: str) -> Grant
         quantity = str(quantity)
     if not isinstance(quantity, str) or not (_is_count(quantity) or is_formula(quantity)):
         raise ContentError(f"{label}: 'quantity' must be a whole number or a dice formula")
-    return Granted(feature=feature, quantity=quantity)
+    raw_choices = item.get("choices", {})
+    if not isinstance(raw_choices, Mapping):
+        raise ContentError(f"{label}: 'choices' must map pick ids to value lists")
+    choices: dict[str, tuple[str, ...]] = {}
+    pick_ids = {pick.id for pick in features[feature].picks}
+    for pick_id, values in raw_choices.items():
+        if pick_id not in pick_ids:
+            raise ContentError(f"{label}: choices names no pick of {feature!r} ({pick_id!r})")
+        if (
+            not isinstance(values, list)
+            or not values
+            or not all(isinstance(value, str) and value.strip() for value in values)
+        ):
+            raise ContentError(f"{label}: choice {pick_id!r} must be a non-empty list of text")
+        if len(set(values)) != len(values):
+            raise ContentError(f"{label}: choice {pick_id!r} repeats a value")
+        choices[pick_id] = tuple(values)
+    return Granted(feature=feature, quantity=quantity, choices=choices)
 
 
 def _is_count(text: str) -> bool:
@@ -4138,7 +4228,11 @@ def _check_feature_choices(spec: CharacterSpec, submitted: Mapping[str, Any]) ->
     if not isinstance(given, Mapping):
         raise CharacterError("'feature_choices' must map feature picks to lists of choices")
     possible = set(submitted.get("features", []))
-    for template_id in _pick_object(submitted.get("templates", {}), "templates").values():
+    templates = _pick_object(submitted.get("templates", {}), "templates")
+    fixed_choices = _template_granted_choices(
+        spec, {str(key): str(value) for key, value in templates.items()}
+    )
+    for template_id in templates.values():
         template = spec.templates.get(str(template_id))
         if template is not None:
             possible.update(granted.feature for granted in template.features)
@@ -4175,7 +4269,7 @@ def _check_feature_choices(spec: CharacterSpec, submitted: Mapping[str, Any]) ->
         if pick.kind != "text" and len(set(values)) != len(values):
             raise CharacterError(f"{feature.name!r} chooses the same {pick.label.lower()} twice")
         if pick.kind != "text":
-            check_feature_choice_groups(spec, feature, pick, values, given)
+            check_feature_choice_groups(spec, feature, pick, values, given, fallback=fixed_choices)
 
 
 def _check_field_values(spec: CharacterSpec, fields: Mapping[str, Any]) -> None:
@@ -4609,8 +4703,15 @@ def resolve(
     _check_ordered_feature_ranks(spec, features)
     stat_modifiers: dict[str, int] = {}
     stat_bonuses: dict[str, int] = {}
+    fixed_choices = _template_granted_choices(spec, templates)
     feature_choices = _feature_choice_values(
-        spec, features, given_feature_choices, increments, stat_modifiers, stat_bonuses
+        spec,
+        features,
+        given_feature_choices,
+        increments,
+        stat_modifiers,
+        stat_bonuses,
+        fixed=fixed_choices,
     )
     # A choice can raise a score that another stat adds the modifier of, such as Constitution
     # to hit points. That stat was computed before the choices, so raise it by the same change.
@@ -4686,15 +4787,27 @@ def _feature_choice_values(
     increments: dict[str, int],
     stat_modifiers: dict[str, int],
     stat_bonuses: dict[str, int],
+    *,
+    fixed: Mapping[str, tuple[str, ...]] | None = None,
 ) -> dict[str, list[str]]:
     """Validate the choices the features the character holds ask for, filling in one when a
-    rolled feature left the choice blank. A `trained` choice marks a level-0 skill as trained."""
+    rolled feature left the choice blank. A `trained` choice marks a level-0 skill as trained.
+    A choice a template fixes must keep the fixed values."""
     choices: dict[str, list[str]] = {}
     for feature_id, count in list(features.items()):
         feature = spec.features[feature_id]
         for pick in feature.picks:
             key = f"{feature_id}:{pick.id}"
             values = list(given.get(key, []))
+            fixed_values = list((fixed or {}).get(key, ()))
+            if fixed_values:
+                if values and not set(fixed_values) <= set(values):
+                    raise CharacterError(
+                        f"{feature.name!r} must use the fixed {pick.label.lower()} "
+                        f"{', '.join(fixed_values)}"
+                    )
+                if not values:
+                    values = fixed_values
             allowed = pick.count * count
             if len(values) > allowed:
                 raise CharacterError(
@@ -4729,7 +4842,7 @@ def _feature_choice_values(
                 continue
             if not options:
                 raise CharacterError(f"{feature.name!r} has no {pick.label.lower()} to choose")
-            check_feature_choice_groups(spec, feature, pick, values, given)
+            check_feature_choice_groups(spec, feature, pick, values, given, fallback=choices)
             if len(values) < allowed and pick.kind == "skill":
                 # A rolled skill feature still needs a usable choice. Unlike a stat modifier,
                 # which the player or GM can pick later, a skill grant cannot be applied without
@@ -4824,14 +4937,20 @@ def check_feature_choice_groups(
     pick: FeaturePick,
     values: Sequence[str],
     given: Mapping[str, Sequence[str]],
+    *,
+    fallback: Mapping[str, Sequence[str]] | None = None,
 ) -> None:
     """Refuse an option outside the groups another pick of the same feature chose, such as a
-    Wizard spell for a Magic Initiate whose player chose the Cleric list."""
+    Wizard spell for a Magic Initiate whose player chose the Cleric list. `fallback` holds
+    choices already resolved, such as a spell list a template fixes."""
     source = _feature_choice_source(feature, pick)
     if source is None:
         return
-    raw = given.get(f"{feature.id}:{source.id}", ())
+    key = f"{feature.id}:{source.id}"
+    raw = given.get(key, ())
     chosen = {value for value in raw if isinstance(value, str)} if isinstance(raw, list) else set()
+    if not chosen and fallback is not None:
+        chosen = set(fallback.get(key, ()))
     if not chosen:
         if values:
             raise CharacterError(f"{feature.name!r} needs its {source.label.lower()} chosen first")

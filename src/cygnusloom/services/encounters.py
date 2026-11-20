@@ -39,6 +39,7 @@ from cygnusloom.services.events import (
     CampaignState,
     CellMark,
     Character,
+    ConditionEnded,
     Encounter,
     EncounterEnded,
     EncounterMap,
@@ -1624,6 +1625,15 @@ def begin_turn(db: Session, campaign_id: int, name: str) -> Character:
     character = state.characters[name_key(encounter.order[encounter.up])]
     if name_key(name) != name_key(character.name):
         raise InvalidInput(f"it is {character.name}'s turn next, not {name}'s")
+    for other in state.characters.values():
+        for condition in list(other.conditions):
+            source = other.condition_until.get(condition, "")
+            if source and name_key(source) == name_key(character.name):
+                record(
+                    db,
+                    campaign_id,
+                    ConditionEnded(name=other.name, condition=condition, how="turn start"),
+                )
     instruction = ""
     if character.kind == NPC_KIND:
         instruction = (

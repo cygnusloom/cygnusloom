@@ -70,6 +70,33 @@
     return selected;
   };
 
+  // A template may fix some of the choices its granted features ask for, such as a background
+  // that grants Magic Initiate with a particular spell list. The fixed values are keyed
+  // `feature:pick`, and the source template names them in the hint beside the choice.
+  const selectedFeatureDefaults = () => {
+    const defaults = new Map();
+    for (const radio of document.querySelectorAll("input[data-template-select]:checked")) {
+      let entries = {};
+      try {
+        entries = JSON.parse(radio.dataset.featureChoiceDefaults || "{}");
+      } catch {
+        entries = {};
+      }
+      for (const [featureId, picks] of Object.entries(entries)) {
+        for (const [pickId, values] of Object.entries(picks)) {
+          const key = `${featureId}:${pickId}`;
+          const found = defaults.get(key) ?? {
+            values: new Set(),
+            source: radio.dataset.title || "This choice",
+          };
+          for (const value of values) found.values.add(value);
+          defaults.set(key, found);
+        }
+      }
+    }
+    return defaults;
+  };
+
   // Picks use a native select for form submission and for the constraint logic, and a custom
   // summary and dialog for reading the options. The dialog is built from the select so the two
   // can never disagree about the offered values.
@@ -471,9 +498,11 @@
   };
 
   // A pick may offer only the options in the groups another pick chose, such as spells from the
-  // spell list a Magic Initiate chose. Two picks of one group cannot take the same option.
+  // spell list a Magic Initiate chose. Two picks of one group cannot take the same option. A
+  // value a chosen template fixes is preselected and cannot be changed to anything else.
   const refreshFeatureChoiceOptions = (panel) => {
     const featureId = panel.dataset.featureChoiceFor;
+    const fixed = selectedFeatureDefaults();
     for (const field of panel.querySelectorAll("[data-pick-field][data-pick-group]")) {
       if (field.hasAttribute("data-pattern-source")) continue;
       const select = featureChoiceFieldSelect(field);
@@ -489,6 +518,21 @@
         const hint = field.querySelector("[data-source-hint]");
         if (hint) hint.hidden = allowed.size > 0;
       }
+      const pickId = field.dataset.pickGroup.startsWith(`${featureId}-`)
+        ? field.dataset.pickGroup.slice(featureId.length + 1)
+        : "";
+      const locked = fixed.get(`${featureId}:${pickId}`);
+      const fixedHint = field.querySelector("[data-fixed-hint]");
+      if (fixedHint) {
+        fixedHint.hidden = !locked;
+        if (locked) fixedHint.textContent = `${locked.source} fixes this choice.`;
+      }
+      if (locked && locked.values.size) {
+        const values = [...locked.values];
+        const slot = Number(field.dataset.slot) || 0;
+        const wanted = values[Math.min(slot, values.length - 1)];
+        if (!select.value || !locked.values.has(select.value)) select.value = wanted;
+      }
       const taken = new Set();
       for (const other of featureChoiceFields(panel, field.dataset.pickGroup)) {
         if (other !== field) {
@@ -499,7 +543,8 @@
       for (const option of select.options) {
         if (!option.value) continue;
         const groups = (option.dataset.groups || "").split(",").filter(Boolean);
-        const fits = !allowed || groups.some((value) => allowed.has(value));
+        const fits = (!allowed || groups.some((value) => allowed.has(value))) &&
+          (!locked || locked.values.has(option.value));
         option.hidden = !fits;
         option.disabled = !fits || taken.has(option.value);
       }

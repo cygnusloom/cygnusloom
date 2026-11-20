@@ -354,6 +354,9 @@ def state_tool_groups(
             "growth",
             "study",
             "xp",
+            "mastery",
+            "retrain",
+            "drill",
         ),
     ):
         groups.add("advancement")

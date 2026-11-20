@@ -616,6 +616,92 @@ def test_magic_initiate_refuses_a_spell_from_another_list(
         create_character_direct(client, campaign_id, name="Rook", fields=fields)
 
 
+def _background_fields(
+    background: str, abilities: tuple[str, str, str], class_skill: str
+) -> dict[str, str]:
+    fields = {
+        key: value
+        for key, value in _fields().items()
+        if not key.startswith("feature-choice-background-asi-")
+    }
+    fields["template-background"] = background
+    fields["pick-skill-class_skills-0"] = class_skill
+    for index, ability in enumerate(abilities):
+        fields[f"feature-choice-background-asi-{background}-scores-{index}"] = ability
+    return fields
+
+
+@pytest.mark.parametrize(
+    ("background", "spell_list", "cantrips", "spell", "ability", "abilities", "class_skill"),
+    [
+        (
+            "acolyte",
+            "cleric",
+            ("spell-guidance", "spell-sacred-flame"),
+            "spell-cure-wounds",
+            "wis",
+            ("int", "wis", "cha"),
+            "history",
+        ),
+        (
+            "sage",
+            "wizard",
+            ("spell-fire-bolt", "spell-light"),
+            "spell-magic-missile",
+            "int",
+            ("con", "int", "wis"),
+            "athletics",
+        ),
+    ],
+)
+def test_a_background_fixes_the_spell_list_of_its_magic_initiate_feat(
+    client_factory: Callable[[], TestClient],
+    background: str,
+    spell_list: str,
+    cantrips: tuple[str, str],
+    spell: str,
+    ability: str,
+    abilities: tuple[str, str, str],
+    class_skill: str,
+) -> None:
+    client = signed_in_client(client_factory)
+    campaign_id = create_campaign_direct(
+        client, world_template="testhollow", rule_set="dnd-srd-2024"
+    )
+    fields = {
+        **_background_fields(background, abilities, class_skill),
+        "feature-choice-feat-magic-initiate-cantrips-0": cantrips[0],
+        "feature-choice-feat-magic-initiate-cantrips-1": cantrips[1],
+        "feature-choice-feat-magic-initiate-spell-0": spell,
+        "feature-choice-feat-magic-initiate-ability-0": ability,
+    }
+
+    create_character_direct(client, campaign_id, name="Rook", fields=fields)
+
+    pc = character_named(client.app, campaign_id, "Rook")
+    assert pc.feature_choices["feat-magic-initiate:list"] == [spell_list]
+
+
+def test_a_background_refuses_a_magic_initiate_list_it_does_not_grant(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    client = signed_in_client(client_factory)
+    campaign_id = create_campaign_direct(
+        client, world_template="testhollow", rule_set="dnd-srd-2024"
+    )
+    fields = {
+        **_background_fields("acolyte", ("int", "wis", "cha"), "history"),
+        "feature-choice-feat-magic-initiate-list-0": "wizard",
+        "feature-choice-feat-magic-initiate-cantrips-0": "spell-fire-bolt",
+        "feature-choice-feat-magic-initiate-cantrips-1": "spell-light",
+        "feature-choice-feat-magic-initiate-spell-0": "spell-magic-missile",
+        "feature-choice-feat-magic-initiate-ability-0": "wis",
+    }
+
+    with pytest.raises(InvalidInput, match="must use the fixed spell list cleric"):
+        create_character_direct(client, campaign_id, name="Rook", fields=fields)
+
+
 def test_acolyte_ability_patterns_are_named_and_describe_each_ability():
     spec = _dnd_rules().character
     pick = feature_choice_views(spec, spec.features["background-asi-acolyte"])[0]
@@ -682,6 +768,96 @@ def test_weapon_mastery_choices_read_as_weapon_names_on_the_sheet(
     assert "Weapon Mastery — Greatsword, Longsword, Dagger" in block
     assert "Feature choice Weapon Mastery (Weapons): Greatsword, Longsword, Dagger" in block
     assert "weapon-greatsword" not in block
+
+
+def test_weapon_mastery_can_retrain_one_weapon_on_a_rest(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    client = signed_in_client(client_factory)
+    campaign_id = create_campaign_direct(
+        client, world_template="testhollow", rule_set="dnd-srd-2024"
+    )
+    fields = {
+        **_fields(),
+        "feature-choice-class-fighter-weapon-mastery-weapons-0": "weapon-greatsword",
+        "feature-choice-class-fighter-weapon-mastery-weapons-1": "weapon-longsword",
+        "feature-choice-class-fighter-weapon-mastery-weapons-2": "weapon-dagger",
+    }
+    create_character_direct(client, campaign_id, name="Rook", fields=fields)
+    tools = tools_for(client.app, campaign_id, rule_set="dnd-srd-2024")
+
+    result = tools.choose_feature_choice(
+        "Rook",
+        "class-fighter-weapon-mastery",
+        "weapons",
+        "weapon-battleaxe",
+        replace="weapon-longsword",
+    )
+
+    assert result["previous"] == "weapon-longsword"
+    pc = character_named(client.app, campaign_id, "Rook")
+    assert pc.feature_choices["class-fighter-weapon-mastery:weapons"] == [
+        "weapon-greatsword",
+        "weapon-battleaxe",
+        "weapon-dagger",
+    ]
+
+
+def test_a_choice_without_retraining_cannot_be_replaced(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    client = signed_in_client(client_factory)
+    campaign_id = create_campaign_direct(
+        client, world_template="testhollow", rule_set="dnd-srd-2024"
+    )
+    fields = {
+        **_background_fields("acolyte", ("int", "wis", "cha"), "history"),
+        "feature-choice-feat-magic-initiate-cantrips-0": "spell-guidance",
+        "feature-choice-feat-magic-initiate-cantrips-1": "spell-sacred-flame",
+        "feature-choice-feat-magic-initiate-spell-0": "spell-cure-wounds",
+        "feature-choice-feat-magic-initiate-ability-0": "wis",
+    }
+    create_character_direct(client, campaign_id, name="Rook", fields=fields)
+    tools = tools_for(client.app, campaign_id, rule_set="dnd-srd-2024")
+
+    with pytest.raises(InvalidInput, match="cannot be retrained"):
+        tools.choose_feature_choice(
+            "Rook", "feat-magic-initiate", "list", "wizard", replace="cleric"
+        )
+
+
+def test_retraining_requires_a_current_choice_and_a_new_one(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    client = signed_in_client(client_factory)
+    campaign_id = create_campaign_direct(
+        client, world_template="testhollow", rule_set="dnd-srd-2024"
+    )
+    fields = {
+        **_fields(),
+        "feature-choice-class-fighter-weapon-mastery-weapons-0": "weapon-greatsword",
+        "feature-choice-class-fighter-weapon-mastery-weapons-1": "weapon-longsword",
+        "feature-choice-class-fighter-weapon-mastery-weapons-2": "weapon-dagger",
+    }
+    create_character_direct(client, campaign_id, name="Rook", fields=fields)
+    tools = tools_for(client.app, campaign_id, rule_set="dnd-srd-2024")
+
+    with pytest.raises(InvalidInput, match="is not one of Rook's current weapons choices"):
+        tools.choose_feature_choice(
+            "Rook",
+            "class-fighter-weapon-mastery",
+            "weapons",
+            "weapon-battleaxe",
+            replace="weapon-club",
+        )
+    with pytest.raises(InvalidInput, match="already chosen"):
+        tools.choose_feature_choice(
+            "Rook",
+            "class-fighter-weapon-mastery",
+            "weapons",
+            "weapon-longsword",
+            replace="weapon-longsword",
+        )
 
 
 def test_evocation_savant_offers_only_wizard_evocation_spells_of_levels_one_and_two():

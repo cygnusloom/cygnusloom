@@ -43,6 +43,7 @@
       <option value="{{ option.value }}" data-title="{{ option.title }}"{% if option.detail %} data-detail="{{ option.detail }}"{% endif %}{% if option.icon %} data-icon="{{ icon_path(option.icon) }}"{% endif %}{% if option.rank %} data-rank="{{ option.rank }}"{% endif %}{% if option.groups %} data-groups="{{ option.groups|join(',') }}"{% endif %}>{{ option.title }}</option>
       {% endfor %}
     {% endcall %}
+    <p class="muted panel-hint" data-fixed-hint hidden></p>
     {% if pick.source_hint %}<p class="muted panel-hint" data-source-hint>{{ pick.source_hint }}</p>{% endif %}
   </div>
   {% endfor %}

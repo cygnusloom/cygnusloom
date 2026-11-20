@@ -45,14 +45,21 @@
     "name": "Acolyte",
     "icon": "altar",
     "order": 0,
-    "description": "Acolyte. Tool proficiency: Calligrapher's Supplies. Equipment: *Choose A or B:* (A) Calligrapher's Supplies, Book (prayers), Holy Symbol, Parchment (10 sheets), Robe, 8 GP; or (B) 50 GP",
+    "description": "Acolyte. Tool proficiency: Calligrapher's Supplies. Feat: Magic Initiate (Cleric). Equipment: *Choose A or B:* (A) Calligrapher's Supplies, Book (prayers), Holy Symbol, Parchment (10 sheets), Robe, 8 GP; or (B) 50 GP",
     "skills": {
       "insight": 1,
       "religion": 1
     },
     "features": [
       "background-asi-acolyte",
-      "feat-magic-initiate"
+      {
+        "feature": "feat-magic-initiate",
+        "choices": {
+          "list": [
+            "cleric"
+          ]
+        }
+      }
     ],
     "grant": {
       "items": [

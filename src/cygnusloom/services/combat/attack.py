@@ -7,7 +7,7 @@ from typing import Any
 
 from sqlmodel import Session
 
-from cygnusloom.content.character import CharacterSpec, ItemTemplate
+from cygnusloom.content.character import MASTERY_PROPERTIES, CharacterSpec, ItemTemplate
 from cygnusloom.content.library import (
     ALL_STATS,
     CombatRules,
@@ -165,18 +165,108 @@ def _critical_threshold(
     return threshold
 
 
+def _is_light_weapon(feature: ItemTemplate | None) -> bool:
+    """Whether a weapon has the Light property."""
+    if feature is None:
+        return False
+    return "light" in feature.flags or "light" in feature.weapon_properties
+
+
+def _check_extra_attack(
+    state: CampaignState,
+    attacker: Character,
+    target: Character,
+    weapon: str,
+    weapon_feature: ItemTemplate | None,
+    spec: CharacterSpec | None,
+    mastery: str,
+    extra: str,
+    extra_from: str,
+    cell_feet: int | None,
+    combat: CombatRules,
+) -> bool:
+    """Check an extra attack the rules grant after an earlier attack this turn. Returns whether
+    the extra attack spends the bonus action, which Light does unless the weapon has Nick."""
+    encounter = state.encounter
+    if encounter is None:
+        raise InvalidInput("an extra attack needs an encounter in progress")
+    if extra not in ("cleave", "light"):
+        raise InvalidInput(f"there is no extra attack named {extra!r}; choose cleave or light")
+    if extra in encounter.extra_attacks:
+        raise InvalidInput(f"{attacker.name} has already made a {extra} extra attack this turn")
+    weapon_id = weapon_feature.id if weapon_feature is not None else name_key(weapon)
+    if extra == "cleave":
+        if mastery != "cleave":
+            raise InvalidInput(f"{weapon} does not have the Cleave mastery property")
+        if weapon_id not in encounter.hit_with:
+            raise InvalidInput(
+                f"{attacker.name} has not hit with {weapon} this turn, so Cleave has no first "
+                "target"
+            )
+        first = state.characters.get(name_key(extra_from))
+        if not extra_from or first is None:
+            raise InvalidInput("Cleave needs the first target's name in extra_from")
+        if name_key(first.name) not in encounter.hit_targets:
+            raise InvalidInput(f"{attacker.name} has not hit {first.name} with {weapon} this turn")
+        if name_key(first.name) == name_key(target.name):
+            raise InvalidInput("Cleave's second target must be a different creature")
+        if cell_feet:
+            first_cell = encounter.cells.get(name_key(first.name))
+            target_cell = encounter.cells.get(name_key(target.name))
+            if first_cell is not None and target_cell is not None:
+                feet = max(abs(target_cell[0] - first_cell[0]), abs(target_cell[1] - first_cell[1]))
+                feet *= cell_feet
+                if feet > 5:
+                    raise InvalidInput(
+                        f"{target.name} is {feet} feet from {first.name}; Cleave needs a second "
+                        "creature within 5 feet of the first"
+                    )
+        return False
+    if not _is_light_weapon(weapon_feature):
+        raise InvalidInput(f"{weapon} is not a Light weapon")
+    light_ids = (
+        {item.id for item in spec.items.values() if _is_light_weapon(item)}
+        if spec is not None
+        else set()
+    )
+    previous = [used for used in encounter.attacked_with if used != weapon_id and used in light_ids]
+    if not previous:
+        raise InvalidInput(
+            f"{attacker.name} has not attacked with a different Light weapon this turn"
+        )
+    if mastery == "nick":
+        return False
+    limit = combat.bonus_actions_per_turn
+    if limit and encounter.bonus_actions_used >= limit:
+        raise InvalidInput(
+            f"{attacker.name} has no bonus action left this turn for the Light extra attack"
+        )
+    return True
+
+
 def _mastered_property(
-    spec: CharacterSpec | None, character: Character, feature: ItemTemplate | None
+    spec: CharacterSpec | None,
+    character: Character,
+    feature: ItemTemplate | None,
+    override: str = "",
 ) -> str:
-    """The weapon's mastery property when the character's Weapon Mastery choices unlock it."""
+    """The weapon's mastery property when the character's Weapon Mastery choices unlock it. A
+    feature such as Tactical Master may let the character use another property instead."""
     if spec is None or feature is None or not feature.mastery:
         return ""
-    for key, values in character.feature_choices.items():
-        if "weapon-mastery" not in key.split(":", 1)[0]:
-            continue
-        if feature.id in values:
-            return feature.mastery
-    return ""
+    unlocked = any(
+        "weapon-mastery" in key.split(":", 1)[0] and feature.id in values
+        for key, values in character.feature_choices.items()
+    )
+    if not unlocked:
+        return ""
+    if not override or override == feature.mastery:
+        return feature.mastery
+    for feature_id in character.features:
+        held = spec.features.get(feature_id)
+        if held is not None and override in held.mastery_options:
+            return override
+    raise InvalidInput(f"{character.name} cannot replace {feature.name}'s mastery with {override}")
 
 
 def _player_bonuses(
@@ -185,6 +275,8 @@ def _player_bonuses(
     weapon: str,
     spec: CharacterSpec | None,
     feature: ItemTemplate | None,
+    *,
+    omit_attribute_damage: bool = False,
 ) -> WeaponBonuses:
     """What a player character's attack with `weapon` adds, from the rule set's combat fields, the
     weapon's skill and attributes, and the character's skills. A rule set with no spec adds
@@ -241,7 +333,12 @@ def _player_bonuses(
                 damage_parts.append((_skill_label(spec, skill), level))
         elif not (feature is not None and NO_UNSKILLED_PENALTY in feature.flags):
             to_hit_parts.append(("unskilled", -combat.unskilled_attack_penalty))
-    if combat.attribute_damage and attributes and attribute:
+    if (
+        combat.attribute_damage
+        and attributes
+        and attribute
+        and not (omit_attribute_damage and attribute > 0)
+    ):
         damage_parts.append((_stat_label(spec, attribute_stat), attribute))
     if feature is not None and feature.shock:
         # Shock takes the weapon's own rating and the attribute modifier. Other damage bonuses,
@@ -532,6 +629,7 @@ def _strike(
                 name=target.name,
                 condition=mastery_condition,
                 cause=f"{mastery} mastery",
+                until=attacker,
             ),
         )
     if mastery == "topple" and mastery_dc and not target.invincible:
@@ -1291,6 +1389,9 @@ def player_attack(
     nonlethal: bool = False,
     two_handed: bool = False,
     roll_mode: str = "normal",
+    mastery: str = "",
+    extra: str = "",
+    extra_from: str = "",
 ) -> dict[str, Any]:
     """A player character's hit. The engine rolls the damage unless the player's roll is passed as
     `damage_roll`. The hit mode decides whether it lands. A group takes only impaired attacks.
@@ -1311,7 +1412,14 @@ def player_attack(
     `cell_feet` turns on the rule set's reach, range, and sight limits. A weapon's `feature`
     supplies its reach and ranged bands; without one the attack is melee at the rule set's reach.
     When the target lies beyond the reach, `range_band` names the band to use, or the nearest one
-    that covers the distance is chosen."""
+    that covers the distance is chosen.
+
+    `mastery` replaces the weapon's mastery property for this attack when a feature such as
+    Tactical Master allows it. `extra` marks an attack the rules grant after an earlier attack
+    this turn: `cleave` needs a hit with the same weapon and names that first target in
+    `extra_from`, while `light` needs a different Light weapon. Extra attacks are once per turn,
+    spend no further attack action, leave a positive ability modifier out of their damage, and
+    `light` spends the bonus action unless the weapon's mastery is Nick."""
     prepared = _prepare_player_attack(
         db,
         campaign_id,
@@ -1328,9 +1436,12 @@ def player_attack(
         character=character,
         cell_feet=cell_feet,
         two_handed=two_handed,
+        mastery=mastery,
+        extra=extra,
+        extra_from=extra_from,
     )
     state, pc, struck = prepared.state, prepared.pc, prepared.struck
-    mastery = _mastered_property(spec, pc, weapon_feature)
+    mastery = prepared.mastery
     if "heavy" in (weapon_feature.flags if weapon_feature is not None else ()):
         stat = "dex" if weapon_feature is not None and weapon_feature.ranges else "str"
         if int(pc.stats.get(stat, 10)) < 13:
@@ -1464,7 +1575,16 @@ def player_attack(
         mastery_dc=8 + int(pc.stats.get("attack_bonus", 2)) + prepared.bonuses.attribute,
     )
     if state.encounter is not None:
-        _mark_attack(db, campaign_id, pc.name)
+        _mark_attack(
+            db,
+            campaign_id,
+            pc.name,
+            weapon=weapon_feature.id if weapon_feature is not None else name_key(prepared.weapon),
+            target=struck.name,
+            extra=prepared.extra,
+            bonus_action=prepared.extra_bonus_action,
+            hit=result.get("hit", True) is not False,
+        )
     placement = {"range": prepared.distance.as_dict()} if prepared.distance.cells else {}
     return {**result, **placement}
 
@@ -1484,6 +1604,9 @@ def player_attack_check(
     force: bool = False,
     character: str = "",
     cell_feet: int | None = None,
+    mastery: str = "",
+    extra: str = "",
+    extra_from: str = "",
 ) -> None:
     """Refuse a player attack the same way `player_attack` would, without rolling or recording
     anything. The engine calls it before showing the player's roll prompt, so an attack outside
@@ -1503,6 +1626,9 @@ def player_attack_check(
         force=force,
         character=character,
         cell_feet=cell_feet,
+        mastery=mastery,
+        extra=extra,
+        extra_from=extra_from,
     )
 
 
@@ -1520,6 +1646,9 @@ class _PreparedAttack:
     range_penalty: int
     dual_penalty: int
     dual_damage: int
+    mastery: str
+    extra: str
+    extra_bonus_action: bool
 
 
 def _prepare_player_attack(
@@ -1539,6 +1668,9 @@ def _prepare_player_attack(
     character: str = "",
     cell_feet: int | None = None,
     two_handed: bool = False,
+    mastery: str = "",
+    extra: str = "",
+    extra_from: str = "",
 ) -> _PreparedAttack:
     """Every check `player_attack` makes before it rolls: the attacker may act now, carries the
     weapon, and can reach the target. Both the attack and its prompt check share it, so the
@@ -1546,11 +1678,14 @@ def _prepare_player_attack(
     state = load_state(db, campaign_id)
     _no_initiative_pending(state)
     pc = _player_character(state, character)
+    override = mastery.strip().casefold()
+    if override and override not in MASTERY_PROPERTIES:
+        raise InvalidInput(f"there is no weapon mastery property named {mastery!r}")
     if pc.save_due is not None:
         # The engine waits for the player's own die when harm overflowed, so the fight pauses
         # until the GM asks for it rather than letting the character act while reeling.
         raise InvalidInput(f"{pc.name} must make their {pc.save_due} save first; call player_save")
-    _require_attack(state, pc, combat, force)
+    _require_attack(state, pc, combat, force, extra=extra)
     if pc.grappled_by and name_key(weapon) not in combat.unarmed_names:
         raise InvalidInput(f"{pc.name} is grappled and can only make unarmed attacks")
     if pc.surprised_turns > 0:
@@ -1562,6 +1697,25 @@ def _prepare_player_attack(
     _living(struck, combat)
     name = _weapon_name(weapon)
     dice = _attack_dice(pc, name, modifier, combat, two_handed=two_handed, spec=spec)
+    mastered = _mastered_property(spec, pc, weapon_feature, override=override)
+    extra_kind = extra.strip().casefold()
+    extra_bonus_action = (
+        _check_extra_attack(
+            state,
+            pc,
+            struck,
+            name,
+            weapon_feature,
+            spec,
+            mastered,
+            extra_kind,
+            extra_from,
+            cell_feet,
+            combat,
+        )
+        if extra_kind
+        else False
+    )
     if spec is not None and weapon_feature is not None:
         ranged = bool(weapon_feature.ranges)
         kind = "ranged" if ranged else "melee"
@@ -1573,7 +1727,14 @@ def _prepare_player_attack(
                 continue
             dice = f"{dice}+{held.damage_dice}"
     _require_impaired(struck, modifier_name(modifier), combat)
-    bonuses = _player_bonuses(combat, pc, name, spec, weapon_feature)
+    bonuses = _player_bonuses(
+        combat,
+        pc,
+        name,
+        spec,
+        weapon_feature,
+        omit_attribute_damage=bool(extra_kind),
+    )
     distance = ranges.check_attack(
         state,
         combat,
@@ -1610,6 +1771,9 @@ def _prepare_player_attack(
         range_penalty=range_penalty,
         dual_penalty=dual_penalty,
         dual_damage=dual_damage,
+        mastery=mastered,
+        extra=extra_kind,
+        extra_bonus_action=extra_bonus_action,
     )
 
 
@@ -1702,10 +1866,32 @@ def _player_character(state: CampaignState, name: str = "") -> Character:
     return pc
 
 
-def _mark_attack(db: Session, campaign_id: int, attacker: str) -> None:
+def _mark_attack(
+    db: Session,
+    campaign_id: int,
+    attacker: str,
+    *,
+    weapon: str = "",
+    target: str = "",
+    extra: str = "",
+    bonus_action: bool = False,
+    hit: bool = True,
+) -> None:
     """Record one attack action for the acting character. The event is hidden and feeds the
-    turn's remaining-attack count; an NPC's multiattack still makes one attack action."""
-    record(db, campaign_id, EncounterAttacked(name=attacker))
+    turn's remaining-attack count; an NPC's multiattack still makes one attack action. An extra
+    attack records its tag instead, and the weapon it used."""
+    record(
+        db,
+        campaign_id,
+        EncounterAttacked(
+            name=attacker,
+            weapon=weapon,
+            target=target,
+            hit=hit,
+            extra=extra,
+            bonus_action=bonus_action,
+        ),
+    )
     db.commit()
 
 
@@ -1717,14 +1903,20 @@ def _mark_attacks(db: Session, campaign_id: int, attackers: Sequence[str]) -> No
 
 
 def _require_attack(
-    state: CampaignState, actor: Character, combat: CombatRules, force: bool
+    state: CampaignState,
+    actor: Character,
+    combat: CombatRules,
+    force: bool,
+    *,
+    extra: str = "",
 ) -> None:
     """Refuse an attack outside the actor's turn, or after the turn's attack actions are spent.
     The limit comes from the rule set's combat, so a rule set that grants more attack actions
     per turn works without engine changes. `force` is the story override the GM may use when
-    the player insists."""
+    the player insists. An extra attack is checked against its own once-per-turn rule instead
+    of the attack-action budget."""
     _require_turn(state, actor, force)
-    if force:
+    if force or extra:
         return
     encounter = state.encounter
     if (
