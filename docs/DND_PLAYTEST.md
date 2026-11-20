@@ -24,13 +24,13 @@ truth is the shipped `SRD_CC_v5.2.1.pdf`; all content is regenerated with
 ```bash
 PYTHONPATH=$PWD/src /workspaces/cygnusloom/.venv/bin/python -m cygnusloom.cli content validate
 PYTHONPATH=$PWD/src /workspaces/cygnusloom/.venv/bin/python scripts/test.py \
-  tests/test_dnd_srd.py tests/test_dnd_srd_play.py -q
+  tests/test_dnd_srd.py tests/test_dnd_srd_play.py tests/test_dnd_multiclass.py -q
 PYTHONPATH=$PWD/src /workspaces/cygnusloom/.venv/bin/python scripts/test.py -q
 ```
 
-The current full suite is **3822 passed**; the two D&D files are **59 passed**; content
-validation reports **0 warnings**; `ruff check` is clean on the changed source and test
-files.
+The current full suite is **3829 passed**; the D&D rule, play, and multiclass files are
+**66 passed**; content validation reports **0 warnings**; `ruff check` is clean on the
+changed source and test files.
 
 ## Live matrix
 
@@ -39,6 +39,7 @@ files.
 | Campaign creation | Choose D&D, a world, Standard experience, and a Fighter | Character is created with a class kit, background skills, Soldier ability scores, and Fighting Style |
 | Sheet | Open Character | HP, AC, level, skills, features, and resources are visible; monster-only save stats stay hidden |
 | Advancement | Award 300 XP from the debug panel | Level-up page opens; Fighter 2 gains +8 HP and Action Surge; the sheet updates |
+| Multiclass | On the next advancement, choose Wizard in the **Advance in** selector | The page shows Wizard 1; the level grants Intelligence 13 prerequisites, d6 Hit Dice, Wizard features, and multiclass slots; the sheet reads **Classes: Fighter 1 / Wizard 1** |
 | Initiative | Start an encounter with one PC and one monster | `roll_initiative` records every combatant and opens the first turn; the order is fixed across rounds |
 | Weapon combat | Move into reach and attack | The player rolls the d20; the engine adds attack and damage modifiers, logs the strike, and spends the attack action |
 | Spellcasting | Create a Cleric, pick spells/cantrips on the advancement page, then cast Guiding Bolt | Prepared list and slots show on the sheet; a spell attack prompts for the d20, logs the roll against AC, and spends the slot |
@@ -114,12 +115,28 @@ These were previously listed as gaps and now have data, engine support, and test
   dice with `roll_dice`; the engine records every face in the Log. Reaction effects such
   as Uncanny Dodge spend their reaction before the hit resolves, so the cost is tracked
   even when the damage would end the encounter.
+- Multiclassing follows the SRD: a 13 in each listed primary ability (Fighter may use
+  Strength or Dexterity), total-level XP, the new class's Hit Die and average HP,
+  per-class features and subclasses, total-level proficiency bonus, multiclass armor
+  and skill training, the multiclass spellcaster table, separate Pact Magic slots, and
+  per-class prepared spells and spellcasting abilities. Saving throws stay with the
+  class the character started in, as the SRD requires.
 
-## Remaining limits
+## Multiclass notes
 
-Multiclassing is deliberately out of scope. Everything else in the SRD character
-options, spells, equipment, conditions, bestiary, and advancement paths is represented
-by the rule set and uses the generic engine tools.
+- The class selector on the Advancement page chooses the class for the pending level;
+  the same selector appears when a multiclass character spends banked spell picks.
+- Hit Dice are tracked by die type. A Fighter 1/Wizard 1 has one d10 and one d6, and
+  `spend_hit_die` can choose either.
+- Warlock Pact Magic slots live in their own `pact_slots` counter; a multiclass
+  Warlock's levels do not add to the ordinary multiclass caster level.
+- Each caster class keeps its own prepared list in `prepared_by_class`; the shared
+  `prepared` mark is their union, so preparing the Wizard's spells does not clear the
+  Cleric's.
+- Simplifications: the multiclass skill choice offers any skill rather than only the
+  new class's list; weapon and tool proficiencies are recorded as descriptive training
+  rather than gating equipment; and the SRD 5.2.1 subclass set has no one-third casters,
+  so `_caster_level` only handles full, half, and Pact Magic classes.
 
 None of these block the core play loop: create a character, explore, start a fight,
 roll attacks and saves, cast spells, take damage, heal, rest, and level up.

@@ -557,6 +557,8 @@ def respec_character(
                 fields=fields,
                 counters=dict(sheet.counters),
                 skills=dict(sheet.skills),
+                class_levels=dict(sheet.class_levels),
+                hit_dice_pools={},
                 feature_choices={
                     key: list(values) for key, values in sheet.feature_choices.items()
                 },

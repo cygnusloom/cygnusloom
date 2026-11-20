@@ -254,6 +254,12 @@ class Character:
     # The character options, resolved when the character was created. See content/character.py.
     stats: dict[str, int] = field(default_factory=dict)
     templates: dict[str, str] = field(default_factory=dict)
+    # Class levels for a multiclass character, by class id such as "fighter". Empty for a
+    # single-class character, whose class level is the level counter.
+    class_levels: dict[str, int] = field(default_factory=dict)
+    # Hit Point Dice available, by die type such as "d8". Empty for a single-class
+    # character, whose dice are the class's own.
+    hit_dice_pools: dict[str, int] = field(default_factory=dict)
     features: dict[str, int] = field(default_factory=dict)
     # Features invented during play, by id. A feature listed in `features` may be one of these
     # rather than one of the rule set's own features.

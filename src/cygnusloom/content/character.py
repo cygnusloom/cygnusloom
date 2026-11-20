@@ -3466,6 +3466,8 @@ class Sheet:
     # Feature id to how many the character has.
     features: dict[str, int]
     fields: dict[str, str]
+    # Class levels for a multiclass character, by class id. Empty for a single class.
+    class_levels: dict[str, int] = field(default_factory=dict)
     # Counter id to its starting value, for the counters the templates set.
     counters: dict[str, int] = field(default_factory=dict)
     # Skill id to the character's level in it, for the skills they have a level in.
@@ -4564,8 +4566,19 @@ def describe(spec: CharacterSpec, sheet: Sheet, *, show_all_counters: bool = Tru
         )
     for kind in spec.kinds():
         if kind in sheet.templates:
+            if kind == "class" and sheet.class_levels:
+                # A multiclass character's classes and levels are shown together below.
+                continue
             template = spec.templates[sheet.templates[kind]]
             lines.append(f"{kind_label(kind)}: {template.name}")
+    if sheet.class_levels:
+        classes = " / ".join(
+            f"{spec.templates[class_id].name} {level}"
+            if class_id in spec.templates
+            else f"{class_id} {level}"
+            for class_id, level in sheet.class_levels.items()
+        )
+        lines.append(f"Classes: {classes}")
     if sheet.skills:
         lines.append(
             "Skills: "

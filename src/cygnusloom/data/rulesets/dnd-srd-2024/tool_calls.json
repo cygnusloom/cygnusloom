@@ -225,12 +225,16 @@
     "id": "spend_hit_die",
     "python_module": "dnd_srd_2024",
     "function": "spend_hit_die",
-    "description": "Spend one of a character's Hit Point Dice on a short rest to regain its roll plus the Constitution modifier. Call it once per die spent, after the rest.",
+    "description": "Spend one of a character's Hit Point Dice on a short rest to regain its roll plus the Constitution modifier. Call it once per die spent, after the rest. Pass the die type when the character has Hit Point Dice of more than one kind.",
     "parameters": {
       "properties": {
         "name": {
           "type": "string",
           "description": "The character spending a Hit Point Die."
+        },
+        "die": {
+          "type": "string",
+          "description": "The die type to spend, such as d8 or d10, for a multiclass character with more than one kind. Leave it out to spend a die of the character's first class."
         }
       },
       "required": [
@@ -278,12 +282,16 @@
     "id": "prepare_spells",
     "python_module": "dnd_srd_2024",
     "function": "prepare_spells",
-    "description": "Prepare the leveled spells a caster can cast today after a long rest. A wizard prepares from the spellbook; a cleric, druid, paladin, or ranger prepares from the class list; a bard, sorcerer, or warlock prepares from the spells they know. Cantrips are always available and take no slot in the list. The number prepared is the Prepared Spells number for the class and level.",
+    "description": "Prepare the leveled spells a caster can cast today after a long rest. A wizard prepares from the spellbook; a cleric, druid, paladin, or ranger prepares from the class list; a bard, sorcerer, or warlock prepares from the spells they know. A multiclass caster names the class whose list this call prepares. Cantrips are always available and take no slot in the list. The number prepared is the Prepared Spells number for the class and level.",
     "parameters": {
       "properties": {
         "character": {
           "type": "string",
           "description": "The caster preparing spells."
+        },
+        "class_name": {
+          "type": "string",
+          "description": "The class whose list is prepared, such as wizard, for a multiclass caster. Leave it out for a single-class character."
         },
         "spells": {
           "type": "array",

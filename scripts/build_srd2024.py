@@ -363,6 +363,43 @@ CLASS_ARMOR_TRAINING = {
     "wizard": [],
 }
 
+# The ability scores a class's Primary Ability line names. "Fighter" accepts either Strength
+# or Dexterity; every other multi-ability class requires both scores at 13 to multiclass.
+CLASS_PRIMARY = {
+    "barbarian": ["str"],
+    "bard": ["cha"],
+    "cleric": ["wis"],
+    "druid": ["wis"],
+    "fighter": ["str", "dex"],
+    "monk": ["dex", "wis"],
+    "paladin": ["str", "cha"],
+    "ranger": ["dex", "wis"],
+    "rogue": ["dex"],
+    "sorcerer": ["cha"],
+    "warlock": ["cha"],
+    "wizard": ["int"],
+}
+CLASS_PRIMARY_ANY = {"fighter"}
+
+# What a class grants when it is gained after the character's first class: the SRD's
+# "As a Multiclass Character" traits. Weapon proficiency is descriptive in this engine.
+MULTICLASS_ARMOR = {
+    "barbarian": ["shield"],
+    "bard": ["light"],
+    "cleric": ["light", "medium", "shield"],
+    "druid": ["light", "shield"],
+    "fighter": ["light", "medium", "shield"],
+    "monk": [],
+    "paladin": ["light", "medium", "shield"],
+    "ranger": ["light", "medium", "shield"],
+    "rogue": ["light"],
+    "sorcerer": [],
+    "warlock": ["light"],
+    "wizard": [],
+}
+MULTICLASS_SKILLS = {"bard": 1, "ranger": 1, "rogue": 1}
+MULTICLASS_TOOLS = {"bard": ["Musical Instrument"], "rogue": ["Thieves' Tools"]}
+
 CLASS_ROLES = {
     "barbarian": "A furious warrior who trades armour for raw stamina and rage.",
     "bard": "A spellcaster whose music and wit inspire allies and unravel foes.",
@@ -933,6 +970,23 @@ def build_counters() -> None:
             "min": 0,
             "initial": 0,
             "description": "Proficient skills the character may sharpen into expertise.",
+        },
+        {
+            "type": "counter",
+            "id": "multiclass_skill_picks",
+            "label": "Multiclass Skill Picks",
+            "min": 0,
+            "initial": 0,
+            "description": "New skill proficiencies granted by a second class.",
+        },
+        {
+            "type": "counter",
+            "id": "pact_slots",
+            "label": "Pact Magic Slots",
+            "min": 0,
+            "max": 4,
+            "initial": 0,
+            "description": "Pact Magic spell slots left; they return on a short or long rest.",
         },
         {
             "type": "counter",
@@ -3087,6 +3141,28 @@ def build_classes(spell_lists: dict[str, dict[int, list[str]]]) -> None:
                 )
             )
             level_features[1].insert(0, armor_training_id)
+        multiclass_armor = MULTICLASS_ARMOR.get(class_id, [])
+        multiclass_skills = MULTICLASS_SKILLS.get(class_id, 0)
+        multiclass_tools = MULTICLASS_TOOLS.get(class_id, [])
+        if multiclass_armor or multiclass_tools or multiclass_skills:
+            pieces = []
+            if multiclass_armor:
+                pieces.append("training with " + ", ".join(multiclass_armor) + " armor")
+            if multiclass_tools:
+                pieces.append("proficiency with " + ", ".join(multiclass_tools))
+            if multiclass_skills:
+                pieces.append("one skill of your choice from the class list")
+            definitions.append(
+                feature(
+                    f"class-{class_id}-multiclass-training",
+                    "Multiclass Training",
+                    "You gain " + ", ".join(pieces) + ".",
+                    feature_type="trait",
+                    tag=f"class:{class_id}",
+                    rank=1,
+                    armor_training=multiclass_armor,
+                )
+            )
         kits = CLASS_KITS[class_id]
         resources = class_resources(record, class_id)
         counters: dict[str, int] = {"hit_dice": 1}
@@ -3218,6 +3294,11 @@ def build_classes(spell_lists: dict[str, dict[int, list[str]]]) -> None:
                 if class_id == "warlock"
                 else [0] * 20
             ),
+            "primary": CLASS_PRIMARY[class_id],
+            "primary_any": class_id in CLASS_PRIMARY_ANY,
+            "multiclass_armor": MULTICLASS_ARMOR.get(class_id, []),
+            "multiclass_skills": MULTICLASS_SKILLS.get(class_id, 0),
+            "multiclass_tools": MULTICLASS_TOOLS.get(class_id, []),
             "features": {str(level): ids for level, ids in sorted(level_features.items())},
             "always_prepared": {
                 str(level): [
@@ -3333,7 +3414,18 @@ def build_classes(spell_lists: dict[str, dict[int, list[str]]]) -> None:
                 "python_module": "dnd_srd_2024",
                 "apply_level": "apply_level_up",
                 "summary": "level_up_summary",
+                "apply_level_class": "apply_level_up_class",
+                "summary_class": "level_up_summary_class",
                 "picks": [
+                    {
+                        "id": "multiclass_skills",
+                        "label": "Multiclass Skill",
+                        "kind": "skill",
+                        "counter": "multiclass_skill_picks",
+                        "costs": {"2": 1},
+                        "minimum_levels": {"2": 2},
+                        "apply": "apply_skill_pick",
+                    },
                     {
                         "id": "spells",
                         "label": "Spells",
@@ -3846,7 +3938,7 @@ def build_prompts() -> None:
             {
                 "type": "prompt",
                 "id": "class_resources",
-                "text": "Class and species resources are tracked as counters: Rage, Bardic Inspiration, Channel Divinity, Wild Shape, Second Wind, Action Surge, Indomitable, Focus Points, the Lay On Hands pool, Sorcery Points, Arcane Recovery, Favored Enemy, Tireless, Mystic Arcanum, Dark One's Luck, and Giant Ancestry. When a character uses a feature that spends one, call use_feature with the feature name; it spends the resource and the feature's Action, Bonus Action, or Reaction automatically. Use use_class_resource only for a pool amount with no single feature, such as a Lay On Hands point total or sorcery points. Never spend a use by narration alone. A short rest returns one use of Rage, Channel Divinity, Wild Shape, and Second Wind and all Action Surge and Focus Points; a long rest refills every pool and Giant Ancestry. The character sheet shows what is left.",
+                "text": "Class and species resources are tracked as counters: Rage, Bardic Inspiration, Channel Divinity, Wild Shape, Second Wind, Action Surge, Indomitable, Focus Points, the Lay On Hands pool, Sorcery Points, Arcane Recovery, Favored Enemy, Tireless, Mystic Arcanum, Dark One's Luck, and Giant Ancestry. When a character uses a feature that spends one, call use_feature with the feature name; it spends the resource and the feature's Action, Bonus Action, or Reaction automatically. Use use_class_resource only for a pool amount with no single feature, such as a Lay On Hands point total or sorcery points. Never spend a use by narration alone. A Reaction that changes a hit or a damage roll, such as Uncanny Dodge, Stone's Endurance, or Cutting Words, is spent with use_feature before the attack or hazard is resolved, so it is recorded even when the blow would end the encounter; roll its die with roll_dice and apply the adjusted damage with harm_character or heal_character. Roll Bardic Inspiration, a monster recharge, and any other die the rules call for with roll_dice instead of inventing it. A short rest returns one use of Rage, Channel Divinity, Wild Shape, and Second Wind and all Action Surge and Focus Points; a long rest refills every pool and Giant Ancestry. The character sheet shows what is left.",
             },
             {
                 "type": "prompt",
@@ -4016,13 +4108,17 @@ def build_tool_calls() -> None:
             "id": "spend_hit_die",
             "python_module": "dnd_srd_2024",
             "function": "spend_hit_die",
-            "description": "Spend one of a character's Hit Point Dice on a short rest to regain its roll plus the Constitution modifier. Call it once per die spent, after the rest.",
+            "description": "Spend one of a character's Hit Point Dice on a short rest to regain its roll plus the Constitution modifier. Call it once per die spent, after the rest. Pass the die type when the character has Hit Point Dice of more than one kind.",
             "parameters": {
                 "properties": {
                     "name": {
                         "type": "string",
                         "description": "The character spending a Hit Point Die.",
-                    }
+                    },
+                    "die": {
+                        "type": "string",
+                        "description": "The die type to spend, such as d8 or d10, for a multiclass character with more than one kind. Leave it out to spend a die of the character's first class.",
+                    },
                 },
                 "required": ["name"],
             },
@@ -4058,12 +4154,16 @@ def build_tool_calls() -> None:
             "id": "prepare_spells",
             "python_module": "dnd_srd_2024",
             "function": "prepare_spells",
-            "description": "Prepare the leveled spells a caster can cast today after a long rest. A wizard prepares from the spellbook; a cleric, druid, paladin, or ranger prepares from the class list; a bard, sorcerer, or warlock prepares from the spells they know. Cantrips are always available and take no slot in the list. The number prepared is the Prepared Spells number for the class and level.",
+            "description": "Prepare the leveled spells a caster can cast today after a long rest. A wizard prepares from the spellbook; a cleric, druid, paladin, or ranger prepares from the class list; a bard, sorcerer, or warlock prepares from the spells they know. A multiclass caster names the class whose list this call prepares. Cantrips are always available and take no slot in the list. The number prepared is the Prepared Spells number for the class and level.",
             "parameters": {
                 "properties": {
                     "character": {
                         "type": "string",
                         "description": "The caster preparing spells.",
+                    },
+                    "class_name": {
+                        "type": "string",
+                        "description": "The class whose list is prepared, such as wizard, for a multiclass caster. Leave it out for a single-class character.",
                     },
                     "spells": {
                         "type": "array",

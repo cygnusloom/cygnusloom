@@ -1211,6 +1211,10 @@ class LevelUpRules:
     description: str = ""
     # Template kinds a character needs at least one of to gain a level, such as a class.
     template_kinds: tuple[str, ...] = ()
+    # A class-aware level-up, for a rule set that supports multiclassing. The class-aware
+    # hooks take the chosen class id; the plain hooks remain for single-class characters.
+    apply_level_class: Callable[..., Any] | None = None
+    summary_class: Callable[..., Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -7899,6 +7903,8 @@ def _load_level_ups(
                 "python_module",
                 "apply_level",
                 "summary",
+                "apply_level_class",
+                "summary_class",
                 "picks",
                 "template_kinds",
             },
@@ -7924,6 +7930,18 @@ def _load_level_ups(
         summary_name = _optional_text(definition.data, "summary", label)
         summary = (
             _level_up_function(module, summary_name, label) if summary_name is not None else None
+        )
+        apply_level_class_name = _optional_text(definition.data, "apply_level_class", label)
+        apply_level_class = (
+            _level_up_function(module, apply_level_class_name, label)
+            if apply_level_class_name is not None
+            else None
+        )
+        summary_class_name = _optional_text(definition.data, "summary_class", label)
+        summary_class = (
+            _level_up_function(module, summary_class_name, label)
+            if summary_class_name is not None
+            else None
         )
         picks = _load_level_picks(
             definition.data.get("picks"),
@@ -7953,6 +7971,8 @@ def _load_level_ups(
             summary=summary,
             picks=picks,
             template_kinds=template_kinds,
+            apply_level_class=apply_level_class,
+            summary_class=summary_class,
         )
     return loaded
 

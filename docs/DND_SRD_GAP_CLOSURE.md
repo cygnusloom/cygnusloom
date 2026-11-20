@@ -10,9 +10,8 @@ and categories, versatile damage, class always-prepared spells, Circle of the La
 level-2/3 class feature choices, lineage cantrips and level-3/5 spells, Goliath ancestry
 resource use, weapon mastery data and choices (Graze, Sap, Slow, Topple, Push, Vex),
 Heavy weapon disadvantage, Rage's resource/action/mark/damage/resistance, Improved
-Critical, Sneak Attack dice, and per-feature resource/turn costs through `use_feature`.
-Multiclassing is the one deliberate limit.
-
+Critical, Sneak Attack dice, per-feature resource/turn costs through `use_feature`, and
+multiclassing.
 
 This plan covers every mismatch recorded in `docs/DND_PLAYTEST.md` plus the action-economy
 gap found in live play. The target is not a second character-creation app: every new
@@ -28,8 +27,7 @@ D&D-specific interpretation stays in `rules/dnd_srd_2024.py`.
 - Every live path is checked with a throwaway server and DeepSeek.
 - Content validation must stay at zero warnings and the full suite must stay green.
 - Remaining source features that cannot be represented without a new class-level model
-  (multiclassing, full weapon-mastery automation) are listed explicitly rather than
-  silently omitted.
+  (full weapon-mastery automation) are listed explicitly rather than silently omitted.
 
 ## Phase 1 - generic building blocks
 
@@ -78,6 +76,10 @@ D&D-specific interpretation stays in `rules/dnd_srd_2024.py`.
 
 ## Phase 2 - D&D content
 
+0. Multiclassing: class-level state and events, per-class advancement, prerequisites,
+   Hit Dice pools, class features and subclasses, multiclass armor/skill training,
+   multiclass spell slots, separate Pact Magic slots, per-class spell preparation, and
+   the Advancement page's class selector.
 1. Background ASI modes and background equipment packages.
 2. Class kit alternatives (A/B/C) and the Monk tool choice.
 3. Origin feats: Magic Initiate, Alert, Savage Attacker, Skilled.
@@ -91,7 +93,8 @@ D&D-specific interpretation stays in `rules/dnd_srd_2024.py`.
 ## Phase 3 - tests and live matrix
 
 - Unit/service tests for each item above in `tests/test_dnd_srd.py` and
-  `tests/test_dnd_srd_play.py`.
+  `tests/test_dnd_srd_play.py`, with multiclass coverage in
+  `tests/test_dnd_multiclass.py`.
 - Form tests for the new creation/advancement controls.
 - UI test for the turn-resource panel.
 - Live DeepSeek run: level-2/3 character, equipment package, species choice, Magic

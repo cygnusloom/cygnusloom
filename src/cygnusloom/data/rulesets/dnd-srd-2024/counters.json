@@ -93,6 +93,23 @@
   },
   {
     "type": "counter",
+    "id": "multiclass_skill_picks",
+    "label": "Multiclass Skill Picks",
+    "min": 0,
+    "initial": 0,
+    "description": "New skill proficiencies granted by a second class."
+  },
+  {
+    "type": "counter",
+    "id": "pact_slots",
+    "label": "Pact Magic Slots",
+    "min": 0,
+    "max": 4,
+    "initial": 0,
+    "description": "Pact Magic spell slots left; they return on a short or long rest."
+  },
+  {
+    "type": "counter",
     "id": "metamagic_picks",
     "label": "Metamagic Picks",
     "min": 0,

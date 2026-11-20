@@ -274,6 +274,18 @@
     ]
   },
   {
+    "type": "feature",
+    "id": "class-barbarian-multiclass-training",
+    "name": "Multiclass Training",
+    "feature_type": "trait",
+    "description": "You gain training with shield armor.",
+    "tag": "class:barbarian",
+    "rank": 1,
+    "armor_training": [
+      "shield"
+    ]
+  },
+  {
     "type": "template",
     "id": "barbarian",
     "kind": "class",
@@ -443,6 +455,18 @@
     "name": "Armor Training",
     "feature_type": "trait",
     "description": "You are trained with light armor.",
+    "tag": "class:bard",
+    "rank": 1,
+    "armor_training": [
+      "light"
+    ]
+  },
+  {
+    "type": "feature",
+    "id": "class-bard-multiclass-training",
+    "name": "Multiclass Training",
+    "feature_type": "trait",
+    "description": "You gain training with light armor, proficiency with Musical Instrument, one skill of your choice from the class list.",
     "tag": "class:bard",
     "rank": 1,
     "armor_training": [
@@ -622,6 +646,20 @@
     "name": "Armor Training",
     "feature_type": "trait",
     "description": "You are trained with light, medium, shield armor.",
+    "tag": "class:cleric",
+    "rank": 1,
+    "armor_training": [
+      "light",
+      "medium",
+      "shield"
+    ]
+  },
+  {
+    "type": "feature",
+    "id": "class-cleric-multiclass-training",
+    "name": "Multiclass Training",
+    "feature_type": "trait",
+    "description": "You gain training with light, medium, shield armor.",
     "tag": "class:cleric",
     "rank": 1,
     "armor_training": [
@@ -839,6 +877,19 @@
     "armor_training": [
       "light",
       "medium",
+      "shield"
+    ]
+  },
+  {
+    "type": "feature",
+    "id": "class-druid-multiclass-training",
+    "name": "Multiclass Training",
+    "feature_type": "trait",
+    "description": "You gain training with light, shield armor.",
+    "tag": "class:druid",
+    "rank": 1,
+    "armor_training": [
+      "light",
       "shield"
     ]
   },
@@ -1130,6 +1181,20 @@
       "light",
       "medium",
       "heavy",
+      "shield"
+    ]
+  },
+  {
+    "type": "feature",
+    "id": "class-fighter-multiclass-training",
+    "name": "Multiclass Training",
+    "feature_type": "trait",
+    "description": "You gain training with light, medium, shield armor.",
+    "tag": "class:fighter",
+    "rank": 1,
+    "armor_training": [
+      "light",
+      "medium",
       "shield"
     ]
   },
@@ -1706,6 +1771,20 @@
     ]
   },
   {
+    "type": "feature",
+    "id": "class-paladin-multiclass-training",
+    "name": "Multiclass Training",
+    "feature_type": "trait",
+    "description": "You gain training with light, medium, shield armor.",
+    "tag": "class:paladin",
+    "rank": 1,
+    "armor_training": [
+      "light",
+      "medium",
+      "shield"
+    ]
+  },
+  {
     "type": "template",
     "id": "paladin",
     "kind": "class",
@@ -1987,6 +2066,20 @@
     ]
   },
   {
+    "type": "feature",
+    "id": "class-ranger-multiclass-training",
+    "name": "Multiclass Training",
+    "feature_type": "trait",
+    "description": "You gain training with light, medium, shield armor, one skill of your choice from the class list.",
+    "tag": "class:ranger",
+    "rank": 1,
+    "armor_training": [
+      "light",
+      "medium",
+      "shield"
+    ]
+  },
+  {
     "type": "template",
     "id": "ranger",
     "kind": "class",
@@ -2242,6 +2335,18 @@
     "name": "Armor Training",
     "feature_type": "trait",
     "description": "You are trained with light armor.",
+    "tag": "class:rogue",
+    "rank": 1,
+    "armor_training": [
+      "light"
+    ]
+  },
+  {
+    "type": "feature",
+    "id": "class-rogue-multiclass-training",
+    "name": "Multiclass Training",
+    "feature_type": "trait",
+    "description": "You gain training with light armor, proficiency with Thieves' Tools, one skill of your choice from the class list.",
     "tag": "class:rogue",
     "rank": 1,
     "armor_training": [
@@ -2561,6 +2666,18 @@
     "name": "Armor Training",
     "feature_type": "trait",
     "description": "You are trained with light armor.",
+    "tag": "class:warlock",
+    "rank": 1,
+    "armor_training": [
+      "light"
+    ]
+  },
+  {
+    "type": "feature",
+    "id": "class-warlock-multiclass-training",
+    "name": "Multiclass Training",
+    "feature_type": "trait",
+    "description": "You gain training with light armor.",
     "tag": "class:warlock",
     "rank": 1,
     "armor_training": [

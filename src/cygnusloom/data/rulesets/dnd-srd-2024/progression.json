@@ -141,6 +141,15 @@
           0,
           0
         ],
+        "primary": [
+          "str"
+        ],
+        "primary_any": false,
+        "multiclass_armor": [
+          "shield"
+        ],
+        "multiclass_skills": 0,
+        "multiclass_tools": [],
         "features": {
           "1": [
             "class-barbarian-armor-training",
@@ -307,6 +316,17 @@
           0,
           0
         ],
+        "primary": [
+          "cha"
+        ],
+        "primary_any": false,
+        "multiclass_armor": [
+          "light"
+        ],
+        "multiclass_skills": 1,
+        "multiclass_tools": [
+          "Musical Instrument"
+        ],
         "features": {
           "1": [
             "class-bard-armor-training",
@@ -446,6 +466,17 @@
           0,
           0
         ],
+        "primary": [
+          "wis"
+        ],
+        "primary_any": false,
+        "multiclass_armor": [
+          "light",
+          "medium",
+          "shield"
+        ],
+        "multiclass_skills": 0,
+        "multiclass_tools": [],
         "features": {
           "1": [
             "class-cleric-armor-training",
@@ -585,6 +616,16 @@
           0,
           0
         ],
+        "primary": [
+          "wis"
+        ],
+        "primary_any": false,
+        "multiclass_armor": [
+          "light",
+          "shield"
+        ],
+        "multiclass_skills": 0,
+        "multiclass_tools": [],
         "features": {
           "1": [
             "class-druid-armor-training",
@@ -779,6 +820,18 @@
           0,
           0
         ],
+        "primary": [
+          "str",
+          "dex"
+        ],
+        "primary_any": true,
+        "multiclass_armor": [
+          "light",
+          "medium",
+          "shield"
+        ],
+        "multiclass_skills": 0,
+        "multiclass_tools": [],
         "features": {
           "1": [
             "class-fighter-armor-training",
@@ -934,6 +987,14 @@
           0,
           0
         ],
+        "primary": [
+          "dex",
+          "wis"
+        ],
+        "primary_any": false,
+        "multiclass_armor": [],
+        "multiclass_skills": 0,
+        "multiclass_tools": [],
         "features": {
           "1": [
             "class-monk-martial-arts",
@@ -1120,6 +1181,18 @@
           0,
           0
         ],
+        "primary": [
+          "str",
+          "cha"
+        ],
+        "primary_any": false,
+        "multiclass_armor": [
+          "light",
+          "medium",
+          "shield"
+        ],
+        "multiclass_skills": 0,
+        "multiclass_tools": [],
         "features": {
           "1": [
             "class-paladin-armor-training",
@@ -1305,6 +1378,18 @@
           0,
           0
         ],
+        "primary": [
+          "dex",
+          "wis"
+        ],
+        "primary_any": false,
+        "multiclass_armor": [
+          "light",
+          "medium",
+          "shield"
+        ],
+        "multiclass_skills": 1,
+        "multiclass_tools": [],
         "features": {
           "1": [
             "class-ranger-armor-training",
@@ -1438,6 +1523,17 @@
           0,
           0,
           0
+        ],
+        "primary": [
+          "dex"
+        ],
+        "primary_any": false,
+        "multiclass_armor": [
+          "light"
+        ],
+        "multiclass_skills": 1,
+        "multiclass_tools": [
+          "Thieves' Tools"
         ],
         "features": {
           "1": [
@@ -1597,6 +1693,13 @@
           0,
           0
         ],
+        "primary": [
+          "cha"
+        ],
+        "primary_any": false,
+        "multiclass_armor": [],
+        "multiclass_skills": 0,
+        "multiclass_tools": [],
         "features": {
           "1": [
             "class-sorcerer-innate-sorcery",
@@ -1733,6 +1836,15 @@
           10,
           10
         ],
+        "primary": [
+          "cha"
+        ],
+        "primary_any": false,
+        "multiclass_armor": [
+          "light"
+        ],
+        "multiclass_skills": 0,
+        "multiclass_tools": [],
         "features": {
           "1": [
             "class-warlock-armor-training",
@@ -1875,6 +1987,13 @@
           0,
           0
         ],
+        "primary": [
+          "int"
+        ],
+        "primary_any": false,
+        "multiclass_armor": [],
+        "multiclass_skills": 0,
+        "multiclass_tools": [],
         "features": {
           "1": [
             "class-wizard-arcane-recovery",

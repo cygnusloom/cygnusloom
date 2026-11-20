@@ -14,7 +14,22 @@
     "python_module": "dnd_srd_2024",
     "apply_level": "apply_level_up",
     "summary": "level_up_summary",
+    "apply_level_class": "apply_level_up_class",
+    "summary_class": "level_up_summary_class",
     "picks": [
+      {
+        "id": "multiclass_skills",
+        "label": "Multiclass Skill",
+        "kind": "skill",
+        "counter": "multiclass_skill_picks",
+        "costs": {
+          "2": 1
+        },
+        "minimum_levels": {
+          "2": 2
+        },
+        "apply": "apply_skill_pick"
+      },
       {
         "id": "spells",
         "label": "Spells",

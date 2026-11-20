@@ -1413,6 +1413,8 @@ class CharacterRespecced(GameEvent):
     fields: dict[str, str] = field(default_factory=dict)
     counters: dict[str, int] = field(default_factory=dict)
     skills: dict[str, int] = field(default_factory=dict)
+    class_levels: dict[str, int] = field(default_factory=dict)
+    hit_dice_pools: dict[str, int] = field(default_factory=dict)
     feature_choices: dict[str, list[str]] = field(default_factory=dict)
     stat_modifiers: dict[str, int] = field(default_factory=dict)
 
@@ -1424,6 +1426,8 @@ class CharacterRespecced(GameEvent):
         character.fields = dict(self.fields)
         character.counters = dict(self.counters)
         character.skills = dict(self.skills)
+        character.class_levels = dict(self.class_levels)
+        character.hit_dice_pools = dict(self.hit_dice_pools)
         character.feature_choices = {
             key: list(values) for key, values in self.feature_choices.items()
         }
@@ -3998,6 +4002,32 @@ class CounterChanged(GameEvent):
 
 
 @dataclass(frozen=True)
+class ClassLevelsChanged(GameEvent):
+    """A character's class levels changed, such as gaining a level in a new class. `levels`
+    maps each class id to its level in that class, and `hit_dice` maps each die type to the
+    dice available."""
+
+    kind: ClassVar[str] = "character.class_levels"
+
+    name: str
+    levels: dict[str, int]
+    hit_dice: dict[str, int] = field(default_factory=dict)
+    class_names: dict[str, str] = field(default_factory=dict)
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        character = state.characters[name_key(self.name)]
+        character.class_levels = dict(self.levels)
+        character.hit_dice_pools = dict(self.hit_dice)
+
+    def render(self) -> str:
+        parts = [
+            f"{self.class_names.get(class_id, class_id)} {level}"
+            for class_id, level in self.levels.items()
+        ]
+        return f"{self.name} is now {', '.join(parts)}."
+
+
+@dataclass(frozen=True)
 class AdvancementTaken(GameEvent):
     """A character spent an Advancement on an option. `stat` is the stat the option raised, or ""."""
 
@@ -4016,6 +4046,23 @@ class AdvancementTaken(GameEvent):
         return f"{self.name} takes the Advancement {self.label}" + (
             f" ({_stat_label(self.stat)})." if self.stat else "."
         )
+
+
+@dataclass(frozen=True)
+class HitDicePoolsSet(GameEvent):
+    """A rest restored the character's Hit Point Dice, by die type."""
+
+    kind: ClassVar[str] = "character.hit_dice_pools"
+    hidden: ClassVar[bool] = True
+
+    name: str
+    pools: dict[str, int]
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.characters[name_key(self.name)].hit_dice_pools = dict(self.pools)
+
+    def render(self) -> str:
+        return f"{self.name}'s Hit Point Dice are restored."
 
 
 @dataclass(frozen=True)

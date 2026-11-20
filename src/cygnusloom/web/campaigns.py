@@ -2065,6 +2065,23 @@ def _advancement_page(
                 request, user, campaign_id, 400, "that character has no advancement waiting"
             )
         view = chosen
+    class_choice = request.query_params.get("class", "").strip()
+    if class_choice and view.kind in (level_up_service.LEVEL, level_up_service.PICKS):
+        try:
+            chosen_view = level_up_service.page_view(
+                engine, campaign.id, rule_set, world, view.character, class_choice
+            )
+        except InvalidInput as exc:
+            return _advancement_page(
+                request,
+                user,
+                campaign_id,
+                400,
+                str(exc),
+                character=view.character,
+            )
+        if chosen_view is not None:
+            view = chosen_view
     return render(
         request,
         "advancement.html",

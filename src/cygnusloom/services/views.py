@@ -1685,6 +1685,7 @@ def _sheet_of(character: Character) -> Sheet:
         templates=character.templates,
         features=character.features,
         fields=character.fields,
+        class_levels=character.class_levels,
         counters=character.counters,
         skills=character.skills,
         feature_choices=character.feature_choices,

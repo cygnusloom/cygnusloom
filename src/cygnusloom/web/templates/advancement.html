@@ -22,6 +22,20 @@
   </nav>
   {% endif %}
 
+  {% if view.kind == "level" and view.summary and view.summary.class_options %}
+  <form method="get" action="/campaigns/{{ campaign.id }}/advancement" class="advancement-class">
+    <input type="hidden" name="character" value="{{ view.character }}">
+    <label>Advance in
+      <select name="class" onchange="this.form.submit()">
+        {% for option in view.summary.class_options %}
+        <option value="{{ option.id }}"{% if option.id == view.summary.class_id %} selected{% endif %}>{{ option.name }}{% if option.level %} (level {{ option.level }} to {{ option.new_level }}){% else %} (new class, level 1){% endif %}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <noscript><button type="submit">Change class</button></noscript>
+  </form>
+  {% endif %}
+
   {% if view.kind == "level" and view.summary %}
   <section class="advancement-summary" aria-labelledby="summary-title">
     <h2 id="summary-title">Level {{ view.summary.new_level }}</h2>
@@ -33,6 +47,19 @@
   </section>
   {% elif view.kind == "picks" %}
   <p class="advancement-lede">These are picks {{ view.character }} saved instead of spending. Spending them does not advance a level, and points you leave unspent stay banked for later.</p>
+  {% if view.class_options %}
+  <form method="get" action="/campaigns/{{ campaign.id }}/advancement" class="advancement-class">
+    <input type="hidden" name="character" value="{{ view.character }}">
+    <label>Picks for
+      <select name="class" onchange="this.form.submit()">
+        {% for option in view.class_options %}
+        <option value="{{ option.id }}"{% if option.id == view.class_id %} selected{% endif %}>{{ option.name }} (level {{ option.level }})</option>
+        {% endfor %}
+      </select>
+    </label>
+    <noscript><button type="submit">Change class</button></noscript>
+  </form>
+  {% endif %}
   {% elif view.kind == "options" %}
   <p class="advancement-lede">Choose one {{ view.label|lower }} for {{ view.character }}. Taking it spends one point and cannot be undone.</p>
   {% endif %}
@@ -90,6 +117,7 @@
   <form method="post" action="/campaigns/{{ campaign.id }}/advancement" class="advancement-form" data-busy-label="{% if view.kind == 'level' %}Applying level {{ view.summary.new_level }}…{% else %}Spending picks…{% endif %}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="character" value="{{ view.character }}">
+    {% if view.summary and view.summary.class_id %}<input type="hidden" name="class" value="{{ view.summary.class_id }}">{% elif view.class_options %}<input type="hidden" name="class" value="{{ view.class_id }}">{% endif %}
     {% for pick in view.picks %}
       {% if pick.kind == "skill" %}
       <fieldset class="creation-panel" data-pick-kind="skill" data-pick-counter="{{ pick.counter }}" data-pick-label="{{ pick.label }}" data-pick-available="{{ pick.available }}">
@@ -157,7 +185,7 @@
           {% with feature_choices=pick.feature_choices %}{% include "_feature_choice_fields.html" %}{% endwith %}
           {% endif %}
         {% else %}
-        <p class="muted">No {{ pick.label|lower }} is available to this character.</p>
+        <p class="muted">Nothing is available for {{ pick.label|lower }} on this character.</p>
         {% endif %}
       </fieldset>
       {% endif %}
@@ -177,6 +205,7 @@
   <form method="post" action="/campaigns/{{ campaign.id }}/advancement" class="advancement-form" data-busy-label="Applying level {{ view.summary.new_level }}…">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="character" value="{{ view.character }}">
+    {% if view.summary and view.summary.class_id %}<input type="hidden" name="class" value="{{ view.summary.class_id }}">{% endif %}
     {% if view.summary.feature_choices %}
     <section class="creation-panel">
       <h2>New feature choices</h2>

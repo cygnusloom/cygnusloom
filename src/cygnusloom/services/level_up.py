@@ -8,6 +8,7 @@ the player's submission before any change is recorded.
 
 from __future__ import annotations
 
+import inspect
 import random
 import re
 from collections.abc import Mapping
@@ -66,6 +67,9 @@ class AdvancementPage:
     grants: Mapping[str, int] = field(default_factory=dict)
     # The picks a player may spend now, with their options and costs.
     picks: tuple[Mapping[str, Any], ...] = ()
+    # A multiclass character's classes, so a banked pick can say which class it belongs to.
+    class_options: tuple[Mapping[str, Any], ...] = ()
+    class_id: str = ""
     # The rule set's Advancement options, when its counter is full.
     options: tuple[Mapping[str, Any], ...] = ()
     # The Advancement rules whose counter is available.
@@ -279,6 +283,7 @@ def page_view(
     rule_set: RuleSet,
     world: WorldContent,
     pc_name: str | None = None,
+    class_choice: str = "",
 ) -> AdvancementPage | None:
     """The page for one player character's next advancement, or None when none is available.
     Without `pc_name`, the campaign's primary player character is used; a shared campaign passes
@@ -292,7 +297,12 @@ def page_view(
     if level_rules is not None and has_leveling_template(pc, rule_set, level_rules):
         ctx = tool_context(engine, campaign_id, rule_set, world)
         if level_ready(state, pc, level_rules, rule_set.counters):
-            summary = level_rules.summary(pc.name, ctx) if level_rules.summary else {}
+            if level_rules.summary_class is not None:
+                summary = level_rules.summary_class(pc.name, ctx, class_choice)
+            elif level_rules.summary is not None:
+                summary = level_rules.summary(pc.name, ctx)
+            else:
+                summary = {}
             summary = {
                 **summary,
                 "feature_choices": _new_feature_choice_views(rule_set, summary),
@@ -300,7 +310,18 @@ def page_view(
             grants = {
                 str(counter): int(points) for counter, points in summary.get("grants", {}).items()
             }
-            picks = pick_views(pc, rule_set, level_rules, summary, grants, ctx)
+            picked_class = class_choice or str(summary.get("class_id", ""))
+            class_level = summary.get("class_level")
+            picks = pick_views(
+                pc,
+                rule_set,
+                level_rules,
+                summary,
+                grants,
+                ctx,
+                class_choice=picked_class,
+                class_level=int(class_level) if class_level else None,
+            )
             return AdvancementPage(
                 kind=LEVEL,
                 character=pc.name,
@@ -312,7 +333,10 @@ def page_view(
                 level=_new_level(pc, rule_set, summary),
                 hireling=pc.hireling,
             )
-        picks = pick_views(pc, rule_set, level_rules, None, {}, ctx)
+        classes = _class_choices(pc, rule_set)
+        picks = pick_views(
+            pc, rule_set, level_rules, None, {}, ctx, class_choice=class_choice
+        )
         if picks:
             return AdvancementPage(
                 kind=PICKS,
@@ -320,6 +344,8 @@ def page_view(
                 label="Spend picks",
                 level_up=level_rules,
                 picks=picks,
+                class_options=classes,
+                class_id=class_choice or (str(classes[0]["id"]) if classes else ""),
                 level=_new_level(pc, rule_set, None),
                 hireling=pc.hireling,
             )
@@ -345,6 +371,8 @@ def pick_views(
     summary: Mapping[str, Any] | None,
     grants: Mapping[str, int],
     ctx: ToolContext | None,
+    class_choice: str = "",
+    class_level: int | None = None,
 ) -> tuple[Mapping[str, Any], ...]:
     """The pools a level-up or a training session lets the player spend, with their choices."""
     views: list[Mapping[str, Any]] = []
@@ -359,8 +387,24 @@ def pick_views(
         elif pick.kind == "stat":
             views.append(_stat_view(pc, rule_set, pick, available, summary))
         elif pick.kind == "feature" and ctx is not None:
-            level = _new_level(pc, rule_set, summary)
-            options = pick.options(pc.name, pick, ctx, level) if pick.options else []
+            # A banked pick has no level projection; its options fall back to the class's
+            # current level, so a low-level class does not offer high-level spells.
+            level = (
+                class_level or _new_level(pc, rule_set, summary)
+                if summary is not None
+                else None
+            )
+            options = (
+                pick.options(pc.name, pick, ctx, level, class_choice=class_choice)
+                if pick.options and class_choice
+                else pick.options(pc.name, pick, ctx, level)
+                if pick.options
+                else []
+            )
+            if summary is not None and pick.options and not options:
+                # This class grants no choice from this pool, such as a Fighter level offering no
+                # spells; the banked points remain for the class that can spend them.
+                continue
             for option in options:
                 feature = rule_set.character.features.get(option.get("id", ""))
                 if feature is not None:
@@ -393,6 +437,7 @@ def _skill_view(
 ) -> Mapping[str, Any]:
     """Every skill's current level and the levels it could be raised to."""
     spec = rule_set.character
+    first = spec.skill_progression.first_level if spec.skill_progression else 1
     level = _new_level(pc, rule_set, summary)
     skills = []
     for skill in spec.skills.values():
@@ -401,7 +446,7 @@ def _skill_view(
         for target in sorted(pick.costs):
             if target <= current:
                 continue
-            cost = _skill_cost(pick, current, target)
+            cost = _skill_cost(pick, current, target, first)
             minimum = max(
                 (pick.minimum_levels.get(step, 0) for step in range(current + 1, target + 1)),
                 default=0,
@@ -555,6 +600,24 @@ def _new_feature_choice_views(
     return views
 
 
+def _class_choices(
+    pc: Character, rule_set: RuleSet
+) -> tuple[Mapping[str, Any], ...]:
+    """A multiclass character's classes, for a banked pick's class selector."""
+    levels = getattr(pc, "class_levels", None) or {}
+    if len(levels) < 2:
+        return ()
+    templates = rule_set.character.templates
+    return tuple(
+        {
+            "id": class_id,
+            "name": templates[class_id].name if class_id in templates else class_id.title(),
+            "level": level,
+        }
+        for class_id, level in levels.items()
+    )
+
+
 def _new_level(pc: Character, rule_set: RuleSet, summary: Mapping[str, Any] | None) -> int:
     """The character's level after the pending level-up, or their current level."""
     rules = next(iter(rule_set.level_ups.values()), None)
@@ -580,14 +643,15 @@ def apply_page(
 ) -> AdvancementPage:
     """Apply the player's level-up or training choices after validating every one, and return
     the page that was applied so the caller can say what just happened."""
-    view = page_view(engine, campaign_id, rule_set, world, pc_name)
+    class_choice = str(form.get("class", "")).strip()
+    view = page_view(engine, campaign_id, rule_set, world, pc_name, class_choice)
     if view is None:
         raise InvalidInput("there is no advancement to take")
     ctx = tool_context(engine, campaign_id, rule_set, world)
     if view.kind == LEVEL and view.level_up is not None:
-        _apply_level(view, engine, campaign_id, rule_set, ctx, form)
+        _apply_level(view, engine, campaign_id, rule_set, ctx, form, class_choice)
     elif view.kind == PICKS and view.level_up is not None:
-        _apply_picks(view, engine, campaign_id, rule_set, ctx, form)
+        _apply_picks(view, engine, campaign_id, rule_set, ctx, form, class_choice)
     elif view.kind == OPTION:
         _apply_option(view, ctx, form)
     else:
@@ -602,15 +666,21 @@ def _apply_level(
     rule_set: RuleSet,
     ctx: ToolContext,
     form: Mapping[str, Any],
+    class_choice: str = "",
 ) -> None:
     assert view.level_up is not None
     # Check every pick against the pools the page's projection says the new level grants, then
     # apply that same plan once the level has added those pools.
-    changes = _plan_picks(view, engine, campaign_id, rule_set, ctx, form)
+    changes = _plan_picks(
+        view, engine, campaign_id, rule_set, ctx, form, class_choice
+    )
     for entry in (view.summary or {}).get("feature_choices", ()):
         _check_feature_choices(rule_set.character, entry["id"], form)
-    view.level_up.apply_level(view.character, ctx)
-    _apply_changes(view, changes, ctx, form)
+    if view.level_up.apply_level_class is not None:
+        view.level_up.apply_level_class(view.character, ctx, class_choice)
+    else:
+        view.level_up.apply_level(view.character, ctx)
+    _apply_changes(view, changes, ctx, form, class_choice)
     for entry in (view.summary or {}).get("feature_choices", ()):
         _apply_feature_choices(view.character, entry["id"], ctx, form)
     # While the campaign follows the owner's level, a new character joins at the level the
@@ -629,8 +699,15 @@ def _apply_picks(
     rule_set: RuleSet,
     ctx: ToolContext,
     form: Mapping[str, Any],
+    class_choice: str = "",
 ) -> None:
-    _apply_changes(view, _plan_picks(view, engine, campaign_id, rule_set, ctx, form), ctx, form)
+    _apply_changes(
+        view,
+        _plan_picks(view, engine, campaign_id, rule_set, ctx, form, class_choice),
+        ctx,
+        form,
+        class_choice,
+    )
 
 
 def _apply_changes(
@@ -638,14 +715,25 @@ def _apply_changes(
     changes: list[tuple[LevelUpPick, Any]],
     ctx: ToolContext,
     form: Mapping[str, Any],
+    class_choice: str = "",
 ) -> None:
     for pick, value in changes:
         if pick.kind == "feature":
             for choice in value:
-                pick.apply(view.character, pick, choice, ctx)
+                _apply_pick(pick, view.character, choice, ctx, class_choice)
                 _apply_feature_choices(view.character, choice, ctx, form)
         else:
-            pick.apply(view.character, pick, value, ctx)
+            _apply_pick(pick, view.character, value, ctx, class_choice)
+
+
+def _apply_pick(
+    pick: LevelUpPick, character: str, value: Any, ctx: ToolContext, class_choice: str
+) -> None:
+    """Call a pick's apply hook, passing the chosen class when the rules for it accept one."""
+    if class_choice and "class_choice" in inspect.signature(pick.apply).parameters:
+        pick.apply(character, pick, value, ctx, class_choice=class_choice)
+    else:
+        pick.apply(character, pick, value, ctx)
 
 
 def _plan_picks(
@@ -655,6 +743,7 @@ def _plan_picks(
     rule_set: RuleSet,
     ctx: ToolContext,
     form: Mapping[str, Any],
+    class_choice: str = "",
 ) -> list[tuple[LevelUpPick, Any]]:
     """Validate every submitted pick against the current state and return what to apply."""
     pc = character_from(engine, campaign_id, view.character)
@@ -663,6 +752,9 @@ def _plan_picks(
     assert view.level_up is not None
     grants = view.grants
     level = _new_level(pc, rule_set, view.summary)
+    # A banked pick's options fall back to its class's current level, not the character's
+    # total level, so a low-level class cannot spend the pick on high-level spells.
+    option_level = level if view.summary is not None else None
     changes: list[tuple[LevelUpPick, Any]] = []
     spent: dict[str, int] = {}
     for pick in view.level_up.picks.values():
@@ -693,7 +785,16 @@ def _plan_picks(
                     f"{'' if available == 1 else 's'}; {len(choices)} were chosen"
                 )
             options = (
-                {option["id"]: option for option in pick.options(pc.name, pick, ctx, level)}
+                {
+                    option["id"]: option
+                    for option in (
+                        pick.options(
+                            pc.name, pick, ctx, option_level, class_choice=class_choice
+                        )
+                        if class_choice
+                        else pick.options(pc.name, pick, ctx, option_level)
+                    )
+                }
                 if pick.options
                 else {}
             )
@@ -721,6 +822,7 @@ def _skill_changes(
     level: int,
 ) -> list[dict[str, Any]]:
     spec = rule_set.character
+    first = spec.skill_progression.first_level if spec.skill_progression else 1
     raised: dict[str, int] = {}
     for skill in spec.skills.values():
         raw = form.get(f"skill-{pick.id}-{skill.id}", "")
@@ -744,7 +846,7 @@ def _skill_changes(
                 f"{skill.name} level {target} needs character level {minimum}; "
                 f"{pc.name} will be level {level}"
             )
-        if _skill_cost(pick, current, target) is None:
+        if _skill_cost(pick, current, target, first) is None:
             raise InvalidInput(
                 f"{skill.name} cannot be raised straight to level {target}; "
                 "raise it one level at a time"
@@ -754,16 +856,23 @@ def _skill_changes(
         {
             "skill": skill,
             "level": target,
-            "cost": _skill_cost(pick, spec.skill_level(pc.skills, skill), target) or 0,
+            "cost": _skill_cost(
+                pick, spec.skill_level(pc.skills, skill), target, first
+            )
+            or 0,
         }
         for skill, target in raised.items()
     ]
 
 
-def _skill_cost(pick: LevelUpPick, current: int, target: int) -> int | None:
-    """The total cost to raise a skill from `current` to `target`, or None when a step has none."""
+def _skill_cost(
+    pick: LevelUpPick, current: int, target: int, first_level: int = 1
+) -> int | None:
+    """The total cost to raise a skill from `current` to `target`, or None when a step has
+    none. An untrained skill starts at the rule set's first trained level, so a progression
+    that begins at level 2 charges that level's cost once."""
     total = 0
-    for step in range(current + 1, target + 1):
+    for step in range(max(current + 1, first_level), target + 1):
         cost = pick.costs.get(step)
         if cost is None:
             return None
