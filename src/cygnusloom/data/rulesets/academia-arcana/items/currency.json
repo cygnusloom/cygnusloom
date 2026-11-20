@@ -1,0 +1,10 @@
+[
+  {
+    "type": "item",
+    "id": "silver",
+    "description": "A purse of silver coins, the coin of the school town.",
+    "looks_like": "coin",
+    "name": "Silver Pieces",
+    "currency": true
+  }
+]

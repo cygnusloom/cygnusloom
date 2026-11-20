@@ -317,7 +317,7 @@ def test_the_ruleset_loads_its_academy_content() -> None:
     assert rules.rests
     assert rules.marketplace is not None
     assert rules.marketplace.currency == "silver"
-    assert rules.character.features["silver"].name == "Silver Pieces"
+    assert rules.character.items["silver"].name == "Silver Pieces"
 
     period = rules.periods["school-year"]
     assert period.tallies == ("college-cup",)

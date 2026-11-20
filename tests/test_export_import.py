@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
+from cygnusloom import CAMPAIGN_MAJOR_VERSION
 from cygnusloom.config import Settings
 from cygnusloom.db.models import Campaign, Event, User
 from cygnusloom.llm.fake import FakeProvider
@@ -80,7 +81,7 @@ def _imported_id(response) -> int:
 def test_the_export_declares_the_campaign_major(client_factory, tmp_path, settings):
     client, campaign_id = campaign_ready_fast(client_factory)
     document = json.loads(_export(client, campaign_id).content)
-    assert document["campaign"]["major_version"] == 4
+    assert document["campaign"]["major_version"] == CAMPAIGN_MAJOR_VERSION
 
 
 def test_another_major_imports_but_cannot_be_played(client_factory, tmp_path, settings):

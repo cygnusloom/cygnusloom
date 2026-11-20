@@ -17,6 +17,7 @@ from sqlmodel import Session
 from cygnusloom.content.character import (
     CharacterSpec,
     Feature,
+    ItemTemplate,
     TableOption,
 )
 from cygnusloom.content.library import (
@@ -48,7 +49,6 @@ from cygnusloom.content.library import (
     ProjectDefinition,
     RelationRules,
     RestLength,
-    ShopItem,
     TallyRules,
     Travel,
     Wilderness,
@@ -268,8 +268,10 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
     # The rule set's combat, or None when it has none, and its monster statblocks by id.
     combat: CombatRules | None = None
     monsters: Mapping[str, MonsterTemplate] = field(default_factory=dict)
-    # The world's own features by id. give_item finds them by name.
+    # The world's own features by id.
     features: Mapping[str, Feature] = field(default_factory=dict)
+    # The world's own items by id. give_item finds them by name.
+    items: Mapping[str, ItemTemplate] = field(default_factory=dict)
     # The rule set's checks by id, such as its skill check.
     checks: Mapping[str, CheckRules] = field(default_factory=dict)
     # The rule set's conditions by id.
@@ -668,44 +670,21 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
             character=self.character,
         )
 
-    def _listed(self, item: str, *, include_character: bool = False) -> ShopItem | None:
+    def _listed(self, item: str) -> ItemTemplate | None:
+        """An item the rule set or world defines, by name. A catalogue item wins over a world
+        item with the same name."""
         if self.marketplace is not None:
             listed = market_service.listed_item(self.marketplace, item)
             if listed is not None:
                 return listed
-        relic = next((f for f in self.features.values() if same_item_name(f.name, item)), None)
-        if relic is None and include_character:
-            relic = next(
-                (
-                    f
-                    for f in self.character.features.values()
-                    if f.feature_type == "item" and same_item_name(f.name, item)
-                ),
+        for catalogue in (self.items, self.character.items):
+            found = next(
+                (entry for entry in catalogue.values() if same_item_name(entry.name, item)),
                 None,
             )
-        if relic is None:
-            return None
-        return ShopItem(
-            id=relic.id,
-            name=relic.name,
-            category=relic.feature_type,
-            price=0,
-            size=relic.size,
-            armor=relic.armor,
-            damage=relic.damage,
-            uses=relic.uses,
-            description=relic.description,
-            armor_mode=(
-                "shield"
-                if "shield" in relic.flags
-                else "max"
-                if relic.armor and self.combat is not None and self.combat.defense_base
-                else "add"
-            ),
-            encumbrance_checks=relic.encumbrance_checks,
-            icon=relic.icon or "",
-            looks_like=relic.looks_like,
-        )
+            if found is not None:
+                return found
+        return None
 
     def equip_armor(self, name: str, item: str, equipped: bool = True) -> dict[str, Any]:
         rules = self.combat
@@ -718,7 +697,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
             held = next((entry for entry in found.items if same_item_name(entry.name, item)), None)
             if held is None:
                 raise InvalidInput(f"{found.name} carries no {item!r}")
-            listed = self._listed(held.name, include_character=True)
+            listed = self._listed(held.name)
             if listed is None or listed.armor_mode not in {
                 "max",
                 "set",
@@ -727,15 +706,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
             }:
                 raise InvalidInput(f"{held.name} is not equippable armor or a shield")
             if equipped:
-                armor_feature = next(
-                    (
-                        feature
-                        for feature in self.character.features.values()
-                        if same_item_name(feature.name, held.name)
-                    ),
-                    None,
-                )
-                category = armor_feature.armor_category if armor_feature is not None else ""
+                category = listed.armor_category
                 if category:
                     trained = any(
                         category in self.character.features[feature_id].armor_training
@@ -1039,31 +1010,24 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 spec=self.character,
             )
 
-    def _weapon_feature(self, name: str) -> Feature | None:
-        """The feature a player character's attack with `name` uses: the rule set's weapon feature
-        of that name that deals damage, looked up among the character's features first and then
-        the world's own catalogue."""
+    def _weapon_item(self, name: str) -> ItemTemplate | None:
+        """The item a player character's attack with `name` uses: the rule set's or world's
+        weapon of that name that deals damage."""
         wanted = name.strip()
         if not wanted:
             return None
-        held = next(
-            (
-                feature
-                for feature in self.character.features.values()
-                if same_item_name(feature.name, wanted) and feature.damage
-            ),
-            None,
-        )
-        if held is not None:
-            return held
-        return next(
-            (
-                feature
-                for feature in self.features.values()
-                if same_item_name(feature.name, wanted) and feature.damage
-            ),
-            None,
-        )
+        for catalogue in (self.character.items, self.items):
+            held = next(
+                (
+                    item
+                    for item in catalogue.values()
+                    if same_item_name(item.name, wanted) and item.damage
+                ),
+                None,
+            )
+            if held is not None:
+                return held
+        return None
 
     def _armor_check_penalty(self, db: Session, character: str, skill: str) -> int:
         """What worn armor takes off a check for `skill`: its Encumbrance slots when the armor
@@ -1078,7 +1042,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
         for worn in (found.equipped_armor, found.equipped_shield):
             if not worn:
                 continue
-            listed = self._listed(worn, include_character=True)
+            listed = self._listed(worn)
             if listed is None or skill not in listed.encumbrance_checks:
                 continue
             held = next((item for item in found.items if same_item_name(item.name, worn)), None)
@@ -1828,7 +1792,6 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
             self.inventory,
             self.item_sizes,
             self.magic,
-            self.marketplace.currency if self.marketplace else "",
         )
 
     def start_encounter(self, map: str) -> dict[str, Any]:
@@ -2087,7 +2050,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 modifier,
                 plus=self.plus,
                 spec=self.character,
-                weapon_feature=self._weapon_feature(weapon),
+                weapon_feature=self._weapon_item(weapon),
                 attack_roll=attack_roll,
                 damage_roll=damage_roll,
                 hit_modifier=hit_modifier,
@@ -2138,7 +2101,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 self._rules(),
                 modifier,
                 spec=self.character,
-                weapon_feature=self._weapon_feature(weapon),
+                weapon_feature=self._weapon_item(weapon),
                 range_band=range_band,
                 dual_wield=dual_wield,
                 force=force,
@@ -2223,17 +2186,17 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
             if character is None:
                 raise InvalidInput(f"there is no character named {name!r}")
             if cost:
-                if character.features.get(currency, 0) < cost:
+                if character.currency.get(currency, 0) < cost:
                     raise InvalidInput(
                         f"creating {item} costs {cost} {currency}; "
-                        f"{character.name} has {character.features.get(currency, 0)}"
+                        f"{character.name} has {character.currency.get(currency, 0)}"
                     )
                 record(
                     db,
                     self.campaign_id,
                     CurrencyChanged(
                         name=character.name,
-                        feature=currency,
+                        item=currency,
                         amount=-cost,
                         cause=f"creating {item}",
                     ),
@@ -2313,17 +2276,26 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
             if rule.kind == "skill" and choice not in spec.skills:
                 raise InvalidInput(f"{choice!r} is not a skill")
             if rule.kind in ("feature", "spell"):
-                target = spec.features.get(choice)
-                if target is None:
-                    raise InvalidInput(f"there is no feature named {choice!r}")
-                if rule.kind == "spell" and target.feature_type != "spell":
-                    raise InvalidInput(f"{target.name} is not a spell")
-                if rule.feature_type and target.feature_type != rule.feature_type:
-                    raise InvalidInput(f"{target.name} is not a {rule.feature_type}")
-                if rule.tags and target.tag not in rule.tags:
-                    raise InvalidInput(f"{target.name} is not one of {', '.join(rule.tags)}")
-                if rule.max_rank and target.rank > rule.max_rank:
-                    raise InvalidInput(f"{target.name} is above rank {rule.max_rank}")
+                if rule.feature_type == "item":
+                    item = spec.items.get(choice)
+                    if item is None:
+                        raise InvalidInput(f"there is no item named {choice!r}")
+                    if rule.tags and item.tag not in rule.tags:
+                        raise InvalidInput(f"{item.name} is not one of {', '.join(rule.tags)}")
+                    if rule.groups and not set(rule.groups) & set(item.groups):
+                        raise InvalidInput(f"{item.name} is not one of {', '.join(rule.groups)}")
+                else:
+                    target = spec.features.get(choice)
+                    if target is None:
+                        raise InvalidInput(f"there is no feature named {choice!r}")
+                    if rule.kind == "spell" and target.feature_type != "spell":
+                        raise InvalidInput(f"{target.name} is not a spell")
+                    if rule.feature_type and target.feature_type != rule.feature_type:
+                        raise InvalidInput(f"{target.name} is not a {rule.feature_type}")
+                    if rule.tags and target.tag not in rule.tags:
+                        raise InvalidInput(f"{target.name} is not one of {', '.join(rule.tags)}")
+                    if rule.max_rank and target.rank > rule.max_rank:
+                        raise InvalidInput(f"{target.name} is above rank {rule.max_rank}")
             if rule.choices and choice not in rule.choices:
                 raise InvalidInput(f"{choice!r} is not one of {', '.join(rule.choices)}")
             if choice in rule.exclude:
@@ -2348,7 +2320,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
             stat = ""
             stat_amount = 0
             stat_raises: dict[str, int] = {}
-            if rule.kind in ("feature", "spell"):
+            if rule.kind in ("feature", "spell") and rule.feature_type != "item":
                 record(
                     db,
                     self.campaign_id,
@@ -2433,7 +2405,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
             character = state.characters.get(name_key(name))
             if character is None:
                 raise InvalidInput(f"there is no character named {name!r}")
-            feature = self._weapon_feature(weapon)
+            feature = self._weapon_item(weapon)
             held = next(
                 (item for item in character.items if same_item_name(item.name, weapon)), None
             )
@@ -2463,7 +2435,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
             helpless = {"unaware", "unconscious"}
             if not helpless.intersection(struck.conditions):
                 raise InvalidInput(f"{struck.name} is aware and cannot be executed")
-            feature = self._weapon_feature(weapon)
+            feature = self._weapon_item(weapon)
             held = next((item for item in pc.items if same_item_name(item.name, weapon)), None)
             dice = (
                 feature.damage
@@ -2950,11 +2922,11 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                     raise InvalidInput(f"{definition.label} needs a character to pay its cost")
                 if (
                     definition.currency
-                    and payer.features.get(definition.currency, 0) < definition.cost
+                    and payer.currency.get(definition.currency, 0) < definition.cost
                 ):
                     raise InvalidInput(
                         f"{definition.label} costs {definition.cost} {definition.currency}; "
-                        f"{payer.name} has {payer.features.get(definition.currency, 0)}"
+                        f"{payer.name} has {payer.currency.get(definition.currency, 0)}"
                     )
                 if (
                     definition.skill
@@ -2970,7 +2942,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                         self.campaign_id,
                         CurrencyChanged(
                             name=payer.name,
-                            feature=definition.currency,
+                            item=definition.currency,
                             amount=-definition.cost,
                             cause=f"starting {name}",
                         ),
@@ -3139,11 +3111,6 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
             "rank": found.rank,
             "description": found.description,
             "effects": [dict(effect) for effect in found.effects],
-            "skill": found.skill,
-            "attributes": list(found.attributes),
-            "shock": found.shock,
-            "shock_ac": found.shock_ac,
-            "flags": list(found.flags),
             "rules": list(found.rules),
         }
 

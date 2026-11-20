@@ -16,7 +16,7 @@ from itertools import pairwise
 from types import MappingProxyType
 from typing import Any, Protocol
 
-from cygnusloom.content.character import CharacterSpec, Feature
+from cygnusloom.content.character import CharacterSpec, Feature, ItemTemplate
 from cygnusloom.content.definitions import ContentError
 from cygnusloom.content.library import LevelGrants
 from cygnusloom.rules.context import ToolContext
@@ -1777,13 +1777,12 @@ def unattune_item(character: str, item: str, ctx: ToolContext) -> dict[str, Any]
     return {"character": found.name, "attuned": remaining, "item": feature.id}
 
 
-def _item_feature(spec: CharacterSpec, item: str) -> Feature:
+def _item_feature(spec: CharacterSpec, item: str) -> ItemTemplate:
     wanted = item.strip().casefold()
     matches = [
-        feature
-        for feature in spec.features.values()
-        if feature.feature_type == "item"
-        and (feature.id.casefold() == wanted or feature.name.casefold() == wanted)
+        entry
+        for entry in spec.items.values()
+        if entry.id.casefold() == wanted or entry.name.casefold() == wanted
     ]
     if not matches:
         raise InvalidInput(f"there is no item named {item!r}")

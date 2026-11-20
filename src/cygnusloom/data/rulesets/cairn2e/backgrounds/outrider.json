@@ -6,18 +6,18 @@
     "kind": "background",
     "name": "Outrider",
     "description": "Your coin comes from escorting caravans, tracking fugitives, or lending your blade to a cause. You\u2019ve been a savior, an executioner, a hero, and even a villain. Yours is not a solitary path, however: you\u2019ll always have your horse.",
-    "features": [
-      "torch",
-      "long-sword",
-      "leather-jerkin",
-      "crossbow",
-      "spyglass"
-    ],
     "tables": [
       "outrider-what-personal-code-or-principle-do-you-uphold",
       "outrider-what-breed-is-your-horse"
     ],
     "names": "outrider-names",
-    "order": 16
+    "order": 16,
+    "items": [
+      "torch",
+      "long-sword",
+      "leather-jerkin",
+      "crossbow",
+      "spyglass"
+    ]
   }
 ]

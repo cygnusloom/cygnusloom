@@ -10,13 +10,12 @@ from typing import Any
 
 from sqlmodel import Session
 
-from cygnusloom.content.character import CharacterSpec
+from cygnusloom.content.character import CharacterSpec, ItemTemplate
 from cygnusloom.content.library import (
     CombatRules,
     Hooks,
     InventoryRules,
     Marketplace,
-    ShopItem,
     ShopService,
 )
 from cygnusloom.services.combat import armor_after, set_armor, set_defense_equipment
@@ -64,12 +63,12 @@ def _defense_of(
     return combat.defense_base + bonus
 
 
-def listed_item(marketplace: Marketplace, item: str) -> ShopItem | None:
+def listed_item(marketplace: Marketplace, item: str) -> ItemTemplate | None:
     return next((listed for listed in marketplace.items if same_item_name(listed.name, item)), None)
 
 
 def _held(character: Character, currency: str) -> int:
-    return character.features.get(currency, 0)
+    return character.currency.get(currency, 0)
 
 
 def _pay(
@@ -89,7 +88,7 @@ def _pay(
     record(
         db,
         campaign_id,
-        CurrencyChanged(name=payer.name, feature=marketplace.currency, amount=-price, cause=cause),
+        CurrencyChanged(name=payer.name, item=marketplace.currency, amount=-price, cause=cause),
     )
     return held - price
 
@@ -407,7 +406,7 @@ def change_currency(
             db,
             campaign_id,
             CurrencyChanged(
-                name=character.name, feature=marketplace.currency, amount=amount, cause=cause
+                name=character.name, item=marketplace.currency, amount=amount, cause=cause
             ),
         )
         left = _held(character, marketplace.currency) + amount
@@ -439,21 +438,21 @@ def transfer_currency(
     payee = character_named(state, payee_name)
     if name_key(payer.name) == name_key(payee.name):
         raise InvalidInput("the payer and the payee must be different characters")
-    if payer.kind == PC_KIND or marketplace.currency in payer.features:
+    if payer.kind == PC_KIND or marketplace.currency in payer.currency:
         payer_left = _pay(db, campaign_id, marketplace, payer, amount, cause=cause)
     else:
         record(
             db,
             campaign_id,
             CurrencyChanged(
-                name=payer.name, feature=marketplace.currency, amount=-amount, cause=cause
+                name=payer.name, item=marketplace.currency, amount=-amount, cause=cause
             ),
         )
         payer_left = 0
     record(
         db,
         campaign_id,
-        CurrencyChanged(name=payee.name, feature=marketplace.currency, amount=amount, cause=cause),
+        CurrencyChanged(name=payee.name, item=marketplace.currency, amount=amount, cause=cause),
     )
     payee_left = _held(payee, marketplace.currency) + amount
     db.commit()

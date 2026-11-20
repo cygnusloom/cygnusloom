@@ -6,18 +6,18 @@
     "kind": "background",
     "name": "Cutpurse",
     "description": "You live in the grey space between those who have power and those who don\u2019t. You find opportunity where others see only chaos. With nimble fingers, you unburden both the richest merchant and the lowliest guard.",
-    "features": [
-      "torch",
-      "twin-daggers",
-      "padded-leather",
-      "lockpicks",
-      "black-outfit"
-    ],
     "tables": [
       "cutpurse-what-was-your-last-big-job",
       "cutpurse-what-helps-you-steal"
     ],
     "names": "cutpurse-names",
-    "order": 4
+    "order": 4,
+    "items": [
+      "torch",
+      "twin-daggers",
+      "padded-leather",
+      "lockpicks",
+      "black-outfit"
+    ]
   }
 ]

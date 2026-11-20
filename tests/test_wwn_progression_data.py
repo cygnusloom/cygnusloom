@@ -117,6 +117,7 @@ def _character_spec(
         stats=stats,
         templates=templates,
         features={},
+        items={},
         fields={},
         tables={},
         table_names={},

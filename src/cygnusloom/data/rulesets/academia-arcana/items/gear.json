@@ -1,0 +1,106 @@
+[
+  {
+    "type": "item",
+    "id": "candle",
+    "size": "tiny",
+    "name": "Candle",
+    "category": "supply",
+    "description": "A candle for late study.",
+    "price": 1,
+    "looks_like": "torch-item",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "ink-and-pen",
+    "size": "tiny",
+    "name": "Ink and Pen",
+    "category": "supply",
+    "description": "Ink, a pen, and a blotter for copying notes.",
+    "price": 2,
+    "looks_like": "scroll",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "parchment-ten-sheets",
+    "name": "Parchment, Ten Sheets",
+    "category": "supply",
+    "description": "Ten sheets of good parchment.",
+    "price": 3,
+    "looks_like": "scroll",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "student-satchel",
+    "name": "Student Satchel",
+    "category": "clothing",
+    "description": "A satchel for books, reagents, and lunch.",
+    "price": 4,
+    "looks_like": "backpack",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "school-robe",
+    "name": "School Robe",
+    "category": "clothing",
+    "description": "A plain robe in the school's colors.",
+    "price": 5,
+    "looks_like": "cloak",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "potion-reagents",
+    "name": "Potion Reagents",
+    "category": "supply",
+    "description": "A packet of common alchemical reagents.",
+    "price": 4,
+    "looks_like": "alchemists-supplies",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "healing-draught",
+    "size": "tiny",
+    "name": "Healing Draught",
+    "category": "potion",
+    "description": "A bitter draught that closes small hurts.",
+    "price": 8,
+    "uses": 1,
+    "looks_like": "potion",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "lantern",
+    "name": "Lantern",
+    "category": "tool",
+    "description": "A hooded lantern for the dark stairs.",
+    "price": 6,
+    "looks_like": "lantern-item",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "firewood",
+    "name": "Firewood",
+    "category": "supply",
+    "description": "A bundle of dry firewood.",
+    "price": 1,
+    "looks_like": "torch-item",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "daily-ration",
+    "name": "Daily Ration",
+    "category": "supply",
+    "description": "A day's food and water for one person.",
+    "price": 1,
+    "looks_like": "rations",
+    "armor_mode": "add"
+  }
+]

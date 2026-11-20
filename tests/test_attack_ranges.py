@@ -79,7 +79,7 @@ def test_a_reach_weapon_strikes_ten_feet_but_not_fifteen(client_factory):
     _app, _campaign_id, tools = _range_fight(client_factory)
     _foe(tools, hp=20)
     _make_room(tools)
-    tools.give_item(PC, "Pike", damage="1d8")
+    tools.give_item(PC, "Pike")
     _place(tools, PC, 0, 0)
     _place(tools, FOE, 0, 2)
     take_turn(tools, PC)
@@ -100,7 +100,7 @@ def test_a_thrown_axe_takes_the_long_band_penalty_and_a_shot_beyond_long_is_refu
     app, campaign_id, tools = _range_fight(client_factory)
     _foe(tools, hp=30, armor=20)
     _make_room(tools)
-    tools.give_item(PC, "Hand Axe", damage="1d6")
+    tools.give_item(PC, "Hand Axe")
     _place(tools, PC, 0, 0)
     _place(tools, FOE, 0, 2)
     take_turn(tools, PC)
@@ -138,7 +138,7 @@ def test_a_wall_blocks_the_line_of_sight_until_it_is_cleared(client_factory):
     _app, _campaign_id, tools = _range_fight(client_factory)
     _foe(tools, hp=20, armor=20)
     _make_room(tools)
-    tools.give_item(PC, BOW, damage="1d8")
+    tools.give_item(PC, BOW)
     _place(tools, PC, 0, 0)
     _place(tools, FOE, 0, 3)
     tools.set_map_cells(RANGE_MAP, [{"column": 0, "row": 1, "object": "wall"}])
@@ -272,8 +272,8 @@ def test_wwn_content_declares_its_reach_range_and_sight_limits():
     assert wwn.combat.ranges is not None
     assert wwn.combat.ranges.melee == 5
     assert "wall" in wwn.combat.ranges.sight_blocked_by
-    assert wwn.character.features["pike"].reach == 10
-    assert wwn.character.features["bow_large"].ranges == {"short": 100, "long": 600}
+    assert wwn.character.items["pike"].reach == 10
+    assert wwn.character.items["bow_large"].ranges == {"short": 100, "long": 600}
     assert wwn.monsters["bog_strider"].attack_reach == {"beak": 10}
     assert wwn.monsters["mound_breaker"].attack_ranges == {
         "hurled stone": {"short": 60, "long": 120}

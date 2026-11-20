@@ -131,7 +131,7 @@ def test_twin_lakes_keeps_the_cas1_source_material():
         "watersnatch",
         "memory-prism",
         "wisp-lamp",
-    } <= set(world.features)
+    } <= set(world.items)
     assert {"victims", "rumors", "encounters"} <= set(world.tables)
     assert {
         "night-cat-attack",
@@ -159,7 +159,7 @@ def test_twin_lakes_keeps_the_cas1_source_material():
     } <= set(world.rules)
     assert "bandit-morale" in world.monsters["bandit"].rules
     assert "bandit-morale" in world.monsters["bandit-leader"].rules
-    assert "memory-prism-current-memories" in world.features["memory-prism"].rules
+    assert "memory-prism-current-memories" in world.items["memory-prism"].rules
     vuk = next(npc for npc in template.npcs if npc.id == "vuk")
     assert "memory-prism-current-memories" in vuk.rules
     assert {"rumors-trigger", "encounters-trigger"} <= set(world.unattached_rules)

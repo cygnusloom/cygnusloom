@@ -118,7 +118,7 @@ def use_item(
     feature = None
     if spec is not None:
         feature = next(
-            (entry for entry in spec.features.values() if same_item_name(entry.name, item)),
+            (entry for entry in spec.items.values() if same_item_name(entry.name, item)),
             None,
         )
     timer_hours = feature.timer_hours if feature is not None else 0

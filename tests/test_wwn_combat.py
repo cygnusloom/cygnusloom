@@ -229,8 +229,13 @@ def _ready_shield(tools: WorldTools) -> None:
     tools.ready_item(PC, "Large Shield", ready=True)
 
 
-def _feature(name: str) -> Feature:
-    return next(feature for feature in WWN.character.features.values() if feature.name == name)
+def _feature(name: str):
+    return next(
+        entry
+        for catalogue in (WWN.character.items, WWN.character.features)
+        for entry in catalogue.values()
+        if entry.name == name
+    )
 
 
 def _pc(app: FastAPI, campaign_id: int):
@@ -302,7 +307,7 @@ def test_an_attack_below_ac_misses_and_one_at_ac_hits(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, hp=20, armor=13)
     _make_room(tools)
-    tools.give_item(PC, BOW, damage="1d8")
+    tools.give_item(PC, BOW)
     take_turn(tools, PC)
     pc = _pc(app, campaign_id)
     feature = _feature(BOW)
@@ -329,7 +334,7 @@ def test_a_miss_still_does_shock_to_a_low_ac_target(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, hp=20, armor=13)
     _make_room(tools)
-    tools.give_item(PC, WAR_AXE, damage="1d10")
+    tools.give_item(PC, WAR_AXE)
     take_turn(tools, PC)
     pc = _pc(app, campaign_id)
     feature = _feature(WAR_AXE)
@@ -365,7 +370,7 @@ def test_a_player_attack_shows_the_roll_and_each_modifier(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, hp=20, armor=13)
     _make_room(tools)
-    tools.give_item(PC, LONG_SWORD, damage="1d8")
+    tools.give_item(PC, LONG_SWORD)
     take_turn(tools, PC)
     pc = _pc(app, campaign_id)
     feature = _feature(LONG_SWORD)
@@ -387,7 +392,7 @@ def test_a_hit_shows_the_damage_dice_and_each_modifier(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, hp=20, armor=13)
     _make_room(tools)
-    tools.give_item(PC, LONG_SWORD, damage="1d8")
+    tools.give_item(PC, LONG_SWORD)
     take_turn(tools, PC)
     pc = _pc(app, campaign_id)
     feature = _feature(LONG_SWORD)
@@ -418,7 +423,7 @@ def test_shock_does_not_reach_a_shield_grade_ac(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, hp=20, armor=16)
     _make_room(tools)
-    tools.give_item(PC, WAR_AXE, damage="1d10")
+    tools.give_item(PC, WAR_AXE)
     take_turn(tools, PC)
     pc = _pc(app, campaign_id)
     feature = _feature(WAR_AXE)
@@ -438,7 +443,7 @@ def test_a_hit_does_at_least_its_shock(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, hp=20, armor=13)
     _make_room(tools)
-    tools.give_item(PC, WAR_AXE, damage="1d10")
+    tools.give_item(PC, WAR_AXE)
     take_turn(tools, PC)
     pc = _pc(app, campaign_id)
     feature = _feature(WAR_AXE)
@@ -455,7 +460,7 @@ def test_a_ranged_weapon_does_no_shock_on_a_miss(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, hp=20, armor=13)
     _make_room(tools)
-    tools.give_item(PC, BOW, damage="1d8")
+    tools.give_item(PC, BOW)
     take_turn(tools, PC)
     pc = _pc(app, campaign_id)
     feature = _feature(BOW)
@@ -474,7 +479,7 @@ def test_hit_roll_adds_attack_bonus_skill_and_best_attribute(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, hp=20, armor=10)
     _make_room(tools)
-    tools.give_item(PC, LONG_SWORD, damage="1d8")
+    tools.give_item(PC, LONG_SWORD)
     level = _raise(tools, "stab")
     take_turn(tools, PC)
     pc = _pc(app, campaign_id)
@@ -511,9 +516,8 @@ def test_an_unskilled_attack_takes_the_penalty(client_factory, weapon, skill, at
     pc = _pc(app, campaign_id)
     assert skill not in pc.skills
     if weapon != UNARMED:
-        feature = _feature(weapon)
         _make_room(tools)
-        tools.give_item(PC, weapon, damage=feature.damage)
+        tools.give_item(PC, weapon)
     expected = current(pc, "attack_bonus") + attribute - 2
     take_turn(tools, PC)
 
@@ -532,7 +536,7 @@ def test_damage_adds_the_weapon_attribute_and_damage_bonus_stat(client_factory):
     )
     _foe(tools, hp=20, armor=10)
     _make_room(tools)
-    tools.give_item(PC, LONG_SWORD, damage="1d8")
+    tools.give_item(PC, LONG_SWORD)
     take_turn(tools, PC)
     pc = _pc(app, campaign_id)
     feature = _feature(LONG_SWORD)
@@ -558,7 +562,7 @@ def test_a_thrown_weapon_at_range_does_no_shock(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, hp=20, armor=13)
     _make_room(tools)
-    tools.give_item(PC, "Hand Axe", damage="1d6")
+    tools.give_item(PC, "Hand Axe")
     tools.place_participant(PC, 0, 0)
     tools.place_participant(FOE, 2, 0)
     take_turn(tools, PC)
@@ -586,7 +590,7 @@ def test_damage_bonus_stat_does_not_add_to_shock(client_factory):
     )
     _foe(tools, hp=20, armor=13)
     _make_room(tools)
-    tools.give_item(PC, WAR_AXE, damage="1d10")
+    tools.give_item(PC, WAR_AXE)
     take_turn(tools, PC)
     pc = _pc(app, campaign_id)
     feature = _feature(WAR_AXE)
@@ -602,7 +606,7 @@ def test_damage_and_shock_modifiers_reach_the_attack(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, hp=20, armor=13)
     _make_room(tools)
-    tools.give_item(PC, WAR_AXE, damage="1d10")
+    tools.give_item(PC, WAR_AXE)
     take_turn(tools, PC)
     pc = _pc(app, campaign_id)
     feature = _feature(WAR_AXE)
@@ -632,7 +636,7 @@ def test_armsmaster_adds_stab_to_melee_damage_and_shock(client_factory):
     stab = _raise(tools, "stab")
     _foe(tools, hp=20, armor=13)
     _make_room(tools)
-    tools.give_item(PC, WAR_AXE, damage="1d10")
+    tools.give_item(PC, WAR_AXE)
     take_turn(tools, PC)
     feature = _feature(WAR_AXE)
     attribute = _modifier(pc, "str")
@@ -657,7 +661,7 @@ def test_deadeye_adds_shoot_to_ranged_damage(client_factory):
     shoot = _raise(tools, "shoot")
     _foe(tools, hp=20, armor=13)
     _make_room(tools)
-    tools.give_item(PC, BOW, damage="1d8")
+    tools.give_item(PC, BOW)
     take_turn(tools, PC)
 
     result = tools.player_attack(FOE, BOW, attack_roll=20, damage_roll=5)
@@ -700,7 +704,7 @@ def test_a_hit_that_takes_an_npc_to_zero_defeats_it_as_dead(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, hp=3, armor=10)
     _make_room(tools)
-    tools.give_item(PC, LONG_SWORD, damage="1d8")
+    tools.give_item(PC, LONG_SWORD)
     take_turn(tools, PC)
 
     result = replace(tools, rng=Rolls(5, 20)).player_attack(FOE, LONG_SWORD)
@@ -1234,7 +1238,7 @@ def test_wwn_player_attack_and_save_prompt_for_the_players_own_dice(client_facto
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, hp=20, armor=10)
     _make_room(tools)
-    tools.give_item(PC, LONG_SWORD, damage="1d8")
+    tools.give_item(PC, LONG_SWORD)
     take_turn(tools, PC)
     tools = replace(tools, rng=Rolls(4))
     ctx = SimpleNamespace(world=tools)
@@ -1420,7 +1424,7 @@ def test_a_stowed_weapon_must_be_readied_before_it_can_strike(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, hp=20)
     _make_room(tools)
-    tools.give_item(PC, WAR_AXE, damage="1d10")
+    tools.give_item(PC, WAR_AXE)
     tools.ready_item(PC, WAR_AXE, ready=False)
     assert next(i for i in _pc(app, campaign_id).items if i.name == WAR_AXE).ready is False
     _player_turn(app, campaign_id)
@@ -1583,7 +1587,7 @@ def test_creating_a_magic_item_charges_its_cost_and_records_its_powers(client_fa
     staff = next(item for item in pc.items if item.name == "Staff of Ash")
     assert staff.damage == "1d6"
     assert "ember light" in staff.text
-    assert pc.features.get("silver", 0) == 0
+    assert pc.currency.get("silver", 0) == 0
 
 
 def test_a_source_project_charges_its_cost_and_requires_its_skill(client_factory):
@@ -1596,7 +1600,7 @@ def test_a_source_project_charges_its_cost_and_requires_its_skill(client_factory
     assert (project["cost"], project["currency"], project["owner"]) == (1000, "silver", PC)
     with Session(app.state.engine) as db:
         pc = load_state(db, campaign_id).characters[name_key(PC)]
-    assert pc.features.get("silver", 0) == 0
+    assert pc.currency.get("silver", 0) == 0
     with pytest.raises(InvalidInput, match="costs 1000 silver"):
         tools.start_project("Second Staff", "magic_item", "Another staff", owner=PC)
 
@@ -1620,7 +1624,7 @@ def test_an_execution_against_an_unaware_target_does_maximum_damage(client_facto
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, hp=30)
     _make_room(tools)
-    tools.give_item(PC, LONG_SWORD, damage="1d8")
+    tools.give_item(PC, LONG_SWORD)
     tools.add_condition(FOE, "unaware", "watching the wrong doorway")
 
     tools.prepare_execution(PC, LONG_SWORD)
@@ -1636,7 +1640,7 @@ def test_grappling_restricts_both_sides_to_unarmed_attacks(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, hp=20)
     _make_room(tools)
-    tools.give_item(PC, LONG_SWORD, damage="1d8")
+    tools.give_item(PC, LONG_SWORD)
 
     tools.grapple(FOE, PC)
     holder = _character(app, campaign_id, FOE)
@@ -1736,7 +1740,7 @@ def test_long_range_takes_the_configured_penalty(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, hp=20, armor=20)
     _make_room(tools)
-    tools.give_item(PC, BOW, damage="1d8")
+    tools.give_item(PC, BOW)
     take_turn(tools, PC)
 
     short = tools.player_attack(FOE, BOW, range_band="short", attack_roll=10, damage_roll=2)
@@ -1754,7 +1758,7 @@ def test_dual_wielding_applies_its_hit_penalty_and_damage_bonus(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, hp=20, armor=20)
     _make_room(tools)
-    tools.give_item(PC, LONG_SWORD, damage="1d8")
+    tools.give_item(PC, LONG_SWORD)
     take_turn(tools, PC)
 
     tools.player_attack(FOE, LONG_SWORD, attack_roll=10, damage_roll=2)
@@ -1794,7 +1798,7 @@ def test_a_shield_bash_suspends_the_shields_ac_until_the_next_turn(client_factor
     tools.set_stat_max(PC, "str", 18, "room for the shield and its bash")
     _ready_shield(tools)
     tools.equip_armor(PC, "Large Shield")
-    tools.give_item(PC, "Shield Bash, Large", damage="1d6")
+    tools.give_item(PC, "Shield Bash, Large")
     take_turn(tools, PC)
 
     before = _pc(app, campaign_id)

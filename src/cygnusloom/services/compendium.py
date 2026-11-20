@@ -20,6 +20,7 @@ from cygnusloom.content.character import (
     Feature,
     FeatureTypeRules,
     Field,
+    ItemTemplate,
     Stat,
     TableOption,
     Template,
@@ -49,7 +50,6 @@ from cygnusloom.content.library import (
     RelationRules,
     RestLength,
     RuleSet,
-    ShopItem,
     ShopService,
     TallyRules,
     Travel,
@@ -489,66 +489,55 @@ def _build(
     for relation in rule_set.progression.relations.values():
         add("advancement", f"relation:{relation.id}", _relation_draft(relation))
 
-    # Abilities and items: the rule set's features first, then the world's own features. A world
-    # feature with a rule set feature's name is an override already covered by the rule set.
+    # Abilities and items: the rule set's features and items first, then the world's own.
+    # A world entry with a rule set entry's name is an override already covered by the rule set.
     feature_names = {name_key(feature.name) for feature in spec.features.values()}
     for feature in spec.features.values():
-        if feature.feature_type == "item":
-            add(
-                "items",
-                f"feature:{feature.id}",
-                _feature_item_draft(feature, "rules", rule_text),
-                "item",
-                (feature.id, feature.name, name_key(feature.name)),
-            )
-        else:
-            add(
-                "abilities",
-                f"feature:{feature.id}",
-                _feature_draft(feature, rule_set, rule_text, "rules"),
-                "ability",
-                (feature.id, feature.name, name_key(feature.name)),
-            )
+        add(
+            "abilities",
+            f"feature:{feature.id}",
+            _feature_draft(feature, rule_set, rule_text, "rules"),
+            "ability",
+            (feature.id, feature.name, name_key(feature.name)),
+        )
+    item_names: dict[str, str] = {}
+    for item in spec.items.values():
+        key = f"item:{item.id}"
+        item_names.setdefault(name_key(item.name), key)
+        add(
+            "items",
+            key,
+            _item_draft(item, "rules", rule_text),
+            "item",
+            (item.id, item.name, name_key(item.name)),
+        )
     if world_content is not None:
         for feature in world_content.features.values():
             if name_key(feature.name) in feature_names:
                 continue
-            if feature.feature_type == "item":
-                add(
-                    "items",
-                    f"world-feature:{feature.id}",
-                    _feature_item_draft(feature, "world", rule_text),
-                    "item",
-                    (feature.id, feature.name, name_key(feature.name)),
-                )
-            else:
-                add(
-                    "abilities",
-                    f"world-feature:{feature.id}",
-                    _feature_draft(feature, rule_set, rule_text, "world"),
-                    "ability",
-                    (feature.id, feature.name, name_key(feature.name)),
-                )
+            add(
+                "abilities",
+                f"world-feature:{feature.id}",
+                _feature_draft(feature, rule_set, rule_text, "world"),
+                "ability",
+                (feature.id, feature.name, name_key(feature.name)),
+            )
+        for item in world_content.items.values():
+            key = name_key(item.name)
+            if key in item_names:
+                continue
+            item_names[key] = f"world-item:{item.id}"
+            add(
+                "items",
+                f"world-item:{item.id}",
+                _item_draft(item, "world", rule_text),
+                "item",
+                (item.id, item.name, key),
+            )
 
-    item_names: dict[str, str] = {}
-    for key, draft in drafts["items"].items():
-        if draft.name:
-            item_names.setdefault(name_key(draft.name), key)
     if rule_set.marketplace is not None:
         marketplace = rule_set.marketplace
         add("items", "marketplace", _marketplace_draft(marketplace, spec))
-        for shop_item in marketplace.items:
-            key = name_key(shop_item.name)
-            if key in item_names:
-                continue
-            item_names[key] = f"shop:{shop_item.id}"
-            add(
-                "items",
-                f"shop:{shop_item.id}",
-                _shop_item_draft(shop_item),
-                "item",
-                (shop_item.id, shop_item.name, key),
-            )
         for service in marketplace.services:
             add("items", f"service:{service.id}", _service_draft(service))
         for hireling in marketplace.hirelings:
@@ -891,8 +880,12 @@ def _feature_group(feature: Feature, feature_types: Mapping[str, FeatureTypeRule
     return feature.feature_type.replace("_", " ").title() or "Abilities"
 
 
-def _item_group(feature: Feature) -> str:
-    return feature.tag.replace("_", " ").title() if feature.tag else "Equipment"
+def _item_group(item: ItemTemplate) -> str:
+    if item.damage:
+        return "Weapons"
+    if item.armor or item.armor_category:
+        return "Armor"
+    return "Equipment"
 
 
 def _effect_text(values: Mapping[str, object]) -> str:
@@ -902,8 +895,6 @@ def _effect_text(values: Mapping[str, object]) -> str:
 def _feature_text(
     feature: Feature,
     rule_text: Mapping[str, str],
-    *,
-    item: bool,
 ) -> str:
     lines = [feature.description] if feature.description else []
     details = [f"Type: {feature.feature_type}"]
@@ -911,18 +902,6 @@ def _feature_text(
         details.append(f"Tag: {feature.tag}")
     if feature.rank:
         details.append(f"Rank: {feature.rank}")
-    if feature.damage:
-        details.append(f"Damage: {feature.damage}")
-    if feature.armor:
-        details.append(f"Armor: {feature.armor}")
-    if feature.uses:
-        details.append(f"Uses: {feature.uses}")
-    if feature.shock:
-        details.append(f"Shock: {feature.shock} / AC {feature.shock_ac}")
-    if feature.flags:
-        details.append(f"Flags: {', '.join(feature.flags)}")
-    if item and feature.size:
-        details.append(f"Size: {feature.size}")
     lines.append("; ".join(details))
     for effect in feature.effects:
         lines.append(f"Effect: {_effect_text(effect)}")
@@ -963,46 +942,68 @@ def _feature_draft(
     return _Draft(
         name=feature.name,
         summary=_first_sentence(feature.description),
-        text=_feature_text(feature, rule_text, item=False),
+        text=_feature_text(feature, rule_text),
         source=source,
         tags=tags,
         group=_feature_group(feature, rule_set.feature_types),
     )
 
 
-def _feature_item_draft(feature: Feature, source: str, rule_text: Mapping[str, str]) -> _Draft:
-    return _Draft(
-        name=feature.name,
-        summary=_first_sentence(feature.description),
-        text=_feature_text(feature, rule_text, item=True),
-        source=source,
-        tags=(feature.tag,) if feature.tag else (),
-        group=_item_group(feature),
-        icon=feature.icon or "",
-    )
-
-
-def _shop_item_draft(item: ShopItem) -> _Draft:
+def _item_text(item: ItemTemplate, rule_text: Mapping[str, str]) -> str:
     lines = [item.description] if item.description else []
-    lines.append(f"Category: {item.category}")
-    lines.append(f"Price: {item.price}")
-    lines.append(f"Size: {item.size}")
-    if item.armor:
-        lines.append(f"Armor: {item.armor} ({item.armor_mode})")
+    details = [f"Size: {item.size}"]
+    if item.category:
+        details.append(f"Category: {item.category}")
+    if item.price is not None:
+        details.append(f"Price: {item.price}")
     if item.damage:
-        lines.append(f"Damage: {item.damage}")
+        damage = f"Damage: {item.damage}"
+        if item.damage_type:
+            damage += f" {item.damage_type}"
+        if item.versatile_damage:
+            damage += f" (versatile {item.versatile_damage})"
+        details.append(damage)
+    if item.mastery:
+        details.append(f"Mastery: {item.mastery}")
+    if item.armor:
+        armor = f"Armor: {item.armor}"
+        if item.armor_category:
+            armor += f" ({item.armor_category})"
+        details.append(armor)
     if item.uses:
-        lines.append(f"Uses: {item.uses}")
+        details.append(f"Uses: {item.uses}")
+    if item.shock:
+        details.append(f"Shock: {item.shock} / AC {item.shock_ac}")
+    if item.reach:
+        details.append(f"Reach: {item.reach} feet")
+    if item.ranges:
+        bands = ", ".join(
+            f"{name} {distance if distance is not None else 'unlimited'}"
+            for name, distance in item.ranges.items()
+        )
+        details.append(f"Ranges: {bands}")
+    if item.flags:
+        details.append(f"Flags: {', '.join(item.flags)}")
     if item.encumbrance_checks:
-        lines.append(f"Encumbers checks: {', '.join(item.encumbrance_checks)}")
-    summary = _first_sentence(item.description) or item.category.title()
+        details.append(f"Encumbers checks: {', '.join(item.encumbrance_checks)}")
+    if item.timer_hours:
+        details.append(f"Timer: {item.timer_label or 'item'} for {item.timer_hours} hours")
+    if item.currency:
+        details.append("Currency")
+    lines.append("; ".join(details))
+    lines.extend(_attached_rule_lines(item.rules, None, rule_text))
+    return "\n".join(lines)
+
+
+def _item_draft(item: ItemTemplate, source: str, rule_text: Mapping[str, str]) -> _Draft:
     return _Draft(
         name=item.name,
-        summary=summary,
-        text="\n".join(lines),
+        summary=_first_sentence(item.description) or item.category.title(),
+        text=_item_text(item, rule_text),
+        source=source,
         tags=(item.category,) if item.category else (),
-        group=item.category.replace("_", " ").title() if item.category else "Equipment",
-        icon=item.icon,
+        group=_item_group(item),
+        icon=item.icon or "",
     )
 
 
@@ -1034,7 +1035,7 @@ def _hireling_draft(hireling: Hireling) -> _Draft:
 
 
 def _marketplace_draft(marketplace: Marketplace, spec: CharacterSpec) -> _Draft:
-    currency = spec.features.get(marketplace.currency)
+    currency = spec.items.get(marketplace.currency)
     currency_name = currency.name if currency is not None else marketplace.currency
     return _Draft(
         name="Marketplace",

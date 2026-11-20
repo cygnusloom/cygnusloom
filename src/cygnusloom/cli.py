@@ -93,6 +93,29 @@ def _content_validate(args: argparse.Namespace) -> int:
     return 0
 
 
+def _content_migrate(args: argparse.Namespace) -> int:
+    from cygnusloom.content.library import DATA_DIR
+    from cygnusloom.content.migrations import migrate_tree
+
+    data_dir = Path(args.data_dir) if args.data_dir else DATA_DIR
+    if not data_dir.is_dir():
+        print(f"error: {data_dir} is not a content folder")
+        return 1
+    try:
+        reports = migrate_tree(data_dir)
+    except (OSError, TypeError, ValueError) as exc:
+        print(f"error: {exc}")
+        return 1
+    changed = [(name, report) for name, report in reports if report.changed]
+    if not changed:
+        print("no legacy items found")
+        return 0
+    for name, report in changed:
+        print(f"{name}: {report.summary()}")
+    print(f"migrated {len(changed)} content folder(s)")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     if not argv:
@@ -143,6 +166,14 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="treat warnings as a failed validation",
     )
+    migrate_parser = content_sub.add_parser(
+        "migrate", help="convert legacy item features and shop items to items"
+    )
+    migrate_parser.add_argument(
+        "--data-dir",
+        default=None,
+        help="content directory to migrate in place (default: the bundled data)",
+    )
     args = parser.parse_args(argv)
     if args.command == "play":
         return _play(args)
@@ -152,6 +183,8 @@ def main(argv: list[str] | None = None) -> int:
         return _where()
     if args.command == "content" and args.content_command == "validate":
         return _content_validate(args)
+    if args.command == "content" and args.content_command == "migrate":
+        return _content_migrate(args)
     return _list_users()
 
 

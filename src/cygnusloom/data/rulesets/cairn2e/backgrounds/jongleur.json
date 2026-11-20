@@ -6,18 +6,18 @@
     "kind": "background",
     "name": "Jongleur",
     "description": "What inspires the soul more than song, words, and spectacle? Why practice for years to master the arcane when you\u2019ve already got real magic inside?",
-    "features": [
-      "torch",
-      "costume",
-      "simple-instrument",
-      "lucky-jerkin",
-      "sling"
-    ],
     "tables": [
       "jongleur-what-happened-at-your-final-performance",
       "jongleur-what-trinket-were-you-unable-to-leave-behind"
     ],
     "names": "jongleur-names",
-    "order": 12
+    "order": 12,
+    "items": [
+      "torch",
+      "costume",
+      "simple-instrument",
+      "lucky-jerkin",
+      "sling"
+    ]
   }
 ]

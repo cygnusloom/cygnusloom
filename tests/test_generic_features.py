@@ -40,9 +40,6 @@ _SOURCE = Feature(
     name="Source Spell",
     feature_type="spell",
     description="A spell the synthetic picks are copied from.",
-    size="",
-    uses=0,
-    armor=0,
     tag=TAG,
 )
 _TEMPLATE = Template(

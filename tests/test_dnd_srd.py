@@ -157,7 +157,7 @@ def test_a_character_keeps_the_starting_kit_pick_and_its_gold(
     )
     pc = character_named(app, campaign_id, "Rook")
     assert pc.fields["grant:fighter"] == "c"
-    assert pc.features.get("silver", 0) >= 1550
+    assert pc.currency.get("silver", 0) >= 1550
     tools = tools_for(client.app, campaign_id, rule_set="dnd-srd-2024")
     assert "grant:fighter" not in tools.get_statblock("Rook")["statblock"]
 
@@ -619,14 +619,14 @@ def test_weapon_mastery_offers_only_the_weapons_its_class_can_use():
     barbarian_ids = {option["value"] for option in barbarian}
     assert "weapon-longbow" not in barbarian_ids
     assert "weapon-greataxe" in barbarian_ids
-    assert all("melee" in spec.features[value].groups for value in barbarian_ids)
+    assert all("melee" in spec.items[value].groups for value in barbarian_ids)
 
     rogue = feature_choice_views(spec, spec.features["class-rogue-weapon-mastery"])[0]["options"]
     rogue_ids = {option["value"] for option in rogue}
     assert "weapon-longbow" not in rogue_ids  # martial ranged is not a Rogue weapon
     assert "weapon-dagger" in rogue_ids
     assert all(
-        set(spec.features[value].groups) & {"simple", "finesse", "light"} for value in rogue_ids
+        set(spec.items[value].groups) & {"simple", "finesse", "light"} for value in rogue_ids
     )
 
 
@@ -665,11 +665,7 @@ def test_every_spell_names_the_class_lists_that_offer_it():
 
 def test_every_weapon_names_a_category_and_a_melee_or_ranged_group():
     rules = _dnd_rules()
-    weapons = [
-        feature
-        for feature in rules.character.features.values()
-        if feature.tag == "weapon" and feature.feature_type == "item"
-    ]
+    weapons = [item for item in rules.character.items.values() if item.tag == "weapon"]
     assert len(weapons) == 38
     for weapon in weapons:
         assert {"simple", "martial"} & set(weapon.groups), weapon.id

@@ -108,10 +108,10 @@ def test_cairn_content_declares_adjacency_and_unlimited_missiles():
     # No melee distance in the ruleset means one cell, so an attack must be next to its target.
     assert cairn.combat.ranges.melee is None
     assert "wall" in cairn.combat.ranges.sight_blocked_by
-    assert cairn.character.features["bow"].ranges == {"ranged": None}
-    assert cairn.character.features["crossbow"].ranges == {"ranged": None}
-    assert cairn.character.features["sling"].ranges == {"ranged": None}
-    assert cairn.character.features["long-sword"].ranges == {}
+    assert cairn.character.items["bow"].ranges == {"ranged": None}
+    assert cairn.character.items["crossbow"].ranges == {"ranged": None}
+    assert cairn.character.items["sling"].ranges == {"ranged": None}
+    assert cairn.character.items["long-sword"].ranges == {}
 
 
 def test_a_band_distance_of_zero_means_no_limit():

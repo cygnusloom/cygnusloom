@@ -64,7 +64,7 @@ def test_wwn_content_loads() -> None:
     assert "village_rationale" in rule_set.dice_tables
     assert any(f.tag == "origin" for f in rule_set.character.features.values())
     assert any(item.name == "Rope, 50 ft" for item in rule_set.marketplace.items)
-    assert "no_unskilled_penalty" in rule_set.character.features["crossbow"].flags
+    assert "no_unskilled_penalty" in rule_set.character.items["crossbow"].flags
     reaction = rule_set.dice_tables["dungeon_reaction"]
     assert "hostile" in reaction.row_for(2).result
     assert "friendly" in reaction.row_for(12).result
@@ -572,7 +572,7 @@ def test_a_character_can_roll_starting_silver_instead_of_taking_a_kit(client_fac
     assert "kit" not in pc.templates
     assert not pc.items
     assert pc.equipped_armor == "" and pc.equipped_shield == ""
-    assert 30 <= pc.features["silver"] <= 180
+    assert 30 <= pc.currency["silver"] <= 180
 
 
 def test_the_creation_page_offers_starting_silver_as_a_kit_choice(client_factory):

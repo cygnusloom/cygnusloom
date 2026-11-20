@@ -12,7 +12,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from math import ceil
 
-from cygnusloom.content.character import Feature
+from cygnusloom.content.character import ItemTemplate
 from cygnusloom.content.library import CombatRules
 from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.events import (
@@ -41,7 +41,7 @@ class AttackRange:
         return cls(reach=rules.melee if rules is not None else None)
 
     @classmethod
-    def for_feature(cls, feature: Feature | None, combat: CombatRules) -> AttackRange:
+    def for_feature(cls, feature: ItemTemplate | None, combat: CombatRules) -> AttackRange:
         """A player character's weapon feature: its own reach and ranged bands, with the rule
         set's default reach for its melee use."""
         default = cls.melee(combat)

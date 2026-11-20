@@ -10,7 +10,7 @@ from sqlmodel import Session
 
 from cygnusloom.content.character import (
     CharacterError,
-    Feature,
+    ItemTemplate,
     SkillProgression,
     TableOption,
     build_character,
@@ -470,14 +470,10 @@ def test_combat_distinguishes_training_from_a_negative_skill_level():
     combat = bundled_library().rule_sets["worldswithoutnumber"].combat
     assert combat is not None
     combat = replace(combat, attack=replace(combat.attack, unskilled_attack_penalty=3))
-    feature = Feature(
+    feature = ItemTemplate(
         id="wand",
         name="Wand",
-        feature_type="item",
         description="A wand.",
-        size="normal",
-        uses=0,
-        armor=0,
         skill="lore",
     )
     character = Character("pc", "Rin", None, "", "", "", [])

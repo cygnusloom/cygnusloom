@@ -1,0 +1,10 @@
+[
+  {
+    "type": "item",
+    "id": "gold",
+    "description": "A purse of gold coins.",
+    "looks_like": "coin",
+    "name": "Gold Pieces",
+    "currency": true
+  }
+]

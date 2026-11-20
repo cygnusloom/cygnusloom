@@ -1,0 +1,795 @@
+[
+  {
+    "type": "item",
+    "id": "backpack",
+    "description": "Can hold up to six slots of items or Fatigue.",
+    "looks_like": "backpack",
+    "name": "Backpack"
+  },
+  {
+    "type": "item",
+    "id": "badge",
+    "description": "A small badge of office or membership.",
+    "looks_like": "amulet",
+    "size": "petty",
+    "name": "Badge"
+  },
+  {
+    "type": "item",
+    "id": "bandages",
+    "description": "3 uses",
+    "uses": 3,
+    "looks_like": "herbalism-kit",
+    "name": "Bandages",
+    "category": "gear",
+    "price": 30,
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "black-outfit",
+    "description": "Dark, quiet clothing for moving unseen.",
+    "looks_like": "cloak",
+    "size": "petty",
+    "name": "Black Outfit"
+  },
+  {
+    "type": "item",
+    "id": "blank-book",
+    "description": "An empty book of blank pages.",
+    "looks_like": "book",
+    "name": "Blank Book"
+  },
+  {
+    "type": "item",
+    "id": "blessed-tinctures",
+    "description": "Small vials of blessed medicine.",
+    "looks_like": "potion",
+    "name": "Blessed Tinctures"
+  },
+  {
+    "type": "item",
+    "id": "cart",
+    "description": "+4 slots, bulky",
+    "looks_like": "cart",
+    "size": "bulky",
+    "name": "Cart",
+    "category": "transport",
+    "price": 30,
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "chains",
+    "description": "Ten feet of heavy iron chain.",
+    "looks_like": "chain",
+    "name": "Chains"
+  },
+  {
+    "type": "item",
+    "id": "compass",
+    "description": "A brass compass for finding north.",
+    "looks_like": "navigators-tools",
+    "name": "Compass",
+    "category": "gear",
+    "price": 75,
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "costume",
+    "description": "Clothes and paint for a disguise or performance.",
+    "looks_like": "cloak",
+    "name": "Costume"
+  },
+  {
+    "type": "item",
+    "id": "fancy-hat",
+    "description": "A fine hat that says you matter.",
+    "looks_like": "cloak",
+    "size": "petty",
+    "name": "Fancy Hat"
+  },
+  {
+    "type": "item",
+    "id": "ghillie-suit",
+    "description": "A cloak of leaves and netting for hiding outdoors.",
+    "looks_like": "cloak",
+    "name": "Ghillie Suit"
+  },
+  {
+    "type": "item",
+    "id": "gloves",
+    "description": "Sturdy gloves for rough work.",
+    "looks_like": "gloves",
+    "size": "petty",
+    "name": "Gloves",
+    "category": "gear",
+    "price": 20,
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "healing-salve",
+    "description": "A soothing salve of crushed herbs. Restores 1d4 STR; one use.",
+    "uses": 1,
+    "looks_like": "potion",
+    "name": "Healing Salve"
+  },
+  {
+    "type": "item",
+    "id": "heartroot-salve",
+    "description": "A potent root salve. Restores 1d4 STR; one use.",
+    "uses": 1,
+    "looks_like": "potion",
+    "name": "Heartroot Salve"
+  },
+  {
+    "type": "item",
+    "id": "heirloom-amulet",
+    "description": "An old family amulet that glows near magic.",
+    "looks_like": "amulet",
+    "size": "petty",
+    "name": "Heirloom Amulet"
+  },
+  {
+    "type": "item",
+    "id": "herbs-pouch",
+    "description": "Dried herbs for poultices. Restores 1 STR; three uses.",
+    "uses": 3,
+    "looks_like": "herbalism-kit",
+    "name": "Herbs Pouch"
+  },
+  {
+    "type": "item",
+    "id": "iron-pot",
+    "description": "A heavy iron cooking pot.",
+    "looks_like": "cooks-utensils",
+    "name": "Iron Pot"
+  },
+  {
+    "type": "item",
+    "id": "lantern",
+    "description": "A hooded lantern that burns oil.",
+    "looks_like": "lantern-item",
+    "name": "Lantern",
+    "category": "gear",
+    "price": 10,
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "leech",
+    "description": "A live leech for drawing bad blood. Restores 1 STR; three uses.",
+    "uses": 3,
+    "looks_like": "tool",
+    "name": "Leech"
+  },
+  {
+    "type": "item",
+    "id": "lockpicks",
+    "description": "Picks and tension tools for opening locks.",
+    "looks_like": "thieves-tools",
+    "name": "Lockpicks"
+  },
+  {
+    "type": "item",
+    "id": "lure",
+    "description": "A bright lure for fishing.",
+    "looks_like": "tool",
+    "name": "Lure"
+  },
+  {
+    "type": "item",
+    "id": "metal-pail",
+    "description": "A metal pail for carrying water or slops.",
+    "looks_like": "tool",
+    "name": "Metal Pail"
+  },
+  {
+    "type": "item",
+    "id": "oil-can",
+    "description": "6 uses",
+    "uses": 6,
+    "looks_like": "oil-flask",
+    "name": "Oil Can",
+    "category": "gear",
+    "price": 10,
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "pincers",
+    "description": "Pincers for gripping, pulling, and prying.",
+    "looks_like": "smiths-tools",
+    "name": "Pincers"
+  },
+  {
+    "type": "item",
+    "id": "protective-gloves",
+    "description": "Thick gloves for handling hot or sharp things.",
+    "looks_like": "gloves",
+    "size": "petty",
+    "name": "Protective Gloves"
+  },
+  {
+    "type": "item",
+    "id": "quill-ink",
+    "description": "A quill and a pot of ink for writing.",
+    "looks_like": "scroll",
+    "name": "Quill & Ink"
+  },
+  {
+    "type": "item",
+    "id": "rations",
+    "description": "3 uses",
+    "uses": 3,
+    "looks_like": "rations",
+    "name": "Rations",
+    "category": "upkeep",
+    "price": 10,
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "repellent",
+    "description": "Wolfsbane, Mugwort, etc.",
+    "looks_like": "potion",
+    "name": "Repellent",
+    "category": "gear",
+    "price": 10,
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "roll-of-tin",
+    "description": "A rolled sheet of thin tin.",
+    "looks_like": "tool",
+    "name": "Roll of Tin"
+  },
+  {
+    "type": "item",
+    "id": "rope",
+    "description": "25ft",
+    "looks_like": "rope",
+    "name": "Rope",
+    "category": "gear",
+    "price": 5,
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "salt-pouch",
+    "description": "A pouch of salt for preserving or blessing.",
+    "looks_like": "pouch",
+    "name": "Salt Pouch"
+  },
+  {
+    "type": "item",
+    "id": "simple-instrument",
+    "description": "A small pipe, lute, or other portable instrument.",
+    "looks_like": "musical-instrument",
+    "name": "Simple Instrument"
+  },
+  {
+    "type": "item",
+    "id": "soporific-darts",
+    "description": "Darts coated with a sleeping draft. STR save or fall asleep; six uses.",
+    "uses": 6,
+    "looks_like": "dart",
+    "name": "Soporific Darts"
+  },
+  {
+    "type": "item",
+    "id": "spring-loaded-trap",
+    "description": "A small spring-loaded trap. Deals 4 STR damage.",
+    "looks_like": "caltrops",
+    "name": "Spring-Loaded trap"
+  },
+  {
+    "type": "item",
+    "id": "spyglass",
+    "description": "A spyglass for seeing far things close.",
+    "looks_like": "spyglass",
+    "name": "Spyglass",
+    "category": "gear",
+    "price": 40,
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "stained-medical-finery",
+    "description": "Bloodstained robes of a field surgeon.",
+    "looks_like": "cloak",
+    "size": "petty",
+    "name": "Stained Medical Finery"
+  },
+  {
+    "type": "item",
+    "id": "tarp",
+    "description": "A waterproof sheet for shelter or covering.",
+    "looks_like": "tent",
+    "name": "Tarp"
+  },
+  {
+    "type": "item",
+    "id": "torch",
+    "description": "3 uses",
+    "uses": 3,
+    "looks_like": "torch-item",
+    "name": "Torch",
+    "timer_hours": 1,
+    "timer_label": "Light",
+    "category": "gear",
+    "price": 5,
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "trick-playing-cards",
+    "description": "A marked deck for cheating at cards.",
+    "looks_like": "gaming-set",
+    "name": "Trick Playing Cards"
+  },
+  {
+    "type": "item",
+    "id": "twine-bauble",
+    "description": "Ward once per day. Ward : A silver circle 50ft across appears on the ground. Choose one species that cannot cross it.",
+    "looks_like": "gem",
+    "size": "petty",
+    "name": "Twine Bauble"
+  },
+  {
+    "type": "item",
+    "id": "vestments-of-the-order",
+    "description": "Formal robes marking a holy order.",
+    "looks_like": "cloak",
+    "size": "petty",
+    "name": "Vestments of the Order"
+  },
+  {
+    "type": "item",
+    "id": "water-shoes",
+    "description": "Shoes that let you walk across soft ground.",
+    "looks_like": "boots",
+    "name": "Water Shoes"
+  },
+  {
+    "type": "item",
+    "id": "wagon",
+    "name": "Wagon",
+    "category": "transport",
+    "description": "+8 slots, slow",
+    "price": 200,
+    "looks_like": "cart",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "horse",
+    "name": "Horse",
+    "category": "transport",
+    "description": "+4 slots",
+    "price": 75,
+    "looks_like": "beast",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "mule",
+    "name": "Mule",
+    "category": "transport",
+    "description": "+6 slots, slow",
+    "price": 30,
+    "looks_like": "beast",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "carriage-seat",
+    "name": "Carriage Seat",
+    "category": "transport",
+    "description": "A seat in a hired carriage, with room for a trunk.",
+    "price": 5,
+    "looks_like": "cart",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "ships-passage",
+    "name": "Ship\u2019s Passage",
+    "category": "transport",
+    "description": "A berth on a ship, paid in advance.",
+    "price": 10,
+    "looks_like": "boat",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "animal-feed",
+    "size": "bulky",
+    "name": "Animal Feed",
+    "category": "upkeep",
+    "description": "3 uses, bulky",
+    "price": 5,
+    "uses": 3,
+    "looks_like": "food",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "air-bladder",
+    "name": "Air Bladder",
+    "category": "gear",
+    "description": "A sealed bladder of air for breathing underwater.",
+    "price": 5,
+    "looks_like": "waterskin",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "antitoxin",
+    "name": "Antitoxin",
+    "category": "gear",
+    "description": "A bitter draft that fights poison.",
+    "price": 20,
+    "looks_like": "potion",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "bathing-goods",
+    "name": "Bathing Goods",
+    "category": "gear",
+    "description": "Soap, Perfume, etc.",
+    "price": 5,
+    "looks_like": "pouch",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "book",
+    "name": "Book",
+    "category": "gear",
+    "description": "A bound book of useful lore.",
+    "price": 50,
+    "looks_like": "book",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "caltrops",
+    "name": "Caltrops",
+    "category": "gear",
+    "description": "Spiked iron pieces scattered to lame pursuers.",
+    "price": 10,
+    "looks_like": "caltrops",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "card-deck",
+    "name": "Card Deck",
+    "category": "gear",
+    "description": "A worn deck for games of chance.",
+    "price": 5,
+    "looks_like": "gaming-set",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "chain",
+    "name": "Chain",
+    "category": "gear",
+    "description": "10ft",
+    "price": 10,
+    "looks_like": "chain",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "chalk",
+    "size": "petty",
+    "name": "Chalk",
+    "category": "gear",
+    "description": "A stick of chalk for marking walls and paths.",
+    "price": 1,
+    "looks_like": "tool",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "chest",
+    "name": "Chest",
+    "category": "gear",
+    "description": "A sturdy chest with a hasp for a lock.",
+    "price": 25,
+    "looks_like": "chest",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "chisel",
+    "name": "Chisel",
+    "category": "gear",
+    "description": "A chisel for cutting stone or wood.",
+    "price": 5,
+    "looks_like": "carpenters-tools",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "common-agents",
+    "name": "Common Agents",
+    "category": "gear",
+    "description": "Glue, Grease, etc.",
+    "price": 10,
+    "looks_like": "alchemists-supplies",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "common-tools",
+    "name": "Common Tools",
+    "category": "gear",
+    "description": "Hammer, Shovel, etc.",
+    "price": 10,
+    "looks_like": "tool",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "complex-instruments",
+    "name": "Complex Instruments",
+    "category": "gear",
+    "description": "Bagpipes, Fiddle, etc.",
+    "price": 50,
+    "looks_like": "musical-instrument",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "containers",
+    "name": "Containers",
+    "category": "gear",
+    "description": "Sack, Waterskin, etc.",
+    "price": 10,
+    "looks_like": "pouch",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "cooking-gear",
+    "name": "Cooking Gear",
+    "category": "gear",
+    "description": "Pots, Utensils, etc.",
+    "price": 10,
+    "looks_like": "cooks-utensils",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "costume-gear",
+    "name": "Costume Gear",
+    "category": "gear",
+    "description": "Face Paint, Disguise",
+    "price": 15,
+    "looks_like": "cloak",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "dowsing-rod",
+    "name": "Dowsing Rod",
+    "category": "gear",
+    "description": "A forked rod that twitches toward water.",
+    "price": 15,
+    "looks_like": "rod",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "expeditionary-gear",
+    "name": "Expeditionary Gear",
+    "category": "gear",
+    "description": "Climbing Spikes, Pulley, etc.",
+    "price": 10,
+    "looks_like": "grappling-hook",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "fire-oil",
+    "name": "Fire Oil",
+    "category": "gear",
+    "description": "A flask of oil that catches fire easily.",
+    "price": 10,
+    "looks_like": "oil-flask",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "fishing-rod",
+    "name": "Fishing Rod",
+    "category": "gear",
+    "description": "A rod, line, and hook for catching fish.",
+    "price": 10,
+    "looks_like": "rod",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "games",
+    "name": "Games",
+    "category": "gear",
+    "description": "Cards, Dice, etc.",
+    "price": 10,
+    "looks_like": "gaming-set",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "grappling-hook",
+    "name": "Grappling Hook",
+    "category": "gear",
+    "description": "A hooked iron grapnel for climbing.",
+    "price": 25,
+    "looks_like": "grappling-hook",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "mirror",
+    "name": "Mirror",
+    "category": "gear",
+    "description": "A small hand mirror of polished silver.",
+    "price": 5,
+    "looks_like": "mirror",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "net",
+    "name": "Net",
+    "category": "gear",
+    "description": "A weighted net for catching or tripping.",
+    "price": 10,
+    "looks_like": "net",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "outdoor-comfort",
+    "name": "Outdoor Comfort",
+    "category": "gear",
+    "description": "Blanket, Hammock, etc.",
+    "price": 10,
+    "looks_like": "bedroll",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "parchment",
+    "name": "Parchment",
+    "category": "gear",
+    "description": "3 uses",
+    "price": 10,
+    "uses": 3,
+    "looks_like": "scroll",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "pole",
+    "name": "Pole",
+    "category": "gear",
+    "description": "10ft",
+    "price": 5,
+    "looks_like": "staff",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "sedative",
+    "name": "Sedative",
+    "category": "gear",
+    "description": "A draft that dulls pain and brings sleep.",
+    "price": 30,
+    "looks_like": "potion",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "sewing-kit",
+    "name": "Sewing Kit",
+    "category": "gear",
+    "description": "Needles, thread, and a small pair of shears.",
+    "price": 20,
+    "looks_like": "tinkers-tools",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "simple-instruments",
+    "name": "Simple Instruments",
+    "category": "gear",
+    "description": "Pipes, Lute, etc.",
+    "price": 10,
+    "looks_like": "musical-instrument",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "smoking-pipe",
+    "size": "petty",
+    "name": "Smoking Pipe",
+    "category": "gear",
+    "description": "A clay pipe for a quiet smoke.",
+    "price": 15,
+    "looks_like": "pipe",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "specialized-tools",
+    "name": "Specialized Tools",
+    "category": "gear",
+    "description": "Ink, etc.",
+    "price": 20,
+    "looks_like": "tool",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "spiked-boots",
+    "name": "Spiked Boots",
+    "category": "gear",
+    "description": "Boots with spikes for ice and steep ground.",
+    "price": 15,
+    "looks_like": "boots",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "tent",
+    "size": "bulky",
+    "name": "Tent",
+    "category": "gear",
+    "description": "fits 2, bulky",
+    "price": 20,
+    "looks_like": "tent",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "thieving-tools",
+    "name": "Thieving Tools",
+    "category": "gear",
+    "description": "Lockpick, Metal File, etc.",
+    "price": 25,
+    "looks_like": "thieves-tools",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "whistle",
+    "size": "petty",
+    "name": "Whistle",
+    "category": "gear",
+    "description": "A shrill whistle to signal or summon.",
+    "price": 15,
+    "looks_like": "musical-instrument",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "wilderness-clothes",
+    "size": "petty",
+    "name": "Wilderness Clothes",
+    "category": "gear",
+    "description": "Warm, weatherproof clothes for the wild.",
+    "price": 15,
+    "looks_like": "cloak",
+    "armor_mode": "add"
+  }
+]

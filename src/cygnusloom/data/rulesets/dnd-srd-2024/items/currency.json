@@ -1,0 +1,13 @@
+[
+  {
+    "type": "item",
+    "id": "silver",
+    "name": "Silver Pieces",
+    "description": "Silver pieces, the standard coin of the SRD economy: ten silver to a gold piece. Prices in the catalogue are given in silver.",
+    "category": "coin",
+    "price": 1,
+    "size": "tiny",
+    "currency": true,
+    "icon": "coin"
+  }
+]

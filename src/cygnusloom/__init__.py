@@ -11,7 +11,7 @@ SOURCE_TREE = PACKAGE_DIR.parents[1]
 
 # Campaigns are a versioned contract. A campaign created by another major version is kept and
 # exported, but the engine refuses to play it. Bump this only with a breaking campaign change.
-CAMPAIGN_MAJOR_VERSION = 4
+CAMPAIGN_MAJOR_VERSION = 5
 
 
 def _project_url(label: str) -> str:

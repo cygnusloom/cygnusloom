@@ -1,0 +1,112 @@
+[
+  {
+    "type": "item",
+    "id": "boiled-leather",
+    "description": "Leather hardened in wax and water.",
+    "looks_like": "leather-armor",
+    "name": "Boiled Leather",
+    "armor": 1
+  },
+  {
+    "type": "item",
+    "id": "brigandine",
+    "description": "1 Armor, bulky",
+    "looks_like": "chain-mail",
+    "size": "bulky",
+    "name": "Brigandine",
+    "armor": 1,
+    "category": "armor",
+    "price": 20,
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "candle-helmet",
+    "description": "A helmet with a candle stub for dim light.",
+    "uses": 6,
+    "looks_like": "helm",
+    "name": "Candle Helmet",
+    "armor": 1
+  },
+  {
+    "type": "item",
+    "id": "leather-jerkin",
+    "description": "A supple leather jerkin.",
+    "looks_like": "leather-armor",
+    "name": "Leather Jerkin",
+    "armor": 1
+  },
+  {
+    "type": "item",
+    "id": "lucky-jerkin",
+    "description": "A much-patched jerkin that has seen luck.",
+    "looks_like": "leather-armor",
+    "name": "Lucky Jerkin",
+    "armor": 1
+  },
+  {
+    "type": "item",
+    "id": "padded-leather",
+    "description": "Quilted armor of layered cloth and leather.",
+    "looks_like": "leather-armor",
+    "name": "Padded Leather",
+    "armor": 1
+  },
+  {
+    "type": "item",
+    "id": "shield",
+    "name": "Shield",
+    "category": "armor",
+    "description": "+1 Armor",
+    "price": 10,
+    "looks_like": "shield",
+    "armor": 1,
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "helmet",
+    "name": "Helmet",
+    "category": "armor",
+    "description": "+1 Armor",
+    "price": 10,
+    "looks_like": "helm",
+    "armor": 1,
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "gambeson",
+    "name": "Gambeson",
+    "category": "armor",
+    "description": "+1 Armor",
+    "price": 15,
+    "looks_like": "leather-armor",
+    "armor": 1,
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "chainmail",
+    "size": "bulky",
+    "name": "Chainmail",
+    "category": "armor",
+    "description": "2 Armor, bulky",
+    "price": 40,
+    "looks_like": "chain-mail",
+    "armor": 2,
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "plate",
+    "size": "bulky",
+    "name": "Plate",
+    "category": "armor",
+    "description": "3 Armor, bulky",
+    "price": 60,
+    "looks_like": "plate-armor",
+    "armor": 3,
+    "armor_mode": "add"
+  }
+]

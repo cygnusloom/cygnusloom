@@ -601,8 +601,8 @@ def _status_lines(
             lines.append(f"Inventory: {used} of {capacity} slots{flag}")
         carried = ", ".join(item.name for item in character.items)
         lines.append(f"Carrying: {carried or 'nothing'}")
-        if currency and currency in character.features:
-            lines.append(f"Currency: {character.features[currency]} {currency}")
+        if currency and currency in character.currency:
+            lines.append(f"Currency: {character.currency[currency]} {currency}")
     return lines
 
 
@@ -956,9 +956,9 @@ def scene_view(
             sheet_links=sheet_entries,
             **sections,
         )
-    feature_icons = _item_feature_icons(spec)
+    item_icons = _item_icons(spec)
     inventory_view = (
-        _inventory_view(spec, pc, inventory, links, feature_icons, track_inventory)
+        _inventory_view(spec, pc, inventory, links, item_icons, track_inventory)
         if pc is not None and inventory is not None
         else None
     )
@@ -980,7 +980,7 @@ def scene_view(
     hireling_inventories: tuple[CharacterInventoryView, ...] = ()
     if inventory is not None:
         hireling_inventories = tuple(
-            _inventory_view(spec, hireling, inventory, links, feature_icons, track_inventory)
+            _inventory_view(spec, hireling, inventory, links, item_icons, track_inventory)
             for hireling in controlled
         )
     objects = tuple(visible_objects(state, place.name)) if place is not None else ()
@@ -1757,6 +1757,7 @@ def _sheet_of(character: Character) -> Sheet:
         stats=character.stats,
         templates=character.templates,
         features=character.features,
+        items=character.template_items,
         fields=character.fields,
         class_levels=character.class_levels,
         counters=character.counters,
@@ -1774,7 +1775,7 @@ def _feature_links(
     links = []
     seen: set[str] = set()
     for feature_id, feature in effective.items():
-        if feature_id not in character.features or feature.feature_type == "item":
+        if feature_id not in character.features:
             continue
         # A background's ability-score allocation is bookkeeping, already shown as the scores.
         if feature.name.endswith(": Ability Scores"):
@@ -1816,8 +1817,6 @@ def _feature_cost(spec: CharacterSpec, feature: Feature) -> str:
         label = counter.label if counter is not None else counter_id
         if label.casefold() != feature.name.casefold():
             labels.append(label)
-    if feature.uses:
-        labels.append(f"{feature.uses} use" + ("" if feature.uses == 1 else "s"))
     if feature.reactions:
         labels.append("Reaction")
     return " · ".join(dict.fromkeys(labels))
@@ -1840,7 +1839,7 @@ def _sheet_ability_sections(
     seen_tools: set[str] = set()
     seen: set[str] = set()
     for feature_id, feature in effective.items():
-        if feature_id not in character.features or feature.feature_type == "item":
+        if feature_id not in character.features:
             continue
         for tool in feature.tool_training:
             key = tool.casefold()
@@ -1865,12 +1864,7 @@ def _sheet_ability_sections(
             continue
         seen.add(key)
         item = SheetFeature(name=feature.name, entry=entry, cost=_feature_cost(spec, feature))
-        if (
-            feature.turn_resource
-            or _feature_counter_id(spec, feature)
-            or feature.uses
-            or feature.reactions
-        ):
+        if feature.turn_resource or _feature_counter_id(spec, feature) or feature.reactions:
             active.append(item)
         else:
             passive.append(item)
@@ -2014,27 +2008,21 @@ def _hireling_sheets(
     return tuple(sheets)
 
 
-def _item_feature_icons(spec: CharacterSpec) -> dict[str, str]:
-    """The icon each item feature names, by that item's name key."""
-    return {
-        name_key(feature.name): feature.icon
-        for feature in spec.features.values()
-        if feature.feature_type == "item" and feature.icon
-    }
+def _item_icons(spec: CharacterSpec) -> dict[str, str]:
+    """The icon each item names, by that item's name key."""
+    return {name_key(item.name): item.icon for item in spec.items.values() if item.icon}
 
 
 def _currency_views(spec: CharacterSpec, character: Character) -> tuple[CurrencyView, ...]:
     """The kinds of coin the character carries, in the rule set's order."""
     return tuple(
         CurrencyView(
-            name=feature.name,
-            amount=character.features[feature_id],
-            icon=feature.icon or "",
+            name=item.name,
+            amount=character.currency[item_id],
+            icon=item.icon or "",
         )
-        for feature_id, feature in spec.features.items()
-        if feature.feature_type == "item"
-        and feature.looks_like == "coin"
-        and feature_id in character.features
+        for item_id, item in spec.items.items()
+        if item.currency and item_id in character.currency
     )
 
 
@@ -2043,7 +2031,7 @@ def _inventory_view(
     character: Character,
     inventory: InventoryRules,
     links: Mapping[str, str],
-    feature_icons: Mapping[str, str],
+    item_icons: Mapping[str, str],
     track_inventory: bool,
 ) -> CharacterInventoryView:
     """One character's pack, coins, and equipped armor, as the player sees them."""
@@ -2068,7 +2056,7 @@ def _inventory_view(
                 ready=item.ready,
                 equipped=equipped,
                 entry=links.get(item.name) or links.get(name_key(item.name)) or "",
-                icon=feature_icons.get(name_key(item.name), ""),
+                icon=item_icons.get(name_key(item.name), ""),
             )
         )
     pack = PackView(

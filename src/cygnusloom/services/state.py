@@ -261,6 +261,8 @@ class Character:
     # character, whose dice are the class's own.
     hit_dice_pools: dict[str, int] = field(default_factory=dict)
     features: dict[str, int] = field(default_factory=dict)
+    # Item grants from the character's templates, by item id, before they are carried.
+    template_items: dict[str, int] = field(default_factory=dict)
     # Features invented during play, by id. A feature listed in `features` may be one of these
     # rather than one of the rule set's own features.
     custom_features: dict[str, CustomFeature] = field(default_factory=dict)
@@ -342,6 +344,8 @@ class Character:
     marks: dict[str, Any] = field(default_factory=dict)
     # What the character carries. The penalty item is an item of the rule set's penalty kind.
     items: list[Item] = field(default_factory=list)
+    # How much of each currency item the character holds, by item id.
+    currency: dict[str, int] = field(default_factory=dict)
     # A hireling is a player-controlled character a party member hired. Its employer pays its
     # wage each day. Empty and zero for everyone else.
     hireling: bool = False

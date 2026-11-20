@@ -48,7 +48,7 @@ def set_debug_stat(
 
 
 def add_debug_currency(
-    db: Session, campaign_id: int, name: str, feature: str, amount: int
+    db: Session, campaign_id: int, name: str, item: str, amount: int
 ) -> dict[str, Any]:
     """Give a player character some of the rule set's currency, for testing purchases."""
     state = load_state(db, campaign_id)
@@ -58,6 +58,6 @@ def add_debug_currency(
     if character.kind != PC_KIND:
         raise InvalidInput(f"{character.name} is not a player character")
     value = whole_number(amount, "amount", 1, 10_000)
-    record(db, campaign_id, DebugCurrencyAdded(name=character.name, feature=feature, amount=value))
+    record(db, campaign_id, DebugCurrencyAdded(name=character.name, item=item, amount=value))
     db.commit()
-    return {"character": character.name, "feature": feature, "gained": value}
+    return {"character": character.name, "item": item, "gained": value}

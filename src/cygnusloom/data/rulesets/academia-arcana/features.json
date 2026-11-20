@@ -12,20 +12,17 @@
   },
   {
     "type": "feature",
-    "id": "silver",
-    "name": "Silver Pieces",
-    "looks_like": "coin",
-    "feature_type": "item",
-    "description": "A purse of silver coins, the coin of the school town."
-  },
-  {
-    "type": "feature",
     "id": "subject-charms",
     "name": "Charms",
     "feature_type": "subject",
     "tag": "Charms",
     "description": "The study of small, useful magic: lighting a room, mending a tear, lifting a latch, and making the everyday bend without breaking. You gain +1 when charms are the heart of the attempt, and you may learn Charms spells.",
-    "effects": [{"op": "note", "text": "+1 to Charms rolls; may learn Charms spells."}]
+    "effects": [
+      {
+        "op": "note",
+        "text": "+1 to Charms rolls; may learn Charms spells."
+      }
+    ]
   },
   {
     "type": "feature",
@@ -34,7 +31,12 @@
     "feature_type": "subject",
     "tag": "Transfiguration",
     "description": "The study of changing one thing into another: shape, material, size, and the stubbornness of matter. You gain +1 when transfiguration is the heart of the attempt, and you may learn Transfiguration spells.",
-    "effects": [{"op": "note", "text": "+1 to Transfiguration rolls; may learn Transfiguration spells."}]
+    "effects": [
+      {
+        "op": "note",
+        "text": "+1 to Transfiguration rolls; may learn Transfiguration spells."
+      }
+    ]
   },
   {
     "type": "feature",
@@ -43,7 +45,12 @@
     "feature_type": "subject",
     "tag": "Warding",
     "description": "The study of boundaries, locks, alarms, and the things that should not cross them. You gain +1 when warding is the heart of the attempt, and you may learn Warding spells.",
-    "effects": [{"op": "note", "text": "+1 to Warding rolls; may learn Warding spells."}]
+    "effects": [
+      {
+        "op": "note",
+        "text": "+1 to Warding rolls; may learn Warding spells."
+      }
+    ]
   },
   {
     "type": "feature",
@@ -52,7 +59,12 @@
     "feature_type": "subject",
     "tag": "Divination",
     "description": "The study of glimpses, omens, lost things, and answers that arrive sideways. You gain +1 when divination is the heart of the attempt, and you may learn Divination spells.",
-    "effects": [{"op": "note", "text": "+1 to Divination rolls; may learn Divination spells."}]
+    "effects": [
+      {
+        "op": "note",
+        "text": "+1 to Divination rolls; may learn Divination spells."
+      }
+    ]
   },
   {
     "type": "feature",
@@ -61,7 +73,12 @@
     "feature_type": "subject",
     "tag": "Healing",
     "description": "The study of mending bodies, calming minds, and keeping someone alive until help arrives. You gain +1 when healing is the heart of the attempt, and you may learn Healing spells.",
-    "effects": [{"op": "note", "text": "+1 to Healing rolls; may learn Healing spells."}]
+    "effects": [
+      {
+        "op": "note",
+        "text": "+1 to Healing rolls; may learn Healing spells."
+      }
+    ]
   },
   {
     "type": "feature",
@@ -70,7 +87,12 @@
     "feature_type": "subject",
     "tag": "Illusion",
     "description": "The study of false doors, borrowed faces, quiet feet, and scenes that are not there. You gain +1 when illusion is the heart of the attempt, and you may learn Illusion spells.",
-    "effects": [{"op": "note", "text": "+1 to Illusion rolls; may learn Illusion spells."}]
+    "effects": [
+      {
+        "op": "note",
+        "text": "+1 to Illusion rolls; may learn Illusion spells."
+      }
+    ]
   },
   {
     "type": "feature",
@@ -79,22 +101,46 @@
     "feature_type": "subject",
     "tag": "Elemental",
     "description": "The study of flame, air, water, stone, and weather, and the bargains they demand. You gain +1 when elemental magic is the heart of the attempt, and you may learn Elemental spells.",
-    "effects": [{"op": "note", "text": "+1 to Elemental rolls; may learn Elemental spells."}]
+    "effects": [
+      {
+        "op": "note",
+        "text": "+1 to Elemental rolls; may learn Elemental spells."
+      }
+    ]
   },
-  {"type": "feature", "id": "training", "generate": "training"},
+  {
+    "type": "feature",
+    "id": "training",
+    "generate": "training"
+  },
   {
     "type": "feature",
     "id": "talent-prodigy",
     "name": "Natural Gift",
     "tag": "talent",
     "description": "Once per week, when a spell you cast rolls a 6-, treat it as a 7-9 instead. The magic arrives late, sideways, or larger than you meant.",
-    "effects": [{"op": "note", "text": "Once per week, turn a spell's 6- into a 7-9."}],
+    "effects": [
+      {
+        "op": "note",
+        "text": "Once per week, turn a spell's 6- into a 7-9."
+      }
+    ],
     "reactions": [
       {
         "id": "natural-gift",
         "trigger": "move",
-        "when": {"move_tags": ["spell"], "bands": ["6-"]},
-        "effect": {"op": "raise_band", "to": "7-9"},
+        "when": {
+          "move_tags": [
+            "spell"
+          ],
+          "bands": [
+            "6-"
+          ]
+        },
+        "effect": {
+          "op": "raise_band",
+          "to": "7-9"
+        },
         "uses": 1,
         "reset": "week",
         "text": "Natural Gift turns the 6- into a 7-9."
@@ -107,7 +153,12 @@
     "name": "Well Read",
     "tag": "talent",
     "description": "When you research from a text, add +1. You always know where a text you have seen is kept, even if it is not where it belongs.",
-    "effects": [{"op": "note", "text": "+1 to research from a text; you know where texts are kept."}]
+    "effects": [
+      {
+        "op": "note",
+        "text": "+1 to research from a text; you know where texts are kept."
+      }
+    ]
   },
   {
     "type": "feature",
@@ -115,7 +166,12 @@
     "name": "Portable Lab",
     "tag": "talent",
     "description": "You carry a compact kit of reagents and tools. Add +1 when you improvise a potion or transmutation without a proper laboratory.",
-    "effects": [{"op": "note", "text": "+1 to improvised lab work."}]
+    "effects": [
+      {
+        "op": "note",
+        "text": "+1 to improvised lab work."
+      }
+    ]
   },
   {
     "type": "feature",
@@ -123,7 +179,12 @@
     "name": "Slippery",
     "tag": "talent",
     "description": "Add +1 when you break curfew, slip past a prefect, or leave a place you should not be. You know one hidden route through the school.",
-    "effects": [{"op": "note", "text": "+1 to breaking curfew and slipping away; know one hidden route."}]
+    "effects": [
+      {
+        "op": "note",
+        "text": "+1 to breaking curfew and slipping away; know one hidden route."
+      }
+    ]
   },
   {
     "type": "feature",
@@ -131,7 +192,12 @@
     "name": "Connections",
     "tag": "talent",
     "description": "Add +1 when you ask a favor through a friend, a rival, or a family name. You know someone who owes you a small favor.",
-    "effects": [{"op": "note", "text": "+1 to favors; know someone who owes you."}]
+    "effects": [
+      {
+        "op": "note",
+        "text": "+1 to favors; know someone who owes you."
+      }
+    ]
   },
   {
     "type": "feature",
@@ -139,13 +205,28 @@
     "name": "Signature Spell",
     "tag": "talent",
     "description": "You have a personal spell, written in your Signature Spell field. When you cast it, describe its unmistakable flourish. Once per week, treat a 6- on it as a 7-9.",
-    "effects": [{"op": "note", "text": "Once per week, turn your signature spell's 6- into a 7-9."}],
+    "effects": [
+      {
+        "op": "note",
+        "text": "Once per week, turn your signature spell's 6- into a 7-9."
+      }
+    ],
     "reactions": [
       {
         "id": "signature-spell",
         "trigger": "move",
-        "when": {"moves": ["signature_spell"], "bands": ["6-"]},
-        "effect": {"op": "raise_band", "to": "7-9"},
+        "when": {
+          "moves": [
+            "signature_spell"
+          ],
+          "bands": [
+            "6-"
+          ]
+        },
+        "effect": {
+          "op": "raise_band",
+          "to": "7-9"
+        },
         "uses": 1,
         "reset": "week",
         "text": "Signature Spell turns the 6- into a 7-9."

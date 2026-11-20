@@ -167,7 +167,7 @@ def take_object(
             db,
             campaign_id,
             CurrencyChanged(
-                name=taker.name, feature=marketplace.currency, amount=obj.currency, cause=cause
+                name=taker.name, item=marketplace.currency, amount=obj.currency, cause=cause
             ),
         )
     if item and inventory is not None:

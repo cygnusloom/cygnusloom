@@ -63,9 +63,7 @@ def test_bulky_items_take_two_slots_and_petty_items_none(client_factory):
 
 
 def _with_world_features(tools: WorldTools) -> WorldTools:
-    return replace(
-        tools, features=content_library().world_content("twin-lakes", "cairn2e").features
-    )
+    return replace(tools, items=content_library().world_content("twin-lakes", "cairn2e").items)
 
 
 def test_a_bulky_catalogue_item_takes_its_listed_size_when_none_is_given(client_factory):
@@ -226,7 +224,7 @@ def test_the_campaign_page_lists_the_pack(client_factory: Callable[[], TestClien
     client, campaign_id, tools = _fight_client(client_factory, rolled=False)
     tools.give_item(PC, "Rope")
     tools.change_currency(PC, 17, cause="test")
-    gold = _character(client.app, campaign_id, PC).features["gold"]
+    gold = _character(client.app, campaign_id, PC).currency["gold"]
     page = client.get(f"/campaigns/{campaign_id}").text
     assert 'id="tab-inventory"' in page
     start = page.index('id="panel-inventory"')

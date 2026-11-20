@@ -129,6 +129,7 @@ def test_a_fighter_can_take_a_wizard_level(
         stats=pc.stats,
         templates=pc.templates,
         features=pc.features,
+        items=pc.items,
         fields=pc.fields,
         class_levels=pc.class_levels,
         counters=pc.counters,

@@ -20,7 +20,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from cygnusloom.content.character import Feature, Granted
+from cygnusloom.content.character import Feature, GrantedItem
 from cygnusloom.content.library import ContentLibrary, LocationTemplate, NpcTemplate
 from cygnusloom.llm.fake import FakeProvider
 from cygnusloom.rules import wwn
@@ -810,9 +810,6 @@ def test_learn_focus_spends_a_pick_and_applies_skill_stat_and_armor_effects(
         name="Test Effects",
         feature_type="feat",
         description="A focus that exercises each effect the advancement tools apply.",
-        size="normal",
-        uses=0,
-        armor=0,
         tag="focus",
         rank=1,
         effects=(
@@ -871,9 +868,6 @@ def test_learn_focus_uses_the_configured_first_level_for_an_untrained_skill(
         name="First Skill Level",
         feature_type="feat",
         description="A focus that grants one untrained skill level.",
-        size="normal",
-        uses=0,
-        armor=0,
         tag="focus",
         rank=1,
         effects=({"op": "skill", "id": skill, "delta": 1},),
@@ -908,9 +902,6 @@ def test_learn_focus_uses_the_spec_skill_maximum(
         name="Skill Maximum",
         feature_type="feat",
         description="A focus that tries to grant a skill above its configured maximum.",
-        size="normal",
-        uses=0,
-        armor=0,
         tag="focus",
         rank=1,
         effects=({"op": "skill", "id": skill, "delta": 1},),
@@ -949,9 +940,6 @@ def test_a_focus_bonus_skill_is_worth_three_skill_points(
         name="Bonus Skill",
         feature_type="feat",
         description="A focus that grants one bonus skill.",
-        size="normal",
-        uses=0,
-        armor=0,
         tag="focus",
         rank=1,
         effects=({"op": "skill", "id": skill, "delta": 1},),
@@ -1047,9 +1035,6 @@ def test_learn_focus_applies_effects_again_for_each_repeatable_copy(
         name="Repeatable Effect",
         feature_type="feat",
         description="A repeatable focus with a measurable effect.",
-        size="normal",
-        uses=0,
-        armor=0,
         tag="focus",
         rank=1,
         effects=({"op": "stat", "id": "str", "delta": 1},),
@@ -1805,7 +1790,11 @@ def test_generated_characters_and_hirelings_receive_passive_defense(client_facto
     warrior = WWN.character.templates["warrior"]
     warrior = replace(
         warrior,
-        features=(*warrior.features, Granted("buff_coat", "1"), Granted("large_shield", "1")),
+        item_grants=(
+            *warrior.item_grants,
+            GrantedItem("buff_coat", "1"),
+            GrantedItem("large_shield", "1"),
+        ),
     )
     spec = replace(WWN.character, templates={**WWN.character.templates, "warrior": warrior})
     tools = _world_tools(app, campaign_id, spec=spec)

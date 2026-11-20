@@ -237,12 +237,12 @@ def test_a_purchase_succeeds_past_capacity_when_space_is_not_tracked(
     currency = CAIRN.marketplace.currency
     tools.change_currency(PC, 100, cause="a test")
     _fill(app, campaign_id, tools)
-    before = _character(app, campaign_id, PC).features[currency]
+    before = _character(app, campaign_id, PC).currency[currency]
 
     result = tools.buy_item(PC, "Moonstone", price=5, size="normal")
 
     assert result["price"] == 5
-    assert _character(app, campaign_id, PC).features[currency] == before - 5
+    assert _character(app, campaign_id, PC).currency[currency] == before - 5
     assert "Moonstone" in [item.name for item in _character(app, campaign_id, PC).items]
 
 

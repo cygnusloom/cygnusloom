@@ -682,6 +682,7 @@ def _tool_context(
         combat=rule_set.combat,
         monsters={**rule_set.monsters, **world.monsters},
         features={**world.features},
+        items={**world.items},
         checks=rule_set.checks,
         conditions=rule_set.conditions,
         projects=rule_set.projects,

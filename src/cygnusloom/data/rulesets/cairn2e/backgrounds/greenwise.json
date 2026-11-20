@@ -6,18 +6,18 @@
     "kind": "background",
     "name": "Greenwise",
     "description": "You delve deep into the Wood , prying its secrets from between rough boughs and whispering leaves. To this verdant kingdom, you are no mere scholar but its confidant as well.",
-    "features": [
-      "torch",
-      "iron-pot",
-      "root-knife",
-      "healing-salve",
-      "twine-bauble"
-    ],
     "tables": [
       "greenwise-how-has-the-wood-failed-you",
       "greenwise-what-keeps-you-safe-while-in-the-wood"
     ],
     "names": "greenwise-names",
-    "order": 9
+    "order": 9,
+    "items": [
+      "torch",
+      "iron-pot",
+      "root-knife",
+      "healing-salve",
+      "twine-bauble"
+    ]
   }
 ]

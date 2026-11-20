@@ -1,0 +1,587 @@
+[
+  {
+    "type": "item",
+    "id": "axe_hand",
+    "attributes": [
+      "str",
+      "dex"
+    ],
+    "description": "1d6 damage, Shock 1/AC 15, throwable 10/30 ft, Encumbrance 1.",
+    "ranges": {
+      "short": 10,
+      "long": 30
+    },
+    "shock_ac": 15,
+    "looks_like": "axe",
+    "size": "normal",
+    "name": "Hand Axe",
+    "shock": 1,
+    "skill": "stab",
+    "damage": "1d6",
+    "category": "weapon",
+    "price": 10,
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "axe_war",
+    "attributes": [
+      "str"
+    ],
+    "description": "1d10 damage, Shock 3/AC 15, two-handed, Encumbrance 2.",
+    "shock_ac": 15,
+    "looks_like": "axe",
+    "size": "large",
+    "name": "Axe, War",
+    "shock": 3,
+    "skill": "stab",
+    "damage": "1d10",
+    "category": "weapon",
+    "price": 50,
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "blackjack",
+    "attributes": [
+      "str",
+      "dex"
+    ],
+    "description": "1d4 damage, no Shock, subtle and easily non-lethal, Encumbrance 1.",
+    "shock_ac": 0,
+    "looks_like": "club",
+    "size": "normal",
+    "name": "Blackjack",
+    "shock": 0,
+    "skill": "stab",
+    "damage": "1d4",
+    "category": "weapon",
+    "price": 1,
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "bow_large",
+    "attributes": [
+      "dex"
+    ],
+    "description": "1d8 damage, range 100/600 ft, two-handed, Encumbrance 2.",
+    "ranges": {
+      "short": 100,
+      "long": 600
+    },
+    "shock_ac": 0,
+    "looks_like": "bow",
+    "size": "large",
+    "name": "Bow, Large",
+    "shock": 0,
+    "skill": "shoot",
+    "damage": "1d8",
+    "category": "weapon",
+    "price": 20,
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "bow_small",
+    "attributes": [
+      "dex"
+    ],
+    "description": "1d6 damage, range 50/300 ft, two-handed, Encumbrance 1.",
+    "ranges": {
+      "short": 50,
+      "long": 300
+    },
+    "shock_ac": 0,
+    "looks_like": "bow",
+    "size": "normal",
+    "name": "Bow, Small",
+    "shock": 0,
+    "skill": "shoot",
+    "damage": "1d6",
+    "category": "weapon",
+    "price": 20,
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "claw_blades",
+    "attributes": [
+      "str",
+      "dex"
+    ],
+    "description": "1d6 damage, Shock 2/AC 13, easily concealed, Encumbrance 1.",
+    "shock_ac": 13,
+    "looks_like": "dagger",
+    "size": "normal",
+    "name": "Claw Blades",
+    "shock": 2,
+    "skill": "stab",
+    "damage": "1d6",
+    "category": "weapon",
+    "price": 10,
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "club",
+    "attributes": [
+      "str",
+      "dex"
+    ],
+    "description": "A length of wood. 1d4 damage, no Shock, throwable to 10/30 feet, easily used to leave a foe alive. Encumbrance 1.",
+    "shock_ac": 0,
+    "looks_like": "club",
+    "size": "normal",
+    "name": "Club",
+    "shock": 0,
+    "skill": "stab",
+    "damage": "1d4"
+  },
+  {
+    "type": "item",
+    "id": "club_great",
+    "attributes": [
+      "str"
+    ],
+    "description": "1d10 damage, Shock 2/AC 15, two-handed, Encumbrance 2.",
+    "shock_ac": 15,
+    "looks_like": "club",
+    "size": "large",
+    "name": "Club, Great",
+    "shock": 2,
+    "skill": "stab",
+    "damage": "1d10",
+    "category": "weapon",
+    "price": 1,
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "crossbow",
+    "attributes": [
+      "dex"
+    ],
+    "description": "1d10 damage, range 100/300 ft, reload takes a Main Action, Encumbrance 1.",
+    "ranges": {
+      "short": 100,
+      "long": 300
+    },
+    "shock_ac": 0,
+    "looks_like": "crossbow",
+    "size": "normal",
+    "name": "Crossbow",
+    "shock": 0,
+    "skill": "shoot",
+    "damage": "1d10",
+    "flags": [
+      "no_unskilled_penalty"
+    ],
+    "category": "weapon",
+    "price": 10,
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "dagger",
+    "attributes": [
+      "str",
+      "dex"
+    ],
+    "description": "1d4 damage, Shock 1/AC 15, throwable 30/60 ft, Encumbrance 1.",
+    "ranges": {
+      "short": 30,
+      "long": 60
+    },
+    "shock_ac": 15,
+    "looks_like": "dagger",
+    "size": "normal",
+    "name": "Dagger",
+    "shock": 1,
+    "skill": "stab",
+    "damage": "1d4",
+    "category": "weapon",
+    "price": 3,
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "halberd",
+    "attributes": [
+      "str"
+    ],
+    "description": "1d10 damage, Shock 2/AC 15, long, two-handed, Encumbrance 2.",
+    "shock_ac": 15,
+    "looks_like": "halberd",
+    "size": "large",
+    "name": "Halberd",
+    "shock": 2,
+    "skill": "stab",
+    "damage": "1d10",
+    "reach": 10,
+    "category": "weapon",
+    "price": 50,
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "hammer_great",
+    "attributes": [
+      "str"
+    ],
+    "description": "1d10 damage, Shock 2/AC 18, two-handed, Encumbrance 2.",
+    "shock_ac": 18,
+    "looks_like": "warhammer",
+    "size": "large",
+    "name": "Hammer, Great",
+    "shock": 2,
+    "skill": "stab",
+    "damage": "1d10",
+    "category": "weapon",
+    "price": 50,
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "hammer_war",
+    "attributes": [
+      "str"
+    ],
+    "description": "1d8 damage, Shock 1/AC 18, Encumbrance 1.",
+    "shock_ac": 18,
+    "looks_like": "warhammer",
+    "size": "normal",
+    "name": "Hammer, War",
+    "shock": 1,
+    "skill": "stab",
+    "damage": "1d8",
+    "category": "weapon",
+    "price": 30,
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "hurlant_great",
+    "attributes": [
+      "dex"
+    ],
+    "description": "3d10 damage, range 600/2400 ft, fixed and single-shot, Encumbrance 15.",
+    "ranges": {
+      "short": 600,
+      "long": 2400
+    },
+    "shock_ac": 0,
+    "looks_like": "wand",
+    "size": "massive",
+    "name": "Hurlant, Great",
+    "shock": 0,
+    "skill": "shoot",
+    "damage": "3d10",
+    "category": "weapon",
+    "price": 10000,
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "hurlant_hand",
+    "attributes": [
+      "dex"
+    ],
+    "description": "1d12 damage, range 30/60 ft, single-shot, Encumbrance 1.",
+    "ranges": {
+      "short": 30,
+      "long": 60
+    },
+    "shock_ac": 0,
+    "looks_like": "wand",
+    "size": "normal",
+    "name": "Hurlant, Hand",
+    "shock": 0,
+    "skill": "shoot",
+    "damage": "1d12",
+    "category": "weapon",
+    "price": 1000,
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "hurlant_long",
+    "attributes": [
+      "dex"
+    ],
+    "description": "2d8 damage, range 200/600 ft, two-handed and single-shot, Encumbrance 2.",
+    "ranges": {
+      "short": 200,
+      "long": 600
+    },
+    "shock_ac": 0,
+    "looks_like": "wand",
+    "size": "large",
+    "name": "Hurlant, Long",
+    "shock": 0,
+    "skill": "shoot",
+    "damage": "2d8",
+    "category": "weapon",
+    "price": 4000,
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "mace",
+    "attributes": [
+      "str"
+    ],
+    "description": "1d6 damage, Shock 1/AC 18, easily non-lethal, Encumbrance 1.",
+    "shock_ac": 18,
+    "looks_like": "mace",
+    "size": "normal",
+    "name": "Mace",
+    "shock": 1,
+    "skill": "stab",
+    "damage": "1d6",
+    "category": "weapon",
+    "price": 15,
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "pike",
+    "attributes": [
+      "str"
+    ],
+    "description": "1d8 damage, Shock 1/AC 18, long, two-handed, Encumbrance 2.",
+    "shock_ac": 18,
+    "looks_like": "pike",
+    "size": "large",
+    "name": "Pike",
+    "shock": 1,
+    "skill": "stab",
+    "damage": "1d8",
+    "reach": 10,
+    "category": "weapon",
+    "price": 10,
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "shield_bash_large",
+    "attributes": [
+      "str"
+    ],
+    "description": "A blow with a large shield. 1d6 damage, Shock 1 against AC 13 or less, and easily non-lethal.",
+    "shock_ac": 13,
+    "looks_like": "shield",
+    "size": "tiny",
+    "name": "Shield Bash, Large",
+    "shock": 1,
+    "skill": "stab",
+    "damage": "1d6"
+  },
+  {
+    "type": "item",
+    "id": "shield_bash_small",
+    "attributes": [
+      "str",
+      "dex"
+    ],
+    "description": "A blow with a small shield. 1d4 damage, no Shock, and easily non-lethal.",
+    "shock_ac": 0,
+    "looks_like": "shield",
+    "size": "tiny",
+    "name": "Shield Bash, Small",
+    "shock": 0,
+    "skill": "stab",
+    "damage": "1d4"
+  },
+  {
+    "type": "item",
+    "id": "spear_heavy",
+    "attributes": [
+      "str"
+    ],
+    "description": "1d10 damage, Shock 2/AC 15, two-handed, Encumbrance 2.",
+    "shock_ac": 15,
+    "looks_like": "spear",
+    "size": "large",
+    "name": "Spear, Heavy",
+    "shock": 2,
+    "skill": "stab",
+    "damage": "1d10",
+    "category": "weapon",
+    "price": 10,
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "spear_light",
+    "attributes": [
+      "str",
+      "dex"
+    ],
+    "description": "1d6 damage, Shock 2/AC 13, throwable 30/60 ft, Encumbrance 1.",
+    "ranges": {
+      "short": 30,
+      "long": 60
+    },
+    "shock_ac": 13,
+    "looks_like": "spear",
+    "size": "normal",
+    "name": "Light Spear",
+    "shock": 2,
+    "skill": "stab",
+    "damage": "1d6",
+    "category": "weapon",
+    "price": 5,
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "throwing_blade",
+    "attributes": [
+      "dex"
+    ],
+    "description": "1d4 damage, no Shock, range 30/60 ft, five count as one item, Encumbrance 1.",
+    "ranges": {
+      "short": 30,
+      "long": 60
+    },
+    "shock_ac": 0,
+    "looks_like": "dagger",
+    "size": "normal",
+    "name": "Throwing Blade",
+    "shock": 0,
+    "skill": "shoot",
+    "damage": "1d4",
+    "category": "weapon",
+    "price": 3,
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "staff",
+    "attributes": [
+      "str",
+      "dex"
+    ],
+    "description": "1d6 damage, Shock 1/AC 13, two-handed and easily non-lethal, Encumbrance 1.",
+    "shock_ac": 13,
+    "looks_like": "staff",
+    "size": "normal",
+    "name": "Staff",
+    "shock": 1,
+    "skill": "stab",
+    "damage": "1d6",
+    "category": "weapon",
+    "price": 1,
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "quarterstaff",
+    "attributes": [
+      "str",
+      "dex"
+    ],
+    "description": "1d6 damage, Shock 1/AC 13, two-handed and easily non-lethal, Encumbrance 1.",
+    "shock_ac": 13,
+    "looks_like": "staff",
+    "size": "normal",
+    "name": "Quarterstaff",
+    "shock": 1,
+    "skill": "stab",
+    "damage": "1d6",
+    "category": "weapon",
+    "price": 1,
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "stiletto",
+    "attributes": [
+      "dex"
+    ],
+    "description": "1d4 damage, Shock 1/AC 18, subtle and precise, Encumbrance 1.",
+    "shock_ac": 18,
+    "looks_like": "dagger",
+    "size": "normal",
+    "name": "Stiletto",
+    "shock": 1,
+    "skill": "stab",
+    "damage": "1d4",
+    "category": "weapon",
+    "price": 10,
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "sword_great",
+    "attributes": [
+      "str"
+    ],
+    "description": "1d12 damage, Shock 2/AC 15, two-handed, Encumbrance 2.",
+    "shock_ac": 15,
+    "looks_like": "greatsword",
+    "size": "large",
+    "name": "Sword, Great",
+    "shock": 2,
+    "skill": "stab",
+    "damage": "1d12",
+    "category": "weapon",
+    "price": 250,
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "sword_long",
+    "attributes": [
+      "str",
+      "dex"
+    ],
+    "description": "1d8 damage, Shock 2/AC 13, Encumbrance 1.",
+    "shock_ac": 13,
+    "looks_like": "sword",
+    "size": "normal",
+    "name": "Sword, Long",
+    "shock": 2,
+    "skill": "stab",
+    "damage": "1d8",
+    "category": "weapon",
+    "price": 100,
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "sword_short",
+    "attributes": [
+      "str",
+      "dex"
+    ],
+    "description": "1d6 damage, Shock 2/AC 15, Encumbrance 1.",
+    "shock_ac": 15,
+    "looks_like": "sword",
+    "size": "normal",
+    "name": "Short Sword",
+    "shock": 2,
+    "skill": "stab",
+    "damage": "1d6",
+    "category": "weapon",
+    "price": 10,
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "unarmed_attack",
+    "attributes": [
+      "str",
+      "dex"
+    ],
+    "description": "Fists, feet, and natural weapons. 1d2 damage plus your Punch skill, no Shock by default, and easily non-lethal.",
+    "shock_ac": 0,
+    "looks_like": "fist",
+    "size": "tiny",
+    "name": "Unarmed Attack",
+    "shock": 0,
+    "skill": "punch",
+    "damage": "1d2"
+  }
+]
