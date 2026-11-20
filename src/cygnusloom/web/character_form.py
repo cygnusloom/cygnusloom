@@ -185,6 +185,7 @@ def creation_view(
             "icon": preset.icon,
             "selections": {
                 "name": preset.suggested_name,
+                "pronouns": preset.pronouns,
                 "priority": list(preset.priority),
                 "stats": dict(preset.stats),
                 "templates": dict(preset.templates),
@@ -371,13 +372,7 @@ def campaign_view(spec: CampaignSpec, values: Mapping[str, Any] | None = None) -
     options in force, so a settings page can show and change them."""
     current = values or {}
     choice_fields = [
-        {
-            "id": field.id,
-            "name": field.name,
-            "description": field.description,
-            "value": current.get(field.id, ""),
-            "options": _option_views(spec, spec.tables[field.table]),
-        }
+        _campaign_choice_view(spec, field, current.get(field.id, ""))
         for field in spec.fields.values()
         if field.table is not None
     ]
@@ -394,12 +389,29 @@ def campaign_view(spec: CampaignSpec, values: Mapping[str, Any] | None = None) -
     return {"choice_fields": choice_fields, "text_fields": text_fields}
 
 
+def _campaign_choice_view(spec: CampaignSpec, field: Any, value: str) -> dict[str, Any]:
+    """One campaign option as a panel. A table with a single choice is chosen for the player,
+    so a rule set like 5E D&D does not make them confirm its only experience track."""
+    options = _option_views(spec, spec.tables[field.table])
+    if not value and len(options) == 1:
+        value = options[0]["value"]
+    return {
+        "id": field.id,
+        "name": field.name,
+        "description": field.description,
+        "value": value,
+        "options": options,
+    }
+
+
 def campaign_submission_from_form(spec: CampaignSpec, form: FormData) -> dict[str, Any]:
     """The campaign options a form stands for, keyed by option id as the schema expects.
-    Every option must be given."""
+    Every option must be given, unless its table offers only one value."""
     options: dict[str, Any] = {}
     for field in spec.fields.values():
         value = form_text(form, CAMPAIGN_PREFIX + field.id)
+        if not value and len(spec.tables[field.table]) == 1:
+            value = spec.tables[field.table][0].value
         if not value:
             raise InvalidInput(f"Choose {field.name}")
         options[field.id] = value

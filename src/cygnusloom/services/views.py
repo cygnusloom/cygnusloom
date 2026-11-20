@@ -17,6 +17,7 @@ from cygnusloom.content.character import (
     CharacterSpec,
     Feature,
     Sheet,
+    choice_value_name,
     describe,
     reaction_effect_text,
 )
@@ -123,6 +124,8 @@ class FeatureLink:
     id: str
     name: str
     entry: str = ""
+    # The values the feature's choices took, such as the weapons a Weapon Mastery covers.
+    detail: str = ""
 
 
 @dataclass(frozen=True)
@@ -177,6 +180,8 @@ class SheetFeature:
     name: str
     entry: str = ""
     cost: str = ""
+    # The values the feature's choices took, such as the weapons a Weapon Mastery covers.
+    detail: str = ""
 
 
 @dataclass(frozen=True)
@@ -438,7 +443,11 @@ def get_statblock(
         show_all_counters=character.kind == PC_KIND or character.hireling,
     )
     for key, choices in character.feature_choices.items():
-        lines.append(f"Feature choice {key}: {', '.join(choices)}")
+        label = _feature_choice_label(spec, key)
+        if not label:
+            continue
+        names = ", ".join(choice_value_name(spec, value) for value in choices)
+        lines.append(f"Feature choice {label}: {names}")
     result = {
         "name": character.name,
         "kind": kind,
@@ -449,6 +458,20 @@ def get_statblock(
     if position is not None:
         result["position"] = position
     return result
+
+
+def _feature_choice_label(spec: CharacterSpec, key: str) -> str:
+    """A readable label for a `feature:pick` choice key, or "" for a pattern-mode entry that
+    only records which ability-score pattern was used."""
+    feature_id, _, rest = key.partition(":")
+    pick_id, _, suffix = rest.partition(":")
+    if suffix == "pattern":
+        return ""
+    feature = spec.features.get(feature_id)
+    if feature is None:
+        return key
+    pick = next((item for item in feature.picks if item.id == pick_id), None)
+    return f"{feature.name} ({pick.label})" if pick is not None else feature.name
 
 
 def _combat_lines(
@@ -1791,9 +1814,21 @@ def _feature_links(
                 entry=ability_entries.get(feature_id)
                 or ability_entries.get(name_key(feature.name))
                 or "",
+                detail=_feature_choice_detail(spec, character, feature_id),
             )
         )
     return tuple(links)
+
+
+def _feature_choice_detail(spec: CharacterSpec, character: Character, feature_id: str) -> str:
+    """The readable values a feature's choices took, such as "Longsword, Javelin". A pattern
+    entry only records the shape of an ability-score increase, so it is left out."""
+    return ", ".join(
+        choice_value_name(spec, value)
+        for key, values in character.feature_choices.items()
+        if key.startswith(f"{feature_id}:") and not key.endswith(":pattern")
+        for value in values
+    )
 
 
 def _feature_counter_id(spec: CharacterSpec, feature: Feature) -> str:
@@ -1863,7 +1898,12 @@ def _sheet_ability_sections(
         if key in seen:
             continue
         seen.add(key)
-        item = SheetFeature(name=feature.name, entry=entry, cost=_feature_cost(spec, feature))
+        item = SheetFeature(
+            name=feature.name,
+            entry=entry,
+            cost=_feature_cost(spec, feature),
+            detail=_feature_choice_detail(spec, character, feature_id),
+        )
         if feature.turn_resource or _feature_counter_id(spec, feature) or feature.reactions:
             active.append(item)
         else:

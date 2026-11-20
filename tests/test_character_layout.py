@@ -9,8 +9,7 @@ import pytest
 from fastapi.testclient import TestClient
 from starlette.datastructures import FormData
 
-from cygnusloom.content.character import character_schema, resolve
-from cygnusloom.rules.dice import roll_total
+from cygnusloom.content.character import character_schema, resolve, roll_stats
 from cygnusloom.services.tools import check_arguments
 from cygnusloom.web.app import create_app
 from cygnusloom.web.character_form import creation_view, submission_from_form
@@ -22,17 +21,10 @@ RULE_SETS = ("dnd-srd-2024", "worldswithoutnumber", "cairn2e", "academia-arcana"
 
 def _rolled_stats(spec, rule_set) -> dict[str, int]:
     """A legal score for every non-derived stat, including hidden and assigned stats."""
-    rng = random.Random(11)
-    rolled: dict[str, int] = {}
+    rolled = roll_stats(spec, random.Random(11), plus=rule_set.plus)
     for stat in spec.stats.values():
-        if stat.derived is not None:
-            continue
-        if stat.formula is not None:
-            rolled[stat.id] = roll_total(stat.formula, rng, plus=rule_set.plus)
-        elif stat.values:
+        if stat.values:
             rolled[stat.id] = stat.values[0]
-        else:
-            rolled[stat.id] = 0
     return rolled
 
 
@@ -41,7 +33,7 @@ def _preset_form(spec, rule_set, preset) -> FormData:
     rolled = _rolled_stats(spec, rule_set)
     entries: list[tuple[str, str]] = [
         ("name", preset.suggested_name or "Ready-made"),
-        ("pronouns", "they/them"),
+        ("pronouns", preset.pronouns or "they/them"),
     ]
     entries.extend((f"stat-{stat}", str(value)) for stat, value in rolled.items())
     entries.extend((f"template-{kind}", template) for kind, template in preset.templates.items())
@@ -99,6 +91,7 @@ def test_every_shipped_rule_set_offers_three_archetypes() -> None:
         }, rule_set_id
         assert len(presets) == 3, rule_set_id
         assert all(preset.templates for preset in presets.values()), rule_set_id
+        assert all(preset.pronouns for preset in presets.values()), rule_set_id
 
 
 @pytest.mark.parametrize("rule_set_id", RULE_SETS)

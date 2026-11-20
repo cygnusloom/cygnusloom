@@ -194,10 +194,11 @@
 
 {% macro feature_choices_panel(character) -%}
 {% if character.feature_choices %}
-<section class="creation-panel" data-feature-choice-section>
-  <h3>Feature choices</h3>
+<section class="creation-panel" data-feature-choice-section hidden>
   <p class="panel-hint">Some features ask you to choose a skill, ability, or detail. Their choices appear here when you take the feature, and every option explains what it does.</p>
-  {% with feature_choices=character.feature_choices %}{% include "_feature_choice_fields.html" %}{% endwith %}
+  <div class="feature-choice-grid">
+    {% with feature_choices=character.feature_choices %}{% include "_feature_choice_fields.html" %}{% endwith %}
+  </div>
 </section>
 {% endif %}
 {%- endmacro %}

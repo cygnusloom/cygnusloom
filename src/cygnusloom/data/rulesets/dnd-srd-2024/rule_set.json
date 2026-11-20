@@ -30,7 +30,8 @@
     },
     "stat_presets": {
       "abilities": {
-        "formula": "3d6",
+        "formula": "4d6",
+        "keep": 3,
         "swap_group": "abilities",
         "swap": "any"
       }

@@ -765,6 +765,7 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 .sheet-chip a { color: var(--accent); text-decoration: none; }
 .sheet-chip a:hover, .sheet-chip a:focus-visible { text-decoration: underline; }
 .sheet-chip .muted { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.sheet-chip .sheet-choice { color: var(--muted); font-size: 0.8rem; }
 .sheet-badge { color: var(--muted); font-size: 0.72rem; }
 .sheet-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(4.5rem, 1fr)); gap: 0.4rem; margin-bottom: 0.85rem; }
 .sheet-stat {
@@ -984,6 +985,8 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 /* A feature's structured choices: each pick keeps its picker and hint together, and a hidden
    slot (an ability-score pattern that uses fewer abilities) takes no room. */
 .feature-choice { display: flex; flex-direction: column; gap: 0.75rem; }
+.creation-panel[data-feature-choice-section] { grid-column: 1 / -1; }
+.feature-choice-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr)); gap: 0.75rem; align-items: start; }
 .feature-choice-hint { white-space: pre-line; }
 .feature-choice-about { border: 1px solid var(--border); border-radius: 6px; padding: 0.45rem 0.6rem; background: var(--field); }
 .feature-choice-about > summary { cursor: pointer; color: var(--muted); }

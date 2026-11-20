@@ -157,7 +157,7 @@
       {
         "id": "weapons",
         "kind": "feature",
-        "label": "Weapon kinds",
+        "label": "Weapons",
         "feature_type": "item",
         "tags": [
           "weapon"

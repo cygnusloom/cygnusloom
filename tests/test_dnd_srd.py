@@ -8,12 +8,14 @@ from typing import Any
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from starlette.datastructures import FormData
 
 from cygnusloom.content.character import check_swaps, feature_choice_views
 from cygnusloom.rules import dnd_srd_2024
 from cygnusloom.services import level_up as level_up_service
 from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.conditions import condition_roll_mode
+from cygnusloom.web.character_form import campaign_submission_from_form, campaign_view
 
 from .factories import (
     character_named,
@@ -71,6 +73,22 @@ def test_every_ability_can_be_arranged_freely():
         {ability: 10 for ability in abilities},
         {"str": 8, "dex": 15, "con": 10, "int": 14, "wis": 12, "cha": 13},
     )
+
+
+def test_random_ability_scores_roll_four_d6_and_keep_the_highest_three():
+    strength = _dnd_rules().character.stats["str"]
+
+    assert strength.formula == "4d6"
+    assert strength.keep == 3
+    assert (strength.low, strength.high) == (3, 18)
+
+
+def test_a_single_option_campaign_field_is_chosen_for_the_player():
+    spec = _dnd_rules().campaign
+    fields = {field["id"]: field for field in campaign_view(spec, {})["choice_fields"]}
+
+    assert fields["xp_rate"]["value"] == "Standard"
+    assert campaign_submission_from_form(spec, FormData()) == {"xp_rate": "Standard"}
 
 
 def test_creation_accepts_a_freely_arranged_standard_array(
@@ -628,6 +646,42 @@ def test_weapon_mastery_offers_only_the_weapons_its_class_can_use():
     assert all(
         set(spec.items[value].groups) & {"simple", "finesse", "light"} for value in rogue_ids
     )
+
+
+def test_weapon_mastery_reads_as_weapon_names_with_their_mastery_property():
+    spec = _dnd_rules().character
+    view = feature_choice_views(spec, spec.features["class-fighter-weapon-mastery"])[0]
+    battleaxe = next(option for option in view["options"] if option["value"] == "weapon-battleaxe")
+
+    assert view["label"] == "Weapons"
+    assert view["slot_label"] == "Weapon"
+    assert view["empty"] == "Choose weapons"
+    assert battleaxe["title"] == "Battleaxe"
+    assert battleaxe["detail"] == "Martial melee · 1d8 slashing (versatile 1d10) · Mastery: Topple"
+    assert battleaxe["icon"] == "axe"
+
+
+def test_weapon_mastery_choices_read_as_weapon_names_on_the_sheet(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    client = signed_in_client(client_factory)
+    campaign_id = create_campaign_direct(
+        client, world_template="testhollow", rule_set="dnd-srd-2024"
+    )
+    fields = {
+        **_fields(),
+        "feature-choice-class-fighter-weapon-mastery-weapons-0": "weapon-greatsword",
+        "feature-choice-class-fighter-weapon-mastery-weapons-1": "weapon-longsword",
+        "feature-choice-class-fighter-weapon-mastery-weapons-2": "weapon-dagger",
+    }
+    create_character_direct(client, campaign_id, name="Rook", fields=fields)
+
+    tools = tools_for(client.app, campaign_id, rule_set="dnd-srd-2024")
+    block = "\n".join(tools.get_statblock("Rook")["statblock"])
+
+    assert "Weapon Mastery — Greatsword, Longsword, Dagger" in block
+    assert "Feature choice Weapon Mastery (Weapons): Greatsword, Longsword, Dagger" in block
+    assert "weapon-greatsword" not in block
 
 
 def test_evocation_savant_offers_only_wizard_evocation_spells_of_levels_one_and_two():

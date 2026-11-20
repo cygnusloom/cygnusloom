@@ -973,7 +973,8 @@ def build_rule_set() -> None:
                 },
                 "stat_presets": {
                     "abilities": {
-                        "formula": "3d6",
+                        "formula": "4d6",
+                        "keep": 3,
                         "swap_group": "abilities",
                         "swap": "any",
                     }
@@ -1621,6 +1622,20 @@ def build_tables() -> None:
                         "Wizard spells. Arcane magic recorded in spellbooks; the spellcasting "
                         "ability is Intelligence."
                     ),
+                },
+            ],
+        },
+        {
+            "type": "table",
+            "id": "human_size",
+            "options": [
+                {
+                    "name": "Medium",
+                    "description": "About 4\u20137 feet tall. You occupy a 5-foot square.",
+                },
+                {
+                    "name": "Small",
+                    "description": "About 2\u20134 feet tall. You occupy a 5-foot square.",
                 },
             ],
         },
@@ -2632,6 +2647,10 @@ def build_species() -> None:
                 extra["level_hp_bonus"] = 1
             elif name == "Dwarven Resilience":
                 extra["resistances"] = ["poison"]
+            elif species_id == "human" and name == "Size":
+                extra["picks"] = [
+                    {"id": "size", "kind": "option", "label": "Size", "table": "human_size"}
+                ]
             rank = 0
             min_level = 5 if name in ("Draconic Flight", "Large Form") else 0
             extra.setdefault("turn_resource", inferred_turn_resource(trait["desc"]))
@@ -3124,7 +3143,7 @@ def feature_choice_picks(name: str, class_id: str = "") -> list[dict[str, Any]]:
         pick: dict[str, Any] = {
             "id": "weapons",
             "kind": "feature",
-            "label": "Weapon kinds",
+            "label": "Weapons",
             "feature_type": "item",
             "tags": ["weapon"],
             "count": count,

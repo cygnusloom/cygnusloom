@@ -40,6 +40,66 @@ def test_roll_stats_stay_within_their_range():
         assert stat.low <= rolled[stat.id] <= stat.high
 
 
+class _SequenceRandom(random.Random):
+    """A random source that hands out chosen die results in order."""
+
+    def __init__(self, values: list[int]) -> None:
+        super().__init__()
+        self._values = iter(values)
+
+    def randint(self, a: int, b: int) -> int:
+        return next(self._values)
+
+
+def test_a_kept_stat_roll_drops_the_lowest_dice():
+    spec = build_character(
+        [
+            Definition(
+                "stat",
+                "str",
+                {
+                    "type": "stat",
+                    "id": "str",
+                    "name": "Strength",
+                    "formula": "4d6",
+                    "keep": 3,
+                    "swap_group": "abilities",
+                },
+            )
+        ],
+        {},
+        {},
+        "kept-roll",
+    )
+    stat = spec.stats["str"]
+    assert (stat.formula, stat.keep, stat.low, stat.high) == ("4d6", 3, 3, 18)
+    rolled = roll_stats(spec, _SequenceRandom([1, 6, 3, 4]), plus="sum")
+    assert rolled == {"str": 13}
+
+
+def test_keep_must_fit_the_dice_it_rolls():
+    with pytest.raises(ContentError, match="'keep' must be a whole number from 0 to 4"):
+        build_character(
+            [
+                Definition(
+                    "stat",
+                    "str",
+                    {
+                        "type": "stat",
+                        "id": "str",
+                        "name": "Strength",
+                        "formula": "4d6",
+                        "keep": 5,
+                        "swap_group": "abilities",
+                    },
+                )
+            ],
+            {},
+            {},
+            "kept-roll",
+        )
+
+
 def _assigned_spec(*stats: dict) -> CharacterSpec:
     definitions = [Definition("stat", d["id"], {"type": "stat", **d}) for d in stats]
     return build_character(definitions, {}, {}, "test")
