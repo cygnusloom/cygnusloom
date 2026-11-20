@@ -29,6 +29,7 @@ from cygnusloom.web import campaigns as campaigns_web
 
 from .conftest import csrf_token
 from .factories import (
+    answer,
     close_opening,
     create_campaign_direct,
     create_character_direct,
@@ -331,6 +332,82 @@ def test_the_live_stream_follows_an_srd_turn_handoff(
         EMAILS[1].split("@")[0],
         account_ids[1],
     )
+
+
+@pytest.mark.parametrize(
+    ("tool", "arguments"),
+    [
+        (
+            "roll_check",
+            {
+                "prompt": "Brenna, read the road for tracks.",
+                "character": "Brenna",
+                "skill": "survival",
+                "stat": "wis",
+                "difficulty": 10,
+            },
+        ),
+        (
+            "player_save",
+            {
+                "prompt": "Brenna, keep your footing on the icy road.",
+                "name": "Brenna",
+                "stat": "con",
+                "dc": 10,
+                "cause": "the icy road",
+            },
+        ),
+    ],
+)
+def test_a_prompt_for_another_players_character_belongs_to_that_player(
+    app: FastAPI,
+    client_factory: Callable[[], TestClient],
+    tool: str,
+    arguments: dict[str, Any],
+):
+    """The GM may ask a character other than the one who spoke to make a check or save. The
+    prompt then belongs to that character's player, not to the player whose message opened the
+    reply; otherwise the guest cannot answer and the opener sees a roll they must not take."""
+    clients, campaign_id = _party(client_factory, size=2)
+    owner, guest = clients
+    guest_id = _account_id(app, EMAILS[1])
+    script = "__FAKE__:" + json.dumps(
+        {
+            "turns": [
+                {
+                    "rounds": [[{"name": tool, "arguments": arguments}]],
+                    "text": "Brenna reads the road.",
+                }
+            ]
+        }
+    )
+    response = send_message(owner, campaign_id, script)
+    assert response.status_code == 303, response.text
+
+    state = open_campaign(app, campaign_id)
+    assert state.turn is not None and state.turn.prompt is not None
+    assert state.turn.prompt.character == "Brenna"
+
+    # The player whose character is named owns the roll; the opener waits.
+    owner_page = owner.get(f"/campaigns/{campaign_id}").text
+    guest_page = guest.get(f"/campaigns/{campaign_id}").text
+    assert "data-pending-action" not in owner_page
+    assert "data-pending-action" in guest_page
+    assert "must answer the GM." in owner_page
+    assert "Ada must answer the GM." not in owner_page
+    snapshot = owner.get(f"/campaigns/{campaign_id}/turn-status").json()
+    assert snapshot["status"] == "prompt"
+    assert snapshot["pending_for"] == guest_id
+
+    refused = answer(owner, campaign_id, "roll")
+    assert refused[-1]["type"] == "error"
+    assert refused[-1]["status"] == 400
+    assert "must answer" in refused[-1]["message"]
+    assert open_campaign(app, campaign_id).turn is not None
+
+    done = answer(guest, campaign_id, "roll")
+    assert done[-1]["type"] == "saved"
+    assert open_campaign(app, campaign_id).turn is None
 
 
 def test_removing_a_player_mid_fight_hands_their_turn_on(

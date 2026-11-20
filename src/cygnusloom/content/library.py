@@ -517,6 +517,11 @@ class PlayerInput:
     # the tool's arguments and refuses the same way the tool would, so an impossible request is
     # reported to the GM instead of being turned into a prompt the player cannot complete.
     precheck: str | None = None
+    # A schema argument naming the character whose player answers the prompt. Without it the
+    # player whose message opened the turn answers, which is right for a character acting on
+    # their own turn. A GM may ask another player's character to roll, and then that player
+    # owns the prompt.
+    character_param: str | None = None
 
 
 @dataclass(frozen=True)
@@ -9556,6 +9561,7 @@ def _check_player_input(
             "details",
             "modifier_param",
             "precheck",
+            "character_param",
         },
         f"{label}: player_input",
     )
@@ -9584,6 +9590,17 @@ def _check_player_input(
     weapon_param = data.get("weapon_param")
     weapon_roll_param = None
     modifier_param = data.get("modifier_param")
+    character_param = data.get("character_param")
+    if character_param is not None:
+        if not isinstance(character_param, str) or not character_param:
+            raise ContentError(
+                f"{label}: 'player_input.character_param' must name a string parameter"
+            )
+        schema = parameters["properties"].get(character_param)
+        if not isinstance(schema, dict) or schema.get("type") != "string":
+            raise ContentError(
+                f"{label}: 'player_input.character_param' must name a string parameter"
+            )
     sources = [
         source
         for source in (dice, dice_param, move_param, check_param, weapon_param)
@@ -9708,6 +9725,7 @@ def _check_player_input(
         details=details,
         modifier_param=modifier_param,
         precheck=precheck,
+        character_param=character_param,
     )
 
 

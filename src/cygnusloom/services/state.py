@@ -859,6 +859,37 @@ class CampaignState:
             return True
         return self.owner_of(character) in (None, player_id)
 
+    def controller_of(self, character: Character) -> int | None:
+        """The account that plays a character, following a hireling's employer chain. A hireling
+        belongs to the player of the character who hired it, not to the campaign owner by
+        default. An unclaimed character has no controller."""
+        current = character
+        seen: set[str] = set()
+        while current.hireling:
+            key = name_key(current.employer)
+            if not current.employer or key in seen:
+                return None
+            seen.add(key)
+            employer = self.characters.get(key)
+            if employer is None:
+                return None
+            current = employer
+        return self.owner_of(current)
+
+    def prompt_owner(self, turn: Turn) -> tuple[int | None, str]:
+        """The account that answers a turn's prompt, and its display name.
+
+        A tool may name the character the prompt is for, such as when the GM asks another
+        player's character to make a check. That character's player answers; a hireling's
+        employer chain finds its player. Without a named character, or when the name is not a
+        player character, the prompt belongs to the player whose message opened the turn."""
+        prompt = turn.prompt
+        if prompt is not None and prompt.character:
+            character = self.characters.get(name_key(prompt.character))
+            if character is not None and character.kind == PC_KIND:
+                return self.controller_of(character), character.player_name
+        return turn.player_id, turn.player_name
+
     def pc(self) -> Character | None:
         """The campaign's primary player character: the owner's living one if there is one,
         otherwise the owner's dead one, and failing that the first player character. Anything
