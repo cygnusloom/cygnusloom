@@ -28,8 +28,8 @@ PYTHONPATH=$PWD/src /workspaces/cygnusloom/.venv/bin/python scripts/test.py \
 PYTHONPATH=$PWD/src /workspaces/cygnusloom/.venv/bin/python scripts/test.py -q
 ```
 
-The current full suite is **3834 passed**; the D&D rule, play, and multiclass files are
-**70 passed**; content validation reports **0 warnings**; `ruff check` is clean on the
+The current full suite is **3836 passed**; the D&D rule, play, and multiclass files are
+**71 passed**; content validation reports **0 warnings**; `ruff check` is clean on the
 changed source and test files.
 
 ## Live matrix
@@ -54,6 +54,27 @@ The live checks used a throwaway SQLite database, `CYGNUSLOOM_TEST_LOGIN=1`,
 `CYGNUSLOOM_TEST_LOGIN_ADMIN=1`, `CYGNUSLOOM_DEBUG_PANEL=1`, and
 `CYGNUSLOOM_DISABLE_MUSIC=1`. The server was run from the worktree with the main
 `.venv` and `PYTHONPATH`, never with `uv sync`.
+
+## Final playtest (2026-11-20)
+
+- A fresh campaign selected **SRD 5.2.1 (5E compatible)** with **Unwritten World** by
+  default. A Cleric with the Soldier background, Human species, Protector order, and
+  Skilled feat created correctly; the sheet showed HP 10, AC 17, skills, Gaming Set,
+  grouped spells with two level-1 slots, and the expected passive features.
+- All four chosen level-1 spells were marked prepared at creation. The engine now copies
+  the stored prepared list before appending a newly learned spell, so the comparison
+  cannot short-circuit after the first spell.
+- Inventory items show names and slots only; clicking an item or spell opens its
+  compendium entry in a dialog without leaving the page.
+- A real DeepSeek opening and social turn worked: Guidance rolled 1d4, the Insight check
+  logged its breakdown, and the GM narrated the result. A combat then started, initiative
+  was set, attacks spent the action budget, **End your turn** updated in place, and the
+  NPC **Start** turn button appeared.
+- On Aria's next turn, Healing Word healed 3 → 8 HP, spent one of two level-1 slots,
+  and spent the bonus action. The sheet immediately showed 1 slot and 0 bonus actions
+  remaining.
+- The core encounter prompt now says that the action which starts a fight waits for its
+  owner's turn; it is not a reason to use a tool's `force` argument.
 
 ## Fixes made in this pass
 

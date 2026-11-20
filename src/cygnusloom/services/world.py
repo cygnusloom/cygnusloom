@@ -1369,7 +1369,9 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 "maximum": new_value,
             }
 
-    def adjust_counter(self, character: str, counter: str, change: int) -> dict[str, Any]:
+    def adjust_counter(
+        self, character: str, counter: str, change: int, reason: str = ""
+    ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return counters_service.adjust_counter(
                 db,
@@ -1382,6 +1384,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 combat=self.combat,
                 rng=self.rng,
                 plus=self.plus,
+                reason=reason,
                 spec=self.character,
             )
 

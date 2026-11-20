@@ -10,7 +10,7 @@ from collections.abc import Mapping, Sequence
 from sqlmodel import Session
 
 from cygnusloom.content.character import CharacterSpec
-from cygnusloom.content.library import ALWAYS_CONDITION_END, ALL_STATS, CombatRules, ConditionRules
+from cygnusloom.content.library import ALL_STATS, ALWAYS_CONDITION_END, CombatRules, ConditionRules
 from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.events import (
     Character,

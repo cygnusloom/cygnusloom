@@ -4798,9 +4798,11 @@ class CheckMade(GameEvent):
 
     def render(self) -> str:
         result = "succeeds" if self.success else "fails"
+        label = self.check or "check"
+        article = "an" if label[:1].casefold() in "aeiou" else "a"
         if self.breakdown:
             text = (
-                f"{self.name} makes a {self.check or 'check'}: "
+                f"{self.name} makes {article} {label}: "
                 f"{breakdown_text(self.breakdown)} and {result}"
             )
             if self.cause:
@@ -4819,7 +4821,7 @@ class CheckMade(GameEvent):
             used.append(f"armor {self.armor_penalty:+d}")
         with_used = f" ({', '.join(used)})" if used else ""
         text = (
-            f"{self.name} makes a {self.check or 'check'}{with_used}: rolls {self.roll}{sign} "
+            f"{self.name} makes {article} {label}{with_used}: rolls {self.roll}{sign} "
             f"for {self.total} against difficulty {self.difficulty} and {result}"
         )
         if self.cause:

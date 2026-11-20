@@ -893,6 +893,39 @@ def test_class_resources_are_spent_and_refilled_by_rests(
     assert character_named(app, campaign_id, "Rook").counters["second_wind"] == 2
 
 
+def test_a_cleric_prepares_every_spell_chosen_at_creation(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    """Each new spell joins the prepared list; learning the next one must not stop after the
+    first because the comparison shares the stored list."""
+    client, campaign_id, _ctx = _class_campaign(client_factory, "Cleric", _cleric_fields())
+    rules = _dnd_rules()
+    world = client.app.state.content.world_content("testhollow", "dnd-srd-2024")
+    level_up_service.apply_page(
+        client.app.state.engine,
+        campaign_id,
+        rules,
+        world,
+        {
+            "pick-spells-0": "spell-guiding-bolt",
+            "pick-spells-1": "spell-healing-word",
+            "pick-spells-2": "spell-bless",
+            "pick-spells-3": "spell-shield-of-faith",
+            "pick-cantrips-0": "spell-sacred-flame",
+            "pick-cantrips-1": "spell-guidance",
+            "pick-cantrips-2": "spell-light",
+        },
+        "Cleric",
+    )
+    pc = character_named(app, campaign_id, "Cleric")
+    assert pc.marks["prepared"] == [
+        "spell-guiding-bolt",
+        "spell-healing-word",
+        "spell-bless",
+        "spell-shield-of-faith",
+    ]
+
+
 def test_divine_order_and_life_domain_spells(
     app: FastAPI, client_factory: Callable[[], TestClient]
 ) -> None:

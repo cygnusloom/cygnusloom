@@ -14,6 +14,7 @@ from cygnusloom.services.events import (
     EVENT_TYPES,
     Channel,
     ChatPlayer,
+    CheckMade,
     CurrencyChanged,
     GameEvent,
     Harmed,
@@ -72,6 +73,21 @@ def test_harm_lines_read_stat_ids_as_words():
     assert Harmed(name="Wren", stat="hp", taken=2).render() == "Wren loses 2 HP."
     assert Harmed(name="Wren", stat="effort_high", taken=1).render() == "Wren loses 1 Effort High."
     assert Recovered(name="Wren", stat="castings", amount=1).render() == "Wren recovers 1 Castings."
+
+
+def test_a_check_line_uses_the_right_article():
+    made = CheckMade(
+        name="Wren",
+        check="Ability check",
+        roll=10,
+        total=12,
+        difficulty=10,
+        success=True,
+    )
+    assert (
+        made.render()
+        == "Wren makes an Ability check: rolls 10 for 12 against difficulty 10 and succeeds."
+    )
 
 
 def test_generic_payloads_apply_to_character_state():

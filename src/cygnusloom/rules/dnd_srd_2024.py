@@ -1351,7 +1351,9 @@ def apply_skill_pick(
             cost += int(pick.costs.get(step, 0))
         applied.append(ctx.world.raise_skill(character, skill, int(target), cause=pick.label))
     if cost:
-        remaining = ctx.world.adjust_counter(character, pick.counter, -cost)
+        remaining = ctx.world.adjust_counter(
+            character, pick.counter, -cost, reason="spending a pick"
+        )
         return {"character": character, "skills": applied, pick.counter: remaining["value"]}
     return {"character": character, "skills": applied}
 
@@ -1362,14 +1364,18 @@ def apply_spell_pick(
     """Learn the chosen spell, assign it to the class the level was taken in, and spend one
     spell pick."""
     result = _learn_spell(character, choice, ctx, class_choice)
-    remaining = ctx.world.adjust_counter(character, pick.counter, -1)
+    remaining = ctx.world.adjust_counter(
+        character, pick.counter, -1, reason="spending a pick"
+    )
     return {**result, pick.counter: remaining["value"]}
 
 
 def apply_feat_pick(character: str, pick: Any, choice: str, ctx: ToolContext) -> dict[str, Any]:
     """Learn the chosen feat and spend one feat pick."""
     result = _learn(ctx, character, choice, cause=pick.label)
-    remaining = ctx.world.adjust_counter(character, pick.counter, -1)
+    remaining = ctx.world.adjust_counter(
+        character, pick.counter, -1, reason="spending a pick"
+    )
     return {**result, pick.counter: remaining["value"]}
 
 
@@ -1378,7 +1384,9 @@ def apply_fighting_style_pick(
 ) -> dict[str, Any]:
     """Learn the chosen fighting style and spend one pick."""
     result = _learn(ctx, character, choice, cause="fighting style")
-    remaining = ctx.world.adjust_counter(character, pick.counter, -1)
+    remaining = ctx.world.adjust_counter(
+        character, pick.counter, -1, reason="spending a pick"
+    )
     return {**result, pick.counter: remaining["value"]}
 
 
@@ -1431,7 +1439,9 @@ def apply_subclass_pick(character: str, pick: Any, choice: str, ctx: ToolContext
             for feature_id in feature_ids:
                 _learn(ctx, character, feature_id, cause=f"{subclass.id} level {feature_level}")
     _learn_always_prepared(ctx, character, subclass, level)
-    remaining = ctx.world.adjust_counter(character, pick.counter, -1)
+    remaining = ctx.world.adjust_counter(
+        character, pick.counter, -1, reason="spending a pick"
+    )
     return {**result, pick.counter: remaining["value"]}
 
 
@@ -1450,7 +1460,9 @@ def apply_expertise_pick(
         current_level + bonus, spec.skill_progression.maximum if spec.skill_progression else 20
     )
     result = ctx.world.raise_skill(character, skill_id, new_level, cause="expertise")
-    remaining = ctx.world.adjust_counter(character, pick.counter, -1)
+    remaining = ctx.world.adjust_counter(
+        character, pick.counter, -1, reason="spending a pick"
+    )
     return {**result, pick.counter: remaining["value"]}
 
 
@@ -2617,7 +2629,7 @@ def _remember_prepared(ctx: ToolContext, character: str, spell_id: str) -> None:
         if spell_id not in current and len(current) < limit:
             current.append(spell_id)
         by_class[rules.id] = current
-        prepared = stored_list
+        prepared = list(stored_list)
         if spell_id in current and spell_id not in prepared:
             prepared.append(spell_id)
         if prepared == stored_list and by_class == (
@@ -2654,7 +2666,7 @@ def _remember_prepared(ctx: ToolContext, character: str, spell_id: str) -> None:
         ]
         prepared = known[:limit]
     else:
-        prepared = stored_list
+        prepared = list(stored_list)
         if spell_id not in prepared and len(prepared) < limit:
             prepared.append(spell_id)
     if prepared == stored_list:

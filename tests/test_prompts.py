@@ -445,6 +445,7 @@ def test_core_owns_the_encounter_start_policy():
     assert "start the encounter" in core.text
     assert "add every combatant" in core.text
     assert "settle initiative" in core.text
+    assert "The action that started the fight is not such an exception" in core.text
 
 
 def test_each_combat_ruleset_adds_only_its_own_initiative_rule():
