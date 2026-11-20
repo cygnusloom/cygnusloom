@@ -95,6 +95,15 @@ def _post_settings(client: TestClient, campaign_id: int, **data: str):
     )
 
 
+def _reset(client: TestClient, campaign_id: int):
+    token = csrf_token(client, f"/campaigns/{campaign_id}")
+    return client.post(
+        f"/campaigns/{campaign_id}/reset",
+        data={"csrf_token": token, "confirm": "reset"},
+        follow_redirects=False,
+    )
+
+
 def test_the_creation_page_offers_every_starting_level_of_a_ruleset_with_levels(
     client_factory: Callable[[], TestClient],
 ) -> None:
@@ -184,6 +193,49 @@ def test_a_starting_level_the_rule_set_cannot_grant_is_refused(
     assert response.status_code == 400
     assert message in response.text
     assert not open_campaign(client.app, campaign_id).pcs()
+
+
+def test_a_reset_keeps_the_starting_experience_of_the_starting_level(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    app, campaign_id = _campaign(client_factory, class_id="warrior", start_level=3)
+    client = _signed_in(client_factory)
+    assert _counter(app, campaign_id, "xp") == FAST_XP[2]
+
+    assert _reset(client, campaign_id).status_code == 303
+
+    # Experience gained in play is gone, but the starting level's experience is still the
+    # party's, exactly as it was when the party was built.
+    assert _counter(app, campaign_id, "xp") == FAST_XP[2]
+    assert _counter(app, campaign_id, "level") == 1
+    assert "Level 2" in _page(client, campaign_id)
+
+    # Resetting again does not hand out the starting experience twice.
+    assert _reset(client, campaign_id).status_code == 303
+    assert _counter(app, campaign_id, "xp") == FAST_XP[2]
+
+
+def test_a_reset_restores_a_starting_level_the_log_never_granted(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    app, campaign_id = _campaign(client_factory, class_id="warrior")
+    client = _signed_in(client_factory)
+    # A log from before the starting level was recorded during setup: the campaign chose level 2
+    # and the character never received the experience that goes with it.
+    with Session(app.state.engine) as db:
+        row = db.get(Campaign, campaign_id)
+        assert row is not None
+        row.start_level = 2
+        row.follow_owner_level = False
+        db.add(row)
+        db.commit()
+    assert _counter(app, campaign_id, "xp") == 0
+
+    assert _reset(client, campaign_id).status_code == 303
+
+    assert _counter(app, campaign_id, "xp") == FAST_XP[1]
+    assert _counter(app, campaign_id, "level") == 1
+    assert "Level 2" in _page(client, campaign_id)
 
 
 def test_turning_following_off_keeps_a_fixed_starting_level(

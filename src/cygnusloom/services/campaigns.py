@@ -67,6 +67,7 @@ from cygnusloom.services.events import (
     load_state,
     name_key,
     record,
+    truncate,
 )
 from cygnusloom.services.names import next_campaign_label
 from cygnusloom.services.prompts import (
@@ -434,7 +435,9 @@ def save_creation(
             # A replacement for this player's out-of-play character gets an opening turn again.
             # A player joining a campaign already under way does not; the GM meets them on the
             # next turn through the world state. The first character's opening waits while the
-            # player builds the rest of the starting party.
+            # player builds the rest of the starting party. The opening is recorded after the
+            # character is complete, so everything before it is the built starting party that a
+            # campaign reset returns to.
             opening = first_character or previous is not None
             if first_character and defer_opening:
                 opening = False
@@ -459,12 +462,14 @@ def save_creation(
                 plus=rule_set.plus,
                 combat_rules=rule_set.combat,
                 player_id=owner_id,
-                opening=opening,
+                opening=False,
             )
             if starting_level > 1 and level_rules is not None:
                 level_up_service.grant_start_level(
                     db, campaign_id, rule_set, character.name, starting_level
                 )
+            if opening:
+                record(db, campaign_id, OpeningStarted(player_id=owner_id))
         db.commit()
 
 
@@ -993,6 +998,65 @@ def _exclusive(campaign_id: int) -> Iterator[None]:
         with _busy_lock:
             _busy_campaigns.discard(campaign_id)
             _live_turns.pop(campaign_id, None)
+
+
+def reset_campaign(
+    engine: Engine, library: ContentLibrary, owner_id: int, campaign_id: int
+) -> None:
+    """Start the campaign over from just before its opening. Everything recorded while the
+    table was being set up stays, including the world, the campaign options, and the starting
+    party with their sheets and gear. The opening turn and everything played since are removed,
+    so the party can be changed and the game started again from a fresh opening. Credits charged
+    for the removed replies are returned. Another account's campaign looks the same as a missing
+    one, and the reset is refused while the GM is still writing a reply."""
+    with _exclusive(campaign_id), session_scope(engine) as db:
+        campaign = db.get(Campaign, campaign_id)
+        if campaign is None or campaign.owner_id != owner_id:
+            raise NotFound("campaign not found")
+        # The campaign's own opening marks the end of setup: a replacement character has its own
+        # opening later, so the first one is the beginning the table returns to.
+        opening = db.exec(
+            select(Event.id)
+            .where(Event.campaign_id == campaign_id, Event.kind == OpeningStarted.kind)
+            .order_by(Event.seq)
+            .limit(1)
+        ).first()
+        if opening is None:
+            raise InvalidInput("this campaign has not started yet; there is nothing to reset")
+        removed = db.exec(
+            select(Event.id).where(
+                Event.campaign_id == campaign_id,
+                Event.id >= opening,
+                Event.kind == ChatGM.kind,
+            )
+        ).all()
+        credit_service.refund_replies(db, removed)
+        truncate(db, campaign_id, opening - 1)
+        _restore_starting_level(db, campaign_id, campaign.start_level, campaign.rule_set, library)
+        db.commit()
+
+
+def _restore_starting_level(
+    db: Any, campaign_id: int, start_level: int, rule_set_id: str, library: ContentLibrary
+) -> None:
+    """Give the starting party back the experience a starting level above 1 implies. An older
+    log recorded that grant inside the opening turn, so the reset removed it. Granting it again
+    is a no-op when the characters kept it. A rule set that has been removed, or a level it can
+    no longer grant, leaves the party as the log reads."""
+    if start_level <= 1:
+        return
+    rule_set = library.rule_sets.get(rule_set_id)
+    if rule_set is None or level_up_service.start_level_rules(rule_set) is None:
+        return
+    for character in load_state(db, campaign_id).characters.values():
+        if character.kind != PC_KIND:
+            continue
+        try:
+            level_up_service.grant_start_level(
+                db, campaign_id, rule_set, character.name, start_level
+            )
+        except InvalidInput:
+            continue
 
 
 def delete_campaign(engine: Engine, owner_id: int, campaign_id: int) -> None:

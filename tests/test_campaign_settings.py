@@ -19,7 +19,9 @@ from tests.factories import (
     campaign_ready_fast,
     create_campaign,
     create_character,
+    open_campaign,
     send_message,
+    signed_in_client,
 )
 from tests.test_multiplayer import _joined_campaign
 
@@ -47,6 +49,15 @@ def _post_settings(client: TestClient, campaign_id: int, **data: str):
     return client.post(
         f"/campaigns/{campaign_id}/settings",
         data={"csrf_token": token, **data},
+        follow_redirects=False,
+    )
+
+
+def _post_reset(client: TestClient, campaign_id: int, confirm: str):
+    token = csrf_token(client, f"/campaigns/{campaign_id}")
+    return client.post(
+        f"/campaigns/{campaign_id}/reset",
+        data={"csrf_token": token, "confirm": confirm},
         follow_redirects=False,
     )
 
@@ -193,6 +204,7 @@ def test_export_and_delete_are_owner_only_and_members_see_a_summary(
     for markup in (
         f'href="/campaigns/{campaign_id}/export"',
         f'action="/campaigns/{campaign_id}/delete"',
+        f'action="/campaigns/{campaign_id}/reset"',
         'name="confirm"',
         'class="danger"',
     ):
@@ -202,6 +214,81 @@ def test_export_and_delete_are_owner_only_and_members_see_a_summary(
     assert "The campaign owner chooses the model for every reply." in member_page
     assert "Inventory space is tracked" in member_page
     assert "Contract Hollow" in member_page
+
+
+def test_the_owner_resets_a_campaign_to_its_starting_party(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    client, campaign_id = campaign_ready_fast(client_factory)
+    assert send_message(client, campaign_id, "We set out.").status_code == 303
+    before = _campaign(app, campaign_id)
+    assert list_messages(app.state.engine, campaign_id)
+
+    response = _post_reset(client, campaign_id, "reset")
+
+    assert response.status_code == 303
+    assert response.headers["location"] == f"/campaigns/{campaign_id}"
+    state = open_campaign(app, campaign_id)
+    assert state.opened is False
+    assert state.turn is None
+    assert [character.name for character in state.pcs()] == ["Ada"]
+    assert list_messages(app.state.engine, campaign_id) == []
+    after = _campaign(app, campaign_id)
+    assert (after.name, after.model, after.setting) == (
+        before.name,
+        before.model,
+        before.setting,
+    )
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert "Campaign reset to just before the opening." in page
+    assert "Start the game" in page
+
+    token = csrf_token(client, f"/campaigns/{campaign_id}")
+    started = client.post(
+        f"/campaigns/{campaign_id}/start",
+        data={"csrf_token": token},
+        follow_redirects=False,
+    )
+    assert started.status_code == 303
+    assert open_campaign(app, campaign_id).opened is True
+
+
+def test_a_reset_needs_the_owner_and_the_word_reset(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    owner, guest, campaign_id, _ = _joined_campaign(client_factory)
+
+    assert _post_reset(guest, campaign_id, "reset").status_code == 404
+    response = _post_reset(owner, campaign_id, "please")
+
+    assert response.status_code == 303
+    assert response.headers["location"] == f"/campaigns/{campaign_id}#view-settings"
+    assert open_campaign(app, campaign_id).opened is True
+    page = owner.get(response.headers["location"]).text
+    assert "confirm starting the campaign over" in page
+
+    assert _post_reset(owner, campaign_id, "reset").status_code == 303
+    state = open_campaign(app, campaign_id)
+    assert [character.name for character in state.pcs()] == ["Ada"]
+    # A player who joined after the opening builds their character again.
+    assert (
+        f'action="/campaigns/{campaign_id}/creation"' in guest.get(f"/campaigns/{campaign_id}").text
+    )
+
+
+def test_a_reset_waits_until_the_campaign_has_started(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    client = signed_in_client(client_factory)
+    campaign_id = create_campaign(client)
+    assert create_character(client, campaign_id, start=False).status_code == 303
+
+    response = _post_reset(client, campaign_id, "reset")
+
+    assert response.status_code == 303
+    assert open_campaign(app, campaign_id).opened is False
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert "has not started yet" in page
 
 
 def test_the_thinking_preference_is_per_account_and_controls_reply_details(

@@ -16,6 +16,8 @@ A campaign may allow respecs, off by default. A player may then rebuild their pl
 
 A new campaign can begin with a starting party. Until the player starts the game, the creation page shows one tab per party member: the player character and any hirelings. The player adds a hireling through the same character options, including its chosen starting kit and money, and removes a starting hireling completely, along with the gear they carry. Starting hirelings serve at wage zero unless the GM sets a wage during play. The campaign's opening turn is recorded only when the player starts the game, so the opening meets the whole party and moves the hirelings with the player character.
 
+An owner who wants to start over can reset a campaign from Settings, next to the delete action. The reset removes the opening turn and everything played since, returning the table to its starting party just before the opening: the world, the campaign options, and the party's sheets and gear stay, while a player who joined after the opening builds their character again. The credits charged for the removed replies are returned, and the reset waits while the GM is writing a reply.
+
 # AI Game Master - Cygnus
 Cygnus is the AI GM. Cygnus will keep the game on track, following all the rules and not allowing any inconsistency. However, Cygnus understands that the story is for the players, so if the players insist, Cygnus will change the story or scene to better fit what story the players want to tell.
 
