@@ -1,0 +1,201 @@
+[
+  {
+    "type": "item",
+    "id": "war_shirt",
+    "description": "Light armor, AC 11, Encumbrance 0.",
+    "looks_like": "leather-armor",
+    "size": "tiny",
+    "name": "War Shirt",
+    "armor": 1,
+    "category": "armor",
+    "price": 5,
+    "armor_mode": "max"
+  },
+  {
+    "type": "item",
+    "id": "buff_coat",
+    "description": "Light armor, AC 12, Encumbrance 0.",
+    "looks_like": "leather-armor",
+    "size": "tiny",
+    "name": "Buff Coat",
+    "armor": 2,
+    "category": "armor",
+    "price": 50,
+    "armor_mode": "max"
+  },
+  {
+    "type": "item",
+    "id": "linothorax",
+    "description": "Light armor, AC 13, Encumbrance 1.",
+    "looks_like": "leather-armor",
+    "size": "normal",
+    "name": "Linothorax",
+    "armor": 3,
+    "category": "armor",
+    "price": 20,
+    "armor_mode": "max"
+  },
+  {
+    "type": "item",
+    "id": "war_robe",
+    "description": "Light armor, AC 14, Encumbrance 3.",
+    "looks_like": "cloak",
+    "size": "huge",
+    "name": "War Robe",
+    "armor": 4,
+    "category": "armor",
+    "price": 50,
+    "armor_mode": "max"
+  },
+  {
+    "type": "item",
+    "id": "pieced_armor",
+    "description": "Light armor, AC 14, Encumbrance 2.",
+    "looks_like": "leather-armor",
+    "size": "large",
+    "name": "Pieced Armor",
+    "armor": 4,
+    "category": "armor",
+    "price": 100,
+    "armor_mode": "max"
+  },
+  {
+    "type": "item",
+    "id": "mail_shirt",
+    "description": "Medium armor, AC 14, Encumbrance 1; penalizes physical Sneak.",
+    "looks_like": "chain-mail",
+    "size": "normal",
+    "name": "Mail Shirt",
+    "encumbrance_checks": [
+      "sneak"
+    ],
+    "armor": 4,
+    "category": "armor",
+    "price": 250,
+    "armor_mode": "max"
+  },
+  {
+    "type": "item",
+    "id": "cuirass_and_greaves",
+    "description": "Medium armor, AC 15, Encumbrance 2; penalizes physical Sneak.",
+    "looks_like": "chain-mail",
+    "size": "large",
+    "name": "Cuirass and Greaves",
+    "encumbrance_checks": [
+      "sneak"
+    ],
+    "armor": 5,
+    "category": "armor",
+    "price": 250,
+    "armor_mode": "max"
+  },
+  {
+    "type": "item",
+    "id": "scaled_armor",
+    "description": "Medium armor, AC 16, Encumbrance 3; penalizes physical Sneak.",
+    "looks_like": "chain-mail",
+    "size": "huge",
+    "name": "Scaled Armor",
+    "encumbrance_checks": [
+      "sneak"
+    ],
+    "armor": 6,
+    "category": "armor",
+    "price": 500,
+    "armor_mode": "max"
+  },
+  {
+    "type": "item",
+    "id": "mail_hauberk",
+    "description": "Heavy armor, AC 16, Encumbrance 2; penalizes Sneak and Exert.",
+    "looks_like": "chain-mail",
+    "size": "large",
+    "name": "Mail Hauberk",
+    "encumbrance_checks": [
+      "sneak",
+      "exert"
+    ],
+    "armor": 6,
+    "category": "armor",
+    "price": 750,
+    "armor_mode": "max"
+  },
+  {
+    "type": "item",
+    "id": "plate_armor",
+    "description": "Heavy armor, AC 17, Encumbrance 2; penalizes Sneak and Exert.",
+    "looks_like": "plate-armor",
+    "size": "large",
+    "name": "Plate Armor",
+    "encumbrance_checks": [
+      "sneak",
+      "exert"
+    ],
+    "armor": 7,
+    "category": "armor",
+    "price": 1000,
+    "armor_mode": "max"
+  },
+  {
+    "type": "item",
+    "id": "great_armor",
+    "description": "Heavy armor, AC 19, Encumbrance 3; penalizes Sneak and Exert.",
+    "looks_like": "plate-armor",
+    "size": "huge",
+    "name": "Great Armor",
+    "encumbrance_checks": [
+      "sneak",
+      "exert"
+    ],
+    "armor": 9,
+    "category": "armor",
+    "price": 2000,
+    "armor_mode": "max"
+  },
+  {
+    "type": "item",
+    "id": "grand_plate",
+    "description": "Heavy armor, AC 16, Encumbrance 3; proof against ordinary non-magical weapons.",
+    "looks_like": "plate-armor",
+    "size": "huge",
+    "name": "Grand Plate",
+    "encumbrance_checks": [
+      "sneak",
+      "exert"
+    ],
+    "armor": 6,
+    "category": "armor",
+    "price": 2000,
+    "armor_mode": "max"
+  },
+  {
+    "type": "item",
+    "id": "small_shield",
+    "description": "Shield, AC 13 alone or +1 with equal or better armor, Encumbrance 1.",
+    "looks_like": "shield",
+    "size": "normal",
+    "name": "Small Shield",
+    "armor": 3,
+    "flags": [
+      "shield"
+    ],
+    "category": "shield",
+    "price": 20,
+    "armor_mode": "shield"
+  },
+  {
+    "type": "item",
+    "id": "large_shield",
+    "description": "Shield, AC 14 alone or +1 with equal or better armor, Encumbrance 1.",
+    "looks_like": "shield",
+    "size": "normal",
+    "name": "Large Shield",
+    "armor": 4,
+    "flags": [
+      "shield"
+    ],
+    "category": "shield",
+    "price": 10,
+    "armor_mode": "shield"
+  }
+]

@@ -6,17 +6,17 @@
     "kind": "background",
     "name": "Fungal Forager",
     "description": "You follow the whisperings of the deep earth, the rhythmic pulse of the mycelium forest that grows beneath the surface. The dark holds no terror for you. Also, you really love mushrooms.",
-    "features": [
-      "sharpened-trowel",
-      "candle-helmet",
-      "rope",
-      "metal-pail"
-    ],
     "tables": [
       "fungal-forager-what-strange-fungus-did-you-discover",
       "fungal-forager-what-keeps-you-sane-even-in-utter-darkness"
     ],
     "names": "fungal-forager-names",
-    "order": 8
+    "order": 8,
+    "items": [
+      "sharpened-trowel",
+      "candle-helmet",
+      "rope",
+      "metal-pail"
+    ]
   }
 ]

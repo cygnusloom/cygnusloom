@@ -18,8 +18,8 @@ from cygnusloom.content.definitions import ContentError, Definition
 from cygnusloom.content.library import (
     ContentLibrary,
     InitiativeRules,
+    ItemTemplate,
     Marketplace,
-    ShopItem,
     _load_marketplace,
     _load_tool_call,
 )
@@ -179,7 +179,7 @@ def test_a_buy_is_measured_against_the_stat_based_capacity(
     marketplace = Marketplace(
         currency="silver",
         items=(
-            ShopItem(
+            ItemTemplate(
                 id="rope",
                 name="Rope",
                 category="gear",
@@ -442,10 +442,7 @@ def test_a_finished_reply_can_roll_the_side_order_when_the_gm_forgot(
     state = _state(client.app, campaign_id)
     assert state.encounter is not None and state.encounter.settled
     # Once the roll is made, a later reply leaves it alone.
-    assert (
-        replace(tools, combat=SIDE, character=WWN.character).settle_side_initiative()
-        is None
-    )
+    assert replace(tools, combat=SIDE, character=WWN.character).settle_side_initiative() is None
 
 
 def test_a_side_uses_the_best_modifier_among_its_members(
@@ -631,7 +628,7 @@ def test_a_marketplace_can_trade_in_any_currency_feature(client_factory: Callabl
     marketplace = Marketplace(
         currency="silver",
         items=(
-            ShopItem(
+            ItemTemplate(
                 id="rope",
                 name="Rope",
                 category="gear",
@@ -657,7 +654,7 @@ def test_a_marketplace_can_trade_in_any_currency_feature(client_factory: Callabl
         result = market.buy_item(
             db, campaign_id, marketplace, WWN.inventory, WWN.item_sizes, WREN, "Rope"
         )
-        assert load_state(db, campaign_id).characters[WREN.casefold()].features["silver"] == 8
+        assert load_state(db, campaign_id).characters[WREN.casefold()].currency["silver"] == 8
     assert result["currency"] == "silver"
     assert result["currency_left"] == 8
 
@@ -666,7 +663,7 @@ def _armor_shop(mode: str, armor: int) -> Marketplace:
     return Marketplace(
         currency=CAIRN.marketplace.currency,
         items=(
-            ShopItem(
+            ItemTemplate(
                 id="mail",
                 name="Mail",
                 category="armor",
@@ -721,40 +718,45 @@ def test_shop_armor_can_add_set_or_keep_the_best(
         assert load_state(db, campaign_id).characters[PC.casefold()].armor == after
 
 
-def _shop_definitions(item: dict[str, Any]) -> list[Definition]:
+def _shop_definitions() -> list[Definition]:
     return [
         Definition(
             type="marketplace",
             id="shop",
             data={"type": "marketplace", "id": "shop", "currency": "gold"},
-        ),
-        Definition(
-            type="shop_item",
-            id="mail",
-            data={
-                "type": "shop_item",
-                "id": "mail",
-                "name": "Mail",
-                "category": "armor",
-                "price": 5,
-                "size": "normal",
-                "armor": 2,
-                "uses": 0,
-                **item,
-            },
-        ),
+        )
     ]
 
 
-def test_a_shop_item_loads_its_armor_mode():
-    shop = _load_marketplace(
-        _shop_definitions({"armor_mode": "set"}), {"normal": 1}, CAIRN.character, "cairn2e"
+def _shop_character(mode: str):
+    return replace(
+        CAIRN.character,
+        items={
+            **CAIRN.character.items,
+            "gold": ItemTemplate(id="gold", name="Gold Pieces", description="", currency=True),
+            "mail": ItemTemplate(
+                id="mail",
+                name="Mail",
+                description="A coat of mail.",
+                size="normal",
+                armor=2,
+                category="armor",
+                price=5,
+                armor_mode=mode,
+            ),
+        },
     )
-    assert shop is not None
-    assert shop.items[0].armor_mode == "set"
 
 
-def test_a_default_shop_item_still_adds_armor():
-    shop = _load_marketplace(_shop_definitions({}), {"normal": 1}, CAIRN.character, "cairn2e")
+def test_an_item_loads_its_armor_mode():
+    shop = _load_marketplace(_shop_definitions(), _shop_character("set"), "cairn2e")
     assert shop is not None
-    assert shop.items[0].armor_mode == "add"
+    mail = next(item for item in shop.items if item.id == "mail")
+    assert mail.armor_mode == "set"
+
+
+def test_a_default_item_still_adds_armor():
+    shop = _load_marketplace(_shop_definitions(), _shop_character("add"), "cairn2e")
+    assert shop is not None
+    mail = next(item for item in shop.items if item.id == "mail")
+    assert mail.armor_mode == "add"

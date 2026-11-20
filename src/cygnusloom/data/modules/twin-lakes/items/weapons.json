@@ -1,0 +1,11 @@
+[
+  {
+    "type": "item",
+    "id": "curved-dagger",
+    "description": "Used by overseers to control their unruly \"pets.\" When used against a Suraru Imperator, its damage is enhanced. Acts as a key to open the door at T10a.",
+    "looks_like": "dagger",
+    "size": "normal",
+    "name": "Curved Dagger",
+    "damage": "1d6"
+  }
+]

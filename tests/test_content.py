@@ -12,6 +12,7 @@ import pytest
 from cygnusloom.content.character import (
     NO_CAMPAIGN,
     Granted,
+    GrantedItem,
     TableOption,
     _modifier_bands,
     campaign_schema,
@@ -160,6 +161,32 @@ def test_content_validate_cli_accepts_the_bundled_data(capsys: pytest.CaptureFix
     assert "validation passed" in capsys.readouterr().out
 
 
+def test_content_migrate_cli_converts_legacy_items(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+):
+    from cygnusloom.cli import main
+
+    tree = content_tree(
+        tmp_path,
+        definitions=[
+            {"type": "item_size", "id": "normal", "slots": 1},
+            {
+                "type": "feature",
+                "id": "gold",
+                "name": "Gold Pieces",
+                "feature_type": "item",
+                "description": "A purse of coins.",
+            },
+            {"type": "marketplace", "id": "market", "currency": "gold"},
+        ],
+    )
+
+    assert main(["content", "migrate", "--data-dir", str(tree)]) == 0
+    assert "converted 1 item feature(s)" in capsys.readouterr().out
+    assert main(["content", "migrate", "--data-dir", str(tree)]) == 0
+    assert "no legacy items found" in capsys.readouterr().out
+
+
 def test_bundled_content_loads():
     library = bundled_library()
     assert set(library.world_templates) == {"unwritten-world", "unwritten-academy"}
@@ -188,9 +215,9 @@ def test_bundled_content_loads():
 
 
 CAIRN_BACKGROUND_KIT = (
-    Granted("backpack", "1"),
-    Granted("gold", "3d6"),
-    Granted("rations", "1"),
+    GrantedItem("backpack", "1"),
+    GrantedItem("gold", "3d6"),
+    GrantedItem("rations", "1"),
 )
 
 
@@ -202,28 +229,30 @@ def test_bundled_cairn_backgrounds_keep_their_kit():
         for template in content_library().rule_sets["cairn2e"].character.templates.values()
         if template.kind == "background"
     }
-    assert backgrounds["aurifex"].features == (
+    assert backgrounds["aurifex"].item_grants == (
         *CAIRN_BACKGROUND_KIT,
-        Granted("lantern", "1"),
-        Granted("oil-can", "1"),
-        Granted("needle-knife", "1"),
-        Granted("protective-gloves", "1"),
+        GrantedItem("lantern", "1"),
+        GrantedItem("oil-can", "1"),
+        GrantedItem("needle-knife", "1"),
+        GrantedItem("protective-gloves", "1"),
     )
-    assert backgrounds["barber-surgeon"].features == (
+    assert backgrounds["barber-surgeon"].item_grants == (
         *CAIRN_BACKGROUND_KIT,
-        Granted("torch", "1"),
-        Granted("bonesaw", "1"),
-        Granted("bandages", "1"),
-        Granted("leech", "1"),
-        Granted("stained-medical-finery", "1"),
+        GrantedItem("torch", "1"),
+        GrantedItem("bonesaw", "1"),
+        GrantedItem("bandages", "1"),
+        GrantedItem("leech", "1"),
+        GrantedItem("stained-medical-finery", "1"),
     )
     assert len(backgrounds) == 20
-    kit_features = {grant.feature for grant in CAIRN_BACKGROUND_KIT}
+    kit_items = {grant.item for grant in CAIRN_BACKGROUND_KIT}
     for template in backgrounds.values():
-        assert template.features[: len(CAIRN_BACKGROUND_KIT)] == CAIRN_BACKGROUND_KIT, template.id
-        own = template.features[len(CAIRN_BACKGROUND_KIT) :]
+        assert template.item_grants[: len(CAIRN_BACKGROUND_KIT)] == CAIRN_BACKGROUND_KIT, (
+            template.id
+        )
+        own = template.item_grants[len(CAIRN_BACKGROUND_KIT) :]
         assert own, template.id
-        assert kit_features.isdisjoint(grant.feature for grant in own), template.id
+        assert kit_items.isdisjoint(grant.item for grant in own), template.id
 
 
 def _load_test_hooks(module: ModuleType, **overrides: Any):
@@ -351,7 +380,6 @@ def test_cairn_hooks_resolve_rations_and_keep_the_rest_hook():
     assert "options" not in hooks.functions
     assert hooks.options == {
         "after_days": 1,
-        "feature": "rations",
         "item": "Rations",
     }
 
@@ -391,15 +419,15 @@ def test_a_hook_payload_must_name_non_empty_text():
 
 
 @pytest.mark.parametrize(
-    ("feature", "message"),
+    ("item", "message"),
     [
-        ("not-a-feature", "'feature' names no character feature"),
-        ("spellbook-thicket", "'feature' must be a consumable item with uses"),
-        ("awl", "'feature' must be a consumable item with uses"),
-        ([], "'feature' must be a non-empty string"),
+        ("not-an-item", "'item' must name a consumable item with uses"),
+        ("spellbook-thicket", "'item' must name a consumable item with uses"),
+        ("awl", "'item' must name a consumable item with uses"),
+        ([], "'item' must be a non-empty string"),
     ],
 )
-def test_cairn_hook_configurator_validates_consumable_features(feature, message):
+def test_cairn_hook_configurator_validates_consumable_items(item, message):
     from cygnusloom.rules.cairn2e import configure_hooks
 
     module = ModuleType("cairn2e")
@@ -409,7 +437,7 @@ def test_cairn_hook_configurator_validates_consumable_features(feature, message)
         _load_test_hooks(
             module,
             configure="configure_hooks",
-            options={"feature": feature},
+            options={"item": item},
         )
 
 
@@ -2850,8 +2878,8 @@ def test_an_invalid_authored_route_is_rejected(tmp_path: Path, routes: object, m
         ContentLibrary.load(root).world_content("twin-lakes", "cairn2e")
 
 
-def test_the_twin_lakes_features_have_their_listed_sizes_uses_and_damage():
-    features = content_library().world_content("twin-lakes", "cairn2e").features
+def test_the_twin_lakes_items_have_their_listed_sizes_uses_and_damage():
+    features = content_library().world_content("twin-lakes", "cairn2e").items
     fletcher = features["fletcher-s-ire"]
     assert (fletcher.name, fletcher.size, fletcher.uses) == ("Fletcher's Ire", "bulky", 3)
     moon = features["moon-cloth"]

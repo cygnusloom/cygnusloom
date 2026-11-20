@@ -1,0 +1,221 @@
+[
+  {
+    "type": "item",
+    "id": "awl",
+    "description": "A pointed awl for boring leather and wood.",
+    "looks_like": "dagger",
+    "name": "Awl",
+    "damage": "1d6"
+  },
+  {
+    "type": "item",
+    "id": "bonesaw",
+    "description": "A serrated saw for cutting bone.",
+    "looks_like": "dagger",
+    "name": "Bonesaw",
+    "damage": "1d6"
+  },
+  {
+    "type": "item",
+    "id": "bow",
+    "description": "d6 damage, bulky",
+    "ranges": {
+      "ranged": 0
+    },
+    "looks_like": "bow",
+    "size": "bulky",
+    "name": "Bow",
+    "damage": "1d6",
+    "category": "weapons",
+    "price": 20,
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "cane-sword",
+    "description": "A sword hidden in a walking cane.",
+    "looks_like": "sword",
+    "name": "Cane Sword",
+    "damage": "1d6"
+  },
+  {
+    "type": "item",
+    "id": "crossbow",
+    "description": "d8 damage, bulky",
+    "ranges": {
+      "ranged": 0
+    },
+    "looks_like": "crossbow",
+    "size": "bulky",
+    "name": "Crossbow",
+    "damage": "1d8",
+    "category": "weapons",
+    "price": 30,
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "dagger",
+    "description": "Dagger, Cudgel, Sickle, Staff, etc. (d6 damage)",
+    "looks_like": "dagger",
+    "name": "Dagger",
+    "damage": "1d6",
+    "category": "weapons",
+    "price": 5,
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "hammer",
+    "description": "A smith's hammer, heavy enough to fight with.",
+    "looks_like": "warhammer",
+    "name": "Hammer",
+    "damage": "1d6"
+  },
+  {
+    "type": "item",
+    "id": "hand-axe",
+    "description": "A short axe for wood or war.",
+    "looks_like": "axe",
+    "name": "Hand Axe",
+    "damage": "1d6"
+  },
+  {
+    "type": "item",
+    "id": "iron-dagger",
+    "description": "A plain iron dagger.",
+    "looks_like": "dagger",
+    "name": "Iron Dagger",
+    "damage": "1d6"
+  },
+  {
+    "type": "item",
+    "id": "leather-whip",
+    "description": "A long, cracking leather whip.",
+    "looks_like": "whip",
+    "name": "Leather Whip",
+    "damage": "1d6"
+  },
+  {
+    "type": "item",
+    "id": "long-sword",
+    "description": "A long, balanced blade.",
+    "looks_like": "sword",
+    "size": "bulky",
+    "name": "Long Sword",
+    "damage": "1d10"
+  },
+  {
+    "type": "item",
+    "id": "needle-knife",
+    "description": "A thin knife for fine work.",
+    "looks_like": "dagger",
+    "name": "Needle-knife",
+    "damage": "1d6"
+  },
+  {
+    "type": "item",
+    "id": "root-knife",
+    "description": "A curved knife for cutting roots and vines.",
+    "looks_like": "dagger",
+    "name": "Root Knife",
+    "damage": "1d6"
+  },
+  {
+    "type": "item",
+    "id": "serrated-knife",
+    "description": "A saw-edged knife that tears as it cuts.",
+    "looks_like": "dagger",
+    "name": "Serrated Knife",
+    "damage": "1d6"
+  },
+  {
+    "type": "item",
+    "id": "sharpened-trowel",
+    "description": "A mason's trowel filed to a fighting edge.",
+    "looks_like": "dagger",
+    "name": "Sharpened Trowel",
+    "damage": "1d6"
+  },
+  {
+    "type": "item",
+    "id": "short-sword",
+    "description": "A short, handy blade for tight quarters.",
+    "looks_like": "sword",
+    "name": "Short Sword",
+    "damage": "1d6"
+  },
+  {
+    "type": "item",
+    "id": "silver-knife",
+    "description": "A knife of cold silver, kept for things that hate it.",
+    "looks_like": "dagger",
+    "name": "Silver Knife",
+    "damage": "1d6"
+  },
+  {
+    "type": "item",
+    "id": "sling",
+    "description": "d6 damage",
+    "ranges": {
+      "ranged": 0
+    },
+    "looks_like": "sling",
+    "name": "Sling",
+    "damage": "1d6",
+    "category": "weapons",
+    "price": 5,
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "stake",
+    "description": "A sharpened wooden stake.",
+    "looks_like": "dagger",
+    "name": "Stake",
+    "damage": "1d6"
+  },
+  {
+    "type": "item",
+    "id": "twin-daggers",
+    "description": "Two daggers. Roll both d6 and keep the higher.",
+    "looks_like": "dagger",
+    "size": "bulky",
+    "name": "Twin Daggers",
+    "damage": "1d6+1d6"
+  },
+  {
+    "type": "item",
+    "id": "spear",
+    "damage": "1d8",
+    "name": "Spear",
+    "category": "weapons",
+    "description": "Spear, Sword, Mace, Axe, Flail, etc. (d8 damage)",
+    "price": 10,
+    "looks_like": "spear",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "halberd",
+    "damage": "1d10",
+    "size": "bulky",
+    "name": "Halberd",
+    "category": "weapons",
+    "description": "Halberd, War Hammer, Long Sword, etc. (d10 damage, bulky)",
+    "price": 20,
+    "looks_like": "halberd",
+    "armor_mode": "add"
+  },
+  {
+    "type": "item",
+    "id": "trap",
+    "damage": "1d6",
+    "name": "Trap",
+    "category": "gear",
+    "description": "d6 STR damage",
+    "price": 35,
+    "looks_like": "caltrops",
+    "armor_mode": "add"
+  }
+]

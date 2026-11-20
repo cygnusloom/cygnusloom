@@ -21,6 +21,7 @@ from cygnusloom.content.character import (
     CharacterError,
     CharacterSpec,
     Feature,
+    ItemTemplate,
     Sheet,
     TableOption,
     campaign_schema,
@@ -72,6 +73,7 @@ from cygnusloom.services.events import (
     CampaignState,
     Character,
     CharacterSummarized,
+    CurrencyChanged,
     HirelingAdded,
     HirelingDismissed,
     HirelingPromoted,
@@ -263,7 +265,6 @@ def seed_campaign(
                 inventory,
                 item_sizes,
                 magic,
-                currency,
             )
     db.commit()
 
@@ -298,90 +299,120 @@ def set_campaign_options(
 def _starting_item(
     feature: Feature, magic: MagicRules | None, item_sizes: Mapping[str, int]
 ) -> Item:
-    """The inventory item a starting feature becomes: a magic item for a spell, else the item."""
-    if feature.feature_type == "spell":
-        if magic is None or magic.item is None:
-            raise InvalidInput("this rule set's spells are not item magic")
-        return Item(
-            feature.name,
-            magic.reusable.size,
-            item_sizes[magic.reusable.size],
-            kind=magic.reusable.kind,
-            text=feature.description,
-        )
-    flags = list(feature.flags)
-    if feature.armor > 0 and "shield" not in flags and "armor" not in flags:
-        flags.append("armor")
+    """The inventory item a starting spell becomes when the rule set's spells are item magic."""
+    if magic is None or magic.item is None:
+        raise InvalidInput("this rule set's spells are not item magic")
     return Item(
         feature.name,
-        feature.size,
-        item_sizes[feature.size],
-        damage=feature.damage,
-        rules=feature.rules,
-        flags=tuple(flags),
-        uses=feature.uses,
-        max_uses=feature.uses,
+        magic.reusable.size,
+        item_sizes[magic.reusable.size],
+        kind=magic.reusable.kind,
+        text=feature.description,
     )
 
 
 def _take_starting_items(
     spec: CharacterSpec,
-    starting: dict[str, int],
+    starting_features: dict[str, int],
+    starting_items: dict[str, int],
     inventory: InventoryRules | None,
     item_sizes: Mapping[str, int] | None,
     magic: MagicRules | None,
-    currency: str,
-) -> list[tuple[Feature, int]]:
-    carried: list[tuple[Feature, int]] = []
-    if inventory is not None and item_sizes is not None:
-        for feature_id in list(starting):
+) -> tuple[list[tuple[Feature, int]], list[tuple[ItemTemplate, int]]]:
+    """Take the starting spells that become magic items and the starting items that become
+    inventory or money. The ids are removed from the maps the character event stores."""
+    spells: list[tuple[Feature, int]] = []
+    items: list[tuple[ItemTemplate, int]] = []
+    if inventory is None or item_sizes is None:
+        return spells, items
+    if magic is not None and magic.item is not None:
+        for feature_id in list(starting_features):
             feature = spec.features[feature_id]
-            kind = spec.feature_types.get(feature.feature_type)
-            carries = kind.inventory if kind is not None else feature.feature_type == "item"
-            if feature_id != currency and (
-                carries
-                or (
-                    feature.feature_type == "spell" and magic is not None and magic.item is not None
-                )
-            ):
-                carried.append((feature, starting.pop(feature_id)))
-    return carried
+            if feature.feature_type == "spell":
+                spells.append((feature, starting_features.pop(feature_id)))
+    for item_id in list(starting_items):
+        template = spec.items.get(item_id)
+        if template is not None:
+            items.append((template, starting_items.pop(item_id)))
+    return spells, items
 
 
 def _carry_starting_items(
     db: Session,
     campaign_id: int,
     name: str,
-    carried: Sequence[tuple[Feature, int]],
+    spells: Sequence[tuple[Feature, int]],
+    items: Sequence[tuple[ItemTemplate, int]],
     inventory: InventoryRules | None,
     item_sizes: Mapping[str, int] | None,
     magic: MagicRules | None,
     *,
     defense: bool,
 ) -> tuple[tuple[str, int], tuple[str, int], int]:
+    """Carry the starting spells as magic items and the starting items as inventory or
+    money. Returns the best worn armor and shield and, when defense does not use
+    equipment, the armor bonus the items add."""
     armor = ("", 0)
     shield = ("", 0)
     armor_bonus = 0
-    if carried:
-        starting_inventory = _required(inventory, "inventory")
-        starting_sizes = _required(item_sizes, "item sizes")
-        for feature, count in carried:
-            for _ in range(count):
-                inventory_service.carry_item(
-                    db,
-                    campaign_id,
-                    starting_inventory,
-                    name,
-                    _starting_item(feature, magic, starting_sizes),
-                    cause="starting gear",
-                )
-            if defense:
-                if "shield" in feature.flags and feature.armor > shield[1]:
-                    shield = (feature.name, feature.armor)
-                elif "shield" not in feature.flags and feature.armor > armor[1]:
-                    armor = (feature.name, feature.armor)
-            else:
-                armor_bonus += feature.armor * count
+    if not spells and not items:
+        return armor, shield, armor_bonus
+    starting_inventory = _required(inventory, "inventory")
+    starting_sizes = _required(item_sizes, "item sizes")
+    for feature, count in spells:
+        for _ in range(count):
+            inventory_service.carry_item(
+                db,
+                campaign_id,
+                starting_inventory,
+                name,
+                _starting_item(feature, magic, starting_sizes),
+                cause="starting gear",
+            )
+    for template, count in items:
+        if template.currency:
+            record(
+                db,
+                campaign_id,
+                CurrencyChanged(
+                    name=name,
+                    item=template.id,
+                    amount=count,
+                    cause="starting money",
+                ),
+            )
+            continue
+        flags = list(template.flags)
+        is_shield = template.armor_category == "shield" or template.armor_mode.startswith("shield")
+        if template.armor > 0 and not {"shield", "armor"} & set(flags):
+            flags.append("shield" if is_shield else "armor")
+        item = Item(
+            template.name,
+            template.size,
+            starting_sizes[template.size],
+            text=template.description,
+            damage=template.damage,
+            rules=list(template.rules),
+            flags=tuple(flags),
+            uses=template.uses,
+            max_uses=template.uses,
+        )
+        for _ in range(count):
+            inventory_service.carry_item(
+                db,
+                campaign_id,
+                starting_inventory,
+                name,
+                item,
+                cause="starting gear",
+            )
+        if defense:
+            if is_shield and template.armor > shield[1]:
+                shield = (template.name, template.armor)
+            elif not is_shield and template.armor > armor[1]:
+                armor = (template.name, template.armor)
+        else:
+            armor_bonus += template.armor * count
     return armor, shield, armor_bonus
 
 
@@ -394,7 +425,6 @@ def _initialize_generated_defense(
     inventory: InventoryRules | None,
     item_sizes: Mapping[str, int] | None,
     magic: MagicRules | None,
-    currency: str,
 ) -> None:
     if rules is None or not rules.defense_base:
         return
@@ -402,15 +432,26 @@ def _initialize_generated_defense(
     if character.story_only or character.defense_tracked:
         return
     starting = dict(character.features)
-    carried = _take_starting_items(spec, starting, inventory, item_sizes, magic, currency)
-    if carried:
+    starting_items = dict(character.template_items)
+    spells, items = _take_starting_items(
+        spec, starting, starting_items, inventory, item_sizes, magic
+    )
+    if spells:
         record(
             db,
             campaign_id,
-            StartingItemsTransferred(name=character.name, features=[f.id for f, _ in carried]),
+            StartingItemsTransferred(name=character.name, features=[f.id for f, _ in spells]),
         )
     armor, shield, _ = _carry_starting_items(
-        db, campaign_id, name, carried, inventory, item_sizes, magic, defense=True
+        db,
+        campaign_id,
+        name,
+        spells,
+        items,
+        inventory,
+        item_sizes,
+        magic,
+        defense=True,
     )
     combat.set_defense_equipment(
         db,
@@ -459,7 +500,7 @@ def _carry_granted_kit(
         if marketplace is None:
             raise InvalidInput("this rule set has no marketplace to grant starting items from")
         rules = _required(inventory, "inventory")
-        carried: list[market_service.ShopItem] = []
+        carried: list[ItemTemplate] = []
         for item_name in grant.items:
             listed = market_service.listed_item(marketplace, item_name)
             if listed is None:
@@ -535,8 +576,8 @@ def create_player_character(
 ) -> dict[str, Any]:
     """Make the player character from the player's choices. `rolled` are the stats rolled for
     this character; the player may only keep them or swap within a swap group. Starting item
-    features are carried as inventory items, spell features as the rule set's magic items, and the armor they
-    give is worn. A template that grants a starting kit hands over its items, money, and equipment
+    item grants are carried as inventory items, spell features as the rule set's magic
+    items, and the armor they give is worn. A template that grants a starting kit hands over its items, money, and equipment
     the same way. The currency stays a count. The pronouns are how the GM refers to the character.
     `player_id` is the account that plays it. `opening` starts the GM's opening turn for a new
     campaign or a replacement character; a player joining a running campaign does not need one."""
@@ -562,7 +603,10 @@ def create_player_character(
     _check_sheet_text(sheet)
     fields = _sheet_fields(sheet)
     starting = fields["features"]
-    carried = _take_starting_items(spec, starting, inventory, item_sizes, magic, currency)
+    starting_items = fields["items"]
+    carried_spells, carried_items = _take_starting_items(
+        spec, starting, starting_items, inventory, item_sizes, magic
+    )
     record(
         db,
         campaign_id,
@@ -585,7 +629,8 @@ def create_player_character(
         db,
         campaign_id,
         name,
-        carried,
+        carried_spells,
+        carried_items,
         inventory,
         item_sizes,
         magic,
@@ -700,10 +745,13 @@ def create_party_hireling(
         plus=plus,
         pronouns=pronouns,
     )
-    # The starting item features become inventory items, exactly as they do for a player
-    # character, so they are taken out of the sheet's feature list before it is recorded.
+    # Starting items become inventory or money, exactly as they do for a player character, so
+    # they are taken out of the sheet before the hireling is recorded.
     features = dict(event.features)
-    carried = _take_starting_items(spec, features, inventory, item_sizes, magic, currency)
+    items = dict(event.items)
+    carried_spells, carried_items = _take_starting_items(
+        spec, features, items, inventory, item_sizes, magic
+    )
     record(
         db,
         campaign_id,
@@ -720,6 +768,7 @@ def create_party_hireling(
             stats=dict(event.stats),
             templates=dict(event.templates),
             features=features,
+            items=items,
             fields=dict(event.fields),
             counters=dict(event.counters),
             armor=event.armor,
@@ -738,7 +787,8 @@ def create_party_hireling(
         db,
         campaign_id,
         name,
-        carried,
+        carried_spells,
+        carried_items,
         inventory,
         item_sizes,
         magic,
@@ -1272,6 +1322,7 @@ def hire_hireling(
             stats=dict(event.stats),
             templates=dict(event.templates),
             features=dict(event.features),
+            items=dict(event.items),
             fields=dict(event.fields),
             counters=dict(event.counters),
             armor=event.armor,
@@ -2894,6 +2945,7 @@ def _sheet_fields(sheet: Sheet) -> dict[str, Any]:
         "stats": dict(sheet.stats),
         "templates": dict(sheet.templates),
         "features": dict(sheet.features),
+        "items": dict(sheet.items),
         "fields": dict(sheet.fields),
         "counters": dict(sheet.counters),
         "skills": dict(sheet.skills),

@@ -12,7 +12,7 @@
     "status": "status",
     "options": {
       "after_days": 1,
-      "feature": "rations"
+      "item": "rations"
     }
   }
 ]

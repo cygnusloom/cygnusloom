@@ -7,7 +7,7 @@ from typing import Any
 
 from sqlmodel import Session
 
-from cygnusloom.content.character import CharacterSpec, Feature
+from cygnusloom.content.character import CharacterSpec, ItemTemplate
 from cygnusloom.content.library import (
     ALL_STATS,
     CombatRules,
@@ -111,7 +111,7 @@ def _skill_label(spec: CharacterSpec, skill: str) -> str:
     return found.name if found is not None else skill.replace("_", " ")
 
 
-def _weapon_skill(combat: CombatRules, weapon: str, feature: Feature | None) -> str:
+def _weapon_skill(combat: CombatRules, weapon: str, feature: ItemTemplate | None) -> str:
     """The skill an attack with `weapon` rolls: the weapon's own when it has one, the unarmed
     skill for an unarmed strike, and no skill for a rule set with neither."""
     if feature is not None and feature.skill:
@@ -121,23 +121,30 @@ def _weapon_skill(combat: CombatRules, weapon: str, feature: Feature | None) -> 
     return ""
 
 
-def _weapon_trained(spec: CharacterSpec, character: Character, feature: Feature) -> bool:
-    """Whether the character's training covers a weapon feature. A weapon with no category is
-    not covered by these rules, so it keeps the rule set's full attack bonus."""
+def _weapon_trained(spec: CharacterSpec, character: Character, feature: ItemTemplate) -> bool:
+    """Whether the character's training covers a weapon. A weapon with no category is not
+    covered by these rules, so it keeps the rule set's full attack bonus."""
     category = feature.weapon_category.casefold()
     if not category:
         return True
     properties = {prop.casefold() for prop in feature.weapon_properties}
+
+    def covers(entry: str) -> bool:
+        kind, _, property_name = entry.casefold().partition(":")
+        if kind == category and (not property_name or property_name in properties):
+            return True
+        return kind == "weapon" and property_name == feature.id.casefold()
+
     for feature_id in character.features:
         held = spec.features.get(feature_id)
         if held is None:
             continue
-        for entry in held.weapon_training:
-            kind, _, property_name = entry.casefold().partition(":")
-            if kind == category and (not property_name or property_name in properties):
-                return True
-            if kind == "weapon" and property_name == feature.id.casefold():
-                return True
+        if any(covers(entry) for entry in held.weapon_training):
+            return True
+    for carried in character.items:
+        template = spec.item_named(carried.name)
+        if template is not None and any(covers(entry) for entry in template.weapon_training):
+            return True
     return False
 
 
@@ -159,7 +166,7 @@ def _critical_threshold(
 
 
 def _mastered_property(
-    spec: CharacterSpec | None, character: Character, feature: Feature | None
+    spec: CharacterSpec | None, character: Character, feature: ItemTemplate | None
 ) -> str:
     """The weapon's mastery property when the character's Weapon Mastery choices unlock it."""
     if spec is None or feature is None or not feature.mastery:
@@ -177,7 +184,7 @@ def _player_bonuses(
     character: Character,
     weapon: str,
     spec: CharacterSpec | None,
-    feature: Feature | None,
+    feature: ItemTemplate | None,
 ) -> WeaponBonuses:
     """What a player character's attack with `weapon` adds, from the rule set's combat fields, the
     weapon's skill and attributes, and the character's skills. A rule set with no spec adds
@@ -1269,7 +1276,7 @@ def player_attack(
     *,
     plus: str,
     spec: CharacterSpec | None = None,
-    weapon_feature: Feature | None = None,
+    weapon_feature: ItemTemplate | None = None,
     attack_roll: int | None = None,
     damage_roll: int | None = None,
     hit_modifier: int = 0,
@@ -1471,7 +1478,7 @@ def player_attack_check(
     modifier: str = "",
     *,
     spec: CharacterSpec | None = None,
-    weapon_feature: Feature | None = None,
+    weapon_feature: ItemTemplate | None = None,
     range_band: str = "",
     dual_wield: bool = False,
     force: bool = False,
@@ -1524,7 +1531,7 @@ def _prepare_player_attack(
     modifier: str,
     *,
     spec: CharacterSpec | None,
-    weapon_feature: Feature | None,
+    weapon_feature: ItemTemplate | None,
     damage_roll: int | None = None,
     range_band: str = "",
     dual_wield: bool = False,
@@ -1796,16 +1803,16 @@ def _attack_dice(
             raise InvalidInput(f"{held.name} is stowed; ready it with ready_item before attacking")
         weapon_dice = held.damage
         if two_handed and spec is not None:
-            feature = next(
+            weapon = next(
                 (
                     entry
-                    for entry in spec.features.values()
+                    for entry in spec.items.values()
                     if same_item_name(entry.name, held.name) and entry.versatile_damage
                 ),
                 None,
             )
-            if feature is not None:
-                weapon_dice = feature.versatile_damage
+            if weapon is not None:
+                weapon_dice = weapon.versatile_damage
     elif name_key(weapon) in combat.unarmed_names:
         weapon_dice = combat.unarmed_damage
     else:

@@ -35,7 +35,7 @@ from cygnusloom.services.events import (
 # The campaign contract this adapter reads and writes. A future major version gets its own
 # adapter rather than widening this one; the UI asks `supports` before offering an upgrade.
 FROM_MAJOR = 3
-TO_MAJOR = 4
+TO_MAJOR = 5
 
 # Event kinds 3.x wrote that the current engine no longer writes, with the event that replaces
 # them. Every replacement is a current event so the converted log replays without this module.

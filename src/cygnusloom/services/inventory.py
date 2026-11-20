@@ -9,8 +9,8 @@ from typing import Any
 
 from sqlmodel import Session
 
-from cygnusloom.content.character import CharacterSpec
-from cygnusloom.content.library import InventoryPool, InventoryRules, ShopItem
+from cygnusloom.content.character import CharacterSpec, ItemTemplate
+from cygnusloom.content.library import InventoryPool, InventoryRules
 from cygnusloom.db.models import Campaign
 from cygnusloom.rules.dice import is_formula
 from cygnusloom.services.common import InvalidInput
@@ -349,7 +349,7 @@ def give_item(
     name: str,
     item: str,
     size: str,
-    listed: ShopItem | None = None,
+    listed: ItemTemplate | None = None,
     damage: str = "",
 ) -> dict[str, Any]:
     """Give a character an item. A catalogue item keeps its listed uses, description, and damage,
@@ -393,7 +393,7 @@ def carry_listed(
     rules: InventoryRules,
     item_sizes: Mapping[str, int],
     name: str,
-    listed: ShopItem,
+    listed: ItemTemplate,
     cause: str = "",
     *,
     overflow: bool = False,
@@ -427,7 +427,7 @@ def fits_listed(
     rules: InventoryRules,
     item_sizes: Mapping[str, int],
     name: str,
-    listed: ShopItem,
+    listed: ItemTemplate,
 ) -> bool:
     """Whether one copy of a catalogue item fits in the character's pack without going over
     capacity. Nothing is recorded."""

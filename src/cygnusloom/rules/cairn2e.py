@@ -26,20 +26,16 @@ if TYPE_CHECKING:
 def configure_hooks(
     options: Mapping[str, Any], character: CharacterSpec, label: str
 ) -> Mapping[str, Any]:
-    """Resolve Cairn's configured ration feature to the item name used by its rest hook."""
+    """Resolve Cairn's configured ration item to the name used by its rest hook."""
     configured = dict(options)
-    if "feature" not in configured:
+    if "item" not in configured:
         return configured
 
-    feature_id = required_text(configured, "feature", f"{label}: options")
-    if feature_id not in character.features:
-        raise ContentError(f"{label}: 'feature' names no character feature ({feature_id!r})")
-    feature = character.features[feature_id]
-    if feature.feature_type != "item" or feature.uses < 1:
-        raise ContentError(
-            f"{label}: 'feature' must be a consumable item with uses ({feature_id!r})"
-        )
-    configured["item"] = feature.name
+    item_id = required_text(configured, "item", f"{label}: options")
+    item = character.items.get(item_id)
+    if item is None or item.uses < 1:
+        raise ContentError(f"{label}: 'item' must name a consumable item with uses ({item_id!r})")
+    configured["item"] = item.name
     return configured
 
 
@@ -159,9 +155,7 @@ def before_rest(hc: HookContext, rest_id: str, start: int, hours_per_part: int) 
             if character.marks.get(MEAL_AT) is not None:
                 hc.set_mark(character.name, MEAL_AT, None, f"{character.name}'s meal is used up.")
             if character.marks.get(SHELTERED):
-                hc.set_mark(
-                    character.name, SHELTERED, None, f"{character.name}'s bed is used up."
-                )
+                hc.set_mark(character.name, SHELTERED, None, f"{character.name}'s bed is used up.")
             if _need_deprivation(character.marks):
                 hc.set_mark(
                     character.name,

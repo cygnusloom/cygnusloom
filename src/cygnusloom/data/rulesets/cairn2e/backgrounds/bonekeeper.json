@@ -6,17 +6,17 @@
     "kind": "background",
     "name": "Bonekeeper",
     "description": "You are a shepherd to the departed. You listen to the final whispers of the dead as they descend into the cold, unyielding earth. You know that to fully celebrate the gift of life, we must honor its finale as well.",
-    "features": [
-      "lantern",
-      "oil-can",
-      "stake",
-      "chains"
-    ],
     "tables": [
       "bonekeeper-what-did-you-take-from-the-dead",
       "bonekeeper-what-tool-was-invaluable-in-your-work"
     ],
     "names": "bonekeeper-names",
-    "order": 3
+    "order": 3,
+    "items": [
+      "lantern",
+      "oil-can",
+      "stake",
+      "chains"
+    ]
   }
 ]

@@ -38,7 +38,7 @@ def pay_wages(db: Session, campaign_id: int, currency: str) -> None:
             )
             continue
         if key not in balances:
-            balances[key] = employer.features.get(currency, 0)
+            balances[key] = employer.currency.get(currency, 0)
         if balances[key] < hireling.wage:
             record(
                 db,
@@ -57,7 +57,7 @@ def pay_wages(db: Session, campaign_id: int, currency: str) -> None:
             campaign_id,
             CurrencyChanged(
                 name=employer.name,
-                feature=currency,
+                item=currency,
                 amount=-hireling.wage,
                 cause=f"wages for {hireling.name}",
             ),
@@ -67,7 +67,7 @@ def pay_wages(db: Session, campaign_id: int, currency: str) -> None:
             campaign_id,
             CurrencyChanged(
                 name=hireling.name,
-                feature=currency,
+                item=currency,
                 amount=hireling.wage,
                 cause=f"wages from {employer.name}",
             ),

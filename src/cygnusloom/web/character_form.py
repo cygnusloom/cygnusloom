@@ -758,7 +758,7 @@ def _pick_noun(pick: Any) -> str:
     """The noun a pick offers, for headings and summaries: spell, potion, subject, focus,
     fighting style. A feat pick names its tag when it has one, so a rule set can call its feats
     what its own book calls them."""
-    if pick.feature_type in {"spell", "potion", "enchantment", "subject", "item"}:
+    if pick.feature_type in {"spell", "potion", "enchantment", "subject"}:
         return pick.feature_type
     if pick.tag in {"focus", "origin"}:
         return pick.tag

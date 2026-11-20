@@ -23,13 +23,5 @@
     "plural": "Feats",
     "group": "Feats",
     "rank_label": "Level"
-  },
-  {
-    "type": "feature_type",
-    "id": "item",
-    "name": "Item",
-    "plural": "Items",
-    "group": "Items",
-    "inventory": true
   }
 ]

@@ -1672,12 +1672,12 @@ def build_tables() -> None:
             ],
         },
     ]
-    for class_id in CLASS_SKILLS:
+    for class_id, options in CLASS_SKILLS.items():
         tables.append(
             {
                 "type": "table",
                 "id": f"skills_{class_id}",
-                "options": CLASS_SKILLS[class_id],
+                "options": options,
             }
         )
     write("tables.json", tables)
@@ -1711,14 +1711,6 @@ def build_feature_types() -> None:
                 "plural": "Feats",
                 "group": "Feats",
                 "rank_label": "Level",
-            },
-            {
-                "type": "feature_type",
-                "id": "item",
-                "name": "Item",
-                "plural": "Items",
-                "group": "Items",
-                "inventory": True,
             },
         ],
     )
@@ -1839,7 +1831,6 @@ def armor_feature_data(record: dict[str, Any]) -> dict[str, Any]:
 
 def item_size_for(record: dict[str, Any]) -> str:
     category = (record.get("category") or {}).get("key", "")
-    name = record.get("name", "").casefold()
     if category in ("mount", "land-vehicle", "waterborne-vehicle"):
         return "massive"
     if category in ("ammunition", "potion", "scroll", "ring"):
@@ -1927,117 +1918,110 @@ def magic_icon(record: dict[str, Any]) -> str:
     return MAGIC_CATEGORY_ICONS.get(category, "wondrous-item")
 
 
+def item_definition(
+    ident: str,
+    name: str,
+    description: str,
+    *,
+    category: str = "",
+    price: int | None = None,
+    tag: str = "",
+    **extra: Any,
+) -> dict[str, Any]:
+    data: dict[str, Any] = {
+        "type": "item",
+        "id": ident,
+        "name": name,
+        "description": description,
+    }
+    if category:
+        data["category"] = category
+    if price is not None:
+        data["price"] = price
+    if tag:
+        data["tag"] = tag
+    data.update(extra)
+    return data
+
+
+def _item_group(item: dict[str, Any]) -> str:
+    if item.get("currency"):
+        return "currency"
+    if item.get("damage"):
+        return "weapons"
+    if item.get("armor") or item.get("armor_category"):
+        return "armor"
+    return "gear"
+
+
 def build_equipment() -> None:
     weapons = load("weapons")
     armor = load("armor")
     items = load("items")
     magic = load("magicitems")
     item_costs = {item["key"]: item.get("cost") for item in items}
-    features: list[dict[str, Any]] = [
-        feature(
+    equipment: list[dict[str, Any]] = [
+        item_definition(
             "silver",
             "Silver Pieces",
             "Silver pieces, the standard coin of the SRD economy: ten silver to a gold piece. "
             "Prices in the catalogue are given in silver.",
-            feature_type="item",
+            category="coin",
+            price=1,
             size="tiny",
+            currency=True,
             icon="coin",
         ),
-        feature(
-            "encumbered",
-            "Encumbered",
-            "Carrying more than the pack holds. Drop enough gear to move freely again.",
-            feature_type="trait",
-        ),
         # Generic kit items the API leaves out.
-        feature(
+        item_definition(
             "musical-instrument",
             "Musical Instrument",
             "A lute, flute, drum, or another instrument of the player's choosing.",
-            feature_type="item",
+            category="tool",
+            price=300,
             size="normal",
             icon="musical-instrument",
         ),
-        feature(
+        item_definition(
             "arcane-focus",
             "Arcane Focus",
             "A crystal, orb, rod, staff, or wand that channels arcane magic.",
-            feature_type="item",
+            category="focus",
+            price=100,
             size="small",
             icon="crystal",
         ),
-        feature(
+        item_definition(
             "holy-symbol",
             "Holy Symbol",
             "A divine emblem worn or held to channel a deity's power.",
-            feature_type="item",
+            category="focus",
+            price=50,
             size="tiny",
             icon="amulet",
         ),
-        feature(
+        item_definition(
             "spellbook",
             "Spellbook",
             "A leather-bound book of spells, worth 50 gp to a wizard.",
-            feature_type="item",
+            category="tool",
+            price=500,
             size="normal",
             icon="book",
         ),
     ]
-    shop: list[dict[str, Any]] = [
-        {
-            "type": "shop_item",
-            "id": "shop-silver",
-            "feature": "silver",
-            "category": "coin",
-            "price": 1,
-            "size": "tiny",
-        },
-        {
-            "type": "shop_item",
-            "id": "shop-musical-instrument",
-            "feature": "musical-instrument",
-            "category": "tool",
-            "price": 300,
-            "size": "normal",
-        },
-        {
-            "type": "shop_item",
-            "id": "shop-arcane-focus",
-            "feature": "arcane-focus",
-            "category": "focus",
-            "price": 100,
-            "size": "small",
-        },
-        {
-            "type": "shop_item",
-            "id": "shop-holy-symbol",
-            "feature": "holy-symbol",
-            "category": "focus",
-            "price": 50,
-            "size": "tiny",
-        },
-        {
-            "type": "shop_item",
-            "id": "shop-spellbook",
-            "feature": "spellbook",
-            "category": "tool",
-            "price": 500,
-            "size": "normal",
-        },
-    ]
     for record in weapons:
         ident = f"weapon-{key_id(record['key'])}"
-        damage = weapon_damage(record)
         props = {entry["property"]["name"].casefold() for entry in record.get("properties", [])}
         extra: dict[str, Any] = {
-            "damage": damage,
+            "damage": weapon_damage(record),
             "damage_type": (record.get("damage_type") or {}).get("name", "").casefold(),
             "attributes": weapon_attributes(record),
             "size": weapon_size(record),
             "weapon_category": "simple" if record.get("is_simple") else "martial",
             "weapon_properties": sorted(props),
-            # Groups a feature pick can offer, such as a Barbarian's melee-only Weapon Mastery or
-            # a Rogue's simple, finesse, and light weapons.
+            # Groups a feature pick can offer, such as a Barbarian's melee-only Weapon Mastery
+            # or a Rogue's simple, finesse, and light weapons.
             "groups": sorted(
                 {
                     "simple" if record.get("is_simple") else "martial",
@@ -2046,6 +2030,7 @@ def build_equipment() -> None:
                 }
             ),
             "icon": weapon_icon(record),
+            "armor_mode": "add",
         }
         mastery = weapon_mastery(record)
         if mastery:
@@ -2063,51 +2048,32 @@ def build_equipment() -> None:
             extra["ranges"] = ranges
         if weapon_reach(record) > 5:
             extra["reach"] = weapon_reach(record)
-        features.append(
-            feature(
+        equipment.append(
+            item_definition(
                 ident,
                 record["name"],
                 weapon_description(record),
-                feature_type="item",
+                category="weapon",
+                price=gp_to_sp(item_costs.get(record["key"], 0)),
                 tag="weapon",
                 **extra,
             )
-        )
-        key = record["key"]
-        shop.append(
-            {
-                "type": "shop_item",
-                "id": f"shop-{key_id(key)}",
-                "feature": ident,
-                "category": "weapon",
-                "price": gp_to_sp(item_costs.get(key, 0)),
-                "armor_mode": "add",
-                "size": weapon_size(record),
-            }
         )
     for record in armor:
         ident = f"armor-{key_id(record['key'])}"
         data = armor_feature_data(record)
         mode = data.pop("armor_mode")
-        features.append(
-            feature(
+        equipment.append(
+            item_definition(
                 ident,
                 record["name"],
                 data.pop("description"),
-                feature_type="item",
+                category="armor",
+                price=gp_to_sp(item_costs.get(record["key"], 0)),
+                armor_mode=mode,
                 icon=armor_icon(record),
                 **data,
             )
-        )
-        shop.append(
-            {
-                "type": "shop_item",
-                "id": f"shop-{key_id(record['key'])}",
-                "feature": ident,
-                "category": "armor",
-                "price": gp_to_sp(item_costs.get(record["key"], 0)),
-                "armor_mode": mode,
-            }
         )
     handled = {record["key"] for record in weapons} | {record["key"] for record in armor}
     for record in items:
@@ -2124,29 +2090,24 @@ def build_equipment() -> None:
             extra["weapon_properties"] = sorted(
                 entry["property"]["name"].casefold() for entry in weapon.get("properties", [])
             )
+            extra["armor_mode"] = "add"
         if record.get("armor") and record["armor"].get("ac_base") is not None:
             data = armor_feature_data(record["armor"])
             data.pop("armor_mode", None)
             data.pop("description", None)
             extra.update(data)
-        features.append(
-            feature(
+            extra.setdefault("armor_mode", "max")
+        catalogue = category if category in ("weapon", "armor") else "gear"
+        equipment.append(
+            item_definition(
                 ident,
                 record["name"],
                 record.get("desc", "") or record["name"],
-                feature_type="item",
+                category=catalogue,
+                price=gp_to_sp(record.get("cost")),
+                tag="weapon" if catalogue == "weapon" and extra.get("damage") else "",
                 **extra,
             )
-        )
-        shop.append(
-            {
-                "type": "shop_item",
-                "id": f"shop-{key_id(record['key'])}",
-                "feature": ident,
-                "category": "gear" if category not in ("weapon", "armor") else category,
-                "price": gp_to_sp(record.get("cost")),
-                "armor_mode": "max",
-            }
         )
     for record in magic:
         ident = f"magic-{key_id(record['key'])}"
@@ -2169,36 +2130,44 @@ def build_equipment() -> None:
             mode = data.pop("armor_mode", "max")
             data.pop("description", None)
             extra.update(data)
-        features.append(
-            feature(
+        extras = {"size": extra.pop("size"), **extra} if "size" in extra else extra
+        rarity = (record.get("rarity") or {}).get("key", "uncommon")
+        equipment.append(
+            item_definition(
                 ident,
                 record["name"],
                 item_description(record),
-                feature_type="item",
-                **extra,
+                category="magic",
+                price=gp_to_sp(RARITY_PRICE_GP.get(rarity, 400)),
+                armor_mode=mode,
+                **extras,
             )
         )
-        rarity = (record.get("rarity") or {}).get("key", "uncommon")
-        shop.append(
+    groups: dict[str, list[dict[str, Any]]] = {
+        "currency": [],
+        "weapons": [],
+        "armor": [],
+        "gear": [],
+    }
+    for entry in equipment:
+        groups[_item_group(entry)].append(entry)
+    write_files({f"items/{name}.json": entries for name, entries in groups.items()})
+    write(
+        "equipment.json",
+        [
             {
-                "type": "shop_item",
-                "id": f"shop-{key_id(record['key'])}",
-                "feature": ident,
-                "category": "magic",
-                "price": gp_to_sp(RARITY_PRICE_GP.get(rarity, 400)),
-                "armor_mode": mode,
-            }
-        )
-    definitions = [
-        {
-            "type": "marketplace",
-            "id": "dnd-srd-2024",
-            "currency": "silver",
-        },
-        *features,
-        *shop,
-    ]
-    write("equipment.json", definitions)
+                "type": "marketplace",
+                "id": "dnd-srd-2024",
+                "currency": "silver",
+            },
+            feature(
+                "encumbered",
+                "Encumbered",
+                "Carrying more than the pack holds. Drop enough gear to move freely again.",
+                feature_type="trait",
+            ),
+        ],
+    )
 
 
 def build_spells() -> dict[str, dict[int, list[str]]]:
@@ -2269,7 +2238,6 @@ def feat_rank(feat: dict[str, Any]) -> int:
 
 def build_feats() -> list[dict[str, Any]]:
     feats = load("feats")
-    by_key = {feat["key"]: feat for feat in feats}
     definitions: list[dict[str, Any]] = [
         feature(
             "feat-ability-score-improvement",
@@ -3537,7 +3505,7 @@ def build_classes(spell_lists: dict[str, dict[int, list[str]]]) -> None:
                 if spell_id is not None:
                     level_features[level].append(spell_id)
         # Weapon Mastery grants more weapon kinds at later class levels.
-        for level, count in CLASS_MASTERY_COUNTS.get(class_id, {}).items():
+        for level in CLASS_MASTERY_COUNTS.get(class_id, {}):
             if level == 1:
                 continue
             mastery_id = f"class-{class_id}-weapon-mastery-{level}"
@@ -4137,14 +4105,13 @@ def monster_abilities(record: dict[str, Any]) -> list[dict[str, Any]]:
     for action in monster_actions(record):
         if action.get("attacks"):
             continue
-        kind = "action" if action.get("action_type") == "ACTION" else "action"
         text = action.get("desc", "") or action.get("name", "")
         usage = monster_usage(action)
         if usage:
             text += f" ({usage})"
         abilities.append(
             {
-                "kind": kind,
+                "kind": "action",
                 "name": action.get("name", "Action"),
                 "description": text,
             }

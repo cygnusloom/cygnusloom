@@ -6,18 +6,18 @@
     "kind": "background",
     "name": "Rill Runner",
     "description": "You sing the stories of rivers and lakes, your talents soothing friends and the elements alike. You\u2019ve seen more than most, but somehow it never seems to be enough.",
-    "features": [
-      "torch",
-      "water-shoes",
-      "brigandine",
-      "compass",
-      "dagger"
-    ],
     "tables": [
       "rill-runner-what-songs-are-you-best-known-for",
       "rill-runner-what-pays-your-way-across-the-land"
     ],
     "names": "rill-runner-names",
-    "order": 18
+    "order": 18,
+    "items": [
+      "torch",
+      "water-shoes",
+      "brigandine",
+      "compass",
+      "dagger"
+    ]
   }
 ]

@@ -19,17 +19,20 @@ from typing import Any
 
 from cygnusloom.content.character import (
     DEFAULT_FEATURE_TYPES,
+    ITEM_KEYS,
     CampaignSpec,
     CharacterSpec,
     CounterRef,
     Feature,
     FeatureTypeRules,
+    ItemTemplate,
     TableOption,
     apply_stat_presets,
     build_campaign,
     build_character,
     character_schema,
     load_feature,
+    load_item,
     load_starting_silver,
     load_starting_years,
     load_training_features,
@@ -43,11 +46,9 @@ from cygnusloom.content.definitions import (
     required_text,
 )
 from cygnusloom.content.icons import (
-    FALLBACK_ITEM,
     FALLBACK_MONSTER,
     FALLBACK_PLACE,
     FALLBACK_RULE_SET,
-    FALLBACK_WEAPON,
     FALLBACK_WORLD,
     check_icon,
     resolve_icon,
@@ -435,11 +436,12 @@ class WorldTemplate:
 
 @dataclass(frozen=True)
 class WorldContent:
-    """A world's own monsters, tables, features, and rules, checked against one rule set."""
+    """A world's own monsters, items, tables, features, and rules, checked against one rule set."""
 
     monsters: Mapping[str, MonsterTemplate]
     tables: Mapping[str, tuple[TableOption, ...]]
     features: Mapping[str, Feature]
+    items: Mapping[str, ItemTemplate]
     rules: Mapping[str, str]
     # Rules no monster, NPC, location, or feature attaches. They are not in any owner's text.
     unattached_rules: Mapping[str, str] = field(default_factory=dict)
@@ -1887,36 +1889,6 @@ class Hooks:
 
 
 @dataclass(frozen=True)
-class ShopItem:
-    """A catalogue item. `price` is in the rule set's currency. `armor` changes the buyer's armor as
-    `armor_mode` says: "add" adds it, "set" replaces the armor with it, "max" keeps the higher
-    of the two, "shield" adds a shield when no body armor is worn, and "shield_flat" adds the
-    shield's full value over any armor. `damage` is the attack die the item gives, as text for
-    the GM."""
-
-    id: str
-    name: str
-    category: str
-    price: int
-    size: str
-    armor: int
-    damage: str
-    uses: int
-    description: str
-    armor_mode: str = "add"
-    # How many hours a timer one use starts for, or 0 when it starts no timer.
-    timer_hours: int = 0
-    # What the timer represents, such as “Light”.
-    timer_label: str = ""
-    # Check ids this worn item penalizes by its Encumbrance, such as Sneak or Exert.
-    encumbrance_checks: tuple[str, ...] = ()
-    # The icon the catalogue entry shows, resolved from `icon` or `looks_like` at load time.
-    icon: str = FALLBACK_ITEM
-    # The icon or definition whose looks this item borrows. Kept for authors and lookups.
-    looks_like: str | None = None
-
-
-@dataclass(frozen=True)
 class ShopService:
     """A service the marketplace sells. `effect` is "lodge", "restore", or "deferred". A lodge
     covers `fits` characters a night. A restore gives back the attributes in `restores`."""
@@ -1942,9 +1914,9 @@ class Hireling:
 
 @dataclass(frozen=True)
 class Marketplace:
-    # The feature id of the currency, such as gold. Buying takes it from the buyer's features.
+    # The item id of the currency, such as gold. Buying takes it from the buyer's balance.
     currency: str
-    items: tuple[ShopItem, ...]
+    items: tuple[ItemTemplate, ...]
     services: tuple[ShopService, ...]
     hirelings: tuple[Hireling, ...]
 
@@ -2772,7 +2744,7 @@ def _single(definitions: list[Definition], kind: str, template: str) -> Definiti
     return matches[0]
 
 
-WORLD_TYPES = ("monster", "table", "dice_table", "creative_table", "feature", "rule")
+WORLD_TYPES = ("monster", "table", "dice_table", "creative_table", "feature", "item", "rule")
 # Every definition type a world loader consumes. A rule-set-only definition in a world directory
 # is a content error instead of being silently dropped.
 WORLD_DEFINITION_TYPES = frozenset({"world", "location", "npc", "region", "route", *WORLD_TYPES})
@@ -2795,6 +2767,7 @@ RULE_SET_DEFINITION_TYPES = frozenset(
         "character_field",
         "campaign_field",
         "feature",
+        "item",
         "feature_type",
         "template",
         "character_layout",
@@ -2820,7 +2793,6 @@ RULE_SET_DEFINITION_TYPES = frozenset(
         "inventory",
         "magic",
         "marketplace",
-        "shop_item",
         "service",
         "hireling",
         "hooks",
@@ -3376,6 +3348,20 @@ def _build_world_content(template: WorldTemplate, rule_set: RuleSet) -> WorldCon
         for d in own
         if d.type == "feature"
     }
+    items = {
+        d.id: load_item(
+            d,
+            name,
+            stats=rule_set.character.stats,
+            skills=rule_set.character.skills,
+            icon_entries=_icon_entries(own, "item", name),
+        )
+        for d in own
+        if d.type == "item"
+    }
+    for item in items.values():
+        if item.size not in rule_set.item_sizes:
+            raise ContentError(f"{name}: item {item.id!r} names no item size ({item.size!r})")
     raw_rules = {
         d.id: required_text(d.data, "text", f"{name}: rule {d.id}") for d in own if d.type == "rule"
     }
@@ -3402,6 +3388,7 @@ def _build_world_content(template: WorldTemplate, rule_set: RuleSet) -> WorldCon
     attached += [(f"npc {npc.id!r}", npc.rules) for npc in template.npcs]
     attached += [(f"location {spot.id!r}", spot.rules) for spot in template.locations]
     attached += [(f"feature {f.id!r}", f.rules) for f in features.values()]
+    attached += [(f"item {item.id!r}", item.rules) for item in items.values()]
     for owner, ids in attached:
         for rule_id in ids:
             if rule_id not in known:
@@ -3435,6 +3422,7 @@ def _build_world_content(template: WorldTemplate, rule_set: RuleSet) -> WorldCon
         monsters=monsters,
         tables=tables,
         features=features,
+        items=items,
         rules=rules,
         unattached_rules=unattached_rules,
         dice_tables=dice_tables,
@@ -3898,13 +3886,8 @@ CHARACTER_DEFINITION_KEYS: Mapping[str, frozenset[str]] = {
             "name",
             "feature_type",
             "description",
-            "size",
-            "uses",
-            "armor",
-            "damage",
-            "damage_type",
-            "versatile_damage",
             "resistances",
+            "damage_type",
             "casting_ability",
             "flat_hp_bonus",
             "initiative_bonus",
@@ -3916,7 +3899,6 @@ CHARACTER_DEFINITION_KEYS: Mapping[str, frozenset[str]] = {
             "free_cast",
             "requires_feature",
             "min_level",
-            "mastery",
             "resource_counter",
             "attack_bonus",
             "damage_bonus",
@@ -3929,37 +3911,24 @@ CHARACTER_DEFINITION_KEYS: Mapping[str, frozenset[str]] = {
             "armor_training",
             "weapon_training",
             "tool_training",
-            "armor_category",
-            "weapon_category",
-            "weapon_properties",
             "groups",
             "rules",
             "tag",
             "rank",
-            "skill",
-            "attributes",
-            "shock",
-            "shock_ac",
-            "reach",
-            "ranges",
-            "flags",
-            "encumbrance_checks",
             "effects",
             "reactions",
             "defense_floor",
             "defense_bonus",
-            "defense_dex_cap",
             "picks",
             "repeatable",
             "level_hp_bonus",
             "stabilizes",
-            "timer_hours",
-            "timer_label",
             "weapon_bonus",
             "icon",
             "looks_like",
         }
     ),
+    "item": ITEM_KEYS,
     "character_field": frozenset(
         {
             "type",
@@ -3994,6 +3963,7 @@ CHARACTER_DEFINITION_KEYS: Mapping[str, frozenset[str]] = {
             "name",
             "description",
             "features",
+            "items",
             "tables",
             "names",
             "stats",
@@ -4619,6 +4589,7 @@ def _build_rule_set(
             "item_sizes",
             "training",
             "template_features",
+            "template_items",
             "condition_ends",
             "npc_hp",
             "npc_hp_stat",
@@ -4693,6 +4664,7 @@ def _build_rule_set(
         starting_silver=load_starting_silver(head.data.get("starting_silver"), label),
         feature_types=feature_types,
         template_features=head.data.get("template_features"),
+        template_items=head.data.get("template_items"),
     )
     for feature in character.features.values():
         if feature.feature_type not in feature_types:
@@ -4784,13 +4756,7 @@ def _build_rule_set(
     _check_item_sizes(character, item_sizes, template)
     magic = _load_magic(definitions, item_sizes, template)
     hooks = _load_rule_hooks(definitions, modules, character, rests, template)
-    marketplace = _load_marketplace(
-        definitions,
-        item_sizes,
-        character,
-        template,
-        icon_entries=_icon_entries(definitions, "shop_item", template),
-    )
+    marketplace = _load_marketplace(definitions, character, template)
     prompt_fragments = _load_prompts(definitions, template, capabilities=capabilities)
     sentence_cap = _load_sentence_cap(definitions, template)
     travel = _load_travel(definitions, template)
@@ -7441,151 +7407,35 @@ def _load_rule_hooks(
 
 
 def _check_item_sizes(character: CharacterSpec, item_sizes: Mapping[str, int], template: str):
-    """Every item feature must name an item size, so the engine can carry it."""
-    for feature in character.features.values():
-        if feature.feature_type == "item" and feature.size not in item_sizes:
-            raise ContentError(
-                f"{template}: feature {feature.id!r} names no item size ({feature.size!r})"
-            )
-
-
-def _shop_item_feature(
-    data: Mapping[str, Any], character: CharacterSpec, label: str
-) -> Feature | None:
-    """The feature a shop item copies its identity and stats from. A shop item names one with
-    `feature`; any field it authors itself still wins, so it may override a copied name or stat."""
-    feature_id = data.get("feature")
-    if feature_id is None:
-        return None
-    if not isinstance(feature_id, str) or not feature_id.strip():
-        raise ContentError(f"{label}: 'feature' must be the id of a feature")
-    feature = character.features.get(feature_id)
-    if feature is None:
-        raise ContentError(f"{label}: 'feature' names no feature ({feature_id!r})")
-    return feature
-
-
-def _shop_item_value(
-    data: Mapping[str, Any], feature: Feature | None, key: str, default: Any
-) -> Any:
-    """A shop item's own value for a key, else the feature it copies, else the default."""
-    if key in data:
-        return data[key]
-    return getattr(feature, key) if feature is not None else default
+    """Every item must name an item size, so the engine can carry it."""
+    for item in character.items.values():
+        if item.size not in item_sizes:
+            raise ContentError(f"{template}: item {item.id!r} names no item size ({item.size!r})")
 
 
 def _load_marketplace(
     definitions: list[Definition],
-    item_sizes: Mapping[str, int],
     character: CharacterSpec,
     template: str,
-    *,
-    icon_entries: Mapping[str, tuple[str | None, str | None]] | None = None,
 ) -> Marketplace | None:
-    """The marketplace: `shop_item`, `service`, and `hireling` definitions. Items may be petty,
-    normal, or bulky, as the rule set's item sizes say. A shop item naming a `feature` copies
-    that feature's name, size, armor, damage, uses, description, icon, and encumbrance checks
-    unless it authors its own. The category, price, and armor mode are always the shop's own."""
-    shop = [d for d in definitions if d.type == "shop_item"]
+    """The marketplace: the items with a price and category, plus services and hirelings. A
+    rule set's catalogue is its items themselves, so a shop entry never copies an item."""
     services = [d for d in definitions if d.type == "service"]
     hirelings = [d for d in definitions if d.type == "hireling"]
     head = _single_optional(definitions, "marketplace", template)
     if head is None:
-        if shop or services or hirelings:
+        if services or hirelings:
             raise ContentError(f"{template}: the marketplace needs a 'marketplace' definition")
         return None
     market_label = f"{template}: marketplace"
     check_keys(head.data, {"type", "id", "currency"}, market_label)
     currency = required_text(head.data, "currency", market_label)
-    if currency not in character.features:
-        raise ContentError(f"{template}: marketplace 'currency' names no feature ({currency!r})")
-    items = []
-    for d in shop:
-        label = f"{template}: shop item {d.id}"
-        check_keys(
-            d.data,
-            {
-                "type",
-                "id",
-                "feature",
-                "name",
-                "category",
-                "price",
-                "size",
-                "armor",
-                "armor_mode",
-                "damage",
-                "uses",
-                "description",
-                "timer_hours",
-                "timer_label",
-                "encumbrance_checks",
-                "icon",
-                "looks_like",
-            },
-            label,
+    money = character.items.get(currency)
+    if money is None or not money.currency:
+        raise ContentError(
+            f"{template}: marketplace 'currency' names no currency item ({currency!r})"
         )
-        feature = _shop_item_feature(d.data, character, label)
-        size = _shop_item_value(d.data, feature, "size", "")
-        if not isinstance(size, str) or not size.strip():
-            size = required_text(d.data, "size", label)
-        if size not in item_sizes:
-            raise ContentError(f"{label}: 'size' names no item size ({size!r})")
-        name = _shop_item_value(d.data, feature, "name", "")
-        if not isinstance(name, str) or not name.strip():
-            name = required_text(d.data, "name", label)
-        damage = str(_shop_item_value(d.data, feature, "damage", ""))
-        if "icon" in d.data or "looks_like" in d.data or feature is None:
-            icon, looks_like = _icon_fields(
-                d.data,
-                icon_entries or {},
-                FALLBACK_WEAPON if damage else FALLBACK_ITEM,
-                label,
-            )
-        else:
-            icon = feature.icon or FALLBACK_ITEM
-            looks_like = feature.looks_like
-        items.append(
-            ShopItem(
-                id=d.id,
-                name=name,
-                category=required_text(d.data, "category", label),
-                price=_whole(d.data, "price", label, 0),
-                size=size,
-                armor=(
-                    _whole(d.data, "armor", label, 0)
-                    if "armor" in d.data or feature is None
-                    else _shop_item_value(d.data, feature, "armor", 0)
-                ),
-                armor_mode=_choice(
-                    d.data,
-                    "armor_mode",
-                    ("add", "set", "max", "shield", "shield_flat"),
-                    "add",
-                    label,
-                ),
-                damage=damage,
-                uses=(
-                    _whole(d.data, "uses", label, 0)
-                    if "uses" in d.data or feature is None
-                    else _shop_item_value(d.data, feature, "uses", 0)
-                ),
-                description=str(_shop_item_value(d.data, feature, "description", "")),
-                timer_hours=(
-                    _whole(d.data, "timer_hours", label, 0)
-                    if "timer_hours" in d.data
-                    else _shop_item_value(d.data, feature, "timer_hours", 0)
-                ),
-                timer_label=str(_shop_item_value(d.data, feature, "timer_label", "")),
-                encumbrance_checks=(
-                    _names(d.data, "encumbrance_checks", label)
-                    if "encumbrance_checks" in d.data
-                    else _shop_item_value(d.data, feature, "encumbrance_checks", ())
-                ),
-                icon=icon or FALLBACK_ITEM,
-                looks_like=looks_like,
-            )
-        )
+    items = tuple(item for item in character.items.values() if item.category.strip())
     loaded_services = []
     for d in services:
         label = f"{template}: service {d.id}"
@@ -8422,7 +8272,6 @@ def _load_feature_types(
                 "tag_label",
                 "tag_groups",
                 "unique",
-                "inventory",
             },
             label,
         )
@@ -8455,7 +8304,6 @@ def _load_feature_types(
             tag_label=_type_text(d.data, "tag_label", label, base.tag_label if base else ""),
             tag_groups=dict(tag_groups),
             unique=_type_flag(d.data, "unique", label, base.unique if base else False),
-            inventory=_type_flag(d.data, "inventory", label, base.inventory if base else False),
         )
     return loaded
 

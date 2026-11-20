@@ -28,7 +28,7 @@ from cygnusloom.services.state import Character, CustomFeature
 MAX_NAME = 120
 MAX_TEXT = 2000
 MAX_MODS = 12
-CUSTOM_TYPES = ("spell", "potion", "enchantment", "item", "trait", "feat")
+CUSTOM_TYPES = ("spell", "potion", "enchantment", "trait", "feat")
 _SLUG = re.compile(r"[^a-z0-9]+")
 
 
@@ -250,9 +250,6 @@ def as_feature(feature: CustomFeature) -> Feature:
         name=feature.name,
         feature_type=feature.feature_type,
         description=feature.description,
-        size="",
-        uses=0,
-        armor=0,
         tag=feature.tag,
         rank=feature.rank,
     )

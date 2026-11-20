@@ -44,7 +44,7 @@ def test_a_modifier_with_its_own_dice_overrides_the_weapons(client_factory):
 
 def test_two_weapons_keep_the_higher_of_their_dice(client_factory):
     app, campaign_id, tools = _fight(client_factory)
-    tools.give_item(PC, "Twin Daggers", damage="1d6+1d6")
+    tools.give_item(PC, "Twin Daggers")
     _foe(tools, "Bo", hp=20)
     take_turn(tools, PC)
     replace(tools, rng=Rolls(2, 5)).player_attack("Bo", "Twin Daggers")

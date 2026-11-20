@@ -68,11 +68,9 @@ class FeatureTypeRules:
     # Subheadings for particular tags, such as Foci and Arts sharing the feat type.
     tag_groups: Mapping[str, str] = field(default_factory=dict)
     unique: bool = False
-    inventory: bool = False
 
 
 DEFAULT_FEATURE_TYPES: Mapping[str, FeatureTypeRules] = {
-    "item": FeatureTypeRules("item", "Item", "Items", "Items", inventory=True),
     "trait": FeatureTypeRules("trait", "Trait", "Traits", "Traits"),
     "spell": FeatureTypeRules(
         "spell",
@@ -94,6 +92,51 @@ DEFAULT_FEATURE_TYPES: Mapping[str, FeatureTypeRules] = {
 FEATURE_EFFECT_OPS = ("stat", "skill", "counter", "armor", "note")
 # When a feature may react to a roll that is already being resolved.
 REACTION_TRIGGERS = ("move", "check", "reaction", "save", "attack", "damage")
+# The mastery properties a D&D-style weapon can carry.
+MASTERY_PROPERTIES = ("cleave", "graze", "nick", "push", "sap", "slow", "topple", "vex")
+# How an item's armor combines with the wearer's defense when it is equipped.
+ITEM_ARMOR_MODES = ("add", "set", "max", "shield", "shield_flat")
+# Every key an item definition reads. The migration also uses it to copy a legacy item
+# feature without dropping a field.
+ITEM_KEYS = frozenset(
+    {
+        "type",
+        "id",
+        "name",
+        "description",
+        "size",
+        "uses",
+        "armor",
+        "damage",
+        "damage_type",
+        "versatile_damage",
+        "mastery",
+        "armor_category",
+        "weapon_category",
+        "weapon_properties",
+        "groups",
+        "tag",
+        "weapon_training",
+        "skill",
+        "attributes",
+        "shock",
+        "shock_ac",
+        "reach",
+        "ranges",
+        "flags",
+        "encumbrance_checks",
+        "timer_hours",
+        "timer_label",
+        "rules",
+        "defense_dex_cap",
+        "category",
+        "price",
+        "armor_mode",
+        "currency",
+        "icon",
+        "looks_like",
+    }
+)
 # What a reaction may do to that roll.
 REACTION_EFFECT_OPS = (
     "raise_band",
@@ -328,29 +371,20 @@ class Reaction:
 
 @dataclass(frozen=True)
 class Feature:
-    """A feature a character can have. An `item` is carried as an inventory item of `size`, with
-    `uses` if it is consumed and `armor` added to the character's armor while carried. A `spell`
-    is a power the character can cast; how it is cast, and from what, is set by the rule set. A
-    feature with no `uses` has none to spend. A feature may carry `effects` that run once when
-    it is granted while a character is created, and `reactions` that modify rolls during play."""
+    """A feature a character can have. A feature may carry `effects` that run once when it is
+    granted while a character is created, and `reactions` that modify rolls during play.
+    Weapons, armor, and gear are Items, not features."""
 
     id: str
     name: str
     feature_type: str
     description: str
-    size: str
-    uses: int
-    armor: int
-    # The weapon's damage dice, such as "1d6", or "1d6+1d6" for two weapons (keep the higher). Empty when the feature is not a weapon.
-    damage: str = ""
-    # The damage type this weapon or spell deals, such as "slashing" or "fire". Empty when
-    # the source does not say or the feature deals no typed damage.
-    damage_type: str = ""
-    # A Versatile weapon's damage dice when it is held in two hands, such as "1d10".
-    versatile_damage: str = ""
     # Damage types this feature makes its holder resistant to. A resistance halves the harm
     # of a matching typed attack or effect when the engine applies it.
     resistances: tuple[str, ...] = ()
+    # The damage type this feature's attack or effect deals, such as a dragonborn ancestry's
+    # acid breath. Empty when the feature deals no typed damage.
+    damage_type: str = ""
     # The ability a feature's spells use when it overrides the class's spellcasting ability.
     casting_ability: str = ""
     # A one-time increase to the character's maximum hit points when this feature is gained.
@@ -385,28 +419,20 @@ class Feature:
     requires_feature: str = ""
     # The character level at which a species feature is gained.
     min_level: int = 0
-    # A weapon's mastery property, such as "sap" or "graze".
-    mastery: str = ""
     # The counter this feature spends when it is used, such as rage or wild_shape.
     resource_counter: str = ""
-    # Groups this feature belongs to, such as a spell's class lists or a weapon's simple/martial
-    # category and properties. A feature pick may offer only the groups it names, or the groups
-    # another pick chooses.
+    # Groups this feature belongs to, such as a spell's class lists. A feature pick may offer
+    # only the groups it names, or the groups another pick chooses.
     groups: tuple[str, ...] = ()
     # Armor categories this feature trains, such as "light", "medium", "heavy", or "shield".
     armor_training: tuple[str, ...] = ()
     # Weapon training this feature grants: "simple", "martial", a category with a property
-    # such as "martial:finesse", or one weapon feature id such as "weapon:longbow".
+    # such as "martial:finesse", or one weapon id such as "weapon:longbow".
     weapon_training: tuple[str, ...] = ()
     # Tool proficiencies this feature grants, such as "Thieves' Tools".
     tool_training: tuple[str, ...] = ()
-    # The armor category of an armor item, or "" when it is not armor.
-    armor_category: str = ""
-    # The weapon category of a weapon item: "simple", "martial", or "".
-    weapon_category: str = ""
-    # Weapon properties such as "finesse" or "light".
-    weapon_properties: tuple[str, ...] = ()
-    # The ids of rules attached to this feature. Their text reaches the GM while the item is carried.
+    # The ids of rules attached to this feature. Their text reaches the GM while the character
+    # has it.
     rules: tuple[str, ...] = ()
     # The rule set's label for the feature, such as the Year a spell belongs to. A template's
     # `choose` picks features by it.
@@ -414,24 +440,6 @@ class Feature:
     # The feature's rank within its kind, such as a focus's level (1 or 2) or a spell's level
     # (1 to 5). Zero when the feature has no rank.
     rank: int = 0
-    # The skill a weapon is used with, such as "stab". Empty when the feature is no weapon.
-    skill: str = ""
-    # The ids of the stats whose modifier a weapon adds to its damage, such as strength.
-    attributes: tuple[str, ...] = ()
-    # The Shock a weapon deals to a target it misses whose armor is at most `shock_ac`.
-    shock: int = 0
-    shock_ac: int = 0
-    # A weapon's melee reach in feet when it is longer than the rule set's default, such as a
-    # pike's 10. Zero uses the rule set's default reach.
-    reach: int = 0
-    # A ranged attack's bands and the farthest distance in feet of each, such as
-    # {"short": 30, "long": 60}. A band written as 0 reaches anywhere on the map. Empty for a
-    # melee-only weapon.
-    ranges: Mapping[str, int | None] = field(default_factory=dict)
-    # Engine flags the weapon or item carries, such as "no_unskilled_penalty".
-    flags: tuple[str, ...] = ()
-    # Check ids this worn item penalizes by its Encumbrance, such as Sneak or Exert.
-    encumbrance_checks: tuple[str, ...] = ()
     # The effects run when the feature is granted while a character is created, in the order
     # they are given. See FEATURE_EFFECT_OPS.
     effects: tuple[Mapping[str, Any], ...] = ()
@@ -441,17 +449,10 @@ class Feature:
     defense_floor: DefenseFloor | None = None
     # A flat Armor Class bonus this feature gives while it is held, such as a fighting style.
     defense_bonus: int = 0
-    # The highest Dexterity modifier this armor lets a wearer add to defense, or None for no
-    # cap. Heavy armor uses 0, medium armor 2.
-    defense_dex_cap: int | None = None
     # A feature that may be taken again as a distinct choice.
     repeatable: bool = False
     # Extra maximum hit points this feature adds for every character level, such as Die Hard's 2.
     level_hp_bonus: int = 0
-    # How many hours a timer one use of this item starts for, or 0 when it starts no timer.
-    timer_hours: int = 0
-    # What the timer represents, such as “Light” or “Poisoned”.
-    timer_label: str = ""
     # Automatic bonuses this feature adds to attacks with a weapon skill.
     weapon_bonuses: tuple[WeaponBonus, ...] = ()
     # Whether the feature steadies its holder when mortally wounded, stopping the dying clock.
@@ -465,11 +466,98 @@ class Feature:
 
 
 @dataclass(frozen=True)
+class ItemTemplate:
+    """A weapon, armor, tool, gear entry, or coin. An item is carried at its `size`, spends its
+    `uses` when consumed, and adds its `armor` while worn. A weapon carries its damage, reach,
+    ranges, mastery, and Shock; armor carries its category, Armor Class, and Dexterity cap.
+    An item with a `category` and `price` is for sale in the marketplace."""
+
+    id: str
+    name: str
+    description: str
+    # The inventory size: petty, normal, bulky, and so on, as the rule set's item sizes name it.
+    size: str = "normal"
+    # How many uses a consumable has. Zero when it is not consumed.
+    uses: int = 0
+    # Armor Class added while the item is worn, or the shield's bonus.
+    armor: int = 0
+    # The weapon's damage dice, such as "1d6", or "1d6+1d6" for two weapons (keep the higher).
+    damage: str = ""
+    # The damage type this weapon deals, such as "slashing" or "fire".
+    damage_type: str = ""
+    # A Versatile weapon's damage dice when it is held in two hands, such as "1d10".
+    versatile_damage: str = ""
+    # A weapon's mastery property, such as "sap" or "graze".
+    mastery: str = ""
+    # The armor category of an armor item, or "" when it is not armor.
+    armor_category: str = ""
+    # The weapon category of a weapon item: "simple", "martial", or "".
+    weapon_category: str = ""
+    # Weapon properties such as "finesse" or "light".
+    weapon_properties: tuple[str, ...] = ()
+    # Groups a weapon belongs to, such as its category and properties. Weapon Mastery picks
+    # filter on them.
+    groups: tuple[str, ...] = ()
+    # The label a pick uses to offer this item, such as "weapon". Items with no pickable
+    # kind leave it empty.
+    tag: str = ""
+    # Weapon training this item grants while carried: "simple", "martial", a category with a
+    # property such as "martial:finesse", or one weapon id such as "weapon:longbow".
+    weapon_training: tuple[str, ...] = ()
+    # The skill a weapon is used with, such as "stab". Empty when it is not a weapon.
+    skill: str = ""
+    # The ids of the stats whose modifier a weapon adds to its damage, such as strength.
+    attributes: tuple[str, ...] = ()
+    # The Shock a weapon deals to a target it misses whose armor is at most `shock_ac`.
+    shock: int = 0
+    shock_ac: int = 0
+    # A weapon's melee reach in feet when it is longer than the rule set's default, such as a
+    # pike's 10. Zero uses the rule set's default reach.
+    reach: int = 0
+    # A ranged attack's bands and the farthest distance in feet of each, such as
+    # {"short": 30, "long": 60}. A band written as 0 reaches anywhere on the map.
+    ranges: Mapping[str, int | None] = field(default_factory=dict)
+    # Engine flags the item carries, such as "no_unskilled_penalty".
+    flags: tuple[str, ...] = ()
+    # Check ids this worn item penalizes by its Encumbrance, such as Sneak or Exert.
+    encumbrance_checks: tuple[str, ...] = ()
+    # How many hours a timer one use starts for, or 0 when it starts no timer.
+    timer_hours: int = 0
+    # What the timer represents, such as "Light" or "Poisoned".
+    timer_label: str = ""
+    # The ids of rules attached to this item. Their text reaches the GM while it is carried.
+    rules: tuple[str, ...] = ()
+    # The highest Dexterity modifier this armor lets a wearer add to defense, or None for no
+    # cap. Heavy armor uses 0, medium armor 2.
+    defense_dex_cap: int | None = None
+    # The marketplace category, such as "weapon" or "gear". Empty when the item is not sold.
+    category: str = ""
+    # The price in the marketplace's currency. None when the item is not for sale.
+    price: int | None = None
+    # How armor combines when worn: "add", "set", "max", "shield", or "shield_flat".
+    armor_mode: str = "add"
+    # A coin. Its amount is tracked as a count rather than as a carried object.
+    currency: bool = False
+    # The icon the item shows, resolved from `icon` or `looks_like` when the content loads.
+    icon: str | None = None
+    # The definition or icon whose looks this one borrows. Kept for authors and lookups.
+    looks_like: str | None = None
+
+
+@dataclass(frozen=True)
 class Granted:
     """A feature a template gives, with its count: a whole number or a dice formula."""
 
     feature: str
     quantity: str
+
+
+@dataclass(frozen=True)
+class GrantedItem:
+    """An item a template gives, with its count: a whole number or a dice formula."""
+
+    item: str
+    quantity: str = "1"
 
 
 @dataclass(frozen=True)
@@ -601,6 +689,8 @@ class Template:
     choice_key: str = ""
     # Items, money, and equipment handed over at creation, such as a starting equipment kit.
     grant: TemplateGrant = field(default_factory=TemplateGrant)
+    # Items this template hands over besides its kit, such as a traveller's rations.
+    item_grants: tuple[GrantedItem, ...] = ()
     # Where this template sits among templates of its kind, lowest first. Ties break by id, so
     # the order is part of the entry itself and never of the file layout.
     order: int = 0
@@ -698,6 +788,8 @@ class CharacterSpec:
     stats: Mapping[str, Stat]
     templates: Mapping[str, Template]
     features: Mapping[str, Feature]
+    # The rule set's weapons, armor, gear, and coins, by id. An item is never a feature.
+    items: Mapping[str, ItemTemplate]
     fields: Mapping[str, Field]
     tables: Mapping[str, tuple[TableOption, ...]]
     table_names: Mapping[str, str]
@@ -722,6 +814,14 @@ class CharacterSpec:
 
     def kinds(self) -> list[str]:
         return sorted({t.kind for t in self.templates.values()})
+
+    def item_named(self, name: str) -> ItemTemplate | None:
+        """The item with this name, ignoring case and punctuation, or None."""
+        wanted = name.strip().casefold()
+        return next(
+            (item for item in self.items.values() if item.name.casefold() == wanted),
+            None,
+        )
 
     def modifier(self, stats: Mapping[str, int], stat: str) -> int:
         """The modifier a stat's score gives, as the stat's bands read it. Raises CharacterError
@@ -773,6 +873,7 @@ def build_character(
     starting_silver: StartingSilver | None = None,
     feature_types: Mapping[str, FeatureTypeRules] | None = None,
     template_features: object = None,
+    template_items: object = None,
 ) -> CharacterSpec:
     """Build the character spec from a rule set's definitions. `tables` are already loaded.
     `icon_entries` maps a feature id to its raw (icon, looks_like) so one feature may borrow
@@ -802,6 +903,17 @@ def build_character(
             feature_types=feature_types,
         ),
     )
+    items = _each(
+        definitions,
+        "item",
+        lambda d: load_item(
+            d,
+            template,
+            stats=stats,
+            skills=skills,
+            icon_entries=icon_entries,
+        ),
+    )
     if ordered_feature_tags == ():
         ordered_feature_tags = []
     ordered_tags = _text_ids(ordered_feature_tags, "ordered_feature_tags", template)
@@ -819,17 +931,20 @@ def build_character(
         definitions, "character_field", lambda d: _field(d, tables, "character_field", template)
     )
     default_features = _template_features(template_features, features, template)
+    default_items = _template_item_grants(template_items, items, template)
     templates = _each(
         definitions,
         "template",
         lambda d: _template(
             d,
             features,
+            items,
             tables,
             skills,
             levels,
             template,
             defaults=default_features,
+            item_defaults=default_items,
             feature_types=feature_types,
             icon_entries=template_icon_entries or {},
         ),
@@ -893,6 +1008,7 @@ def build_character(
         stats=stats,
         templates=templates,
         features=features,
+        items=items,
         fields=fields,
         tables=tables,
         table_names=table_names,
@@ -1786,35 +1902,21 @@ def load_feature(
     label = f"{template}: feature {definition.id}"
     data = definition.data
     kind = required_text(data, "feature_type", label)
+    if kind == "item":
+        raise ContentError(
+            f"{label}: items are their own definition type; use type 'item' "
+            "(run `cygnusloom content migrate` to convert old content)"
+        )
     allowed_types = feature_types or DEFAULT_FEATURE_TYPES
     if kind not in allowed_types:
         raise ContentError(f"{label}: 'feature_type' must be one of {', '.join(allowed_types)}")
     description = data.get("description", "")
     if not isinstance(description, str):
         raise ContentError(f"{label}: 'description' must be text")
-    size = data.get("size", "normal")
-    if not isinstance(size, str) or not size:
-        raise ContentError(f"{label}: 'size' must name an item size")
-    uses = data.get("uses", 0)
-    if isinstance(uses, bool) or not isinstance(uses, int) or uses < 0:
-        raise ContentError(f"{label}: 'uses' must be a whole number, 0 or more")
-    armor = data.get("armor", 0)
-    if isinstance(armor, bool) or not isinstance(armor, int) or armor < 0:
-        raise ContentError(f"{label}: 'armor' must be a whole number, 0 or more")
-    damage = data.get("damage", "")
-    if not isinstance(damage, str) or (damage and not is_formula(damage)):
-        raise ContentError(f"{label}: 'damage' must be a dice formula such as 'd6'")
+    resistances = _text_list(data.get("resistances", []), "resistances", label)
     damage_type = data.get("damage_type", "")
     if not isinstance(damage_type, str) or (damage_type and not damage_type.strip()):
         raise ContentError(f"{label}: 'damage_type' must be a damage name")
-    versatile_damage = data.get("versatile_damage", "")
-    if not isinstance(versatile_damage, str) or (
-        versatile_damage and not is_formula(versatile_damage)
-    ):
-        raise ContentError(f"{label}: 'versatile_damage' must be a dice formula such as '1d10'")
-    if versatile_damage and not damage:
-        raise ContentError(f"{label}: 'versatile_damage' needs a 'damage' value")
-    resistances = _text_list(data.get("resistances", []), "resistances", label)
     casting_ability = data.get("casting_ability", "")
     if not isinstance(casting_ability, str):
         raise ContentError(f"{label}: 'casting_ability' must be an ability id")
@@ -1850,18 +1952,6 @@ def load_feature(
     min_level = data.get("min_level", 0)
     if isinstance(min_level, bool) or not isinstance(min_level, int) or min_level < 0:
         raise ContentError(f"{label}: 'min_level' must be 0 or more")
-    mastery = data.get("mastery", "")
-    if mastery and mastery not in (
-        "cleave",
-        "graze",
-        "nick",
-        "push",
-        "sap",
-        "slow",
-        "topple",
-        "vex",
-    ):
-        raise ContentError(f"{label}: 'mastery' is not a weapon mastery property")
     resource_counter = data.get("resource_counter", "")
     if not isinstance(resource_counter, str):
         raise ContentError(f"{label}: 'resource_counter' must be a counter id")
@@ -1913,13 +2003,6 @@ def load_feature(
     armor_training = _text_list(data.get("armor_training", []), "armor_training", label)
     weapon_training = _text_list(data.get("weapon_training", []), "weapon_training", label)
     tool_training = _text_list(data.get("tool_training", []), "tool_training", label)
-    armor_category = data.get("armor_category", "")
-    if not isinstance(armor_category, str):
-        raise ContentError(f"{label}: 'armor_category' must be text")
-    weapon_category = data.get("weapon_category", "")
-    if weapon_category not in ("", "simple", "martial"):
-        raise ContentError(f"{label}: 'weapon_category' must be simple, martial, or empty")
-    weapon_properties = _text_list(data.get("weapon_properties", []), "weapon_properties", label)
     tag = data.get("tag", "")
     if not isinstance(tag, str):
         raise ContentError(f"{label}: 'tag' must be text")
@@ -1927,17 +2010,6 @@ def load_feature(
     rank = data.get("rank", 0)
     if isinstance(rank, bool) or not isinstance(rank, int) or rank < 0:
         raise ContentError(f"{label}: 'rank' must be a whole number, 0 or more")
-    skill = data.get("skill", "")
-    if not isinstance(skill, str) or (skill and not skill.strip()):
-        raise ContentError(f"{label}: 'skill' must be the id of a skill")
-    if skill and skills and skill not in skills:
-        raise ContentError(f"{label}: 'skill' names no skill ({skill!r})")
-    shock = _amount(data, "shock", label)
-    shock_ac = _amount(data, "shock_ac", label)
-    reach = data.get("reach", 0)
-    if not isinstance(reach, int) or isinstance(reach, bool) or reach < 0:
-        raise ContentError(f"{label}: 'reach' must be a whole number of feet, at least 0")
-    ranges = range_bands(data.get("ranges", {}), f"{label}: ranges")
     repeatable = data.get("repeatable", False)
     if not isinstance(repeatable, bool):
         raise ContentError(f"{label}: 'repeatable' must be a boolean")
@@ -1951,46 +2023,29 @@ def load_feature(
     stabilizes = data.get("stabilizes", False)
     if not isinstance(stabilizes, bool):
         raise ContentError(f"{label}: 'stabilizes' must be a boolean")
-    timer_hours = _amount(data, "timer_hours", label)
-    timer_label = data.get("timer_label", "")
-    if not isinstance(timer_label, str):
-        raise ContentError(f"{label}: 'timer_label' must be text")
     weapon_bonuses = _weapon_bonuses(data.get("weapon_bonus", []), skills, label)
     defense_bonus = data.get("defense_bonus", 0)
     if isinstance(defense_bonus, bool) or not isinstance(defense_bonus, int) or defense_bonus < 0:
         raise ContentError(f"{label}: 'defense_bonus' must be a whole number, 0 or more")
-    if shock and "shock_ac" not in data:
-        raise ContentError(f"{label}: 'shock' needs a 'shock_ac'")
     icon = data.get("icon")
     if icon is not None and (not isinstance(icon, str) or not icon.strip()):
         raise ContentError(f"{label}: 'icon' must be the name of an icon")
     looks_like = data.get("looks_like")
     if looks_like is not None and (not isinstance(looks_like, str) or not looks_like.strip()):
         raise ContentError(f"{label}: 'looks_like' must name an icon or another definition")
-    # A carried feature's kind sets its fallback: a weapon shows the weapon icon, other items the
-    # generic item icon. Non-item features have no fallback picture.
-    fallback = None
-    if kind == "item":
-        fallback = FALLBACK_WEAPON if damage else FALLBACK_ITEM
     resolved = resolve_icon(
         icon,
         looks_like,
         label=label,
         entries=icon_entries,
-        fallback=fallback,
     )
     return Feature(
         id=definition.id,
         name=required_text(data, "name", label),
         feature_type=kind,
         description=description,
-        size=size,
-        uses=uses,
-        armor=armor,
-        damage=damage,
-        damage_type=damage_type,
-        versatile_damage=versatile_damage,
         resistances=resistances,
+        damage_type=damage_type,
         casting_ability=casting_ability,
         flat_hp_bonus=flat_hp_bonus,
         initiative_bonus=initiative_bonus,
@@ -2002,7 +2057,6 @@ def load_feature(
         free_cast=free_cast,
         requires_feature=requires_feature,
         min_level=min_level,
-        mastery=mastery,
         resource_counter=resource_counter,
         attack_bonus=attack_bonus,
         damage_bonus=damage_bonus,
@@ -2015,35 +2069,157 @@ def load_feature(
         armor_training=armor_training,
         weapon_training=weapon_training,
         tool_training=tool_training,
-        armor_category=armor_category,
-        weapon_category=weapon_category,
-        weapon_properties=weapon_properties,
         rules=rule_ids(data, label),
         tag=tag,
         rank=rank,
         groups=groups,
-        skill=skill,
-        attributes=_stat_ids(data.get("attributes", []), "attributes", stats, label),
-        shock=shock,
-        shock_ac=shock_ac,
-        reach=reach,
-        ranges=dict(ranges),
-        flags=_text_list(data.get("flags", []), "flags", label),
-        encumbrance_checks=_text_list(
-            data.get("encumbrance_checks", []), "encumbrance_checks", label
-        ),
         effects=_feature_effects(data.get("effects", []), label, stats, skills, counters),
         reactions=_feature_reactions(data.get("reactions", []), label),
         defense_floor=_defense_floor(data.get("defense_floor"), counters, stats, label),
         defense_bonus=defense_bonus,
-        defense_dex_cap=_defense_dex_cap(data.get("defense_dex_cap"), label),
         repeatable=repeatable,
         level_hp_bonus=level_hp_bonus,
         stabilizes=stabilizes,
-        timer_hours=timer_hours,
-        timer_label=timer_label,
         weapon_bonuses=weapon_bonuses,
         picks=_feature_picks(data.get("picks", []), stats, skills, label),
+        icon=resolved,
+        looks_like=looks_like,
+    )
+
+
+def load_item(
+    definition: Definition,
+    template: str,
+    *,
+    stats: Collection[str] = (),
+    skills: Collection[str] = (),
+    icon_entries: Mapping[str, tuple[str | None, str | None]] | None = None,
+) -> ItemTemplate:
+    """Read an item definition. `stats` and `skills` are the ids the rule set defines; when one
+    is empty the ids of that kind are not checked, as for a world whose rule set is not known."""
+    label = f"{template}: item {definition.id}"
+    data = definition.data
+    description = data.get("description", "")
+    if not isinstance(description, str):
+        raise ContentError(f"{label}: 'description' must be text")
+    size = data.get("size", "normal")
+    if not isinstance(size, str) or not size:
+        raise ContentError(f"{label}: 'size' must name an item size")
+    uses = _amount(data, "uses", label)
+    armor = _amount(data, "armor", label)
+    damage = data.get("damage", "")
+    if not isinstance(damage, str) or (damage and not is_formula(damage)):
+        raise ContentError(f"{label}: 'damage' must be a dice formula such as 'd6'")
+    damage_type = data.get("damage_type", "")
+    if not isinstance(damage_type, str) or (damage_type and not damage_type.strip()):
+        raise ContentError(f"{label}: 'damage_type' must be a damage name")
+    versatile_damage = data.get("versatile_damage", "")
+    if not isinstance(versatile_damage, str) or (
+        versatile_damage and not is_formula(versatile_damage)
+    ):
+        raise ContentError(f"{label}: 'versatile_damage' must be a dice formula such as '1d10'")
+    if versatile_damage and not damage:
+        raise ContentError(f"{label}: 'versatile_damage' needs a 'damage' value")
+    mastery = data.get("mastery", "")
+    if mastery and mastery not in MASTERY_PROPERTIES:
+        raise ContentError(f"{label}: 'mastery' is not a weapon mastery property")
+    armor_category = data.get("armor_category", "")
+    if not isinstance(armor_category, str):
+        raise ContentError(f"{label}: 'armor_category' must be text")
+    weapon_category = data.get("weapon_category", "")
+    if weapon_category not in ("", "simple", "martial"):
+        raise ContentError(f"{label}: 'weapon_category' must be simple, martial, or empty")
+    weapon_properties = _text_list(data.get("weapon_properties", []), "weapon_properties", label)
+    groups = _text_list(data.get("groups", []), "groups", label)
+    tag = data.get("tag", "")
+    if not isinstance(tag, str):
+        raise ContentError(f"{label}: 'tag' must be text")
+    weapon_training = _text_list(data.get("weapon_training", []), "weapon_training", label)
+    skill = data.get("skill", "")
+    if not isinstance(skill, str) or (skill and not skill.strip()):
+        raise ContentError(f"{label}: 'skill' must be the id of a skill")
+    if skill and skills and skill not in skills:
+        raise ContentError(f"{label}: 'skill' names no skill ({skill!r})")
+    attributes = _stat_ids(data.get("attributes", []), "attributes", stats, label)
+    shock = _amount(data, "shock", label)
+    shock_ac = _amount(data, "shock_ac", label)
+    if shock and "shock_ac" not in data:
+        raise ContentError(f"{label}: 'shock' needs a 'shock_ac'")
+    reach = data.get("reach", 0)
+    if not isinstance(reach, int) or isinstance(reach, bool) or reach < 0:
+        raise ContentError(f"{label}: 'reach' must be a whole number of feet, at least 0")
+    ranges = range_bands(data.get("ranges", {}), f"{label}: ranges")
+    flags = _text_list(data.get("flags", []), "flags", label)
+    encumbrance_checks = _text_list(data.get("encumbrance_checks", []), "encumbrance_checks", label)
+    timer_hours = _amount(data, "timer_hours", label)
+    timer_label = data.get("timer_label", "")
+    if not isinstance(timer_label, str):
+        raise ContentError(f"{label}: 'timer_label' must be text")
+    category = data.get("category", "")
+    if not isinstance(category, str):
+        raise ContentError(f"{label}: 'category' must be text")
+    if "price" in data:
+        price: int | None = data["price"]
+        if isinstance(price, bool) or not isinstance(price, int) or price < 0:
+            raise ContentError(f"{label}: 'price' must be a whole number, 0 or more")
+        if not category.strip():
+            raise ContentError(f"{label}: a priced item needs a marketplace 'category'")
+    else:
+        price = None
+        if category.strip():
+            raise ContentError(f"{label}: a marketplace 'category' needs a 'price'")
+    armor_mode = data.get("armor_mode", "add")
+    if armor_mode not in ITEM_ARMOR_MODES:
+        raise ContentError(f"{label}: 'armor_mode' must be one of {', '.join(ITEM_ARMOR_MODES)}")
+    currency = data.get("currency", False)
+    if not isinstance(currency, bool):
+        raise ContentError(f"{label}: 'currency' must be true or false")
+    icon = data.get("icon")
+    if icon is not None and (not isinstance(icon, str) or not icon.strip()):
+        raise ContentError(f"{label}: 'icon' must be the name of an icon")
+    looks_like = data.get("looks_like")
+    if looks_like is not None and (not isinstance(looks_like, str) or not looks_like.strip()):
+        raise ContentError(f"{label}: 'looks_like' must name an icon or another definition")
+    resolved = resolve_icon(
+        icon,
+        looks_like,
+        label=label,
+        entries=icon_entries,
+        fallback=FALLBACK_WEAPON if damage else FALLBACK_ITEM,
+    )
+    return ItemTemplate(
+        id=definition.id,
+        name=required_text(data, "name", label),
+        description=description,
+        size=size,
+        uses=uses,
+        armor=armor,
+        damage=damage,
+        damage_type=damage_type,
+        versatile_damage=versatile_damage,
+        mastery=mastery,
+        armor_category=armor_category,
+        weapon_category=weapon_category,
+        weapon_properties=weapon_properties,
+        groups=groups,
+        tag=tag,
+        weapon_training=weapon_training,
+        skill=skill,
+        attributes=attributes,
+        shock=shock,
+        shock_ac=shock_ac,
+        reach=reach,
+        ranges=dict(ranges),
+        flags=flags,
+        encumbrance_checks=encumbrance_checks,
+        timer_hours=timer_hours,
+        timer_label=timer_label,
+        rules=rule_ids(data, label),
+        defense_dex_cap=_defense_dex_cap(data.get("defense_dex_cap"), label),
+        category=category,
+        price=price,
+        armor_mode=armor_mode,
+        currency=currency,
         icon=resolved,
         looks_like=looks_like,
     )
@@ -2623,11 +2799,13 @@ def _restriction(data: object, label: str) -> Restriction | None:
 def _template(
     definition: Definition,
     features: Mapping[str, Feature],
+    items: Mapping[str, ItemTemplate],
     tables: Mapping[str, Sequence[TableOption]],
     skills: Mapping[str, Skill],
     skill_progression: SkillProgression | None,
     template: str,
     defaults: Mapping[str, tuple[Granted, ...]] | None = None,
+    item_defaults: Mapping[str, tuple[GrantedItem, ...]] | None = None,
     feature_types: Mapping[str, FeatureTypeRules] | None = None,
     icon_entries: Mapping[str, tuple[str | None, str | None]] | None = None,
 ) -> Template:
@@ -2638,11 +2816,17 @@ def _template(
     granted = data.get("features", [])
     if not isinstance(granted, list):
         raise ContentError(f"{label}: 'features' must be a list")
+    granted_items = data.get("items", [])
+    if not isinstance(granted_items, list):
+        raise ContentError(f"{label}: 'items' must be a list")
     kind = required_text(data, "kind", label)
     icon, looks_like = _icon_fields(data, icon_entries or {}, template_fallback(kind), label)
     grants = _with_default_grants(
         tuple(_granted(item, features, label) for item in granted),
         (defaults or {}).get(kind, ()),
+    )
+    item_grants = tuple((item_defaults or {}).get(kind, ())) + tuple(
+        _granted_item(item, items, f"{label}: items") for item in granted_items
     )
     table_ids = data.get("tables", [])
     if not isinstance(table_ids, list) or not all(isinstance(t, str) for t in table_ids):
@@ -2679,6 +2863,7 @@ def _template(
         template_requirements=_template_requirements(data.get("template_requirements", []), label),
         choice_key=choice_key,
         grant=_template_grant(data.get("grant"), label),
+        item_grants=item_grants,
         order=order,
     )
 
@@ -3322,6 +3507,44 @@ def _template_features(
     return defaults
 
 
+def _template_item_grants(
+    value: object, items: Mapping[str, ItemTemplate], label: str
+) -> dict[str, tuple[GrantedItem, ...]]:
+    """The rule set's default item grants, by template kind. Every template of a kind begins
+    with them."""
+    if value is None:
+        return {}
+    if not isinstance(value, Mapping):
+        raise ContentError(f"{label}: 'template_items' must map kinds to item grants")
+    defaults: dict[str, tuple[GrantedItem, ...]] = {}
+    for kind, grants in value.items():
+        if not isinstance(kind, str) or not kind.strip():
+            raise ContentError(f"{label}: 'template_items' kinds must be non-empty text")
+        if not isinstance(grants, list):
+            raise ContentError(f"{label}: 'template_items' {kind!r} must be a list of item grants")
+        defaults[kind] = tuple(
+            _granted_item(grant, items, f"{label}: template_items {kind!r}") for grant in grants
+        )
+    return defaults
+
+
+def _granted_item(item: object, items: Mapping[str, ItemTemplate], label: str) -> GrantedItem:
+    """An item grant is an item id, or an object naming an item and a quantity other than one."""
+    if isinstance(item, str):
+        item = {"item": item}
+    if not isinstance(item, dict):
+        raise ContentError(f"{label}: each item must be an id or an object")
+    item_id = required_text(item, "item", label)
+    if item_id not in items:
+        raise ContentError(f"{label}: unknown item {item_id!r}")
+    quantity = item.get("quantity", "1")
+    if isinstance(quantity, int) and not isinstance(quantity, bool):
+        quantity = str(quantity)
+    if not isinstance(quantity, str) or not (_is_count(quantity) or is_formula(quantity)):
+        raise ContentError(f"{label}: 'quantity' must be a whole number or a dice formula")
+    return GrantedItem(item=item_id, quantity=quantity)
+
+
 def _granted(item: object, features: Mapping[str, Feature], label: str) -> Granted:
     """A grant is a feature id, or an object naming a feature and a quantity other than one."""
     if isinstance(item, str):
@@ -3394,6 +3617,13 @@ def character_schema(spec: CharacterSpec) -> dict[str, Any]:
             "items": {"type": "string", "enum": list(spec.features)},
             "uniqueItems": True,
             "description": _features_description(spec),
+        }
+    if spec.items:
+        properties["items"] = {
+            "type": "array",
+            "items": {"type": "string", "enum": list(spec.items)},
+            "uniqueItems": True,
+            "description": "Items the character begins with, besides any a template grants",
         }
     picks = _feature_pick_schemas(spec)
     if picks:
@@ -3628,10 +3858,23 @@ def check_choices(spec: CharacterSpec, submitted: Mapping[str, Any]) -> None:
     _check_templates(spec, submitted)
     _check_field_values(spec, submitted.get("fields", {}))
     _check_picks(spec, submitted)
+    _check_items(spec, submitted)
     _check_skill_picks(spec, submitted)
     _check_feature_picks(spec, submitted)
     _check_feature_repeats(spec, submitted)
     _check_feature_choices(spec, submitted)
+
+
+def _check_items(spec: CharacterSpec, submitted: Mapping[str, Any]) -> None:
+    """Every given item must be one the rule set defines, with no repeats."""
+    given = submitted.get("items", [])
+    if not isinstance(given, list) or not all(isinstance(item, str) for item in given):
+        raise CharacterError("'items' must be a list of item ids")
+    if len(set(given)) != len(given):
+        raise CharacterError("'items' names an item more than once")
+    unknown = [item for item in given if item not in spec.items]
+    if unknown:
+        raise CharacterError(f"there is no item {unknown[0]!r}")
 
 
 def _check_templates(spec: CharacterSpec, submitted: Mapping[str, Any]) -> None:
@@ -4027,7 +4270,7 @@ def _choice_schema(description: str, options: Sequence[TableOption]) -> dict[str
 
 
 NO_CHARACTER = CharacterSpec(
-    stats={}, templates={}, features={}, fields={}, tables={}, table_names={}
+    stats={}, templates={}, features={}, items={}, fields={}, tables={}, table_names={}
 )
 
 NO_CAMPAIGN = CampaignSpec(fields={}, tables={}, table_names={})
@@ -4045,6 +4288,8 @@ class Sheet:
     templates: dict[str, str]
     # Feature id to how many the character has.
     features: dict[str, int]
+    # Item id to how many the character carries before they are carried as inventory.
+    items: dict[str, int]
     fields: dict[str, str]
     # Class levels for a multiclass character, by class id. Empty for a single class.
     class_levels: dict[str, int] = field(default_factory=dict)
@@ -4146,6 +4391,7 @@ def resolve(
     given_stats = submitted.get("stats", {})
     given_templates = submitted.get("templates", {})
     given_features = submitted.get("features", [])
+    given_items = submitted.get("items", [])
     given_fields = submitted.get("fields", {})
     given_skill_picks = _pick_object(submitted.get("skill_picks", {}), "skill_picks")
     given_feature_picks = _pick_object(submitted.get("feature_picks", {}), "feature_picks")
@@ -4166,6 +4412,7 @@ def resolve(
     }
     templates = dict(given_templates)
     features = {feature: 1 for feature in given_features}
+    items = {item: 1 for item in given_items}
     fields: dict[str, str] = {}
     restricted: list[Field] = []
     counter_amounts: dict[str, int] = {}
@@ -4193,6 +4440,16 @@ def resolve(
                 raise CharacterError(f"feature {granted.feature!r} rolled a negative quantity")
             if count:
                 features[granted.feature] = features.get(granted.feature, 0) + count
+        for granted in template.item_grants:
+            count = (
+                int(granted.quantity)
+                if granted.quantity.isdigit()
+                else roll_total(granted.quantity, rng, plus=plus)
+            )
+            if count < 0:
+                raise CharacterError(f"item {granted.item!r} rolled a negative quantity")
+            if count:
+                items[granted.item] = items.get(granted.item, 0) + count
         for table in template.tables:
             fields[table] = given_fields.get(table) or rng.choice(spec.tables[table]).value
     _apply_plus_modifiers(spec, stats)
@@ -4361,6 +4618,7 @@ def resolve(
         stats=stats,
         templates=templates,
         features=features,
+        items=items,
         fields=fields,
         counters=counters,
         skills=skills,
@@ -4473,6 +4731,13 @@ def _feature_choice_options(spec: CharacterSpec, pick: FeaturePick) -> tuple[str
         options = list(spec.skills)
     elif pick.kind == "option":
         options = [option.value for option in spec.tables.get(pick.table, ())]
+    elif pick.kind == "feature" and pick.feature_type == "item":
+        options = [
+            item.id
+            for item in spec.items.values()
+            if (not pick.tags or item.tag in pick.tags)
+            and (not pick.groups or set(pick.groups) & set(item.groups))
+        ]
     elif pick.kind in ("feature", "spell"):
         options = [
             feature.id

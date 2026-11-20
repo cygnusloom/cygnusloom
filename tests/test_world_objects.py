@@ -31,7 +31,7 @@ NICHE = (
 
 
 def _gold(app: FastAPI, campaign_id: int, name: str = PC) -> int:
-    return _character(app, campaign_id, name).features.get(CURRENCY, 0)
+    return _character(app, campaign_id, name).currency.get(CURRENCY, 0)
 
 
 def _visible(app: FastAPI, campaign_id: int, place: str = YARD) -> list[str]:

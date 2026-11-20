@@ -45,9 +45,9 @@ def equipped_defense(character: Character, spec: CharacterSpec, base: int, modif
     if character.equipped_armor:
         armor = next(
             (
-                feature
-                for feature in spec.features.values()
-                if same_item_name(feature.name, character.equipped_armor)
+                armor
+                for armor in spec.items.values()
+                if same_item_name(armor.name, character.equipped_armor)
             ),
             None,
         )
@@ -114,9 +114,9 @@ def _defense_bonus(character: Character, spec: CharacterSpec, rules: CombatRules
     if character.equipped_armor:
         armor = next(
             (
-                feature
-                for feature in spec.features.values()
-                if same_item_name(feature.name, character.equipped_armor)
+                armor
+                for armor in spec.items.values()
+                if same_item_name(armor.name, character.equipped_armor)
             ),
             None,
         )

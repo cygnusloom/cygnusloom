@@ -6,18 +6,18 @@
     "kind": "background",
     "name": "Prowler",
     "description": "You are a specter in the night, a fleeting shadow that slips by its prey, unseen. Each kill is a test of cunning and animal determination, a contest between life and death. You know that one day you will lose. You look forward to it.",
-    "features": [
-      "torch",
-      "tarp",
-      "boiled-leather",
-      "short-sword",
-      "spring-loaded-trap"
-    ],
     "tables": [
       "prowler-what-did-you-last-hunt",
       "prowler-what-tool-is-always-in-your-pack"
     ],
     "names": "prowler-names",
-    "order": 17
+    "order": 17,
+    "items": [
+      "torch",
+      "tarp",
+      "boiled-leather",
+      "short-sword",
+      "spring-loaded-trap"
+    ]
   }
 ]

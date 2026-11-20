@@ -42,7 +42,7 @@ def _pcs(client_factory: Callable[[], TestClient]):
 
 
 def _gold(app: FastAPI, campaign_id: int, name: str = PC) -> int:
-    return _character(app, campaign_id, name).features.get(MARKET.currency, 0)
+    return _character(app, campaign_id, name).currency.get(MARKET.currency, 0)
 
 
 def _set_gold(app: FastAPI, campaign_id: int, amount: int, name: str = PC) -> None:

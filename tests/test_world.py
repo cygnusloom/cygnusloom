@@ -805,8 +805,8 @@ def test_the_gm_state_and_statblock_include_the_currency_count(
 ):
     _, campaign_id = _described_campaign(client_factory)
     state = _state(app, campaign_id)
-    currency = next(iter(SPEC.features))
-    state.pc().features[currency] = 22
+    currency = "gold"
+    state.pc().currency[currency] = 22
     text = world.world_state_text(
         state,
         NO_CAMPAIGN,

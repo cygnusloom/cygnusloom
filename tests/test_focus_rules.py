@@ -113,6 +113,7 @@ def test_character_description_distinguishes_ordered_ranks_and_repeated_choices(
         stats={},
         templates={},
         features={"focus_spirit_familiar": 1, "focus_spirit_familiar_2": 2},
+        items={},
         fields={},
     )
     description = describe(spec, sheet)

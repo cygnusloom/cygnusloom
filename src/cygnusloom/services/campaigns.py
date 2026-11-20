@@ -675,6 +675,7 @@ def respec_character(
                 stats=dict(sheet.stats),
                 templates=dict(sheet.templates),
                 features=features,
+                items=dict(target.template_items),
                 fields=fields,
                 counters=dict(sheet.counters),
                 skills=dict(sheet.skills),
@@ -716,9 +717,6 @@ def _carried_feature(spec: CharacterSpec, magic: Any, feature_id: str) -> bool:
     feature = spec.features.get(feature_id)
     if feature is None:
         return False
-    kind = spec.feature_types.get(feature.feature_type)
-    if kind is not None and kind.inventory:
-        return True
     return feature.feature_type == "spell" and magic is not None and magic.item is not None
 
 
@@ -1243,13 +1241,13 @@ def set_debug_stat(
 
 
 def set_debug_currency(
-    engine: Engine, owner_id: int, campaign_id: int, name: str, feature: str, amount: int
+    engine: Engine, owner_id: int, campaign_id: int, name: str, item: str, amount: int
 ) -> dict[str, Any]:
     """Give a player character some of the rule set's currency from the debug panel. Refused while
     the GM is still writing a reply."""
     get_campaign(engine, owner_id, campaign_id)
     with _exclusive(campaign_id), session_scope(engine) as db:
-        return combat.add_debug_currency(db, campaign_id, name, feature, amount)
+        return combat.add_debug_currency(db, campaign_id, name, item, amount)
 
 
 def set_debug_credits(

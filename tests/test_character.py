@@ -395,6 +395,7 @@ def test_schema_omits_groups_the_rule_set_does_not_define():
         stats={},
         templates={},
         features={},
+        items={},
         fields=SPEC.fields,
         tables=SPEC.tables,
         table_names=SPEC.table_names,
@@ -429,6 +430,7 @@ def test_describe_lists_each_part():
         stats={"str": 10, "dex": 11, "wil": 12, "hp": 3},
         templates={template.kind: template.id},
         features={feature_id: 2},
+        items={},
         fields={},
     )
     text = describe(SPEC, sheet)
@@ -439,7 +441,7 @@ def test_describe_lists_each_part():
 
 def test_describe_skips_blank_fields():
     field = next(f for f in SPEC.fields.values() if f.table is None)
-    sheet = Sheet(stats={}, templates={}, features={}, fields={field.id: ""})
+    sheet = Sheet(stats={}, templates={}, features={}, items={}, fields={field.id: ""})
     assert field.name not in describe(SPEC, sheet)
 
 
@@ -451,20 +453,18 @@ def test_every_background_grants_one_backpack():
     backgrounds = _backgrounds()
     assert len(backgrounds) == 20
     for template in backgrounds:
-        grants = [g.quantity for g in template.features if g.feature == "backpack"]
+        grants = [g.quantity for g in template.item_grants if g.item == "backpack"]
         assert grants == ["1"], template.id
 
 
 def test_backpack_is_described_as_in_the_source():
-    assert SPEC.features["backpack"].description == (
-        "Can hold up to six slots of items or Fatigue."
-    )
+    assert SPEC.items["backpack"].description == ("Can hold up to six slots of items or Fatigue.")
 
 
 def test_petty_and_bulky_items_are_flagged():
-    assert SPEC.features["badge"].size == "petty"
-    assert SPEC.features["bow"].size == "bulky"
-    assert SPEC.features["torch"].size == "normal"
+    assert SPEC.items["badge"].size == "petty"
+    assert SPEC.items["bow"].size == "bulky"
+    assert SPEC.items["torch"].size == "normal"
 
 
 def test_each_background_suggests_names_that_are_not_a_choice():
@@ -485,6 +485,7 @@ def _named_work_spec(options: tuple[TableOption, ...]) -> CharacterSpec:
         stats={},
         templates={},
         features={},
+        items={},
         fields={"work": Field(id="work", name="Work", description="What you did", table="work")},
         tables={"work": options},
         table_names={"work": "Work"},

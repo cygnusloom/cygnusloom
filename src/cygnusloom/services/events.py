@@ -677,6 +677,7 @@ class PcAdded(GameEvent):
     stats: dict[str, int] = field(default_factory=dict)
     templates: dict[str, str] = field(default_factory=dict)
     features: dict[str, int] = field(default_factory=dict)
+    items: dict[str, int] = field(default_factory=dict)
     fields: dict[str, str] = field(default_factory=dict)
     counters: dict[str, int] = field(default_factory=dict)
     skills: dict[str, int] = field(default_factory=dict)
@@ -703,6 +704,7 @@ class PcAdded(GameEvent):
             stats=dict(self.stats),
             templates=dict(self.templates),
             features=dict(self.features),
+            template_items=dict(self.items),
             fields=dict(self.fields),
             counters=dict(self.counters),
             skills=dict(self.skills),
@@ -808,6 +810,7 @@ class NpcAdded(GameEvent):
     stats: dict[str, int] = field(default_factory=dict)
     templates: dict[str, str] = field(default_factory=dict)
     features: dict[str, int] = field(default_factory=dict)
+    items: dict[str, int] = field(default_factory=dict)
     fields: dict[str, str] = field(default_factory=dict)
     counters: dict[str, int] = field(default_factory=dict)
     armor: int = 0
@@ -839,6 +842,7 @@ class NpcAdded(GameEvent):
             stats=dict(self.stats),
             templates=dict(self.templates),
             features=dict(self.features),
+            template_items=dict(self.items),
             fields=dict(self.fields),
             counters=dict(self.counters),
             armor=self.armor,
@@ -876,9 +880,10 @@ class NpcStatted(GameEvent):
     stats: dict[str, int]
     templates: dict[str, str]
     features: dict[str, int]
-    fields: dict[str, str]
-    armor: int
-    attacks: dict[str, str]
+    items: dict[str, int] = field(default_factory=dict)
+    fields: dict[str, str] = field(default_factory=dict)
+    armor: int = 0
+    attacks: dict[str, str] = field(default_factory=dict)
     attack_flags: dict[str, list[str]] = field(default_factory=dict)
     attack_shock: dict[str, list[int]] = field(default_factory=dict)
     attack_reach: dict[str, int] = field(default_factory=dict)
@@ -893,6 +898,7 @@ class NpcStatted(GameEvent):
         npc.stats = dict(self.stats)
         npc.templates = dict(self.templates)
         npc.features = dict(self.features)
+        npc.template_items = dict(self.items)
         npc.fields = dict(self.fields)
         npc.counters = dict(self.counters)
         npc.armor = self.armor
@@ -963,6 +969,7 @@ class HirelingAdded(GameEvent):
     stats: dict[str, int] = field(default_factory=dict)
     templates: dict[str, str] = field(default_factory=dict)
     features: dict[str, int] = field(default_factory=dict)
+    items: dict[str, int] = field(default_factory=dict)
     fields: dict[str, str] = field(default_factory=dict)
     skills: dict[str, int] = field(default_factory=dict)
     attack_shock: dict[str, list[int]] = field(default_factory=dict)
@@ -985,6 +992,7 @@ class HirelingAdded(GameEvent):
             stats=dict(self.stats),
             templates=dict(self.templates),
             features=dict(self.features),
+            template_items=dict(self.items),
             fields=dict(self.fields),
             counters=dict(self.counters),
             armor=self.armor,
@@ -1019,6 +1027,7 @@ class NpcHired(GameEvent):
     stats: dict[str, int] = field(default_factory=dict)
     templates: dict[str, str] = field(default_factory=dict)
     features: dict[str, int] = field(default_factory=dict)
+    items: dict[str, int] = field(default_factory=dict)
     fields: dict[str, str] = field(default_factory=dict)
     counters: dict[str, int] = field(default_factory=dict)
     skills: dict[str, int] = field(default_factory=dict)
@@ -1039,6 +1048,7 @@ class NpcHired(GameEvent):
         character.stats = dict(self.stats)
         character.templates = dict(self.templates)
         character.features = dict(self.features)
+        character.template_items = dict(self.items)
         character.fields = dict(self.fields)
         character.counters = dict(self.counters)
         character.skills = dict(self.skills)
@@ -1414,6 +1424,7 @@ class CharacterRespecced(GameEvent):
     stats: dict[str, int] = field(default_factory=dict)
     templates: dict[str, str] = field(default_factory=dict)
     features: dict[str, int] = field(default_factory=dict)
+    items: dict[str, int] = field(default_factory=dict)
     fields: dict[str, str] = field(default_factory=dict)
     counters: dict[str, int] = field(default_factory=dict)
     skills: dict[str, int] = field(default_factory=dict)
@@ -1427,6 +1438,7 @@ class CharacterRespecced(GameEvent):
         character.stats = dict(self.stats)
         character.templates = dict(self.templates)
         character.features = dict(self.features)
+        character.template_items = dict(self.items)
         character.fields = dict(self.fields)
         character.counters = dict(self.counters)
         character.skills = dict(self.skills)
@@ -3806,15 +3818,20 @@ class DebugCurrencyAdded(GameEvent):
     channel: ClassVar[Channel] = Channel.INTERNAL
 
     name: str
-    feature: str
-    amount: int
+    item: str = ""
+    amount: int = 0
+    # Older events stored the currency as a feature count.
+    feature: str = ""
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         character = state.characters[name_key(self.name)]
-        character.features[self.feature] = character.features.get(self.feature, 0) + self.amount
+        item = self.item or self.feature
+        character.currency[item] = character.currency.get(item, 0) + self.amount
 
     def render(self) -> str:
-        return f"{self.name} is given {self.amount} {self.feature} from the debug panel."
+        return (
+            f"{self.name} is given {self.amount} {self.item or self.feature} from the debug panel."
+        )
 
 
 @dataclass(frozen=True)
@@ -5101,23 +5118,27 @@ class RestTaken(GameEvent):
 
 @dataclass(frozen=True)
 class CurrencyChanged(GameEvent):
-    """Money changes hands. `feature` is the rule set's currency, held as a feature count. The
+    """Money changes hands. `item` is the rule set's currency item, held as a count. The
     balance never goes below zero."""
 
     kind: ClassVar[str] = "character.currency_changed"
 
     name: str
-    feature: str
     amount: int
     cause: str
+    # The currency item id. Older events called this `feature`; see the field below.
+    item: str = ""
+    # BACKWARDS-COMPATIBILITY: 5 - old events and exports carry `feature` instead of `item`.
+    feature: str = ""
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         character = state.characters[name_key(self.name)]
-        balance = character.features.get(self.feature, 0) + self.amount
-        character.features[self.feature] = max(0, balance)
+        ident = self.item or self.feature
+        balance = character.currency.get(ident, 0) + self.amount
+        character.currency[ident] = max(0, balance)
 
     def render(self) -> str:
-        unit = _currency_label(self.feature, self.amount)
+        unit = _currency_label(self.item or self.feature, self.amount)
         if self.amount < 0:
             return f"{self.name} pays {-self.amount} {unit} for {self.cause}."
         return f"{self.name} gains {self.amount} {unit} from {self.cause}."
