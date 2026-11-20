@@ -1061,10 +1061,12 @@ def world_state_text(
     if pc is None:
         return ""
     multiplayer = len(pcs) > 1
+    # A campaign option with only one value is fixed, not a choice, so it is not reported.
+    offered = {field.id for field in campaign.offered_fields()}
     lines = [
         f"Campaign {campaign.fields[field_id].name.lower()}: {value}."
         for field_id, value in state.options.items()
-        if field_id in campaign.fields
+        if field_id in offered
     ]
     if multiplayer:
         lines.append(

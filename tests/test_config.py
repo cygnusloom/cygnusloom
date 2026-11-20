@@ -93,17 +93,10 @@ def test_test_login_stays_off_for_other_values(value: str):
 
 
 def test_debug_panel_is_off_by_default():
+    # The true/false spelling matrix is covered once by the shared boolean parser in the
+    # test-login tests; this checks the debug-panel key and its default.
     assert load_settings(BASE).debug_panel is False
-
-
-@pytest.mark.parametrize("value", ["1", " TRUE ", "yes", "on"])
-def test_debug_panel_can_be_enabled(value: str):
-    assert load_settings({**BASE, "CYGNUSLOOM_DEBUG_PANEL": value}).debug_panel is True
-
-
-@pytest.mark.parametrize("value", ["0", "false", "no", "off", ""])
-def test_debug_panel_stays_off_for_other_values(value: str):
-    assert load_settings({**BASE, "CYGNUSLOOM_DEBUG_PANEL": value}).debug_panel is False
+    assert load_settings({**BASE, "CYGNUSLOOM_DEBUG_PANEL": "1"}).debug_panel is True
 
 
 OIDC = {

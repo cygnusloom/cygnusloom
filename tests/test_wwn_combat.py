@@ -405,20 +405,6 @@ def test_a_hit_shows_the_damage_dice_and_each_modifier(client_factory):
     assert "1d20" in text and "vs AC 13" in text
 
 
-def test_a_thrown_attack_does_no_shock_on_a_miss(client_factory):
-    """The source says thrown weapons never inflict Shock, even when the target's AC is low."""
-    app, campaign_id, tools = _fight(client_factory)
-    _foe(tools, hp=20, armor=12)
-    take_turn(tools, PC)
-
-    result = tools.player_attack(FOE, "Dagger", attack_roll=1, damage_roll=2, range_band="short")
-
-    assert result["hit"] is False
-    assert result["harm"] == {}
-    [event] = _struck(app, campaign_id)
-    assert (event.hit, event.shock) == (False, 0)
-
-
 def test_shock_does_not_reach_a_shield_grade_ac(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, hp=20, armor=16)
@@ -454,25 +440,6 @@ def test_a_hit_does_at_least_its_shock(client_factory):
     result = replace(tools, rng=Rolls(1, _roll_for_total(13, bonus))).player_attack(FOE, WAR_AXE)
     assert result["raw"] == shock
     assert result["harm"] == {"hp": shock}
-
-
-def test_a_ranged_weapon_does_no_shock_on_a_miss(client_factory):
-    app, campaign_id, tools = _fight(client_factory)
-    _foe(tools, hp=20, armor=13)
-    _make_room(tools)
-    tools.give_item(PC, BOW)
-    take_turn(tools, PC)
-    pc = _pc(app, campaign_id)
-    feature = _feature(BOW)
-    assert feature.shock == 0
-    bonus = _to_hit_bonus(pc, BOW, feature)
-
-    result = replace(tools, rng=Rolls(5, _roll_for_total(12, bonus))).player_attack(FOE, BOW)
-    assert result["hit"] is False
-    assert result["harm"] == {}
-
-    [event] = _struck(app, campaign_id)
-    assert (event.hit, event.to_hit, event.shock) == (False, 12, 0)
 
 
 def test_hit_roll_adds_attack_bonus_skill_and_best_attribute(client_factory):

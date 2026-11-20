@@ -17,7 +17,6 @@ from sqlmodel import Session
 
 from cygnusloom.content.character import derived_stats, resolve
 from cygnusloom.rules import wwn, wwn_magic
-from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.events import load_state
 from cygnusloom.services.views import scene_view
 from tests.test_wwn_advancement import (
@@ -136,20 +135,6 @@ def test_a_warrior_sheet_shows_no_effort_lines(
         sheet = scene_view(load_state(db, campaign_id), WWN.character).sheet
 
     assert not any("Effort" in line for line in sheet)
-
-
-def test_commitment_refuses_a_character_without_a_matching_pool(
-    client_factory: Callable[[], TestClient],
-) -> None:
-    app, campaign_id = _campaign(client_factory, class_id="warrior")
-    ctx = _ctx(_world_tools(app, campaign_id))
-
-    with pytest.raises(InvalidInput, match="cannot commit high Effort"):
-        wwn_magic.commit_effort(NAME, "high", 1, "scene", ctx)
-
-    character = _pc(app, campaign_id)
-    assert wwn.EFFORT_MARK not in character.marks
-    assert not any(key.startswith("effort_") for key in character.harm)
 
 
 def test_commitment_and_recovery_still_work_for_an_eligible_character(

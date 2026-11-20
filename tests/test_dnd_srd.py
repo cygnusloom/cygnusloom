@@ -83,11 +83,11 @@ def test_random_ability_scores_roll_four_d6_and_keep_the_highest_three():
     assert (strength.low, strength.high) == (3, 18)
 
 
-def test_a_single_option_campaign_field_is_chosen_for_the_player():
+def test_a_single_option_campaign_field_is_fixed_without_a_click():
     spec = _dnd_rules().campaign
     fields = {field["id"]: field for field in campaign_view(spec, {})["choice_fields"]}
 
-    assert fields["xp_rate"]["value"] == "Standard"
+    assert "xp_rate" not in fields
     assert campaign_submission_from_form(spec, FormData()) == {"xp_rate": "Standard"}
 
 

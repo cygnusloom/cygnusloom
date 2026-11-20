@@ -38,8 +38,10 @@
           {% if credits_blocked %}<p role="alert">{{ credit_message }} <a href="/credits">Get more credits</a></p>{% endif %}
         {% endif %}
       {% endif %}
+      {% if campaign_options.choice_fields or campaign_options.text_fields %}
       <h4 class="settings-subheading">Campaign options</h4>
       <p class="muted">Every character in this campaign shares these. Changes apply from the next reply on.</p>
+      {% endif %}
       <div class="creation-grid campaign-options-grid">
         {% for field in campaign_options.choice_fields %}
         <section class="creation-panel" aria-labelledby="settings-option-{{ field.id }}">

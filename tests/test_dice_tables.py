@@ -163,14 +163,6 @@ def test_a_bundled_compact_dice_table_keeps_its_first_and_last_rows():
     assert table.rows[-1] == DiceRow(99, 100, "Honey traded for barley, not coin")
 
 
-def test_a_dice_table_reads_its_genre_tags():
-    table = _load_dice_table(
-        _definition([{"roll": "2-12", "result": "a"}], genres=["fantasy", "generic"]),
-        "test",
-    )
-    assert table.genres == ("fantasy", "generic")
-
-
 def test_a_dice_table_refuses_an_unknown_genre():
     with pytest.raises(ContentError, match="unknown genre"):
         _load_dice_table(

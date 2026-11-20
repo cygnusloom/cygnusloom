@@ -1455,9 +1455,7 @@ async def change_campaign_settings(request: Request, campaign_id: int) -> Respon
             allow_respec = "1" in raw_respec
         if rule_set is not None:
             campaign_options = campaign_spec(library, campaign)
-            if campaign_options.fields and any(
-                f"campaign-{field_id}" in form for field_id in campaign_options.fields
-            ):
+            if any(f"campaign-{field.id}" in form for field in campaign_options.offered_fields()):
                 options = campaign_submission_from_form(campaign_options, form)
         update_campaign_settings(
             engine,
@@ -2346,7 +2344,9 @@ def _campaign_page(
             rule_set=rule_set,
             compendium=compendium,
             story=story_view(world.state),
-            show_options=options_pending and respec_target is None,
+            show_options=(
+                options_pending and bool(options.offered_fields()) and respec_target is None
+            ),
             show_setting=not world.state.pcs() and respec_target is None,
             campaign_setting=setting or campaign.setting,
             track_inventory=(

@@ -150,6 +150,28 @@ def _is_tool_markup(text: str, tool_names: Iterable[str]) -> bool:
     return any(match.group(1).casefold() in names for match in _TAG_NAME.finditer(text))
 
 
+# An opening reply is the campaign's introduction. A reply that stops after a sentence or two
+# leaves the player with no setting, no character, and nothing to do, so it is asked for again.
+OPENING_REPLY_ATTEMPTS = 3
+OPENING_MIN_SENTENCES = 4
+OPENING_REPLY_RETRY = (
+    "Opening reply. That was not the whole introduction. The opening instruction asks for one "
+    "sentence for each of these, in this order, and nothing else: introducing yourself as "
+    "Cygnus, the game master; each important detail the player must know before they act; each "
+    "player character; setting the scene; and prompting the player to begin acting. Bold any "
+    "keywords or core concepts, use line breaks to separate the sentences, and write the whole "
+    "introduction now."
+)
+_SENTENCE_END = re.compile(r"[.!?]+")
+
+
+def _opening_reply_is_complete(text: str) -> bool:
+    """Whether an opening reply carries the whole introduction. The instruction asks for an
+    introduction sentence, the setting, the player characters, the scene, and a prompt to act,
+    so a reply with only a sentence or two has not written the opening."""
+    return len(_SENTENCE_END.findall(text)) >= OPENING_MIN_SENTENCES
+
+
 # An empty speech reply is retried this many times before the step gives up.
 SPEECH_ATTEMPTS = 3
 SPEECH_RETRY = (
@@ -2508,21 +2530,51 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
             else:
                 instruction = OOC_INSTRUCTION
             view.append({"role": "system", "content": instruction})
-            step: ChatReply | None = None
-            async for arrived, item in _stream_with_heartbeat(
-                run.provider.stream(run.model_name, view, ooc_tools)
-            ):
-                if not arrived:
-                    yield Status(HEARTBEAT_MESSAGE)
-                elif isinstance(item, TextDelta):
-                    yield Delta(item.text)
-                else:
-                    step = item
-            if step is None:
-                raise LLMError("the model returned no reply")
-            # The ooc tool is not offered here. A model that calls it anyway must not restart the
-            # out-of-character step; the state step already decided whether the story continues.
-            requests = [request for request in step.tool_requests if request.name != OOC_TOOL]
+            attempts = OPENING_REPLY_ATTEMPTS if turn.opening else 1
+            reply = ""
+            reasoning = ""
+            requests: list[ToolRequest] = []
+            displayed = False
+            cleared = False
+            for attempt in range(attempts):
+                # A short opening is asked for again with the items it left out spelled out.
+                request = (
+                    view
+                    if attempt == 0
+                    else [*view, {"role": "system", "content": OPENING_REPLY_RETRY}]
+                )
+                step: ChatReply | None = None
+                streamed = False
+                async for arrived, item in _stream_with_heartbeat(
+                    run.provider.stream(run.model_name, request, ooc_tools)
+                ):
+                    if not arrived:
+                        yield Status(HEARTBEAT_MESSAGE)
+                    elif isinstance(item, TextDelta):
+                        streamed = True
+                        yield Delta(item.text)
+                    else:
+                        step = item
+                if step is None:
+                    raise LLMError("the model returned no reply")
+                # The ooc tool is not offered here. A model that calls it anyway must not restart
+                # the out-of-character step; the state step already decided whether the story
+                # continues.
+                requests = [request for request in step.tool_requests if request.name != OOC_TOOL]
+                if requests:
+                    break
+                text = step.text.strip()
+                if text:
+                    reply, reasoning = text, step.reasoning
+                displayed = streamed
+                if reply and (not turn.opening or _opening_reply_is_complete(reply)):
+                    break
+                if streamed and attempt + 1 < attempts:
+                    # The player saw the short introduction; clear it before the retry writes in
+                    # its place. The last attempt is left on screen if it is still short.
+                    yield Retract()
+                    displayed = False
+                    cleared = True
             if requests:
                 filtered = ChatReply(
                     text=step.text, tool_requests=tuple(requests), reasoning=step.reasoning
@@ -2544,11 +2596,14 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
                     ),
                 )
                 continue
-            reply = step.text.strip()
             if not reply:
                 raise LLMError("the model returned an empty reply")
+            if cleared and not displayed:
+                # A retry that came back empty cleared the earlier text from the page; show the
+                # reply that is being kept.
+                yield Delta(reply)
             if turn.ooc_narrate:
-                messages: list[dict[str, Any]] = [_text_message(reply, step.reasoning)]
+                messages: list[dict[str, Any]] = [_text_message(reply, reasoning)]
                 context = [ContextPart("assistant", "GM out-of-character reply", reply)]
                 if turn.speech:
                     _add_speech(messages, context, turn.speech)
@@ -2566,19 +2621,19 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
                         content=reply,
                         model=run.model,
                         final=False,
-                        reasoning=step.reasoning,
+                        reasoning=reasoning,
                     ),
                 )
                 _after_reply(run, event_id)
                 yield NextMessage()
                 continue
             if turn.opening:
-                async for event in _write_journal(run, turn, reply, step.reasoning):
+                async for event in _write_journal(run, turn, reply, reasoning):
                     yield event
             # An out-of-character reply can still be the reply that plays out an NPC's turn, so
             # it closes the turn exactly as a narrated reply does. Skipping this left the
             # encounter acting forever, with the table unable to send another message.
-            event_id = _finish_reply(run, turn, reply, step.reasoning)
+            event_id = _finish_reply(run, turn, reply, reasoning)
             yield Saved(event_id)
             return
         yield Status("Managing state...")

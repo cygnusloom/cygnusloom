@@ -16,7 +16,7 @@ from cygnusloom.content.library import DATA_DIR
 from cygnusloom.services.prompts import state_instruction
 from tests.conftest import bundled_library, content_library
 
-BUNDLED_RULE_SETS = ("academia-arcana", "cairn2e", "worldswithoutnumber")
+BUNDLED_RULE_SETS = ("academia-arcana", "cairn2e", "dnd-srd-2024", "worldswithoutnumber")
 SETTING_FORGE = "There is no published setting"
 
 

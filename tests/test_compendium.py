@@ -191,6 +191,17 @@ def test_field_and_period_descriptions_reach_the_compendium():
     assert week.text.startswith("A week of lessons")
 
 
+def test_a_campaign_option_with_one_value_is_not_a_compendium_option():
+    """The SRD's one experience track is fixed, so the compendium does not list it as an
+    option or a table. A rule set whose track is a real choice keeps listing it."""
+    library = content_library()
+    dnd = compendium_view(library, "dnd-srd-2024", "testhollow")
+    assert "Experience" not in _entry_names(dnd, "fields")
+    assert "Xp Rate" not in _entry_names(dnd, "tables")
+    wwn = compendium_view(library, "worldswithoutnumber", "unwritten-world")
+    assert "Experience Track" in _entry_names(wwn, "fields")
+
+
 def test_world_secrets_stay_out_of_the_compendium():
     library = content_library()
     world = library.setting_template("twin-lakes")

@@ -295,15 +295,13 @@ def test_icon_path_unknown_id_raises_key_error():
         icon_path("no-such-icon")
 
 
-@pytest.mark.parametrize(
-    ("category", "icon_id"),
-    [(category, icon_id) for category, ids in REQUIRED.items() for icon_id in ids],
-)
-def test_required_icon_is_in_registry(category: str, icon_id: str):
+def test_every_required_icon_is_in_the_registry_under_its_category():
     registry = _registry()
-    assert icon_id in registry, f"missing required {category} icon {icon_id}"
-    assert registry[icon_id]["category"] == category
-    assert icon_path(icon_id).startswith("/static/icons/" + category + "/")
+    for category, icon_ids in REQUIRED.items():
+        for icon_id in icon_ids:
+            assert icon_id in registry, f"missing required {category} icon {icon_id}"
+            assert registry[icon_id]["category"] == category, icon_id
+            assert icon_path(icon_id).startswith("/static/icons/" + category + "/"), icon_id
 
 
 def _seed_map_icons() -> list[str]:
@@ -323,9 +321,8 @@ def _rule_set_item_icons() -> list[str]:
     return sorted(magic.item_kind_icons.values())
 
 
-@pytest.mark.parametrize(
-    "icon_id",
-    sorted(
+def test_every_shipped_icon_reference_is_registered_and_has_a_file():
+    icon_ids = sorted(
         {
             *_seed_map_icons(),
             PLACE_FALLBACK_ICON,
@@ -333,10 +330,10 @@ def _rule_set_item_icons() -> list[str]:
             WEAPON_ICON,
             *_rule_set_item_icons(),
         }
-    ),
-)
-def test_every_shipped_icon_is_registered_and_has_a_file(icon_id: str):
-    _assert_registered_with_file(icon_id)
+    )
+    assert icon_ids
+    for icon_id in icon_ids:
+        _assert_registered_with_file(icon_id)
 
 
 @pytest.mark.parametrize(

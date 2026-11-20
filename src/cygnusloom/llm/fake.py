@@ -12,7 +12,9 @@ A user message may carry a directive, `__FAKE__:` followed by a JSON object:
 Each user message after the directive uses the next turn. A turn's `rounds` are the tool calls
 the model makes, one list per round. The engine runs them for real, so each name must be a tool
 in the rule set. A `player_input` tool pauses the turn until the test answers it, so the test
-posts the answer next. Its `text` is the narration. Its `error` raises LLMError; the player's message stays and the reply stays open.
+posts the answer next. Its `text` is the narration. Its `ooc` text is an out-of-character or
+opening reply, and a short opening reply is retried with `ooc_retry` when it is given. Its
+`error` raises LLMError; the player's message stays and the reply stays open.
 Within a turn, `chat` calls (the GM's state steps) get the rounds and return no text, and `stream`
 calls (the narration) get `text`. An empty or malformed narration is retried with the turn's
 `retry` text. A review that undoes the narration makes the next `stream` call get `rewrite`
@@ -40,6 +42,8 @@ DIRECTIVE = "__FAKE__:"
 SPEECH_MARKER = "Speech step."
 OOC_MARKER = "Out-of-character step."
 OPENING_REPLY_MARKER = "Opening reply."
+# The start of the engine's retry instruction for a short opening reply.
+OPENING_RETRY_MARKER = "That was not the whole introduction"
 JOURNAL_MARKER = "Journal step."
 JOURNAL_REVIEW_MARKER = "Journal and review step."
 REVIEW_MARKER = "Turn review step."
@@ -269,7 +273,14 @@ def _respond(messages: list[dict[str, Any]], decision: bool) -> ChatReply:
     done = sum(1 for m in messages[last_user + 1 :] if "tool_calls" in m)
     if done >= len(rounds):
         if _is_ooc(messages):
-            return ChatReply(text=str(turn.get("ooc", "")))
+            # An opening reply that stopped short is asked for again: a scripted turn may give
+            # the whole introduction as `ooc_retry`.
+            retried = any(
+                m["role"] == "system" and OPENING_RETRY_MARKER in str(m.get("content"))
+                for m in messages
+            )
+            key = "ooc_retry" if retried else "ooc"
+            return ChatReply(text=str(turn.get(key, turn.get("ooc", ""))))
         return _checklist_from_prompt(messages)
     prefix = f"fake_{turn_index}_{done}"
     return ChatReply(text="", tool_requests=_tool_requests(rounds[done], prefix))

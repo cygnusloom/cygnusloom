@@ -369,12 +369,18 @@ def _pronoun_options() -> list[dict[str, Any]]:
 
 def campaign_view(spec: CampaignSpec, values: Mapping[str, Any] | None = None) -> dict[str, Any]:
     """What the campaign options form shows: each campaign option as a panel. `values` are the
-    options in force, so a settings page can show and change them."""
+    options in force, so a settings page can show and change them. An option whose table lists
+    one value is fixed, so it is not shown: there is nothing to choose."""
     current = values or {}
     choice_fields = [
-        _campaign_choice_view(spec, field, current.get(field.id, ""))
-        for field in spec.fields.values()
-        if field.table is not None
+        {
+            "id": field.id,
+            "name": field.name,
+            "description": field.description,
+            "value": current.get(field.id, ""),
+            "options": _option_views(spec, spec.table_options(field)),
+        }
+        for field in spec.choice_fields()
     ]
     text_fields = [
         {
@@ -383,32 +389,20 @@ def campaign_view(spec: CampaignSpec, values: Mapping[str, Any] | None = None) -
             "description": field.description,
             "value": current.get(field.id, ""),
         }
-        for field in spec.fields.values()
-        if field.table is None
+        for field in spec.text_fields()
     ]
     return {"choice_fields": choice_fields, "text_fields": text_fields}
 
 
-def _campaign_choice_view(spec: CampaignSpec, field: Any, value: str) -> dict[str, Any]:
-    """One campaign option as a panel. A table with a single choice is chosen for the player,
-    so a rule set like 5E D&D does not make them confirm its only experience track."""
-    options = _option_views(spec, spec.tables[field.table])
-    if not value and len(options) == 1:
-        value = options[0]["value"]
-    return {
-        "id": field.id,
-        "name": field.name,
-        "description": field.description,
-        "value": value,
-        "options": options,
-    }
-
-
 def campaign_submission_from_form(spec: CampaignSpec, form: FormData) -> dict[str, Any]:
     """The campaign options a form stands for, keyed by option id as the schema expects.
-    Every option must be given, unless its table offers only one value."""
+    Every visible option must be given; a fixed option is filled with its only value."""
     options: dict[str, Any] = {}
     for field in spec.fields.values():
+        fixed = spec.fixed_value(field)
+        if fixed is not None:
+            options[field.id] = fixed
+            continue
         value = form_text(form, CAMPAIGN_PREFIX + field.id)
         if not value and len(spec.tables[field.table]) == 1:
             value = spec.tables[field.table][0].value
