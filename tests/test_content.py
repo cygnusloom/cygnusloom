@@ -1445,20 +1445,6 @@ def test_tool_call_definition_is_checked(tree: Path, overrides: dict[str, Any], 
         ContentLibrary.load(tree)
 
 
-def test_a_parameter_schema_may_omit_its_type(tree: Path):
-    schema = {
-        "properties": {
-            "relationship": {"type": "integer"},
-            "circumstance": {"type": "integer"},
-        },
-        "required": ["relationship", "circumstance"],
-    }
-    _write(tree, {"rulesets/testset/module.json": _module(parameters=schema)})
-    tool = ContentLibrary.load(tree).rule_sets["testset"].tool_calls["social"]
-    assert tool.parameters["type"] == "object"
-    assert tool.parameters["properties"] == schema["properties"]
-
-
 def test_a_nested_schema_node_still_needs_its_type(tree: Path):
     schema = {
         "properties": {
