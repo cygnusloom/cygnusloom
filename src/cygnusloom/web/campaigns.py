@@ -67,11 +67,13 @@ from cygnusloom.services.campaigns import (
     list_messages,
     pending_turn,
     promote_hireling_to_character,
+    remove_party_hireling,
     respec_character,
     resume_turn,
     roll_player_stats,
     rollback_to,
     save_creation,
+    save_party_hireling,
     set_campaign_inventory_space,
     set_campaign_label,
     set_campaign_model,
@@ -82,6 +84,7 @@ from cygnusloom.services.campaigns import (
     set_debug_invincibility,
     set_debug_stat,
     set_turn_activity,
+    start_campaign,
     start_encounter_turn,
     stream_message,
     turn_busy,
@@ -547,6 +550,7 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
             allow_respec=allow_respec,
             start_level=start_level if initial_setup else None,
             follow_owner_level=follow_owner_level if initial_setup else None,
+            defer_opening=initial_setup,
         )
     except InvalidInput as exc:
         return _campaign_page(
@@ -601,6 +605,84 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
             if pending:
                 # A first-level spellcaster still has its cantrip and spell choices to spend.
                 return RedirectResponse(f"/campaigns/{campaign_id}/advancement", status_code=303)
+    return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
+
+
+@router.post("/{campaign_id}/party/hireling")
+async def create_party_hireling(request: Request, campaign_id: int) -> Response:
+    """Add a hireling to the starting party. The hireling is built from the same character
+    options as the player character, including a starting kit, and joins at the party's level."""
+    user = page_user(request)
+    await verify_csrf(request)
+    form = await request.form()
+    engine = request.app.state.engine
+    library = request.app.state.content
+    key = _roll_key(campaign_id)
+    try:
+        campaign = get_campaign(engine, user.id, campaign_id)
+        spec = character_spec(library, campaign)
+        rolled = request.session.get(key)
+        if not isinstance(rolled, dict):
+            _roll_stats(request, user, campaign_id)
+            raise InvalidInput("Your stats were rolled again. Review them and add your hireling.")
+        submitted = submission_from_form(spec, form)
+        problem = check_arguments(character_schema(spec), submitted)
+        if problem:
+            raise InvalidInput(problem)
+        character = NewCharacter(
+            name=form_text(form, "name"),
+            rolled=rolled,
+            submitted=submitted,
+            pronouns=pronouns_from_form(form),
+        )
+        starting_level = save_party_hireling(
+            engine, library, user.id, campaign_id, character=character
+        )
+    except InvalidInput as exc:
+        return _campaign_page(request, user, campaign_id, 400, str(exc), party="add")
+    except Conflict as exc:
+        return _campaign_page(request, user, campaign_id, 409, str(exc), party="add")
+    request.session.pop(key, None)
+    _flash(request, f"{character.name} joined your party.")
+    if starting_level > 1:
+        # The hireling has levels to choose before the party sets out.
+        return RedirectResponse(
+            f"/campaigns/{campaign_id}/advancement?character={quote(character.name)}",
+            status_code=303,
+        )
+    return RedirectResponse(
+        f"/campaigns/{campaign_id}?party={quote(character.name)}", status_code=303
+    )
+
+
+@router.post("/{campaign_id}/party/remove")
+async def remove_party_member(request: Request, campaign_id: int) -> Response:
+    """Remove a hireling from the starting party, before play begins."""
+    user = page_user(request)
+    await verify_csrf(request)
+    form = await request.form()
+    try:
+        name = remove_party_hireling(
+            request.app.state.engine, user.id, campaign_id, form_text(form, "name")
+        )
+    except (InvalidInput, Conflict) as exc:
+        _flash(request, str(exc), "error")
+        return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
+    _flash(request, f"{name} left your party.")
+    return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
+
+
+@router.post("/{campaign_id}/start")
+async def begin_campaign(request: Request, campaign_id: int) -> Response:
+    """Start play once the starting party is ready, recording the opening turn."""
+    user = page_user(request)
+    await verify_csrf(request)
+    try:
+        start_campaign(request.app.state.engine, user.id, campaign_id)
+    except InvalidInput as exc:
+        return _campaign_page(request, user, campaign_id, 400, str(exc))
+    except Conflict as exc:
+        return _campaign_page(request, user, campaign_id, 409, str(exc))
     return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
 
 
@@ -863,7 +945,13 @@ async def convert_campaign_page(request: Request, campaign_id: int) -> Response:
 @router.get("/{campaign_id}")
 def campaign_page(request: Request, campaign_id: int) -> Response:
     user = page_user(request)
-    return _campaign_page(request, user, campaign_id, respec=request.query_params.get("respec", ""))
+    return _campaign_page(
+        request,
+        user,
+        campaign_id,
+        respec=request.query_params.get("respec", ""),
+        party=request.query_params.get("party", ""),
+    )
 
 
 @router.get("/{campaign_id}/live")
@@ -2111,6 +2199,7 @@ def _campaign_page(
     start_level: int | None = None,
     follow_owner_level: bool | None = None,
     respec: str = "",
+    party: str = "",
     fragment: bool = False,
 ) -> Response:
     engine = request.app.state.engine
@@ -2201,7 +2290,18 @@ def _campaign_page(
         if fragment:
             return PlainTextResponse("The respec form has no live refresh.", status_code=409)
         character_pending = True
-    if options_pending or character_pending:
+    # The campaign is still being set up while its first opening has not been recorded. During
+    # that time the player character's page shows the whole starting party as tabs, so the
+    # player can add and remove hirelings before the first turn.
+    party_setup = (
+        not world.state.opened
+        and viewer_pc is not None
+        and not viewer_pc.out_of_play
+        and respec_target is None
+        and rule_set is not None
+    )
+    adding_hireling = bool(party_setup and party == "add" and not character_pending)
+    if options_pending or character_pending or party_setup:
         if fragment:
             # The creation page has no live refresh; a reload shows the form again.
             return PlainTextResponse("This campaign is still being set up.", status_code=409)
@@ -2211,7 +2311,7 @@ def _campaign_page(
             if c.hireling and not c.dead and c.dying_hours is None and c.dying_rounds is None
         ]
         character = None
-        if character_pending and rule_set is not None:
+        if (character_pending or adding_hireling) and rule_set is not None:
             rolled_stats = {s.id for s in spec.stats.values() if s.derived is None}
             if respec_target is not None:
                 rolled = request.session.get(_respec_roll_key(campaign.id, respec_target.name))
@@ -2222,6 +2322,17 @@ def _campaign_page(
                 if not isinstance(rolled, dict) or set(rolled) != rolled_stats:
                     rolled = _roll_stats(request, user, campaign.id)
             character = creation_view(spec, rolled)
+        party_members = _party_members(
+            world.state, spec, user.id, rule_set.hp_stat if rule_set is not None else None
+        )
+        active_party = None
+        for member in party_members:
+            if not adding_hireling and name_key(member["name"]) == name_key(party):
+                active_party = member
+        if active_party is None and not adding_hireling:
+            active_party = party_members[0] if party_members else None
+        for member in party_members:
+            member["active"] = member is active_party
         return render(
             request,
             "creation.html",
@@ -2275,8 +2386,13 @@ def _campaign_page(
             category_help=CREATIVE_CATEGORY_HELP,
             tone_help=TONE_HELP,
             options=campaign_view(options) if options_pending else None,
-            show_character=character_pending,
+            show_character=character_pending or adding_hireling,
             character=character,
+            hireling=adding_hireling,
+            party_setup=party_setup,
+            party_members=party_members,
+            active_party=active_party,
+            can_start=party_setup and not character_pending and not adding_hireling,
             respec=respec_target,
             start_levels=(
                 level_up_service.start_level_options(rule_set) if rule_set is not None else ()
@@ -2609,6 +2725,47 @@ def _creation_pending(state: Any, rule_set: Any, user_id: int) -> tuple[bool, bo
     options = rule_set.campaign if rule_set else NO_CAMPAIGN
     pc = state.player_character(user_id)
     return bool(options.fields) and not state.options, pc is None or pc.out_of_play
+
+
+def _party_members(
+    state: CampaignState, spec: Any, player_id: int, hp_stat: str | None
+) -> list[dict[str, Any]]:
+    """This player's starting party: their player character and the hirelings they made for
+    it. The player character comes first, so the first tab is the one the others follow."""
+    pc = state.player_character(player_id)
+    if pc is None:
+        return []
+    members = [pc]
+    members.extend(
+        character
+        for character in state.characters.values()
+        if character.hireling
+        and not character.out_of_play
+        and name_key(character.employer) == name_key(pc.name)
+    )
+    result: list[dict[str, Any]] = []
+    for character in members:
+        hp = hit_points(character, hp_stat)
+        result.append(
+            {
+                "name": character.name,
+                "kind": "hireling" if character.hireling else "pc",
+                "role": (
+                    f"Hireling of {character.employer}" if character.hireling else "Your character"
+                ),
+                "pronouns": character.pronouns or "",
+                "hp": hp[0] if hp is not None else None,
+                "hp_max": hp[1] if hp is not None else None,
+                "templates": tuple(
+                    spec.templates[template_id].name
+                    for template_id in character.templates.values()
+                    if template_id in spec.templates
+                ),
+                "summary": character.summary or character.description,
+                "removable": bool(character.hireling),
+            }
+        )
+    return result
 
 
 def _encounter_rows(encounter: dict[str, Any]) -> list[list[dict[str, Any]]]:

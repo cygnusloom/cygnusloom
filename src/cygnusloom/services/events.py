@@ -952,7 +952,9 @@ class HirelingAdded(GameEvent):
     name: str
     employer: str
     wage: int
-    location: str
+    # A hireling made during party setup has no location yet; they join the employer where the
+    # opening places the party.
+    location: str | None
     description: str
     personality: str
     accent: str
@@ -996,6 +998,8 @@ class HirelingAdded(GameEvent):
         )
 
     def render(self) -> str:
+        if self.location is None:
+            return f"{self.name} joins {self.employer}'s company as a hireling."
         return f"{self.name} joins {self.employer}'s company as a hireling, at {self.location}."
 
 
@@ -1880,6 +1884,8 @@ class OpeningStarted(GameEvent):
     player_id: int | None = None
 
     def apply(self, state: CampaignState, event_id: int) -> None:
+        # The opening starts play: from here on the starting party is fixed.
+        state.opened = True
         if state.turn is None:
             state.turn = Turn(
                 opener=event_id,

@@ -57,6 +57,8 @@ from cygnusloom.services.events import (
     ContextPart,
     DebugInjectionCleared,
     DebugInjectionSet,
+    NpcRemoved,
+    OpeningStarted,
     TurnFailed,
     decode,
     estimate_tokens,
@@ -87,6 +89,7 @@ from cygnusloom.services.tools import (
 )
 from cygnusloom.services.views import present_rules_text, world_state_text
 from cygnusloom.services.world import (
+    create_party_hireling,
     create_player_character,
     promote_hireling,
     seed_campaign,
@@ -356,12 +359,15 @@ def save_creation(
     start_level: int | None = None,
     follow_owner_level: bool | None = None,
     allow_respec: bool | None = None,
+    defer_opening: bool = False,
 ) -> None:
     """Save the campaign options, the player character, the setting and story, the table
     genres, and the starting level together, so either all of them are saved or none is. A part
     left as None is not saved. The character needs the options first. The setting, genres,
     starting level, follow switch, and respec option are captured on the campaign-options
-    creation page, not when the campaign is first made."""
+    creation page, not when the campaign is first made. `defer_opening` leaves the first
+    character's opening turn unrecorded, so the table can still build its starting party and
+    start play with the party in place."""
     campaign = get_campaign(engine, owner_id, campaign_id)
     spec = campaign_spec(library, campaign)
     brief = None
@@ -427,8 +433,11 @@ def save_creation(
             previous = state.player_character(owner_id)
             # A replacement for this player's out-of-play character gets an opening turn again.
             # A player joining a campaign already under way does not; the GM meets them on the
-            # next turn through the world state.
+            # next turn through the world state. The first character's opening waits while the
+            # player builds the rest of the starting party.
             opening = first_character or previous is not None
+            if first_character and defer_opening:
+                opening = False
             create_player_character(
                 db,
                 campaign_id,
@@ -456,6 +465,118 @@ def save_creation(
                 level_up_service.grant_start_level(
                     db, campaign_id, rule_set, character.name, starting_level
                 )
+        db.commit()
+
+
+def _require_party_setup(state: CampaignState) -> None:
+    """Party members may only be added or removed before play begins and while nothing is
+    running. A session that has started uses the game's own hireling tools instead."""
+    if state.opened:
+        raise InvalidInput("the game has already begun; change the party through play")
+    if state.turn is not None:
+        raise InvalidInput("the party waits until the current turn is finished")
+    if state.encounter is not None:
+        raise InvalidInput("the party waits until the encounter is over")
+
+
+def save_party_hireling(
+    engine: Engine,
+    library: ContentLibrary,
+    player_id: int,
+    campaign_id: int,
+    *,
+    character: NewCharacter,
+    wage: int = 0,
+) -> int:
+    """Add a hireling to the player's starting party from the creation form. The hireling is
+    built from the same options as the player character and receives its chosen starting kit.
+    Returns the level the hireling begins at, which the advancement pages take up from there."""
+    campaign = get_campaign(engine, player_id, campaign_id)
+    rule_set = library.rule_sets.get(campaign.rule_set)
+    if rule_set is None:
+        raise InvalidInput("that campaign's rule set is no longer available")
+    spec = character_spec(library, campaign)
+    with _exclusive(campaign_id), session_scope(engine) as db:
+        state = load_state(db, campaign_id)
+        _require_party_setup(state)
+        player_character = state.player_character(player_id)
+        if player_character is None or player_character.out_of_play:
+            raise InvalidInput("create your player character before adding a hireling")
+        # A starting hireling joins at the campaign's starting level, which follows the owner's
+        # level while the campaign says so. Using the stored value also covers a party setting
+        # out at level 2 before the player has spent the owner's first level-up picks.
+        starting_level = campaign.start_level
+        level_rules = level_up_service.start_level_rules(rule_set)
+        if level_rules is not None:
+            level_up_service.check_start_level(rule_set, starting_level)
+        created = create_party_hireling(
+            db,
+            campaign_id,
+            library.core.tables,
+            random.Random(),
+            spec,
+            character.name,
+            player_character.name,
+            character.rolled,
+            character.submitted,
+            pronouns=character.pronouns,
+            plus=rule_set.plus,
+            level_ups=rule_set.level_ups,
+            inventory=rule_set.inventory,
+            item_sizes=rule_set.item_sizes,
+            magic=rule_set.magic,
+            currency=rule_set.marketplace.currency if rule_set.marketplace else "",
+            marketplace=rule_set.marketplace,
+            armor_max=rule_set.combat.armor_max if rule_set.combat else 0,
+            defense_base=rule_set.combat.defense_base if rule_set.combat else 0,
+            defense_modifier=rule_set.combat.defense_modifier if rule_set.combat else "",
+            combat_rules=rule_set.combat,
+            wage=wage,
+        )
+        if starting_level > 1 and level_rules is not None:
+            level_up_service.grant_start_level(
+                db, campaign_id, rule_set, created["name"], starting_level
+            )
+        db.commit()
+        return starting_level
+
+
+def remove_party_hireling(engine: Engine, player_id: int, campaign_id: int, name: str) -> str:
+    """Remove a hireling from the starting party before play begins. The character is deleted,
+    along with the gear they carry, so the slot can be built again."""
+    get_campaign(engine, player_id, campaign_id)
+    with _exclusive(campaign_id), session_scope(engine) as db:
+        state = load_state(db, campaign_id)
+        _require_party_setup(state)
+        character = state.characters.get(name_key(name))
+        if character is None:
+            raise InvalidInput(f"there is no character named {name!r}")
+        if not character.hireling:
+            raise InvalidInput("only a hireling can be removed from the party")
+        player_character = state.player_character(player_id)
+        if player_character is None or name_key(character.employer) != name_key(
+            player_character.name
+        ):
+            raise InvalidInput("that hireling is not in your party")
+        record(db, campaign_id, NpcRemoved(name=character.name))
+        db.commit()
+        return character.name
+
+
+def start_campaign(engine: Engine, player_id: int, campaign_id: int) -> None:
+    """Begin play: record the opening turn for this player once the starting party is ready.
+    Repeating the request while the campaign has not opened is harmless."""
+    get_campaign(engine, player_id, campaign_id)
+    with _exclusive(campaign_id), session_scope(engine) as db:
+        state = load_state(db, campaign_id)
+        if state.opened:
+            return
+        if state.turn is not None:
+            raise InvalidInput("a turn is already running")
+        player_character = state.player_character(player_id)
+        if player_character is None or player_character.out_of_play:
+            raise InvalidInput("create your player character before starting the game")
+        record(db, campaign_id, OpeningStarted(player_id=player_id))
         db.commit()
 
 

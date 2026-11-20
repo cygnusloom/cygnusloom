@@ -1,6 +1,6 @@
 {% extends "campaign_base.html" %}
 {% from "macros.html" import choice, choice_picker, choice_panel, dice_button, pick_control, text_panel %}
-{% block title %}{% if respec %}Respec {{ respec.name }}{% elif show_options %}Create your campaign{% else %}Create your character{% endif %} · {{ campaign.name }}{% endblock %}
+{% block title %}{% if respec %}Respec {{ respec.name }}{% elif hireling %}Add a hireling{% elif party_setup and not show_character %}Your party{% elif show_options %}Create your campaign{% else %}Create your character{% endif %} · {{ campaign.name }}{% endblock %}
 {% block play %}
 <section class="view creation" data-view="play" aria-labelledby="creation-title">
   <h1 id="creation-title">{{ campaign.name }}</h1>
@@ -11,7 +11,47 @@
     {% include "_players_panel.html" %}
   </details>
   {% endif %}
-  {% if show_character and fallen and not respec %}
+  {% if party_setup %}
+  <nav class="tab-list party-tabs" aria-label="Your party">
+    {% for member in party_members %}
+    <a class="tab party-tab" href="/campaigns/{{ campaign.id }}?party={{ member.name|urlencode }}"{% if member.active %} aria-current="page"{% endif %}>{{ member.name }} <span class="party-tab-role">{{ "Hireling" if member.kind == "hireling" else "You" }}</span></a>
+    {% endfor %}
+    <a class="tab party-tab" href="/campaigns/{{ campaign.id }}?party=add"{% if adding_hireling %} aria-current="page"{% endif %}>+ Add a hireling</a>
+  </nav>
+  {% if not show_character %}
+  <p class="muted">This is your starting party. Add hired companions, or start the game when the party is ready. Hirelings use the same character options as your character and are played by you.</p>
+  {% endif %}
+  {% if not show_character and active_party %}
+  <section class="creation-section party-member" aria-labelledby="party-member-title">
+    <h2 id="party-member-title">{{ active_party.name }}</h2>
+    <p class="muted">
+      {{ active_party.role }}
+      {%- if active_party.pronouns %} · {{ active_party.pronouns }}{% endif %}
+      {%- if active_party.hp is not none %} · HP {{ active_party.hp }}/{{ active_party.hp_max }}{% endif %}
+    </p>
+    {% if active_party.templates %}<p class="party-templates">{{ active_party.templates|join(" · ") }}</p>{% endif %}
+    {% if active_party.summary %}<p>{{ active_party.summary }}</p>{% endif %}
+    {% if active_party.removable %}
+    <form method="post" action="/campaigns/{{ campaign.id }}/party/remove" class="party-remove">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="name" value="{{ active_party.name }}">
+      <button type="submit" class="secondary" data-confirm="Remove {{ active_party.name }} from your party?">Remove {{ active_party.name }}</button>
+    </form>
+    {% endif %}
+  </section>
+  {% endif %}
+  {% if can_start %}
+  <section class="creation-section party-start" aria-labelledby="party-start-title">
+    <h2 id="party-start-title">Start the game</h2>
+    <p class="muted">Your party is ready. Cygnus will introduce the world and set the first scene for the whole party.</p>
+    <form method="post" action="/campaigns/{{ campaign.id }}/start">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button type="submit">Start the game</button>
+    </form>
+  </section>
+  {% endif %}
+  {% endif %}
+  {% if show_character and fallen and fallen.out_of_play and not respec %}
   <section class="death-screen" aria-labelledby="death-title">
     <h2 id="death-title">{{ fallen.name }} is dead</h2>
     <p class="muted">{% if fallen.location %}Their body lies at {{ fallen.location }}, with the gear they carried.{% else %}Their body is lost to the story.{% endif %} Choose who plays next.</p>
@@ -32,18 +72,18 @@
     {% endif %}
   </section>
   {% endif %}
+  {% if show_character %}
   <div class="creation-toolbar">
     <button type="button" class="secondary" data-randomize="all">Randomize all</button>
     <button type="button" class="secondary" data-randomize="unchosen">Randomize all not chosen</button>
   </div>
-  {% if show_character %}
   {# The stats panel's Randomize button submits this form when scripts are off. #}
   <form method="post" action="{% if respec %}/campaigns/{{ campaign.id }}/respec/reroll{% else %}/campaigns/{{ campaign.id }}/character/reroll{% endif %}" class="character-reroll" id="character-reroll" data-reroll-form>
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     {% if respec %}<input type="hidden" name="character" value="{{ respec.name }}">{% endif %}
   </form>
   {% endif %}
-  <form method="post" action="{% if respec %}/campaigns/{{ campaign.id }}/respec{% else %}/campaigns/{{ campaign.id }}/creation{% endif %}" class="creation-form"{% if character.skill_progression %} data-skill-first-level="{{ character.skill_progression.first_level }}" data-skill-creation-maximum="{{ character.skill_progression.creation_maximum }}"{% endif %}>
+  <form method="post" action="{% if respec %}/campaigns/{{ campaign.id }}/respec{% elif hireling %}/campaigns/{{ campaign.id }}/party/hireling{% else %}/campaigns/{{ campaign.id }}/creation{% endif %}" class="creation-form"{% if character.skill_progression %} data-skill-first-level="{{ character.skill_progression.first_level }}" data-skill-creation-maximum="{{ character.skill_progression.creation_maximum }}"{% endif %}>
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     {% if respec %}
     <input type="hidden" name="character" value="{{ respec.name }}">
@@ -131,8 +171,8 @@
     {% endif %}
     {% if show_character %}
     <section class="creation-section" aria-labelledby="character-title">
-      <h2 id="character-title">{% if respec %}{{ respec.name }}'s new build{% else %}Your character{% endif %}</h2>
-      <p class="muted">Choose each panel below to build your character. A blank skill or feature pick is rolled when you submit; the dice button rolls one now. Chosen options explain what they grant.</p>
+      <h2 id="character-title">{% if respec %}{{ respec.name }}'s new build{% elif hireling %}Add a hireling{% else %}Your character{% endif %}</h2>
+      <p class="muted">{% if hireling %}Build a companion who begins with the party. A hireling uses the same options, skills, and features as your character, receives the starting kit the choices grant, and is played by you. Their daily wage starts at zero, and the GM may set one during play.{% else %}Choose each panel below to build your character. A blank skill or feature pick is rolled when you submit; the dice button rolls one now. Chosen options explain what they grant.{% endif %}</p>
       <p class="muted form-hint" data-choice-note role="status" hidden>Some earlier choices were cleared because they no longer fit this selection.</p>
       <div class="creation-grid">
         {% if not respec %}
@@ -359,9 +399,11 @@
     </section>
     {% endif %}
     {% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
+    {% if show_character or show_options %}
     <p class="form-error" role="alert" hidden></p>
     <p class="muted form-hint">Blank skill and feature picks are rolled for you. Every other panel must be chosen.</p>
-    <button type="submit">{% if respec %}Respec {{ respec.name }}{% elif show_options and show_character %}Create campaign and character{% elif show_options %}Save campaign options{% else %}Create character{% endif %}</button>
+    <button type="submit">{% if respec %}Respec {{ respec.name }}{% elif hireling %}Add to the party{% elif show_options and show_character %}Create campaign and character{% elif show_options %}Save campaign options{% else %}Create character{% endif %}</button>
+    {% endif %}
   </form>
 </section>
 {% endblock %}

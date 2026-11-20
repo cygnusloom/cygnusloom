@@ -178,6 +178,7 @@ def create_character(
     fields: Mapping[str, str] | None = None,
     templates: Mapping[str, str] | None = None,
     pronouns: str | None = DEFAULT_PRONOUNS,
+    start: bool = True,
 ) -> Response:
     """Submit the campaign's creation form and return the response.
 
@@ -185,7 +186,9 @@ def create_character(
     that already carry their prefix, such as ``{"stat-hp": "6"}``. ``templates`` map a template
     kind to its id, such as ``{"role": "test-role"}``; a ``template-`` prefixed key is also
     accepted unchanged. A test that needs the rolled stat values can read the creation page
-    first and pass them as ``stat-`` fields.
+    first and pass them as ``stat-`` fields. ``start`` begins play after a successful
+    creation, as the campaign's Start button does; pass False to inspect the starting-party
+    setup page.
     """
     # The page rolls the stats into the session when the character is still pending, so load it
     # before submitting. It also carries the CSRF token, which the same page refresh can change.
@@ -204,11 +207,18 @@ def create_character(
         form[_field_form_name(field_name)] = str(value)
     for kind, template_id in (templates or {}).items():
         form[_template_form_name(kind)] = str(template_id)
-    return client.post(
+    response = client.post(
         f"/campaigns/{campaign_id}/creation",
         data=form,
         follow_redirects=False,
     )
+    if start and response.status_code == 303:
+        client.post(
+            f"/campaigns/{campaign_id}/start",
+            data={"csrf_token": token},
+            follow_redirects=False,
+        )
+    return response
 
 
 def _account_id(client: TestClient, email: str) -> int:

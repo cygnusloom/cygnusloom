@@ -719,6 +719,21 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 .tab[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }
 .tab-panel { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 1rem 1.25rem; }
 .tab-panel[hidden] { display: none; }
+/* The starting-party tabs name each character; links carry the same shape as the panel tabs. */
+.party-tabs { margin: 0.5rem 0 1rem; padding: 0; }
+.party-tabs .tab { text-decoration: none; }
+.party-tabs .tab[aria-current="page"] {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+.party-tab-role { color: var(--muted); font-size: 0.8rem; }
+.party-member .party-templates { color: var(--muted); }
+.party-remove { margin: 0.75rem 0 0; }
+.party-start { margin: 0 0 1rem; }
+.party-start form { margin-top: 0.5rem; }
+@media (max-width: 640px) {
+  .party-tab-role { display: none; }
+}
 /* The Character panel holds a sub-tab bar and one scrollable sheet at a time. */
 .character-panel { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
 .character-panel > .tab-list { flex: none; }

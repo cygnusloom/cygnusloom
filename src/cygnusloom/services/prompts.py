@@ -364,8 +364,9 @@ NARRATION_REVISION = (
 OPENING_PROMPT = (
     "Opening instruction. This is setup, not play: do not narrate a scene, speak as a character, "
     "or act for the player character. Make any tool calls first and write no text before them: "
-    "place the player character in the world with move_actor, look up the starting location with "
-    "all_at_location, make any opening reading or roll the rule set calls for, and create the "
+    "place the player character in the world with move_actor, and move any hireling already in "
+    "their party to the same place, since the party begins together; look up the starting location "
+    "with all_at_location, make any opening reading or roll the rule set calls for, and create the "
     "campaign's storylines from the adventure's hooks with create_storyline, one for each distinct "
     "thread, player-facing in name and summary, and focus the one the opening starts with. If one "
     "hook bundles separate threads, split it by updating the original with update_storyline and "
@@ -532,7 +533,8 @@ def opening_prompt(template: WorldTemplate | None) -> str:
         place = next(loc for loc in template.locations if loc.id == start.location)
         text += (
             f"\n\nThe campaign starts at {place.name} (location id {place.id}). Place the "
-            f"player character there with move_actor, and do not place them anywhere else. The "
+            f"player character there with move_actor, along with every hireling in their party, "
+            f"and do not place them anywhere else. The "
             f"adventure's hooks, which bring the party to this start, are below. Work them into "
             f"the introduction as what the player character has heard or been asked to do; do "
             f"not state them as a list.\n\n{start.hooks}"
