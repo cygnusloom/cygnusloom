@@ -194,12 +194,14 @@ def _creation_fields(
     tradition2: str | None = None,
     options: dict[str, str] | None = None,
     kit: str | None = None,
+    path: str = "",
 ) -> dict[str, str]:
     """The creation form fields for a WWN character, with the stat roll pinned and every
-    choice named, as the page offers them."""
+    choice named, as the page offers them. ``path`` opens a party tab, such as ``?party=add``,
+    when the player character already exists."""
     with pytest.MonkeyPatch.context() as patch:
         patch.setattr(campaigns_service, "roll_stats", _fixed_roll)
-        page = client.get(f"/campaigns/{campaign_id}").text
+        page = client.get(f"/campaigns/{campaign_id}{path}").text
         fields = {f"stat-{stat}": str(value) for stat, value in _rolled_stats(page).items()}
         fields.update(_choices(page))
         fields.update(_picks(page))

@@ -428,7 +428,8 @@ def _carry_granted_kit(
     db: Session,
     campaign_id: int,
     name: str,
-    sheet: Sheet,
+    templates: Mapping[str, str],
+    fields: Mapping[str, str],
     spec: CharacterSpec,
     marketplace: Marketplace | None,
     inventory: InventoryRules | None,
@@ -443,9 +444,9 @@ def _carry_granted_kit(
     shield: tuple[str, int] = ("", 0)
     shield_mode = "shield"
     silver = 0
-    for template_id in sheet.templates.values():
+    for template_id in templates.values():
         grant = spec.templates[template_id].grant
-        chosen_option = sheet.fields.get(f"grant:{template_id}")
+        chosen_option = fields.get(f"grant:{template_id}")
         if chosen_option:
             match = next((option for option in grant.options if option.id == chosen_option), None)
             if match is None:
@@ -494,7 +495,7 @@ def _carry_granted_kit(
             silver += grant.silver
     chosen_kinds = {
         spec.templates[template_id].kind
-        for template_id in sheet.templates.values()
+        for template_id in templates.values()
         if template_id in spec.templates
     }
     if spec.starting_silver is not None and spec.starting_silver.kind not in chosen_kinds:
@@ -591,7 +592,16 @@ def create_player_character(
         defense=bool(combat_rules is not None and combat_rules.defense_base),
     )
     granted_armor, granted_shield, _, granted_shield_mode = _carry_granted_kit(
-        db, campaign_id, name, sheet, spec, marketplace, inventory, item_sizes, rng
+        db,
+        campaign_id,
+        name,
+        sheet.templates,
+        sheet.fields,
+        spec,
+        marketplace,
+        inventory,
+        item_sizes,
+        rng,
     )
     if granted_armor[0]:
         equipped_armor = granted_armor
@@ -621,6 +631,175 @@ def create_player_character(
             OpeningStarted(player_id=player_id),
         )
     return {"created": "pc", "name": name, "location": None}
+
+
+def create_party_hireling(
+    db: Session,
+    campaign_id: int,
+    tables: Mapping[str, Sequence[TableOption]],
+    rng: random.Random,
+    spec: CharacterSpec,
+    name: str,
+    employer: str,
+    rolled: Mapping[str, int],
+    submitted: Mapping[str, Any],
+    *,
+    pronouns: str,
+    plus: str,
+    level_ups: Mapping[str, LevelUpRules],
+    inventory: InventoryRules | None = None,
+    item_sizes: Mapping[str, int] | None = None,
+    magic: MagicRules | None = None,
+    currency: str = "",
+    armor_max: int = 0,
+    marketplace: Marketplace | None = None,
+    combat_rules: CombatRules | None = None,
+    defense_base: int = 0,
+    defense_modifier: str = "",
+    wage: int = 0,
+) -> dict[str, Any]:
+    """Make a hireling from the player's own creation choices while a campaign is still being
+    set up. Unlike a hireling the GM hires during play, this one is built exactly like a player
+    character: the player's rolled stats and swaps are honored, and the chosen templates hand
+    over their starting kit, money, and worn gear, so the party begins equipped. The hireling
+    has no location yet; the opening moves the party together."""
+    state = load_state(db, campaign_id)
+    boss = state.characters.get(name_key(employer))
+    if boss is None or boss.kind != PC_KIND or boss.hireling:
+        raise InvalidInput(f"{employer} is not a player character who can hire")
+    if boss.out_of_play:
+        raise InvalidInput(f"{boss.name} is not in play, so cannot lead a party")
+    if not isinstance(wage, int) or isinstance(wage, bool) or wage < 0:
+        raise InvalidInput("the wage must be a whole number of currency, zero or more")
+    name = bounded_text(name, "name", MAX_NAME)
+    pronouns = bounded_text(pronouns, "pronouns", MAX_NAME)
+    _ensure_free_name(state, name)
+    chosen = submitted.get("stats", {})
+    rolled_stats = {
+        stat.id for stat in spec.stats.values() if stat.derived is None and not stat.hidden
+    }
+    if set(chosen) != rolled_stats:
+        raise InvalidInput("every stat needs a value")
+    try:
+        check_swaps(spec, rolled, chosen)
+        check_choices(spec, submitted)
+    except CharacterError as error:
+        raise InvalidInput(str(error)) from error
+    _require_leveling_template(spec, submitted, name, level_ups)
+    event = _npc_event(
+        tables,
+        rng,
+        spec,
+        name=name,
+        location=boss.location,
+        description=_party_hireling_description(spec, submitted, boss.name),
+        personality=None,
+        accent=None,
+        quirks=None,
+        character=submitted,
+        plus=plus,
+        pronouns=pronouns,
+    )
+    # The starting item features become inventory items, exactly as they do for a player
+    # character, so they are taken out of the sheet's feature list before it is recorded.
+    features = dict(event.features)
+    carried = _take_starting_items(spec, features, inventory, item_sizes, magic, currency)
+    record(
+        db,
+        campaign_id,
+        HirelingAdded(
+            name=event.name,
+            employer=boss.name,
+            wage=wage,
+            location=event.location,
+            description=event.description,
+            personality=event.personality,
+            accent=event.accent,
+            quirks=list(event.quirks),
+            pronouns=event.pronouns,
+            stats=dict(event.stats),
+            templates=dict(event.templates),
+            features=features,
+            fields=dict(event.fields),
+            counters=dict(event.counters),
+            armor=event.armor,
+            skills=dict(event.skills),
+            feature_choices={key: list(values) for key, values in event.feature_choices.items()},
+            stat_modifiers=dict(event.stat_modifiers),
+        ),
+    )
+    armor = defense_base
+    if defense_modifier:
+        armor += spec.modifier(event.stats, defense_modifier) + event.stat_modifiers.get(
+            defense_modifier, 0
+        )
+    armor += event.armor
+    equipped_armor, equipped_shield, item_armor = _carry_starting_items(
+        db,
+        campaign_id,
+        name,
+        carried,
+        inventory,
+        item_sizes,
+        magic,
+        defense=bool(combat_rules is not None and combat_rules.defense_base),
+    )
+    granted_armor, granted_shield, _, granted_shield_mode = _carry_granted_kit(
+        db,
+        campaign_id,
+        name,
+        event.templates,
+        event.fields,
+        spec,
+        marketplace,
+        inventory,
+        item_sizes,
+        rng,
+    )
+    if granted_armor[0]:
+        equipped_armor = granted_armor
+    if granted_shield[0]:
+        equipped_shield = granted_shield
+    armor += item_armor
+    if combat_rules is not None and combat_rules.defense_base:
+        created = _character_named(load_state(db, campaign_id), name)
+        combat.set_defense_equipment(
+            db,
+            campaign_id,
+            created,
+            spec,
+            combat_rules,
+            armor=equipped_armor,
+            shield=equipped_shield,
+            adjustment=event.armor,
+            shield_mode=granted_shield_mode,
+        )
+    elif armor:
+        cap = armor_max or combat.UNCAPPED_ARMOR
+        record(db, campaign_id, ArmorSet(name=name, armor=min(armor, cap)))
+    return {
+        "created": "hireling",
+        "name": event.name,
+        "employer": boss.name,
+        "wage": wage,
+        "location": event.location,
+    }
+
+
+def _party_hireling_description(
+    spec: CharacterSpec, submitted: Mapping[str, Any], employer: str
+) -> str:
+    """A description for a starting hireling, taken from the player's own flavor words when
+    the rule set has any, so the GM meets the character the player pictured."""
+    fields = submitted.get("fields")
+    if isinstance(fields, Mapping):
+        ordered = [field for field in spec.fields.values() if field.table is None]
+        ordered += [field for field in spec.fields.values() if field.table is not None]
+        for field in ordered:
+            value = fields.get(field.id)
+            if isinstance(value, str) and value.strip():
+                return bounded_text(value, "description", MAX_TEXT)
+    return f"A companion of {employer}."
 
 
 def create_location(

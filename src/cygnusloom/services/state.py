@@ -761,6 +761,9 @@ class CampaignState:
     summary: str = ""
     through: int = 0
     turn: Turn | None = None
+    # The campaign's first opening turn has been recorded, so play has begun. Before this, the
+    # table is still in party setup and may add or remove starting hirelings.
+    opened: bool = False
     # Regions of the world map by name without case.
     regions: dict[str, Region] = field(default_factory=dict)
     # The world map's palette, ambient light, and custom colours.

@@ -77,6 +77,7 @@ def _create_character(
     setting: str | None = None,
     table_genres: list[str] | None = None,
     table_tones: list[str] | None = None,
+    start: bool = True,
 ):
     token = csrf_token(client, f"/campaigns/{campaign_id}")
     # A browser posts checked boxes, and both tracking switches start checked.
@@ -95,11 +96,18 @@ def _create_character(
         form["table_genres"] = table_genres
     if table_tones is not None:
         form["table_tones"] = table_tones
-    return client.post(
+    response = client.post(
         f"/campaigns/{campaign_id}/creation",
         data=form,
         follow_redirects=False,
     )
+    if start and response.status_code == 303:
+        client.post(
+            f"/campaigns/{campaign_id}/start",
+            data={"csrf_token": token},
+            follow_redirects=False,
+        )
+    return response
 
 
 def _campaign_id(

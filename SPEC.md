@@ -14,6 +14,8 @@ A character field is either mechanical or flavor. Flavor is identity and colour:
 
 A campaign may allow respecs, off by default. A player may then rebuild their player character, or a hireling they play for, from the creation form. The character keeps their name, pronouns, description, flavor, gear, and place in the story, while stats, templates, skills, features, counters, and mechanical fields start again, so levels, experience, and advancement picks are refunded and chosen anew. A respec waits until no turn or encounter is running.
 
+A new campaign can begin with a starting party. Until the player starts the game, the creation page shows one tab per party member: the player character and any hirelings. The player adds a hireling through the same character options, including its chosen starting kit and money, and removes a starting hireling completely, along with the gear they carry. Starting hirelings serve at wage zero unless the GM sets a wage during play. The campaign's opening turn is recorded only when the player starts the game, so the opening meets the whole party and moves the hirelings with the player character.
+
 # AI Game Master - Cygnus
 Cygnus is the AI GM. Cygnus will keep the game on track, following all the rules and not allowing any inconsistency. However, Cygnus understands that the story is for the players, so if the players insist, Cygnus will change the story or scene to better fit what story the players want to tell.
 
