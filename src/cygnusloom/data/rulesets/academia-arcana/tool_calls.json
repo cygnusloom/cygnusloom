@@ -53,7 +53,8 @@
     "player_input": {
       "param": "roll",
       "move_param": "move",
-      "details": "The engine adds the move's stat and any condition penalty."
+      "details": "The engine adds the move's stat and any condition penalty.",
+      "character_param": "character"
     }
   },
   {

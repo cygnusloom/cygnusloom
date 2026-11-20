@@ -959,6 +959,9 @@ def _turn_snapshot(
     running = busy and turn is not None
     actor_id = turn.player_id if turn is not None else None
     actor = turn.player_name if turn is not None else ""
+    pending_for = None
+    if turn is not None and turn.prompt is not None:
+        pending_for, _prompt_name = state.prompt_owner(turn)
     if state.encounter is not None and state.encounter.acting:
         acting = state.characters.get(name_key(state.encounter.acting))
         if acting is not None:
@@ -976,7 +979,7 @@ def _turn_snapshot(
         "turn": turn.opener if turn is not None else 0,
         "actor_id": actor_id,
         "actor": actor,
-        "pending_for": turn.player_id if turn is not None and turn.prompt else None,
+        "pending_for": pending_for,
         "typing": [{"id": typer.user_id, "name": typer.name} for typer in typers],
         "activity": activity,
         "reply": reply,
@@ -2510,7 +2513,13 @@ def _interaction_state(
         waiting_for = f"{pending.player_name or 'Another player'} must answer the GM."
         other_turn = True
     open_turn = state.turn
-    if open_turn is not None and open_turn.player_id not in (None, user_id):
+    if (
+        open_turn is not None
+        and open_turn.player_id not in (None, user_id)
+        and not (pending is not None and pending.prompt is not None)
+    ):
+        # A prompt belongs to the character's player, which may not be the player whose
+        # message opened the reply. The pending branch above already names the right person.
         waiting_for = f"{open_turn.player_name or 'Another player'} is taking a turn."
         other_turn = True
     control = ""

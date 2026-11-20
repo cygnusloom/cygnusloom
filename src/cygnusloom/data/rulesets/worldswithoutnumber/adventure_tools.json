@@ -35,7 +35,8 @@
     "player_input": {
       "dice": "1d20",
       "param": "natural",
-      "details": "{save} save against {cause}: roll 1d20 and meet or beat your save score."
+      "details": "{save} save against {cause}: roll 1d20 and meet or beat your save score.",
+      "character_param": "character"
     },
     "parameters": {
       "properties": {

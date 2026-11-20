@@ -2077,6 +2077,9 @@ class PromptShown(GameEvent):
     band: str = ""
     roll: int = 0
     total: int = 0
+    # The character the prompt is for; its player answers it. Empty in older logs, which keeps
+    # the prompt with the turn's opener.
+    character: str = ""
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         _open_turn(state).prompt = Ask(
@@ -2090,6 +2093,7 @@ class PromptShown(GameEvent):
             total=self.total,
             optional=tuple(self.optional),
             reaction=self.reaction or None,
+            character=self.character,
         )
 
 

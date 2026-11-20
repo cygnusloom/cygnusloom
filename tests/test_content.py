@@ -537,6 +537,7 @@ ROLLED_PARAMETERS: dict[str, Any] = {
     "type": "object",
     "properties": {
         "prompt": {"type": "string"},
+        "character": {"type": "string"},
         "relationship": {"type": "integer"},
         "circumstance": {"type": "integer"},
     },
@@ -577,6 +578,16 @@ def test_a_player_input_precheck_is_read(tree: Path):
     assert tool.player_input.precheck == "player_save"
 
 
+def test_a_player_input_character_parameter_is_read(tree: Path):
+    """A prompt tool may name the argument whose character owns the prompt."""
+    tool = _load_tool(
+        tree,
+        player_input={"dice": "1d20", "param": "roll", "character_param": "character"},
+    )
+    assert tool.player_input is not None
+    assert tool.player_input.character_param == "character"
+
+
 @pytest.mark.parametrize(
     "overrides, message",
     [
@@ -615,6 +626,20 @@ def test_a_player_input_precheck_is_read(tree: Path):
         (
             {"player_input": {"dice": "1d20", "param": "roll", "precheck": 1}},
             "'player_input.precheck' must name a WorldTools method",
+        ),
+        (
+            {"player_input": {"dice": "1d20", "param": "roll", "character_param": "nope"}},
+            "'player_input.character_param' must name a string parameter",
+        ),
+        (
+            {
+                "player_input": {
+                    "dice": "1d20",
+                    "param": "roll",
+                    "character_param": "relationship",
+                }
+            },
+            "'player_input.character_param' must name a string parameter",
         ),
         ({"activity": "   "}, "non-empty text template"),
         (

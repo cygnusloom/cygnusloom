@@ -73,7 +73,8 @@
       "param": "roll",
       "dice": "1d20",
       "dice_values_param": "dice_values",
-      "details": "The engine adds your ability modifier and proficiency bonus."
+      "details": "The engine adds your ability modifier and proficiency bonus.",
+      "character_param": "character"
     }
   },
   {
@@ -136,7 +137,8 @@
     "player_input": {
       "param": "roll",
       "dice": "1d20",
-      "details": "The engine adds your save bonus."
+      "details": "The engine adds your save bonus.",
+      "character_param": "name"
     }
   },
   {
@@ -217,7 +219,8 @@
     "player_input": {
       "param": "roll",
       "dice": "1d20",
-      "details": "Roll a death save: 10 or more succeeds."
+      "details": "Roll a death save: 10 or more succeeds.",
+      "character_param": "name"
     }
   },
   {
@@ -570,7 +573,8 @@
     "player_input": {
       "param": "roll",
       "dice": "1d20",
-      "details": "The engine adds your spell attack bonus."
+      "details": "The engine adds your spell attack bonus.",
+      "character_param": "name"
     }
   },
   {

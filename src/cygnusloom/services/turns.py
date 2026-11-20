@@ -533,6 +533,7 @@ def _prompt_shown(ask: Ask) -> PromptShown:
         band=ask.band,
         roll=ask.roll,
         total=ask.total,
+        character=ask.character,
     )
 
 
@@ -2815,6 +2816,7 @@ async def _answer_reaction(
                 dice=dice,
                 details=details or None,
                 reaction=pending,
+                character=str(pending.get("name", "") or ""),
             )
             _record(run.engine, run.campaign_id, _prompt_shown(ask))
             for entry in _flush(run):
@@ -2992,11 +2994,13 @@ async def resume_turn(
     if campaign.model not in allowed_models:
         raise InvalidInput("that model is not available")
     with _campaigns()._exclusive(campaign.id):
-        turn = _state(engine, campaign.id).turn
+        state = _state(engine, campaign.id)
+        turn = state.turn
         if turn is None:
             raise InvalidInput("there is no reply waiting for an answer")
-        if turn.player_id is not None and turn.player_id != owner_id:
-            who = turn.player_name or "another player"
+        prompt_owner, prompt_name = state.prompt_owner(turn)
+        if prompt_owner is not None and prompt_owner != owner_id:
+            who = prompt_name or "another player"
             raise InvalidInput(f"{who} must answer this reply")
         rule_set = library.rule_sets.get(campaign.rule_set)
         if rule_set is None:
@@ -3180,15 +3184,17 @@ def pending_turn(engine: Engine, owner_id: int, campaign_id: int) -> PendingView
     with _campaigns()._busy_lock:
         if campaign_id in _campaigns()._busy_campaigns:
             return None
-    turn = _state(engine, campaign_id).turn
+    state = _state(engine, campaign_id)
+    turn = state.turn
     if turn is None:
         return None
     if turn.prompt is not None:
+        player_id, player_name = state.prompt_owner(turn)
         return PendingView(
             prompt=turn.prompt,
             opening=turn.opening,
-            player_id=turn.player_id,
-            player_name=turn.player_name,
+            player_id=player_id,
+            player_name=player_name,
         )
     auto = turn.opening and turn.failed is None
     return PendingView(

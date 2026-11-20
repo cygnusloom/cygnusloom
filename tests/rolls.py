@@ -32,9 +32,11 @@ def social_roll(
     circumstance: int,
     roll: int | None = None,
     rng: random.Random | None = None,
+    character: str = "",
 ) -> SocialRoll:
     """One d20, plus the relationship and circumstance modifiers the GM sets.
 
-    The player rolls the die when the rule set asks for it, and passes the result as `roll`."""
+    The player rolls the die when the rule set asks for it, and passes the result as `roll`.
+    `character` is accepted so a test tool can name the character a prompt belongs to."""
     die = roll if roll is not None else roll_total("1d20", rng)
     return SocialRoll(die=die, relationship=relationship, circumstance=circumstance)
