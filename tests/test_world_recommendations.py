@@ -155,7 +155,7 @@ def test_the_new_campaign_form_groups_recommended_worlds_first(
     recommended = page.index('data-world-group="recommended"')
     other = page.index('data-world-group="other"')
     assert recommended < other
-    assert "Recommended for Worlds Without Number" in page
+    assert "Recommended for Dungeons &amp; Dragons 5.5e (SRD 5.2)" in page
     group = page[recommended:other]
     assert '<option value="unwritten-world"' in group
     assert '<option value="twin-lakes"' not in group

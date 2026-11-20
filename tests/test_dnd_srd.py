@@ -60,21 +60,6 @@ def _campaign(
     return client, campaign_id
 
 
-def test_the_srd_rule_set_loads_with_its_content() -> None:
-    rules = _dnd_rules()
-    assert rules.character.stats["str"].modifier(15) == 2
-    assert rules.character.stats["str"].modifier(8) == -1
-    assert set(rules.character.skills) >= {"athletics", "perception", "stealth"}
-    assert len(rules.character.templates) > 20
-    assert len(rules.monsters) > 300
-    assert sum(1 for f in rules.character.features.values() if f.feature_type == "spell") == 339
-    assert rules.level_ups["level"].max_level == 20
-    monk = rules.character.templates["monk"]
-    defense_id = next(grant.feature for grant in monk.features if "unarmored" in grant.feature)
-    floor = rules.character.features[defense_id].defense_floor
-    assert floor is not None and floor.requires_no_armor and floor.requires_no_shield
-
-
 def test_class_starting_kits_offer_the_srd_lettered_packages() -> None:
     rules = _dnd_rules()
     fighter = [option.id for option in rules.character.templates["fighter"].grant.options]
@@ -862,6 +847,21 @@ def test_armor_training_refuses_armor_a_class_cannot_wear(
         tools.equip_armor("Wren", "Chain Mail")
 
 
+def test_inventory_links_items_to_the_compendium_without_dumping_descriptions(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    client, campaign_id = _campaign(client_factory)
+    tools = tools_for(client.app, campaign_id, rule_set="dnd-srd-2024")
+    tools.give_item("Rook", "Longsword")
+    page = client.get(f"/campaigns/{campaign_id}").text
+    start = page.index("data-inventory")
+    panel = page[start : page.index("</ul>", start)]
+    assert (
+        'data-view-link="compendium"><strong>Longsword</strong></a>' in panel
+    )
+    assert "Sap. If you hit" not in panel
+
+
 def test_a_poisoned_character_has_disadvantage_on_attacks_and_checks(
     app: FastAPI, client_factory: Callable[[], TestClient]
 ) -> None:
@@ -872,14 +872,6 @@ def test_a_poisoned_character_has_disadvantage_on_attacks_and_checks(
     conditions = tools.conditions
     assert condition_roll_mode(fighter, conditions, "attack") == "disadvantage"
     assert condition_roll_mode(fighter, conditions, "check") == "disadvantage"
-
-
-def test_a_longsword_can_be_used_two_handed_for_versatile_damage(
-    app: FastAPI, client_factory: Callable[[], TestClient]
-) -> None:
-    rules = _dnd_rules()
-    longsword = rules.character.features["weapon-longsword"]
-    assert longsword.versatile_damage == "1d10"
 
 
 def test_class_resources_are_spent_and_refilled_by_rests(

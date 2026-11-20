@@ -8088,6 +8088,7 @@ def _load_level_picks(
                     "maximum_ref",
                     "limit_counter",
                     "stat_group",
+                    "options",
                     "apply",
                 },
                 pick_label,
@@ -8096,6 +8097,12 @@ def _load_level_picks(
         if counter not in counters:
             raise ContentError(f"{pick_label}: 'counter' names no counter ({counter!r})")
         apply = _level_up_function(module, required_text(value, "apply", pick_label), pick_label)
+        options_name = _optional_text(value, "options", pick_label)
+        options = (
+            _level_up_function(module, options_name, pick_label)
+            if options_name is not None
+            else None
+        )
         if kind == "feature":
             feature_type = required_text(value, "feature_type", pick_label)
             if feature_type not in character.feature_types:
@@ -8147,6 +8154,7 @@ def _load_level_picks(
             maximum=maximum,
             limit_counter=limit or "",
             stat_group=_optional_text(value, "stat_group", pick_label) or "",
+            options=options,
             apply=apply,
         )
     return picks

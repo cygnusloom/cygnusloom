@@ -36,8 +36,10 @@ changed source and test files.
 
 | Area | What to do | Expected |
 | --- | --- | --- |
+| Campaign creation | Open New campaign | D&D and Unwritten World are selected by default; choose Standard experience and a Fighter |
 | Campaign creation | Choose D&D, a world, Standard experience, and a Fighter | Character is created with a class kit, background skills, Soldier ability scores, and Fighting Style |
-| Sheet | Open Character | HP, AC, level, skills, features, and resources are visible; monster-only save stats stay hidden |
+| Sheet | Open Character | Compact vitals, ability cards, trained skills, and only relevant resources are visible; zero counters and background ASI bookkeeping stay hidden |
+| Inventory | Open Inventory and click an item | Names and slot details only; the compendium entry opens in a dialog without leaving the play view |
 | Advancement | Award 300 XP from the debug panel | Level-up page opens; Fighter 2 gains +8 HP and Action Surge; the sheet updates |
 | Multiclass | On the next advancement, choose Wizard in the **Advance in** selector | The page shows Wizard 1; the level grants Intelligence 13 prerequisites, d6 Hit Dice, Wizard features, and multiclass slots; the sheet reads **Classes: Fighter 1 / Wizard 1** |
 | Initiative | Start an encounter with one PC and one monster | `roll_initiative` records every combatant and opens the first turn; the order is fixed across rounds |
@@ -133,10 +135,11 @@ These were previously listed as gaps and now have data, engine support, and test
 - Each caster class keeps its own prepared list in `prepared_by_class`; the shared
   `prepared` mark is their union, so preparing the Wizard's spells does not clear the
   Cleric's.
-- Simplifications: the multiclass skill choice offers any skill rather than only the
-  new class's list; weapon and tool proficiencies are recorded as descriptive training
-  rather than gating equipment; and the SRD 5.2.1 subclass set has no one-third casters,
-  so `_caster_level` only handles full, half, and Pact Magic classes.
+- The multiclass skill choice is limited to the new class's skill table, as the SRD
+  requires.
+- Remaining simplification: weapon and tool proficiencies are recorded as descriptive
+  training rather than gating equipment. The SRD 5.2.1 subclass set has no one-third
+  casters, so `_caster_level` only handles full, half, and Pact Magic classes.
 
 None of these block the core play loop: create a character, explore, start a fight,
 roll attacks and saves, cast spells, take damage, heal, rest, and level up.

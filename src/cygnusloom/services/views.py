@@ -142,6 +142,34 @@ class ReactionLink:
 
 
 @dataclass(frozen=True)
+class SheetStat:
+    """One score on the compact character sheet, with its modifier when the rule set has bands."""
+
+    name: str
+    value: int
+    modifier: int | None = None
+
+
+@dataclass(frozen=True)
+class SheetSkill:
+    """One trained skill, with its level and compendium entry."""
+
+    name: str
+    level: int
+    expertise: bool = False
+    entry: str = ""
+
+
+@dataclass(frozen=True)
+class SheetResource:
+    """One resource counter worth showing on the sheet."""
+
+    label: str
+    value: int
+    entry: str = ""
+
+
+@dataclass(frozen=True)
 class CharacterSheetView:
     """A character sheet the player can read: their own, or a hireling they play for."""
 
@@ -164,6 +192,13 @@ class CharacterSheetView:
     # How the hireling is paid, such as "3 silver a day". Empty for a player character.
     wage: str = ""
     sheet_links: Mapping[str, str] = field(default_factory=dict)
+    # The sheet's compact sections, parsed from the same lines the sheet text uses.
+    identity: tuple[tuple[str, str], ...] = ()
+    stats: tuple[SheetStat, ...] = ()
+    skills: tuple[SheetSkill, ...] = ()
+    resources: tuple[SheetResource, ...] = ()
+    conditions: str = ""
+    notes: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -867,6 +902,7 @@ def scene_view(
     pc_sheet = None
     if pc is not None:
         points = hit_points(pc, hp_stat)
+        sections = _sheet_sections(spec, sheet, sheet_entries)
         pc_sheet = CharacterSheetView(
             name=pc.name,
             pronouns=pc.pronouns or "",
@@ -882,6 +918,7 @@ def scene_view(
             location=pc.location or "",
             employer=pc.employer,
             sheet_links=sheet_entries,
+            **sections,
         )
     feature_icons = _item_feature_icons(spec)
     inventory_view = (
@@ -1698,17 +1735,28 @@ def _feature_links(
 ) -> tuple[FeatureLink, ...]:
     """The features a character has, with compendium links, in the rule set's order."""
     effective = custom_features.merged_features(spec, character)
-    return tuple(
-        FeatureLink(
-            id=feature_id,
-            name=feature.name,
-            entry=ability_entries.get(feature_id)
-            or ability_entries.get(name_key(feature.name))
-            or "",
+    links = []
+    seen: set[str] = set()
+    for feature_id, feature in effective.items():
+        if feature_id not in character.features or feature.feature_type == "item":
+            continue
+        # A background's ability-score allocation is bookkeeping, already shown as the scores.
+        if feature.name.endswith(": Ability Scores"):
+            continue
+        key = feature.name.casefold()
+        if key in seen:
+            continue
+        seen.add(key)
+        links.append(
+            FeatureLink(
+                id=feature_id,
+                name=feature.name,
+                entry=ability_entries.get(feature_id)
+                or ability_entries.get(name_key(feature.name))
+                or "",
+            )
         )
-        for feature_id, feature in effective.items()
-        if feature_id in character.features and feature.feature_type != "item"
-    )
+    return tuple(links)
 
 
 def _prepared_links(
@@ -1793,6 +1841,7 @@ def _hireling_sheets(
         if conditions is not None:
             lines += _status_lines(character, conditions, None, None, None)
         points = hit_points(character, hp_stat)
+        sections = _sheet_sections(spec, lines, sheet_entries)
         sheets.append(
             CharacterSheetView(
                 name=character.name,
@@ -1814,6 +1863,7 @@ def _hireling_sheets(
                     else f"{character.wage} a day"
                 ),
                 sheet_links=sheet_entries,
+                **sections,
             )
         )
     return tuple(sheets)
@@ -1929,6 +1979,97 @@ def _sheet_text(spec: CharacterSpec, character: Character, *, include_fields: bo
     if harmed:
         text = f"{text}\nCurrent: {', '.join(harmed)}"
     return text
+
+
+def _sheet_sections(
+    spec: CharacterSpec,
+    lines: Sequence[str],
+    sheet_entries: Mapping[str, str],
+) -> dict[str, Any]:
+    """Split the sheet text into the compact sections the play view renders. The text lines
+    stay the complete record used by statblocks; this only decides what a player sees first."""
+    identity: list[tuple[str, str]] = []
+    stats: list[SheetStat] = []
+    skills: list[SheetSkill] = []
+    resources: list[SheetResource] = []
+    notes: list[str] = []
+    conditions = ""
+    counter_ids = {rules.label: counter_id for counter_id, rules in spec.counters.items()}
+    stat_ids = {rules.name: stat_id for stat_id, rules in spec.stats.items()}
+    first_skill = spec.skill_progression.first_level if spec.skill_progression else 1
+    in_features = False
+    for line in lines:
+        if line == "Features:":
+            in_features = True
+            continue
+        if in_features and line.startswith("• "):
+            continue
+        if in_features:
+            in_features = False
+        if line.startswith("Stats: "):
+            for part in line.removeprefix("Stats: ").split(", "):
+                name, _, raw = part.rpartition(" ")
+                stat = spec.stats.get(stat_ids.get(name, ""))
+                if stat is None or stat.hidden or stat.sheet_hidden or stat.derived is not None:
+                    continue
+                if stat.id == "hp":
+                    continue
+                try:
+                    value = int(raw)
+                except ValueError:
+                    continue
+                modifier = stat.modifier(value) if stat.modifier_bands else None
+                stats.append(SheetStat(name=stat.name, value=value, modifier=modifier))
+            continue
+        if line.startswith("Skills: "):
+            for part in line.removeprefix("Skills: ").split(", "):
+                name, _, raw = part.rpartition(" ")
+                try:
+                    level = int(raw)
+                except ValueError:
+                    continue
+                skills.append(
+                    SheetSkill(
+                        name=name,
+                        level=level,
+                        expertise=level > first_skill,
+                        entry=sheet_entries.get(name, ""),
+                    )
+                )
+            continue
+        if line.startswith("Conditions:"):
+            value = line.partition(": ")[2].strip()
+            conditions = "" if value.casefold() == "none" else value
+            continue
+        if line.startswith("Current:"):
+            notes.append(line)
+            continue
+        label, separator, value = line.partition(": ")
+        if separator and label in counter_ids:
+            counter_id = counter_ids[label]
+            try:
+                amount = int(value)
+            except ValueError:
+                continue
+            if counter_id in ("level", "xp"):
+                identity.append((label, value))
+            else:
+                entry = sheet_entries.get(label, "")
+                if amount != 0 or counter_id == "hit_dice":
+                    resources.append(
+                        SheetResource(label=label, value=amount, entry=entry)
+                    )
+            continue
+        if separator and len(value) <= 120:
+            identity.append((label, value))
+    return {
+        "identity": tuple(identity),
+        "stats": tuple(stats),
+        "skills": tuple(skills),
+        "resources": tuple(resources),
+        "conditions": conditions,
+        "notes": tuple(notes),
+    }
 
 
 def _is_statblock_default(spec: CharacterSpec, stat: str) -> bool:

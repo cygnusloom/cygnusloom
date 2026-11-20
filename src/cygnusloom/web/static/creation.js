@@ -1104,9 +1104,31 @@
     syncPickControls();
   };
 
+  // Choices a feature asks for (ability scores, skills, spells) live in panels that the chosen
+  // feature reveals. They are plain selects rather than dice-controlled radios, so roll them here
+  // instead of leaving required choices blank for the server to reject.
+  const randomizeFeatureChoices = (onlyUnchosen) => {
+    for (const panel of document.querySelectorAll("[data-feature-choice-for]")) {
+      if (panel.hidden || panel.closest("[hidden]")) continue;
+      const selects = [...panel.querySelectorAll("select")].filter(
+        (select) => !select.name.endsWith("-mode") && !select.disabled,
+      );
+      const taken = new Set(onlyUnchosen ? selects.map((select) => select.value).filter(Boolean) : []);
+      for (const select of selects) {
+        if (onlyUnchosen && select.value !== "") continue;
+        const offered = [...select.options]
+          .filter((option) => option.value !== "" && !option.disabled && !taken.has(option.value))
+          .map((option) => option.value);
+        select.value = offered.length > 0 ? offered[Math.floor(Math.random() * offered.length)] : "";
+        if (select.value !== "") taken.add(select.value);
+      }
+    }
+  };
+
   // Tagged feature picks follow their fields; the name is rolled after all choices.
   const randomizeAll = (onlyUnchosen) => {
     randomizeChoices(onlyUnchosen);
+    randomizeFeatureChoices(onlyUnchosen);
     if (!onlyUnchosen) randomizeStats();
     for (const fieldset of document.querySelectorAll("[data-tagged-picks]")) {
       if (!fieldset.closest("[hidden]")) randomizeTaggedPicks(fieldset, onlyUnchosen);

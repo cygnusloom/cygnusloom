@@ -77,9 +77,9 @@ D&D-specific interpretation stays in `rules/dnd_srd_2024.py`.
 ## Phase 2 - D&D content
 
 0. Multiclassing: class-level state and events, per-class advancement, prerequisites,
-   Hit Dice pools, class features and subclasses, multiclass armor/skill training,
-   multiclass spell slots, separate Pact Magic slots, per-class spell preparation, and
-   the Advancement page's class selector.
+   Hit Dice pools, class features and subclasses, multiclass armor training, the new
+   class's skill-table-only skill choice, multiclass spell slots, separate Pact Magic
+   slots, per-class spell preparation, and the Advancement page's class selector.
 1. Background ASI modes and background equipment packages.
 2. Class kit alternatives (A/B/C) and the Monk tool choice.
 3. Origin feats: Magic Initiate, Alert, Savage Attacker, Skilled.

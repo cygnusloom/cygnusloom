@@ -3424,6 +3424,7 @@ def build_classes(spell_lists: dict[str, dict[int, list[str]]]) -> None:
                         "counter": "multiclass_skill_picks",
                         "costs": {"2": 1},
                         "minimum_levels": {"2": 2},
+                        "options": "multiclass_skill_options",
                         "apply": "apply_skill_pick",
                     },
                     {

@@ -1164,6 +1164,31 @@ def _xp_rate(ctx: ToolContext, progression: DndProgression) -> str:
 # --- level-up picks ----------------------------------------------------------------------
 
 
+def multiclass_skill_options(
+    character: str,
+    pick: Any,
+    ctx: ToolContext,
+    level: int | None = None,
+    class_choice: str = "",
+) -> list[str]:
+    """The skills a new class lets a multiclass character train in, from its class table."""
+    progression = require_progression(ctx.world)
+    spec = ctx.world.character
+    found = _read_character(character, ctx)
+    rules = _class_rules(found, progression, class_choice)
+    if rules.multiclass_skills <= 0:
+        return []
+    template = spec.templates.get(rules.id)
+    if template is None or not template.skill_picks:
+        return []
+    choice = template.skill_picks[0]
+    return [
+        option.value
+        for option in spec.tables.get(choice.table, ())
+        if option.value in spec.skills and option.value not in choice.exclude
+    ]
+
+
 def spell_options(
     character: str, pick: Any, ctx: ToolContext, level: int | None = None, class_choice: str = ""
 ) -> list[dict[str, Any]]:

@@ -116,6 +116,24 @@ def _state(app: FastAPI, campaign_id: int) -> Any:
         return load_state(db, campaign_id)
 
 
+def test_the_character_sheet_shows_only_the_characters_relevant_resources(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id, _ctx = _campaign(client_factory)
+    page = client.get(f"/campaigns/{campaign_id}").text
+    panel = page.partition('id="panel-character"')[2].partition('id="panel-inventory"')[0]
+
+    assert 'class="sheet-hp"' in panel
+    assert 'class="sheet-ac"' in panel
+    assert "STR" in panel and 'title="Strength"' in panel
+    assert "Hit Point Dice" in panel
+    assert "Second Wind" in panel
+    assert "Level 1 Spell Slots" not in panel
+    assert "Pact Magic Slots" not in panel
+    assert "Death Save Failures" not in panel
+    assert "Soldier: Ability Scores" not in panel
+
+
 def test_roll_initiative_sets_a_numeric_order_and_unblocks_the_first_turn(
     app: FastAPI, client_factory: Callable[[], TestClient]
 ) -> None:

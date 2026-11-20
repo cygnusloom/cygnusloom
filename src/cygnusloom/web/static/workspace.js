@@ -150,6 +150,44 @@
     });
   };
 
+  // Compendium links throughout the play view open the entry in place. Most views already
+  // carry the compendium, so this avoids leaving the sheet, inventory, or statblock to read
+  // one item's rules.
+  let compendiumDialog = null;
+  const openCompendiumEntry = (entry, opener) => {
+    if (!compendiumDialog) {
+      compendiumDialog = document.createElement("dialog");
+      compendiumDialog.className = "app-dialog compendium-dialog";
+      compendiumDialog.innerHTML = `
+        <div class="compendium-dialog-head">
+          <h2></h2>
+          <button type="button" class="dialog-close" data-compendium-close aria-label="Close">×</button>
+        </div>
+        <div class="compendium-dialog-body"></div>`;
+      document.body.append(compendiumDialog);
+      compendiumDialog
+        .querySelector("[data-compendium-close]")
+        .addEventListener("click", () => compendiumDialog.close());
+      compendiumDialog.addEventListener("close", () =>
+        dialogOpeners.get(compendiumDialog)?.focus(),
+      );
+      closeOnBackdropClick(compendiumDialog);
+    }
+    const body = compendiumDialog.querySelector(".compendium-dialog-body");
+    const title = compendiumDialog.querySelector("h2");
+    const heading = entry.querySelector("h5");
+    title.textContent = heading?.textContent.trim() || "Compendium";
+    const clone = entry.cloneNode(true);
+    clone.removeAttribute("id");
+    clone.querySelectorAll("[id]").forEach((element) => element.removeAttribute("id"));
+    body.replaceChildren(clone);
+    dialogOpeners.set(compendiumDialog, opener);
+    compendiumDialog.showModal();
+    title.tabIndex = -1;
+    title.focus();
+    compendiumDialog.scrollTop = 0;
+  };
+
   // A dialog that fetches a fragment shows the same loading line while it waits, and reads the
   // fragment with the session cookie so the server can refuse a page the player cannot see.
   const loadFragment = async (url) => {
@@ -240,6 +278,12 @@
       on(link, "view-link", "click", (event) => {
         const target = document.querySelector(link.getAttribute("href"));
         if (!target) return;
+        const entry = target.closest("[data-compendium-entry]");
+        if (link.dataset.viewLink === "compendium" && entry) {
+          event.preventDefault();
+          openCompendiumEntry(entry, link);
+          return;
+        }
         event.preventDefault();
         showView(link.dataset.viewLink);
         revealCompendiumTarget(target);

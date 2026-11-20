@@ -303,9 +303,10 @@ def test_a_multiclass_skill_pick_trains_a_new_skill(
     )
     assert page is not None and page.kind == level_up_service.PICKS
     skill_pick = next(pick for pick in page.picks if pick["id"] == "multiclass_skills")
-    available = [
-        skill for skill in skill_pick["skills"] if skill["targets"]
-    ]
+    rogue = rules.character.templates["rogue"].skill_picks[0]
+    allowed = {option.value for option in rules.character.tables[rogue.table]}
+    assert {skill["id"] for skill in skill_pick["skills"]} <= allowed
+    available = [skill for skill in skill_pick["skills"] if skill["targets"]]
     assert available
     chosen = available[0]["id"]
     level_up_service.apply_page(
@@ -313,7 +314,11 @@ def test_a_multiclass_skill_pick_trains_a_new_skill(
         campaign_id,
         rules,
         world,
-        {"character": "Rook", f"skill-multiclass_skills-{chosen}": "2"},
+        {
+            "character": "Rook",
+            "class": "rogue",
+            f"skill-multiclass_skills-{chosen}": "2",
+        },
         "Rook",
     )
     pc = character_named(app, campaign_id, "Rook")

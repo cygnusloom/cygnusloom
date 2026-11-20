@@ -276,7 +276,6 @@
               {% endif %}
               <div class="tab-panel character-sheet-panel" id="panel-sheet-pc"{% if scene.hireling_sheets %} role="tabpanel" aria-labelledby="tab-sheet-pc"{% endif %}>
                 {% if scene.pc_sheet %}
-                <p><strong>{{ scene.pc_sheet.name }}</strong></p>
                 {% with sheet_view=scene.pc_sheet %}{% include "_character_sheet.html" %}{% endwith %}
                 {{ character_actions(campaign, csrf_token, scene.pc_sheet.name, "play", scene.pc_sheet.name in editable_names, scene.pc_sheet.name in respec_names) }}
                 {% else %}

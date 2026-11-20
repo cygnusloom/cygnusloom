@@ -411,7 +411,11 @@ def test_gm_records_npc_pronouns_and_they_replay(client_factory: Callable[[], Te
     text = world.world_state_text(_state(app, campaign_id), SPEC)
     assert "Pronouns: Wren, she/her." in text
     page = client.get(f"/campaigns/{campaign_id}").text
-    assert "Pronouns: she/her." in page
+    card_start = page.index(
+        '<h4><a href="#" class="statblock-name" data-statblock-name="Wren">'
+    )
+    card = page[card_start : page.index("</article>", card_start)]
+    assert "Pronouns: she/her" in card
 
 
 def test_npc_without_pronouns_still_works_and_omits_the_line(

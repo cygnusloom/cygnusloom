@@ -729,7 +729,52 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
   padding: 0.1rem 0.65rem; border: 1px solid var(--border); border-radius: 999px;
   background: var(--field); font-variant-numeric: tabular-nums;
 }
-.sheet-hp strong { color: var(--accent); letter-spacing: 0.05em; }
+.sheet-hp strong, .sheet-ac strong { color: var(--accent); letter-spacing: 0.05em; }
+/* The compact sheet: vitals, scores, skills, and resources read as cards and chips instead
+   of a long list of text lines. */
+.sheet-title { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.6rem; }
+.sheet-title > div { display: inline-flex; align-items: baseline; flex-wrap: wrap; gap: 0.45rem; }
+.sheet-title .muted { font-size: 0.85rem; }
+.sheet-vitals { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem; }
+.sheet-hp, .sheet-ac {
+  display: inline-flex; align-items: baseline; gap: 0.3rem; padding: 0.2rem 0.75rem;
+  border: 1px solid var(--border); border-radius: 999px; background: var(--field);
+  font-variant-numeric: tabular-nums; margin: 0;
+}
+.sheet-chips { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0 0 0.7rem; padding: 0; }
+.sheet-chip {
+  display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.15rem 0.55rem;
+  border: 1px solid var(--border); border-radius: 999px; background: var(--field);
+  font-size: 0.85rem; line-height: 1.4;
+}
+.sheet-chip a { color: var(--accent); text-decoration: none; }
+.sheet-chip a:hover, .sheet-chip a:focus-visible { text-decoration: underline; }
+.sheet-chip .muted { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.sheet-badge { color: var(--muted); font-size: 0.72rem; }
+.sheet-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(4.5rem, 1fr)); gap: 0.4rem; margin-bottom: 0.85rem; }
+.sheet-stat {
+  display: flex; flex-direction: column; align-items: center; padding: 0.35rem 0.25rem;
+  border: 1px solid var(--border); border-radius: 8px; background: var(--field);
+  font-variant-numeric: tabular-nums;
+}
+.sheet-stat-name { color: var(--muted); font-size: 0.7rem; letter-spacing: 0.05em; text-decoration: none; }
+.sheet-stat strong { font-size: 1.15rem; line-height: 1.25; }
+.sheet-stat-mod { color: var(--muted); font-size: 0.78rem; }
+.sheet-section { margin: 0.15rem 0 0.85rem; }
+.sheet-section h3 {
+  margin: 0 0 0.35rem; color: var(--muted); font-size: 0.72rem; font-weight: 700;
+  letter-spacing: 0.09em; text-transform: uppercase;
+}
+.sheet-condition {
+  display: inline-block; margin: 0 0 0.7rem; padding: 0.2rem 0.65rem;
+  border: 1px solid var(--danger); border-radius: 999px; color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+}
+.sheet-note { margin: 0 0 0.6rem; }
+.sheet-about { margin-top: 0.35rem; color: var(--muted); }
+.sheet-about summary { cursor: pointer; }
+.sheet-about p { margin: 0.4rem 0 0; color: var(--text); }
+.tag-danger { border-color: var(--danger); color: var(--danger); }
 /* The Inventory panel does the same for the player's pack and each hireling's. */
 .inventory-panel { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
 .inventory-panel > .tab-list { flex: none; }
@@ -961,6 +1006,20 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 .app-dialog { width: min(28rem, calc(100% - 2rem)); padding: 1.25rem; background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 8px; }
 .app-dialog::backdrop { background: rgba(0, 0, 0, 0.5); }
 .app-dialog h2 { margin: 0 0 0.5rem; font-size: 1.1rem; }
+.compendium-dialog { width: min(46rem, calc(100% - 2rem)); max-height: 85vh; overflow-y: auto; }
+.compendium-dialog-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+.compendium-dialog-head h2 { margin: 0; }
+.compendium-dialog .dialog-close {
+  flex: none; width: 2rem; height: 2rem; padding: 0; border: 1px solid var(--border);
+  border-radius: 999px; background: var(--field); color: var(--text); font-size: 1.2rem;
+  line-height: 1; cursor: pointer;
+}
+.compendium-dialog .dialog-close:hover, .compendium-dialog .dialog-close:focus-visible {
+  border-color: var(--accent); color: var(--accent);
+}
+.compendium-dialog-body { margin-top: 0.75rem; }
+.compendium-dialog-body .compendium-entry { margin: 0; padding: 0; border: 0; }
+.compendium-dialog-body .compendium-entry h5 { display: none; }
 .app-dialog form { display: flex; flex-direction: column; gap: 0.75rem; }
 .app-dialog form > button { align-self: flex-end; }
 .app-dialog .dialog-actions { display: flex; justify-content: flex-end; gap: 0.5rem; }

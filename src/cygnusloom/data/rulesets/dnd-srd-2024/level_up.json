@@ -28,6 +28,7 @@
         "minimum_levels": {
           "2": 2
         },
+        "options": "multiclass_skill_options",
         "apply": "apply_skill_pick"
       },
       {

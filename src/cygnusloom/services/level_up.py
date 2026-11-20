@@ -334,8 +334,9 @@ def page_view(
                 hireling=pc.hireling,
             )
         classes = _class_choices(pc, rule_set)
+        picked_class = class_choice or (str(classes[-1]["id"]) if classes else "")
         picks = pick_views(
-            pc, rule_set, level_rules, None, {}, ctx, class_choice=class_choice
+            pc, rule_set, level_rules, None, {}, ctx, class_choice=picked_class
         )
         if picks:
             return AdvancementPage(
@@ -345,7 +346,7 @@ def page_view(
                 level_up=level_rules,
                 picks=picks,
                 class_options=classes,
-                class_id=class_choice or (str(classes[0]["id"]) if classes else ""),
+                class_id=picked_class,
                 level=_new_level(pc, rule_set, None),
                 hireling=pc.hireling,
             )
@@ -383,7 +384,17 @@ def pick_views(
         if available <= 0:
             continue
         if pick.kind == "skill":
-            views.append(_skill_view(pc, rule_set, pick, available, summary))
+            views.append(
+                _skill_view(
+                    pc,
+                    rule_set,
+                    pick,
+                    available,
+                    summary,
+                    ctx,
+                    class_choice,
+                )
+            )
         elif pick.kind == "stat":
             views.append(_stat_view(pc, rule_set, pick, available, summary))
         elif pick.kind == "feature" and ctx is not None:
@@ -434,13 +445,18 @@ def _skill_view(
     pick: LevelUpPick,
     available: int,
     summary: Mapping[str, Any] | None,
+    ctx: ToolContext | None = None,
+    class_choice: str = "",
 ) -> Mapping[str, Any]:
     """Every skill's current level and the levels it could be raised to."""
     spec = rule_set.character
     first = spec.skill_progression.first_level if spec.skill_progression else 1
     level = _new_level(pc, rule_set, summary)
+    allowed = _allowed_skills(pick, pc, ctx, level, class_choice)
     skills = []
     for skill in spec.skills.values():
+        if allowed is not None and skill.id not in allowed:
+            continue
         current = spec.skill_level(pc.skills, skill.id)
         targets = []
         for target in sorted(pick.costs):
@@ -472,6 +488,25 @@ def _skill_view(
         "available": available,
         "skills": skills,
     }
+
+
+def _allowed_skills(
+    pick: LevelUpPick,
+    pc: Character,
+    ctx: ToolContext | None,
+    level: int | None,
+    class_choice: str,
+) -> set[str] | None:
+    """The skill ids a pick's option hook allows, or None when the pick allows every skill."""
+    if pick.options is None or ctx is None:
+        return None
+    if class_choice:
+        options = pick.options(
+            pc.name, pick, ctx, level, class_choice=class_choice
+        )
+    else:
+        options = pick.options(pc.name, pick, ctx, level)
+    return {str(option) for option in options}
 
 
 def _stat_view(
@@ -763,7 +798,9 @@ def _plan_picks(
             grants.get(pick.counter, 0)
         )
         if pick.kind == "skill":
-            picked = _skill_changes(pc, rule_set, pick, form, level)
+            picked = _skill_changes(
+                pc, rule_set, pick, form, level, ctx, class_choice
+            )
             cost = sum(change["cost"] for change in picked)
             if cost > available:
                 raise InvalidInput(f"{pick.label} cost {cost} points; {available} are available")
@@ -820,14 +857,21 @@ def _skill_changes(
     pick: LevelUpPick,
     form: Mapping[str, Any],
     level: int,
+    ctx: ToolContext | None = None,
+    class_choice: str = "",
 ) -> list[dict[str, Any]]:
     spec = rule_set.character
     first = spec.skill_progression.first_level if spec.skill_progression else 1
+    allowed = _allowed_skills(pick, pc, ctx, level, class_choice)
     raised: dict[str, int] = {}
     for skill in spec.skills.values():
         raw = form.get(f"skill-{pick.id}-{skill.id}", "")
         if raw in ("", None):
             continue
+        if allowed is not None and skill.id not in allowed:
+            raise InvalidInput(
+                f"{skill.name} is not one of the skills this {pick.label.lower()} offers"
+            )
         try:
             target = int(raw)
         except (TypeError, ValueError):

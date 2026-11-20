@@ -41,7 +41,7 @@ def _selected_option(page: str, name: str) -> str:
 def test_core_json_declares_the_new_campaign_defaults():
     default = bundled_library().core.default_campaign
     assert default is not None
-    assert default.rule_set == "worldswithoutnumber"
+    assert default.rule_set == "dnd-srd-2024"
     assert default.world_template == "unwritten-world"
 
 
@@ -52,7 +52,7 @@ def test_the_new_campaign_form_starts_on_the_core_defaults(
 
     page = client.get("/campaigns/new").text
 
-    assert _selected_option(page, "rule_set") == "worldswithoutnumber"
+    assert _selected_option(page, "rule_set") == "dnd-srd-2024"
     assert _selected_option(page, "world_template") == "unwritten-world"
 
 

@@ -1,30 +1,121 @@
 {# One character sheet: the player's own, or a hireling they play for. Expects `sheet_view`. #}
-{% if sheet_view.pronouns %}<p class="muted">Pronouns: {{ sheet_view.pronouns }}.</p>{% endif %}
-{% if sheet_view.description %}<p>{{ sheet_view.description }}</p>{% endif %}
-{% if sheet_view.hp is not none %}<p class="sheet-hp"><strong>HP</strong> {{ sheet_view.hp }} / {{ sheet_view.hp_max }}</p>{% endif %}
-{% if sheet_view.defense is not none %}<p class="sheet-ac"><strong>AC</strong> {{ sheet_view.defense }}</p>{% endif %}
-{% for line in sheet_view.sheet %}
-<p>{{ line | compendium_links(sheet_view.sheet_links) }}</p>
-{% else %}
-<p class="muted">No character sheet yet.</p>
+<div class="sheet-title">
+  <div>
+    <strong>{{ sheet_view.name }}</strong>
+    {% if sheet_view.pronouns %}<span class="muted">Pronouns: {{ sheet_view.pronouns }}.</span>{% endif %}
+    {% if sheet_view.employer %}<span class="muted">· hireling of {{ sheet_view.employer }}</span>{% endif %}
+    {% if sheet_view.wage %}<span class="muted">· {{ sheet_view.wage }}</span>{% endif %}
+  </div>
+  {% if sheet_view.dead %}<span class="tag tag-danger">Dead</span>{% endif %}
+</div>
+
+<div class="sheet-vitals">
+  {% if sheet_view.hp is not none %}
+  <div class="sheet-hp">
+    <strong>HP</strong> {{ sheet_view.hp }} / {{ sheet_view.hp_max }}
+  </div>
+  {% endif %}
+  {% if sheet_view.defense is not none %}
+  <div class="sheet-ac">
+    <strong>AC</strong> {{ sheet_view.defense }}
+  </div>
+  {% endif %}
+</div>
+
+{% if sheet_view.identity %}
+<p class="sheet-chips sheet-identity">
+  {% for label, value in sheet_view.identity %}
+  {% set entry = sheet_view.sheet_links.get(value, "") %}
+  <span class="sheet-chip"><span class="muted">{{ label }}</span> {% if entry %}<a href="#{{ entry }}" data-view-link="compendium">{{ value }}</a>{% else %}{{ value }}{% endif %}</span>
+  {% endfor %}
+</p>
+{% endif %}
+
+{% if sheet_view.stats %}
+<div class="sheet-stats" aria-label="Ability scores">
+  {% for stat in sheet_view.stats %}
+  <div class="sheet-stat">
+    <abbr class="sheet-stat-name" title="{{ stat.name }}">{{ stat.name[:3]|upper }}</abbr>
+    <strong>{{ stat.value }}</strong>
+    {% if stat.modifier is not none %}<span class="sheet-stat-mod">{{ "%+d"|format(stat.modifier) }}</span>{% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if sheet_view.skills %}
+<section class="sheet-section" aria-labelledby="sheet-skills">
+  <h3 id="sheet-skills">Skills</h3>
+  <p class="sheet-chips">
+    {% for skill in sheet_view.skills %}
+    <span class="sheet-chip" title="Skill level {{ skill.level }}">
+      {% if skill.entry %}<a href="#{{ skill.entry }}" data-view-link="compendium">{{ skill.name }}</a>{% else %}{{ skill.name }}{% endif %}
+      {% if skill.expertise %}<span class="sheet-badge">expertise</span>{% endif %}
+    </span>
+    {% endfor %}
+  </p>
+</section>
+{% endif %}
+
+{% if sheet_view.resources %}
+<section class="sheet-section" aria-labelledby="sheet-resources">
+  <h3 id="sheet-resources">Resources</h3>
+  <p class="sheet-chips">
+    {% for resource in sheet_view.resources %}
+    <span class="sheet-chip">{% if resource.entry %}<a href="#{{ resource.entry }}" data-view-link="compendium">{{ resource.label }}</a>{% else %}{{ resource.label }}{% endif %} <strong>{{ resource.value }}</strong></span>
+    {% endfor %}
+  </p>
+</section>
+{% endif %}
+
+{% if sheet_view.conditions %}
+<p class="sheet-condition">Conditions: {{ sheet_view.conditions }}</p>
+{% endif %}
+
+{% for note in sheet_view.notes %}
+<p class="sheet-note">{{ note }}</p>
 {% endfor %}
+
 {% if sheet_view.abilities %}
-<p class="compendium-links"><strong>Abilities:</strong>
-  {% for ability in sheet_view.abilities %}{% if not loop.first %} · {% endif %}{% if ability.entry %}<a href="#{{ ability.entry }}" data-view-link="compendium">{{ ability.name }}</a>{% else %}{{ ability.name }}{% endif %}{% endfor %}
-</p>
+<section class="sheet-section" aria-labelledby="sheet-features">
+  <h3 id="sheet-features">Features &amp; spells</h3>
+  <p class="sheet-chips">
+    {% for ability in sheet_view.abilities %}
+    <span class="sheet-chip">
+      {% if ability.entry %}<a href="#{{ ability.entry }}" data-view-link="compendium">{{ ability.name }}</a>{% else %}{{ ability.name }}{% endif %}
+    </span>
+    {% endfor %}
+  </p>
+</section>
 {% endif %}
+
 {% if sheet_view.prepared %}
-<p class="compendium-links"><strong>Prepared:</strong>
-  {% for spell in sheet_view.prepared %}{% if not loop.first %} · {% endif %}{% if spell.entry %}<a href="#{{ spell.entry }}" data-view-link="compendium">{{ spell.name }}</a>{% else %}{{ spell.name }}{% endif %}{% endfor %}
-</p>
+<section class="sheet-section" aria-labelledby="sheet-prepared">
+  <h3 id="sheet-prepared">Prepared</h3>
+  <p class="sheet-chips">
+    {% for spell in sheet_view.prepared %}
+    <span class="sheet-chip">
+      {% if spell.entry %}<a href="#{{ spell.entry }}" data-view-link="compendium">{{ spell.name }}</a>{% else %}{{ spell.name }}{% endif %}
+    </span>
+    {% endfor %}
+  </p>
+</section>
 {% endif %}
+
 {% if sheet_view.reactions %}
-<div class="compendium-links reaction-block">
-  <p><strong>Reactions:</strong></p>
+<section class="sheet-section" aria-labelledby="sheet-reactions">
+  <h3 id="sheet-reactions">Reactions:</h3>
   <ul class="reaction-list">
     {% for reaction in sheet_view.reactions %}
     <li>{{ reaction.text }} <span class="muted">({{ reaction.uses }} per {{ reaction.reset }}, {{ "ready" if reaction.ready else reaction.used ~ "/" ~ reaction.uses ~ " used" }})</span></li>
     {% endfor %}
   </ul>
-</div>
+</section>
+{% endif %}
+
+{% if sheet_view.description %}
+<details class="sheet-about">
+  <summary>About {{ sheet_view.name }}</summary>
+  <p>{{ sheet_view.description }}</p>
+</details>
 {% endif %}

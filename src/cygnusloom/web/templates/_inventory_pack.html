@@ -23,7 +23,6 @@
     {% if item.kind %}<span class="muted">({{ item.kind|capitalize }})</span>{% endif %}
     {% if inventory.pack.has_readied %}· {{ "Readied" if item.ready else "Stowed" }}{% endif %}
     {% if item.equipped %}· {{ item.equipped }}{% endif %}
-    {% if item.text %}<p class="muted">{{ item.text }}</p>{% endif %}
   </li>
   {% endfor %}
 </ul>
