@@ -60,7 +60,13 @@
     else sideToggle.focus();
   };
   if (shell && sideToggle) {
-    sideToggle.addEventListener("click", () => setSide(!shell.classList.contains("show-side")));
+    sideToggle.addEventListener("click", () => {
+      const open = !shell.classList.contains("show-side");
+      // The details drawer belongs to the Play view, so asking for it from another view
+      // returns to Play first instead of toggling a drawer that cannot be seen.
+      if (open && document.querySelector('[data-view="play"]')?.hidden) selectView("play");
+      setSide(open);
+    });
     document.addEventListener("keydown", (event) => {
       if (event.key !== "Escape" || document.querySelector("dialog[open]")) return;
       if (shell.classList.contains("show-side")) setSide(false);
@@ -222,12 +228,15 @@
       button.setAttribute("aria-pressed", String(button.dataset.viewTarget === name));
     }
   };
+  const selectView = (name) => {
+    showView(name);
+    // A sidebar view is a fresh place to start; a deep link into the view we left must not
+    // reopen it on reload or Back.
+    if (location.hash) history.replaceState(null, "", location.pathname + location.search);
+  };
   document.querySelectorAll("[data-view-target]").forEach((button) => {
     button.addEventListener("click", () => {
-      showView(button.dataset.viewTarget);
-      // A sidebar view is a fresh place to start; a deep link into the view we left must not
-      // reopen it on reload or Back.
-      if (location.hash) history.replaceState(null, "", location.pathname + location.search);
+      selectView(button.dataset.viewTarget);
       setSide(false, false);
     });
   });

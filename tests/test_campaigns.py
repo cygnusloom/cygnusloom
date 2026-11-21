@@ -856,6 +856,19 @@ def test_campaign_page_has_sidebar_controls(client_factory: Callable[[], TestCli
     assert 'id="site-menu"' in page
 
 
+def test_the_details_button_returns_to_play_before_opening_its_drawer(
+    client_factory: Callable[[], TestClient],
+):
+    """The details drawer lives inside the Play view, so its button opens Play from elsewhere."""
+    client, _ = _campaign_id(client_factory)
+    script = client.get("/static/workspace.js")
+    assert script.status_code == 200
+    start = script.text.index('sideToggle.addEventListener("click"')
+    handler = script.text[start : script.text.index("});", start)]
+    assert 'selectView("play")' in handler
+    assert "document.querySelector('[data-view=\"play\"]')?.hidden" in handler
+
+
 def test_debug_panel_is_hidden_and_refused_by_default(client_factory):
     client, campaign_id = _campaign_id(client_factory)
     assert 'id="tab-debug"' not in client.get(f"/campaigns/{campaign_id}").text
