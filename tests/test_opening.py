@@ -111,6 +111,21 @@ def test_pending_opening_page_auto_starts_and_hides_discard(
     assert "Discard reply" not in page
 
 
+def test_an_auto_started_opening_hides_its_continue_prompt_while_the_gm_works(
+    client_factory: Callable[[], TestClient],
+):
+    """The player never presses Continue for the opening, so the prompt that offered it must
+    not sit beside the GM's working state once the page has started it. A turn that could not
+    start brings the prompt back."""
+    client, campaign_id = _created_campaign(client_factory)
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert "data-auto-start" in page
+    script = client.get("/static/turn_stream.js").text
+    assert 'form.hasAttribute("data-auto-start") && pendingBlock' in script
+    assert "pendingBlock.hidden = true" in script
+    assert "pendingBlock.hidden = false" in script
+
+
 def test_failed_opening_offers_continue_instead_of_auto_start(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):

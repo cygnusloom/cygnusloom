@@ -699,8 +699,13 @@
     }
 
     // Encounter turn forms have no pending block, so their own controls are disabled instead.
-    const controls = (form.closest("[data-pending]") ?? form).querySelectorAll("button, textarea");
+    const pendingBlock = form.closest("[data-pending]");
+    const controls = (pendingBlock ?? form).querySelectorAll("button, textarea");
     for (const control of controls) control.disabled = true;
+    // The opening starts by itself. Once it is under way its Continue prompt is stale, and a
+    // button beside the working GM reads as a second action, so hide the prompt until the turn
+    // is saved. A turn that could not start brings it back below.
+    if (form.hasAttribute("data-auto-start") && pendingBlock) pendingBlock.hidden = true;
     localTurn = true;
     setGmState("busy");
     watchTurn();
@@ -716,6 +721,7 @@
       // updating into another automatic start.
       if (form.hasAttribute("data-auto-start") && !attempt.started) {
         reply.bubble.remove();
+        if (pendingBlock) pendingBlock.hidden = false;
         showError(error instanceof TurnFailure ? error.message : "The GM's reply did not finish. Try again.");
         for (const control of controls) control.disabled = false;
         setGmState("waiting");

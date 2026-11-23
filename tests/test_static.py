@@ -32,3 +32,11 @@ def test_posting_forms_show_a_busy_button(client):
     assert "dataset.busyLabel" in script.text
     assert "data-no-busy" in script.text
     assert '<script src="/static/busy.js"></script>' in client.get("/license").text
+
+
+def test_a_form_marked_busy_while_the_page_loads_keeps_its_state(client):
+    """The campaign page starts the opening before `pageshow`; only a back-forward cache
+    restore may put the form back to its server-rendered state."""
+    script = client.get("/static/busy.js").text
+
+    assert "if (!event.persisted) return;" in script

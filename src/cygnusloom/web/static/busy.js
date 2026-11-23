@@ -86,8 +86,11 @@
   });
 
   // A back-forward cache restore brings the disabled button back with the page; put it
-  // back the way the server rendered it.
-  window.addEventListener("pageshow", () => {
+  // back the way the server rendered it. A page that marks a form during its own load (the
+  // campaign's auto-started opening) must keep that state; the initial pageshow is not a
+  // restore.
+  window.addEventListener("pageshow", (event) => {
+    if (!event.persisted) return;
     for (const form of document.querySelectorAll("form[data-busy]")) clear(form);
   });
 
