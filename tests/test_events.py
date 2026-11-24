@@ -19,8 +19,10 @@ from cygnusloom.services.events import (
     GameEvent,
     Harmed,
     LocationAdded,
+    LocationUpdated,
     NoteAdded,
     NpcAdded,
+    NpcUpdated,
     Place,
     Recovered,
     ResourceChanged,
@@ -178,6 +180,91 @@ def test_npc_pronouns_round_trip_and_old_events_load_without_them(
     legacy.pop("pronouns")
     row.payload = json.dumps(legacy)
     assert decode(row).pronouns is None
+
+
+def test_old_events_load_without_species_and_old_updates_keep_the_recorded_people(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    _, campaign_id = _campaign_id(client_factory)
+    with Session(app.state.engine) as db:
+        # Two records from before this version carry no people at all.
+        old_place = record(
+            db, campaign_id, LocationAdded(name="Old Hold", description="A hall.")
+        )
+        old_npc = record(
+            db,
+            campaign_id,
+            NpcAdded(
+                name="Pell",
+                location="Old Hold",
+                description="A ferryman.",
+                personality="Calm",
+                accent="Soft",
+                quirks=["hums"],
+            ),
+        )
+        # A record that carries a people, then an update from before the species fields existed.
+        # The update must not clear what the add recorded.
+        record(
+            db,
+            campaign_id,
+            LocationAdded(
+                name="Stonehold", description="A hall.", majority_species="dwarves"
+            ),
+        )
+        record(
+            db,
+            campaign_id,
+            NpcAdded(
+                name="Borin",
+                location="Stonehold",
+                description="A smith.",
+                personality="Calm",
+                accent="Soft",
+                quirks=[],
+                species="Dwarf",
+            ),
+        )
+        place_update = record(
+            db,
+            campaign_id,
+            LocationUpdated(name="Stonehold", description="A colder hall."),
+        )
+        npc_update = record(
+            db,
+            campaign_id,
+            NpcUpdated(
+                name="Borin",
+                description="A tired smith.",
+                personality="Calm",
+                accent="Soft",
+                quirks=[],
+            ),
+        )
+        db.commit()
+
+    stripped = {
+        old_place: ("majority_species",),
+        old_npc: ("species",),
+        place_update: ("majority_species", "majority_species_changed"),
+        npc_update: ("species", "species_changed"),
+    }
+    with Session(app.state.engine) as db:
+        for event_id, fields in stripped.items():
+            row = db.get(Event, event_id)
+            assert row is not None
+            payload = json.loads(row.payload)
+            for field in fields:
+                payload.pop(field, None)
+            row.payload = json.dumps(payload)
+        db.commit()
+
+    with Session(app.state.engine) as db:
+        state = load_state(db, campaign_id)
+    assert state.places["old hold"].majority_species is None
+    assert state.characters["pell"].species == ""
+    assert state.places["stonehold"].majority_species == "dwarves"
+    assert state.characters["borin"].species == "Dwarf"
 
 
 def test_a_player_message_keeps_the_character_it_spoke_for(
