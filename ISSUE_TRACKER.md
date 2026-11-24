@@ -4,7 +4,8 @@ Tackle triaged issues in the order presented (untraiged issues have no particula
 
 # Untriaged Issues
 
-None.
+* Human-written SPEC and README: the project's SPEC and README should be written by a person, not left as AI-generated prose.
+* Human review of the UI wording to clean up AI-heavy language: a person reads the user-facing text and rewrites anything that sounds AI-generated.
 
 # Triaged Issues
 
