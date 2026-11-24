@@ -37,6 +37,8 @@
         "kind": "feature",
         "counter": "spell_picks",
         "feature_type": "spell",
+        "creation": true,
+        "creation_options": "creation_spell_options",
         "options": "spell_options",
         "apply": "apply_spell_pick"
       },
@@ -46,6 +48,8 @@
         "kind": "feature",
         "counter": "cantrip_picks",
         "feature_type": "spell",
+        "creation": true,
+        "creation_options": "creation_spell_options",
         "options": "spell_options",
         "apply": "apply_spell_pick"
       },

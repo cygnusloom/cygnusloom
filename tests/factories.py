@@ -87,6 +87,10 @@ def pinned_stats(stats: Mapping[str, int]) -> Iterator[None]:
 # A form field name may already carry its prefix, as the existing creation helpers send it.
 _FIELD_PREFIXES = (
     "field-",
+    "feature-choice-",
+    "creation-pick-",
+    "start_level",
+    "follow_owner_level",
     "stat-",
     "pick-",
     "repeat-feature-",

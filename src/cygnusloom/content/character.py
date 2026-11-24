@@ -780,6 +780,8 @@ class CharacterPreset:
     tables: Mapping[str, str] = field(default_factory=dict)
     # Skill and feature pick values, by pick id, in the order the form shows the picks.
     picks: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
+    # Level-up picks offered during creation, by pick id, such as a starting spell list.
+    creation_picks: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
     # Feature choice values, keyed by `feature:pick` or `feature:pick:pattern`.
     feature_choices: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
     # Starting kit options, by template id.
@@ -1178,6 +1180,7 @@ PRESET_KEYS = {
     "fields",
     "tables",
     "picks",
+    "creation_picks",
     "feature_choices",
     "grants",
 }
@@ -1233,6 +1236,7 @@ def _character_preset(
     fields = _preset_fields(data.get("fields"), spec, label)
     tables = _preset_tables(data.get("tables"), spec, label)
     picks = _preset_picks(data.get("picks"), spec, label)
+    creation_picks = _preset_creation_picks(data.get("creation_picks"), spec, label)
     grants: dict[str, str] = {}
     raw_grants = data.get("grants", {})
     if not isinstance(raw_grants, Mapping):
@@ -1273,9 +1277,36 @@ def _character_preset(
         fields=fields,
         tables=tables,
         picks=picks,
+        creation_picks=creation_picks,
         feature_choices=feature_choices,
         grants=grants,
     )
+
+
+def _preset_creation_picks(
+    value: object, spec: CharacterSpec, label: str
+) -> dict[str, tuple[str, ...]]:
+    """A preset's starting level picks, by pick id. The creation form offers these next to the
+    other template choices; the values must name features the rule set knows."""
+    if value is None:
+        return {}
+    if not isinstance(value, Mapping):
+        raise ContentError(f"{label}: 'creation_picks' must map pick ids to lists of choices")
+    picks: dict[str, tuple[str, ...]] = {}
+    for pick_id, raw in value.items():
+        if (
+            not isinstance(pick_id, str)
+            or not isinstance(raw, list)
+            or not all(isinstance(item, str) for item in raw)
+        ):
+            raise ContentError(f"{label}: 'creation_picks' must map pick ids to lists of choices")
+        for choice in raw:
+            if choice not in spec.features:
+                raise ContentError(f"{label}: no feature {choice!r} for creation pick {pick_id!r}")
+        if len(set(raw)) != len(raw):
+            raise ContentError(f"{label}: creation pick {pick_id!r} repeats a choice")
+        picks[pick_id] = tuple(raw)
+    return picks
 
 
 def _preset_fields(value: object, spec: CharacterSpec, label: str) -> dict[str, str]:
