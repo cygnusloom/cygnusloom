@@ -34,6 +34,7 @@ from cygnusloom.content.library import (
     InventoryRules,
     MonsterTemplate,
     RelationRules,
+    Species,
     TallyRules,
     WorldTerrain,
 )
@@ -60,6 +61,7 @@ from cygnusloom.services.events import (
 from cygnusloom.services.geometry import contains, representative_point, signed_area
 from cygnusloom.services.hooks import HookContext, call_hook
 from cygnusloom.services.objects import visible_objects
+from cygnusloom.services.peoples import MIXED_PEOPLES
 
 # The map always shows at least this many kilometers from its center, and leaves a margin.
 MIN_MAP_RADIUS_KM = 1.0
@@ -430,6 +432,8 @@ def get_statblock(
     lines = _sheet_text(spec, character, include_fields=include_fields).splitlines()
     if include_description and character.description:
         lines.insert(0, f"Description: {character.description}")
+    if character.species:
+        lines.insert(0, f"People: {character.species}")
     if combat is not None:
         lines += _combat_lines(character, spec, combat, monsters)
     lines += _status_lines(
@@ -1052,6 +1056,7 @@ def world_state_text(
     track_survival_needs: bool = True,
     character: CharacterSpec | None = None,
     monsters: Mapping[str, MonsterTemplate] | None = None,
+    species: Sequence[Species] = (),
 ) -> str:
     """The GM's orientation at the start of a turn: the campaign options, the day, the player
     character and where they are, the NPCs there, the factions and their cup, and any encounter in
@@ -1077,6 +1082,21 @@ def world_state_text(
     if state.settings:
         lines.append("Setting:")
         lines.extend(f"  {topic}: {detail}" for topic, detail in state.settings.items())
+    if species:
+        lines.append(
+            "Peoples of this world: "
+            + "; ".join(f"{entry.name} — {entry.blurb}" for entry in species)
+            + "."
+        )
+        lines.append(
+            "Vary the peoples of places and NPCs: a settlement is usually mostly one people, "
+            "with travelers, settlers, and exiles from the others, and a person's trade, dress, "
+            "and manner follow their people's culture. Give a new place that people live in its "
+            "majority people with create_location's majority_species. create_npc takes species, "
+            "which defaults to the place's majority people, so give it only for someone of "
+            "another people. Use lookup_species to read a people's customs when a scene turns "
+            "on them."
+        )
     if unwritten_world and not state.world_description:
         lines.append(
             "Player-facing world overview: not written yet. Write two or three sentences with "
@@ -1388,7 +1408,9 @@ def _excerpt(text: str, limit: int) -> str:
 def _npc_state_name(npc: Character) -> str:
     """An NPC as the turn orientation lists them: the name and the traits a player can see. The
     personality is there so the GM can weigh how likely the NPC is to speak unprompted."""
-    tags = ["story only, no stats yet"] if npc.story_only else []
+    tags = [npc.species] if npc.species else []
+    if npc.story_only:
+        tags.append("story only, no stats yet")
     if npc.dead:
         tags.append("dead body")
     elif npc.defeated:
@@ -1476,6 +1498,10 @@ def _place_here_lines(
     if things:
         lines.append(f"{object_heading}: {'; '.join(things)}.")
     here = _place_named(state, location)
+    if here.majority_species == MIXED_PEOPLES:
+        lines.append(f"{here.name} has no single majority people; many peoples live here.")
+    elif here.majority_species:
+        lines.append(f"{here.name} is mostly {here.majority_species}.")
     if here.parent is not None:
         lines.append(f"{here.name} is inside {here.parent}.")
     inside = [_place_named(state, name) for name in _children_of(state, here.name)]
@@ -1651,7 +1677,7 @@ def _location_entry(place: Place) -> dict[str, Any]:
     position = None
     if place.position is not None:
         position = {"x": place.position.x, "y": place.position.y}
-    return {
+    entry: dict[str, Any] = {
         "name": place.name,
         "description": place.description,
         "summary": place.summary,
@@ -1659,6 +1685,9 @@ def _location_entry(place: Place) -> dict[str, Any]:
         "position_km": position,
         "parent": place.parent,
     }
+    if place.majority_species:
+        entry["majority_species"] = place.majority_species
+    return entry
 
 
 def _npcs_at(state: CampaignState, location: str) -> list[Character]:
@@ -1756,7 +1785,7 @@ def _npcs_in_the_wind(state: CampaignState) -> list[str]:
 
 
 def _npc_summary(npc: Character) -> dict[str, Any]:
-    return {
+    entry: dict[str, Any] = {
         "name": npc.name,
         "location": npc.location,
         "description": npc.description,
@@ -1766,10 +1795,21 @@ def _npc_summary(npc: Character) -> dict[str, Any]:
         "pronouns": npc.pronouns,
         "defeated": npc.defeated,
     }
+    if npc.species:
+        entry["species"] = npc.species
+    return entry
 
 
 def _npc_words(npc: Character) -> list[str]:
-    return [npc.name, npc.location or "", npc.description, npc.personality, npc.accent, *npc.quirks]
+    return [
+        npc.name,
+        npc.location or "",
+        npc.species,
+        npc.description,
+        npc.personality,
+        npc.accent,
+        *npc.quirks,
+    ]
 
 
 def _flag_text(flags: Sequence[str]) -> str:

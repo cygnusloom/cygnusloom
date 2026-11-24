@@ -21,7 +21,9 @@ from cygnusloom.services.events import (
     record,
 )
 from cygnusloom.services.inventory import tracks_inventory
+from cygnusloom.services.peoples import majority_species_name, npc_species
 from cygnusloom.services.views import (
+    _place_named,
     get_statblock,
     speaker_profile,
 )
@@ -45,8 +47,18 @@ class PeopleMixin:
         armor: int | None = None,
         attacks: Sequence[Mapping[str, Any]] | None = None,
         summary: str | None = None,
+        species: str | None = None,
     ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
+            people = ""
+            if species is not None:
+                people = npc_species(self.species, species)
+            else:
+                # An NPC is of the place's majority people unless the GM says otherwise.
+                where = _place_named(load_state(db, self.campaign_id), location)
+                people = majority_species_name(
+                    self.species, where.majority_species or ""
+                )
             result = create_npc(
                 db,
                 self.campaign_id,
@@ -68,6 +80,7 @@ class PeopleMixin:
                 hp_tier=hp_tier,
                 pronouns=pronouns,
                 important=important,
+                species=people,
             )
             if result["statblock"] is None:
                 self._initialize_generated_defense(db, name)
@@ -174,7 +187,9 @@ class PeopleMixin:
         character: Mapping[str, Any] | None = None,
         armor: int | None = None,
         attacks: Sequence[Mapping[str, Any]] | None = None,
+        species: str | None = None,
     ) -> dict[str, Any]:
+        people = None if species is None else npc_species(self.species, species)
         with session_scope(self.engine) as db:
             result = update_npc(
                 db,
@@ -192,6 +207,7 @@ class PeopleMixin:
                 armor_max=self.combat.armor_max if self.combat else 0,
                 defense_base=self.combat.defense_base if self.combat else 0,
                 plus=self.plus,
+                species=people,
             )
             if result["statted"] and armor is None:
                 self._initialize_generated_defense(db, name)

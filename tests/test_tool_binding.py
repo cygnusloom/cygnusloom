@@ -310,6 +310,7 @@ def test_core_binding_leaves_the_schemas_unchanged():
         "personality",
         "pronouns",
         "quirks",
+        "species",
         "summary",
     ]
     assert calls["view_journal"].parameters["required"] == ["start_line"]

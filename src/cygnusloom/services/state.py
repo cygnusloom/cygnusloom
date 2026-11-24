@@ -86,6 +86,9 @@ class Place:
     # The world's id for this place, such as "isthmus-town", or None for one the GM invented.
     # Authored routes are keyed by it.
     location_id: str | None = None
+    # The people most of this place's folk belong to, in the plural as in "dwarves", or
+    # "mixed" for a place with no single majority. None when it was never recorded.
+    majority_species: str | None = None
 
 
 # The looks the player's world map may choose. The CSS colours each palette, so a campaign's
@@ -251,6 +254,8 @@ class Character:
     summary: str = ""
     # How the GM refers to the character, such as "she/her". None if it was never recorded.
     pronouns: str | None = None
+    # An NPC's people, in the singular as in "Dwarf", or "" when it was never recorded.
+    species: str = ""
     # The character options, resolved when the character was created. See content/character.py.
     stats: dict[str, int] = field(default_factory=dict)
     templates: dict[str, str] = field(default_factory=dict)

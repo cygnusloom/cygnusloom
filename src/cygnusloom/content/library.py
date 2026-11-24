@@ -365,6 +365,9 @@ class LocationTemplate:
     # The id of the encounter template that is this place's authored local map, or None. It is
     # checked against the rule set's templates when the world's content is built.
     map: str | None = None
+    # The people most of this place's folk belong to, in the plural as in "dwarves", or
+    # "mixed", or None when it has no recorded majority. The GM reads it when creating NPCs.
+    majority_species: str | None = None
 
 
 @dataclass(frozen=True)
@@ -389,6 +392,27 @@ class NpcTemplate:
     # The rule set's NPC HP tier, such as "average", for an NPC with no statblock. None uses the
     # rule set's ordinary character HP roll.
     hp_tier: str | None = None
+
+
+@dataclass(frozen=True)
+class Species:
+    """One of the peoples a ruleset or world offers the GM. NPCs and places take their species
+    from this list, and the culture notes keep a people's places and customs consistent. A
+    world's species replace the rule set's when the world declares its own."""
+
+    id: str
+    # The singular name, such as "Dwarf". Recorded on an NPC.
+    name: str
+    # The plural, such as "dwarves". Used for a place's majority people.
+    plural: str
+    # The adjective, such as "dwarven". Used to describe places and things.
+    adjective: str
+    # One line the GM sees every turn, enough to vary NPCs and settlements by people.
+    blurb: str
+    # The longer culture note, read with lookup_species when a scene turns on it.
+    culture: str
+    # The order the peoples are offered in; ties fall back to the name.
+    order: int = 0
 
 
 @dataclass(frozen=True)
@@ -426,6 +450,8 @@ class WorldTemplate:
     # Areas of ground on the world map. They do not overlap, and are checked against the rule set's
     # world terrain in WorldContent.
     regions: tuple[RegionTemplate, ...] = ()
+    # The peoples of this world. When empty, the rule set's peoples apply.
+    species: tuple[Species, ...] = ()
 
     @property
     def has_setting(self) -> bool:
@@ -2291,6 +2317,8 @@ class RuleSet:
     # The optional engine parts this rule set offers, declared in its head or inferred from its
     # definitions when the head has no `capabilities` block.
     capabilities: Capabilities = field(default_factory=Capabilities)
+    # The peoples the GM may give to NPCs and places. A world may declare its own instead.
+    species: tuple[Species, ...] = ()
 
     @property
     def rules(self) -> Mapping[str, str]:
@@ -2757,7 +2785,9 @@ def _single(definitions: list[Definition], kind: str, template: str) -> Definiti
 WORLD_TYPES = ("monster", "table", "dice_table", "creative_table", "feature", "item", "rule")
 # Every definition type a world loader consumes. A rule-set-only definition in a world directory
 # is a content error instead of being silently dropped.
-WORLD_DEFINITION_TYPES = frozenset({"world", "location", "npc", "region", "route", *WORLD_TYPES})
+WORLD_DEFINITION_TYPES = frozenset(
+    {"world", "location", "npc", "region", "route", "species", *WORLD_TYPES}
+)
 # A module is one manifest plus optional world-like definitions. A campaign module's setting is
 # built from those definitions; a mini module is prose only. Modules are data only; no module may
 # import Python.
@@ -2821,6 +2851,7 @@ RULE_SET_DEFINITION_TYPES = frozenset(
         "tool_call",
         "dice_table",
         "creative_table",
+        "species",
     }
 )
 STATBLOCK_KEYS = ("stats", "armor", "attacks")
@@ -3117,7 +3148,48 @@ def _build_world_template(template: str, definitions: list[Definition]) -> World
         definitions=(*own, *statblocks),
         start=_load_world_start(world.data, label, location_ids),
         regions=regions,
+        species=_load_species_definitions(definitions, template),
     )
+
+
+def _load_species_definitions(
+    definitions: Sequence[Definition], template: str
+) -> tuple[Species, ...]:
+    """The `species` definitions, sorted by their declared order. A people's name, plural, and
+    adjective must all be distinct, since the GM may use any of them to name it."""
+    species: list[Species] = []
+    for definition in definitions:
+        if definition.type != "species":
+            continue
+        label = f"{template}: species {definition.id}"
+        check_keys(
+            definition.data,
+            {"type", "id", "name", "plural", "adjective", "blurb", "culture", "order"},
+            label,
+        )
+        species.append(
+            Species(
+                id=definition.id,
+                name=required_text(definition.data, "name", label),
+                plural=required_text(definition.data, "plural", label),
+                adjective=required_text(definition.data, "adjective", label),
+                blurb=required_text(definition.data, "blurb", label),
+                culture=required_text(definition.data, "culture", label),
+                order=_optional_whole(definition.data, "order", label),
+            )
+        )
+    seen: dict[str, str] = {}
+    for entry in species:
+        for value in (entry.name, entry.plural, entry.adjective):
+            key = " ".join(value.split()).casefold()
+            owner = seen.get(key)
+            if owner is not None and owner != entry.id:
+                raise ContentError(
+                    f"{template}: species {entry.id!r} and {owner!r} both call themselves "
+                    f"{value!r}; a people needs a name, plural, and adjective of its own"
+                )
+            seen[key] = entry.id
+    return tuple(sorted(species, key=lambda entry: (entry.order, entry.name.casefold(), entry.id)))
 
 
 def _load_regions(definitions: list[Definition], template: str) -> tuple[RegionTemplate, ...]:
@@ -3617,6 +3689,7 @@ def _load_location(
             "rules",
             "routes",
             "map",
+            "majority_species",
         },
         label,
     )
@@ -3646,6 +3719,7 @@ def _load_location(
         routes=_load_routes(data, label),
         looks_like=looks_like,
         map=_optional_text(data, "map", label),
+        majority_species=_optional_text(data, "majority_species", label),
     )
 
 
@@ -4831,6 +4905,7 @@ def _build_rule_set(
     return RuleSet(
         id=head.id,
         name=required_text(head.data, "name", label),
+        species=_load_species_definitions(definitions, template),
         description=required_text(head.data, "description", label),
         blurb=_optional_text(head.data, "blurb", label),
         icon=_definition_icon(head.data, label, FALLBACK_RULE_SET),

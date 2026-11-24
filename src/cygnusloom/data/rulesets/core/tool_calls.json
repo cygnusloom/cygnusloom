@@ -4,7 +4,7 @@
     "id": "create_location",
     "python_module": "core",
     "function": "create_location",
-    "description": "Add a new location to the campaign; before adding an invented place, seed it with roll_creative (location and location_descriptor) unless the world, module, storylines, or a table already supplies it. This tool records the place, it does not invent it. Use it when the story reaches a place that does not exist yet. Names must be unique among locations and NPCs, and a name that repeats an existing place in other words (such as 'Market Street' for 'Market Road') is refused. Set discovered to true only when anyone in the world would have heard of the place, so the player already knows it. A place given a map point (x and y) must lie inside a region of the map with at least 0.5 km of ground between the point and the region's edge; if none does, the refusal says so, and you must create that region with create_region first. To put a place inside another, give parent set to the name of that top-level location; such a place has no map point of its own, so leave out x and y.",
+    "description": "Add a new location to the campaign; before adding an invented place, seed it with roll_creative (location and location_descriptor) unless the world, module, storylines, or a table already supplies it. This tool records the place, it does not invent it. Use it when the story reaches a place that does not exist yet. Names must be unique among locations and NPCs, and a name that repeats an existing place in other words (such as 'Market Street' for 'Market Road') is refused. Set discovered to true only when anyone in the world would have heard of the place, so the player already knows it. A place given a map point (x and y) must lie inside a region of the map with at least 0.5 km of ground between the point and the region's edge; if none does, the refusal says so, and you must create that region with create_region first. To put a place inside another, give parent set to the name of that top-level location; such a place has no map point of its own, so leave out x and y. When people live here, give their majority people with majority_species from the peoples in the world state, so the place's folk and later NPCs stay consistent with that people.",
     "parameters": {
       "properties": {
         "name": {
@@ -42,6 +42,10 @@
         "summary": {
           "type": "string",
           "description": "A short paragraph the player sees in the compendium: what this place looks or feels like from what they know, with no GM-only secrets, hidden contents, or plot notes. Required in spirit whenever discovered is true. At most 600 characters."
+        },
+        "majority_species": {
+          "type": "string",
+          "description": "The people most of this place's folk belong to, such as dwarves or humans, from the peoples in the world state. Use the word mixed for a place with no single majority. Leave it out when nobody lives there. A new NPC here takes this people unless given another species."
         }
       },
       "required": [
@@ -202,7 +206,7 @@
     "id": "create_npc",
     "character_options": true,
     "npc_hp_tier": true,
-    "description": "Add an NPC to the campaign and place them at an existing location; leave personality, accent, and quirks out so create_npc rolls them from its tables, and pass only a trait the player or an earlier record already fixes. Do not infer a trait from the NPC's role or the scene. Give character options, such as appearance or biography, only when the story calls for them; anything left out is rolled or left blank. A name that matches a published statblock, such as a creature in the source material, takes that statblock's stats, armor, and attacks, so leave the stats out of the character options. Give armor and attacks when the NPC is meant to fight; this arms them in the same call, so a whole band can be created before stage_encounter. Give summary when the player has met them and should see a brief entry on the Characters page. Names must be unique among locations and NPCs.",
+    "description": "Add an NPC to the campaign and place them at an existing location; leave personality, accent, and quirks out so create_npc rolls them from its tables, and pass only a trait the player or an earlier record already fixes. Do not infer a trait from the NPC's role or the scene. Give character options, such as appearance or biography, only when the story calls for them; anything left out is rolled or left blank. A name that matches a published statblock, such as a creature in the source material, takes that statblock's stats, armor, and attacks, so leave the stats out of the character options. Give armor and attacks when the NPC is meant to fight; this arms them in the same call, so a whole band can be created before stage_encounter. Give summary when the player has met them and should see a brief entry on the Characters page. Names must be unique among locations and NPCs. A new NPC takes the place's majority people; give species from the world state's peoples only for a traveler, settler, or exile of another people.",
     "parameters": {
       "properties": {
         "name": {
@@ -280,6 +284,10 @@
         "pronouns": {
           "type": "string",
           "description": "Optional. The NPC's pronouns, such as \"she/her\", \"he/him\", or \"they/them\", or another form. Record them whenever the NPC is written in the text, so the GM does not have to guess."
+        },
+        "species": {
+          "type": "string",
+          "description": "Optional. The NPC's people, from the peoples in the world state, such as Dwarf or Human. Leave it out for the place's majority people, which is recorded for a new NPC here. Give it for a traveler, settler, or exile of another people. A creature that is not one of the peoples takes no species."
         },
         "personality": {
           "type": "string",
@@ -767,6 +775,20 @@
   },
   {
     "type": "tool_call",
+    "id": "lookup_species",
+    "lookup": true,
+    "description": "Read a people's culture: how they live, build, dress, worship, and deal with other peoples. Call it with no name to read every people, or with a people's name, plural, or adjective to read one. Use it before inventing a settlement or NPC whose customs matter, so a dwarven hold, elven village, or gnome caravan reads as its people and not as generic fantasy.",
+    "parameters": {
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "A people's name, plural, or adjective, such as Dwarf, dwarves, or dwarven. Leave it out to read every people at once."
+        }
+      }
+    }
+  },
+  {
+    "type": "tool_call",
     "id": "lookup_rule",
     "python_module": "core",
     "function": "lookup_rule",
@@ -860,6 +882,10 @@
         "icon": {
           "type": "string",
           "description": "An icon id from map_options' place_icons for the map marker. An empty string goes back to the default marker."
+        },
+        "majority_species": {
+          "type": "string",
+          "description": "The people most of this place's folk belong to, such as dwarves or humans, from the peoples in the world state; use mixed for a place with no single majority. Leave it out to keep the recorded majority, or pass an empty string to clear it."
         }
       },
       "required": [
@@ -1068,6 +1094,10 @@
             "type": "string"
           },
           "description": "Optional. The NPC's full list of habits or mannerisms, replacing the old list."
+        },
+        "species": {
+          "type": "string",
+          "description": "Optional. The NPC's people, from the peoples in the world state. Use it to correct a recorded people or to name one the NPC was created without. Leave it out to keep the recorded one."
         },
         "armor": {
           "type": "integer",
