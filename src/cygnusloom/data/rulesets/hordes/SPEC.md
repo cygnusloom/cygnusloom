@@ -13,23 +13,7 @@ ruleset supplies the procedures, the tables, and the engine-backed crunch.
 
 ## Sources and legal
 
-- All rules text is original. The game belongs to the PbtA design lineage
-  (2d6, 10+/7–9/6–), but no text is copied from Dungeon World, Stonetop, or any
-  other game.
-- The combat procedure follows the PbtA principle that a fight is a
-  conversation, not a turn-based mode: no initiative, no rounds, no grid
-  turns, and no attack rolls for monsters. The Stonetop/Dungeon World
-  discussion at *Spouting Lore* is a design reference, not a source of text.
-- **Cataclysm: Dark Days Ahead** (CC BY-SA 3.0) may inspire tone, item
-  categories, and threats. The default world and content are original. If any
-  Cataclysm-derived text or data ships, that content carries a CC BY-SA 3.0
-  notice and attribution in `CREDITS.md`, and its share-alike terms apply to
-  that content.
-- **Liminal Horror**'s third-party license forbids AI-generated art and text in
-  compatible publications, so it is not a source. Breathless and Sigil are
-  mechanical references only; no text is ported.
-- **Naming risk:** *HORDES* is also a Privateer Press miniatures game. Confirm
-  the name before release or rename.
+- All rules text is original.
 
 ## Locked design
 
