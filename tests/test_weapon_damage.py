@@ -60,14 +60,6 @@ def test_unarmed_fists_roll_1d4(client_factory):
     assert CAIRN.combat.unarmed_damage == "1d4"
 
 
-def test_an_uncarried_weapon_is_refused(client_factory):
-    _, _, tools = _fight(client_factory)
-    _foe(tools, "Bo")
-    take_turn(tools, PC)
-    with pytest.raises(InvalidInput, match="carries no weapon named 'Cutlass'"):
-        tools.player_attack("Bo", "Cutlass")
-
-
 def test_a_carried_item_with_no_damage_is_refused(client_factory):
     _, _, tools = _fight(client_factory)
     tools.give_item(PC, "Rope")

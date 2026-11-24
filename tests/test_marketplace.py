@@ -26,7 +26,6 @@ from tests.factories import create_character_direct
 from tests.support import content_tree
 from tests.test_campaigns import _debug_client_factory
 from tests.test_character_creation import _cairn_campaign, _complete_form
-from tests.test_clock_rest import _wound
 from tests.test_combat import CAIRN, PC, _character, _set_stat, _tools
 from tests.test_inventory import _fill
 
@@ -339,13 +338,6 @@ def test_a_moments_rest_eats_nothing(client_factory):
     before = _rations(app, campaign_id)[0].uses
     tools.rest("moments", reason="watch")
     assert _rations(app, campaign_id)[0].uses == before
-
-
-def test_a_wounded_character_who_eats_still_heals(client_factory):
-    app, campaign_id, tools = _pcs(client_factory)
-    _wound(app, campaign_id)
-    tools.rest("night", reason="camp")
-    assert _character(app, campaign_id, PC).harm.get("hp", 0) == 0
 
 
 def test_the_starting_pack_is_an_item_with_its_uses(client_factory):

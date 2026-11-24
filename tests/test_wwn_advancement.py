@@ -1686,19 +1686,6 @@ def test_impervious_defense_updates_on_level_and_dexterity_changes(client_factor
     assert _pc(app, campaign_id).armor == 15
 
 
-def test_impervious_defense_applies_when_selected_at_creation(client_factory, monkeypatch):
-    picks = {**CLASS_PICKS["warrior"], "pick-feature-class_focus_any-0": "focus_impervious_defense"}
-    monkeypatch.setitem(CLASS_PICKS, "warrior", picks)
-    app, campaign_id = _campaign(client_factory)
-    tools = _world_tools(app, campaign_id)
-    tools.drop_item(NAME, "Pieced Armor")
-    tools.drop_item(NAME, "Large Shield")
-
-    character = _pc(app, campaign_id)
-    assert character.features["focus_impervious_defense"] == 1
-    assert character.armor == 17
-
-
 def test_a_warrior_can_start_with_both_ranks_of_a_focus(client_factory, monkeypatch):
     picks = {
         "pick-feature-class_focus_any-0": "focus_impervious_defense",

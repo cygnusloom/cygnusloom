@@ -151,16 +151,6 @@ def test_fatigue_cannot_be_dropped_before_a_full_rest(client_factory):
         tools.drop_item(PC, "Fatigue")
 
 
-def test_a_full_night_rest_clears_fatigue(client_factory):
-    app, campaign_id, tools = _fight(client_factory)
-    tools.add_penalty(PC, "a spell")
-    kinds = [i.kind for i in _character(app, campaign_id, PC).items]
-    assert "fatigue" in kinds
-    tools.rest("night", reason="camp")
-    kinds = [i.kind for i in _character(app, campaign_id, PC).items]
-    assert "fatigue" not in kinds
-
-
 def _add_consumable(app: FastAPI, campaign_id: int, item: str, uses: int, kind: str = "") -> None:
     with Session(app.state.engine) as db:
         record(

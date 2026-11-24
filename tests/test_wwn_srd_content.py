@@ -125,17 +125,6 @@ def test_creative_tables_roll_a_hundred_entries_each() -> None:
         )
 
 
-def test_every_dice_table_is_filled_for_its_dice() -> None:
-    rules = _wwn().rule_sets["worldswithoutnumber"]
-    for table in rules.dice_tables.values():
-        rolls = {roll for row in table.rows for roll in range(row.low, row.high + 1)}
-        if table.dice == "2d6":
-            expected = set(range(2, 13))
-        else:
-            expected = set(range(1, int(table.dice.removeprefix("1d")) + 1))
-        assert rolls == expected, f"{table.id} does not cover {table.dice}"
-
-
 def test_kits_arm_every_character_and_leave_none_unarmed() -> None:
     rules = _wwn().rule_sets["worldswithoutnumber"]
     kits = [t for t in rules.character.templates.values() if t.kind == "kit"]

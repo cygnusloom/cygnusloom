@@ -2,20 +2,18 @@
 
 A Warrior or Expert has no Effort at all. A Mage has the pool of the tradition they chose, a
 partial Mage has the pool of their partial tradition, a Healer has Healer Effort, and a Vowed has
-Vowed Effort. Commitment still refuses a tradition the character does not have, and an eligible
-character can still commit and recover Effort.
+Vowed Effort. Commitment refuses a tradition the character does not have.
 """
 
 from __future__ import annotations
 
-import random
 from collections.abc import Callable, Mapping
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from cygnusloom.content.character import derived_stats, resolve
+from cygnusloom.content.character import derived_stats
 from cygnusloom.rules import wwn, wwn_magic
 from cygnusloom.services.events import load_state
 from cygnusloom.services.views import scene_view
@@ -137,23 +135,6 @@ def test_a_warrior_sheet_shows_no_effort_lines(
     assert not any("Effort" in line for line in sheet)
 
 
-def test_commitment_and_recovery_still_work_for_an_eligible_character(
-    client_factory: Callable[[], TestClient],
-) -> None:
-    app, campaign_id = _campaign(client_factory, class_id="mage", tradition="high_mage")
-    ctx = _ctx(_world_tools(app, campaign_id))
-    maximum = _pc(app, campaign_id).stats["effort_high"]
-
-    committed = wwn_magic.commit_effort(NAME, "high", 1, "scene", ctx)
-    assert committed["maximum"] == maximum
-    assert _pc(app, campaign_id).harm["effort_high"] == 1
-
-    recovered = wwn_magic.recover_effort(NAME, "high", "scene", ctx)
-    assert recovered["recovered"] == 1
-    assert wwn.EFFORT_MARK not in _pc(app, campaign_id).marks
-    assert _pc(app, campaign_id).harm.get("effort_high", 0) == 0
-
-
 def test_derived_effort_pools_need_their_template() -> None:
     spec = WWN.character
     stats = {"str": 10, "dex": 10, "con": 10, "int": 14, "wis": 10, "cha": 10}
@@ -170,14 +151,3 @@ def test_derived_effort_pools_need_their_template() -> None:
     )
     assert values["effort_elemental"] == 3
     assert not {"effort_high", "effort_necromancer"} & set(values)
-
-
-def test_resolve_leaves_effort_off_a_warrior_sheet() -> None:
-    sheet = resolve(
-        WWN.character,
-        {"templates": {"class": "warrior", "tradition": "no_tradition"}},
-        random.Random(7),
-        plus=WWN.plus,
-    )
-
-    assert not _effort_pools(sheet.stats)

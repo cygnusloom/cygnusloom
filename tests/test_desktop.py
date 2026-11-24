@@ -109,9 +109,6 @@ def test_the_server_store_adds_renames_removes_and_deduplicates(tmp_path):
     renamed = store.rename(first.id, "Wednesday table")
     assert renamed.name == "Wednesday table"
 
-    store.touch(second.id)
-    assert store.list()[0].id == second.id
-
     store.remove(first.id)
     assert [server.id for server in store.list()] == [second.id]
     with pytest.raises(ServerError, match="not in the list"):

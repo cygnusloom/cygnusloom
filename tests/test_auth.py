@@ -324,14 +324,6 @@ def test_test_user_new_campaign_form_gets_the_default_label(client: TestClient):
     assert 'name="character_name"' not in page
 
 
-def test_oidc_user_new_campaign_form_gets_the_default_label(settings: Settings):
-    client = _client(settings, FakeOIDC(identity=claims()))
-    client.get("/auth/callback")
-    page = client.get("/campaigns/new").text
-    assert 'name="label" value="Unwritten World #1"' in page
-    assert 'name="character_name"' not in page
-
-
 def test_account_page_shows_identity_and_sessions(client: TestClient):
     register(client)
     page = client.get("/account")

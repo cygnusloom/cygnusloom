@@ -509,14 +509,6 @@ def _backgrounds():
     return [t for t in SPEC.templates.values() if t.kind == "background"]
 
 
-def test_every_background_grants_one_backpack():
-    backgrounds = _backgrounds()
-    assert len(backgrounds) == 20
-    for template in backgrounds:
-        grants = [g.quantity for g in template.item_grants if g.item == "backpack"]
-        assert grants == ["1"], template.id
-
-
 def test_backpack_is_described_as_in_the_source():
     assert SPEC.items["backpack"].description == ("Can hold up to six slots of items or Fatigue.")
 

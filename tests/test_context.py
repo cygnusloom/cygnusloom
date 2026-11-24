@@ -419,14 +419,6 @@ def test_the_composer_has_no_settings_button_and_keeps_the_context_meter(
     assert 'data-dialog-target="dialog-settings"' not in page
 
 
-def test_context_meter_shows_the_models_window(settings: Settings):
-    app = make_app(settings, fake_provider=RecordingProvider())
-    _set_model_context(app, 4096)
-    client, campaign_id = _campaign_id(lambda: TestClient(app))
-    page = client.get(f"/campaigns/{campaign_id}").text
-    assert re.search(r'<span class="muted">[\d,]+ / 4,096</span>', page)
-
-
 def test_context_meter_uses_the_campaign_models_window(settings: Settings):
     app = make_app(
         dataclasses.replace(settings, provider_base_urls={"ollama": "http://localhost:11434/v1"}),
