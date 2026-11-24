@@ -64,7 +64,7 @@ def _post_settings(client: TestClient, campaign_id: int, **data: str):
     )
 
 
-def test_the_creation_page_offers_both_tracking_switches_checked(
+def test_the_creation_page_offers_both_survival_switches_checked(
     client_factory: Callable[[], TestClient],
 ):
     client, campaign_id = _cairn_campaign_fast(client_factory)

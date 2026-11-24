@@ -1,3 +1,4 @@
+{% from "macros.html" import optional_panel %}
 <section class="view settings-page" id="view-settings" data-view="settings" aria-labelledby="settings-title" hidden>
   <h2 id="settings-title">Settings</h2>
   <section class="settings-section" aria-labelledby="settings-view-title">
@@ -61,11 +62,10 @@
           <input type="text" name="campaign-{{ field.id }}" value="{{ field.value }}" maxlength="2000" aria-label="{{ field.name }}">
         </section>
         {% endfor %}
-        <section class="creation-panel" aria-labelledby="settings-setting-panel">
-          <h3 id="settings-setting-panel">Setting / story (optional)</h3>
-          <textarea name="setting" rows="6" maxlength="4000" placeholder="Describe the kind of setting or story you want to play. Leave blank to let the world and rule set lead." aria-labelledby="settings-setting-panel">{{ campaign_setting }}</textarea>
+        {% call optional_panel("settings-setting-panel", "Setting / story (optional)", campaign_setting) %}
+          <textarea name="setting" rows="3" maxlength="4000" placeholder="Describe the kind of setting or story you want to play. Leave blank to let the world and rule set lead." aria-labelledby="settings-setting-panel">{{ campaign_setting }}</textarea>
           <p class="muted">Tell Cygnus what kind of world or story you want. Blank is ignored.</p>
-        </section>
+        {% endcall %}
         <section class="creation-panel table-genres" aria-labelledby="settings-table-genres-panel">
           <details class="creative-sources-details">
             <summary id="settings-table-genres-panel">Creative sources</summary>
@@ -90,15 +90,12 @@
             {% endif %}
           </details>
         </section>
-        <section class="creation-panel campaign-tracking" aria-labelledby="settings-tracking-panel">
-          <h3 id="settings-tracking-panel">Tracking</h3>
+        {% call optional_panel("settings-survival-panel", "Survival Options", not campaign.use_inventory_space or not campaign.use_survival_needs) %}
           <label><input type="checkbox" name="use_inventory_space" value="1"{% if campaign.use_inventory_space %} checked{% endif %}> Track item slots and their limits</label>
           <label><input type="checkbox" name="use_survival_needs" value="1"{% if campaign.use_survival_needs %} checked{% endif %}> Track food, water, and rest needs</label>
-          <p class="muted">Without inventory space, characters may carry anything reasonable: no capacity checks, no penalty item, and no drain from a full pack. Without survival needs, rests spend no rations or water, and hunger and thirst are not tracked.</p>
-        </section>
+        {% endcall %}
         {% if start_levels|length > 1 %}
-        <section class="creation-panel" aria-labelledby="settings-start-level-panel">
-          <h3 id="settings-start-level-panel">Starting level</h3>
+        {% call optional_panel("settings-start-level-panel", "Starting level", not follow_owner_level) %}
           <label class="show-hidden-option"><input type="checkbox" name="follow_owner_level" value="1" data-follow-owner-level{% if follow_owner_level %} checked{% endif %}> Follow the campaign owner's character level</label>
           <input type="hidden" name="follow_owner_level" value="0">
           <label>New characters start at
@@ -109,14 +106,13 @@
             </select>
           </label>
           <p class="muted">While following, new characters join at the campaign owner's current level and the starting level keeps up with it.</p>
-        </section>
+        {% endcall %}
         {% endif %}
-        <section class="creation-panel campaign-respec" aria-labelledby="settings-respec-panel">
-          <h3 id="settings-respec-panel">Character rebuilding</h3>
+        {% call optional_panel("settings-respec-panel", "Character rebuilding", allow_respec) %}
           <input type="hidden" name="allow_respec" value="0">
           <label><input type="checkbox" name="allow_respec" value="1"{% if allow_respec %} checked{% endif %}> Let players respec their characters</label>
-          <p class="muted">When on, a player may rebuild their player character or a hireling they play for. The character keeps their name, pronouns, description, flavor details, and gear, while levels, experience, advancement picks, stats, skills, and features start over. Nothing can be respecced during a turn or an encounter.</p>
-        </section>
+          <p class="muted">Lets a player rebuild their character or hireling from scratch. The character keeps their name, story, and gear; levels, picks, stats, skills, and features start over. Nothing can be rebuilt during a turn or an encounter.</p>
+        {% endcall %}
       </div>
       <button type="submit">Save</button>
     </form>

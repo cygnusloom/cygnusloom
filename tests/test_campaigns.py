@@ -443,7 +443,7 @@ def test_setting_belongs_to_the_campaign_options_creation_page(
     response = _new_campaign(client, world_template="twin-lakes", rule_set="cairn2e")
     campaign_id = _created_campaign_id(response)
     page = client.get(f"/campaigns/{campaign_id}").text
-    assert 'name="setting" rows="6" maxlength="4000"' in page
+    assert 'name="setting" rows="3" maxlength="4000"' in page
     assert 'name="table_genres"' in page
     assert page.index("Campaign options") < page.index('name="setting"')
     assert page.index("Campaign options") < page.index("Creative sources")

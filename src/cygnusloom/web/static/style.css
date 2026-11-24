@@ -892,9 +892,8 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 .view { padding: 1rem 1.25rem; overflow-y: auto; }
 .creation { --creation-width: 72rem; padding-inline: max(1.25rem, calc((100% - var(--creation-width)) / 2)); }
 .creation-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr)); gap: 1rem; align-items: start; }
-/* The campaign option cards and the brief/tables row are separate grids, so space them too. */
+/* A second grid (for example a brief beside its options) keeps the same spacing. */
 .creation-grid + .creation-grid { margin-top: 1.5rem; }
-.campaign-brief { grid-template-columns: minmax(0, 2fr) minmax(16rem, 1fr); }
 .genre-options { display: flex; flex-wrap: wrap; gap: 0.45rem 1rem; }
 .genre-options label { display: flex; align-items: center; gap: 0.4rem; margin: 0; cursor: pointer; }
 .genre-options input { width: auto; margin: 0; padding: 0; accent-color: var(--accent); }
@@ -918,6 +917,9 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 .campaign-options-panel > h2 { margin-top: 0; }
 .optional-options > summary { cursor: pointer; font-weight: 600; }
 .optional-options[open] > summary { margin-bottom: 0.35rem; }
+/* The panel's flex gap stops at the <details>, so its own checkbox rows need that gap.
+   The extra class outranks `.creation-panel label`, which removes label margins. */
+.creation-panel .optional-options > label { margin: 0.5rem 0 0; }
 .name-row { display: flex; align-items: center; gap: 0.5rem; }
 .name-row label { flex: 1; min-width: 0; }
 .template-tables { display: contents; }
@@ -1287,8 +1289,6 @@ main > .card + .card, main > .card + .admin-grid, main > .admin-grid + .card { m
   .details { grid-template-columns: minmax(0, 1fr); gap: 0.1rem; }
   .details dt { margin-top: 0.55rem; }
   .details dt:first-child { margin-top: 0; }
-
-  .campaign-brief { grid-template-columns: minmax(0, 1fr); }
 
   .admin-search { flex-wrap: wrap; align-items: stretch; }
   .admin-search input { flex: 1 1 100%; }

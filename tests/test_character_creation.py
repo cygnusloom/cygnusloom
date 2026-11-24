@@ -403,7 +403,7 @@ def test_cairn_campaign_asks_for_its_options_and_character_on_one_page(
     assert "Campaign options" in page
     assert "Your character" in page
     assert 'name="campaign-omen"' in page
-    assert 'name="setting" rows="6" maxlength="4000"' in page
+    assert 'name="setting" rows="3" maxlength="4000"' in page
     assert 'name="table_genres"' in page
     assert page.index("Campaign options") < page.index('name="setting"')
     assert page.index('name="setting"') < page.index("Creative sources")
@@ -424,7 +424,7 @@ def test_a_rule_set_without_campaign_options_still_offers_the_setting(
     page = client.get(f"/campaigns/{campaign_id}").text
     assert "Campaign options" in page
     assert 'name="campaign-' not in page
-    assert 'name="setting" rows="6" maxlength="4000"' in page
+    assert 'name="setting" rows="3" maxlength="4000"' in page
     assert 'name="table_genres"' in page
     assert page.index("Campaign options") < page.index('name="setting"')
     assert page.index('name="setting"') < page.index("Creative sources")
