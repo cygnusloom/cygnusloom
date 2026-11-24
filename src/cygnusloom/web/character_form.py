@@ -21,6 +21,7 @@ from cygnusloom.content.character import (
     kind_label,
     skill_pick_options,
 )
+from cygnusloom.content.library import LevelUpPick
 from cygnusloom.services.common import InvalidInput
 from cygnusloom.web.forms import form_text
 
@@ -31,6 +32,8 @@ PICK_PREFIX = "pick-"
 SKILL_PICK_PREFIX = PICK_PREFIX + "skill-"
 FEATURE_PICK_PREFIX = PICK_PREFIX + "feature-"
 FEATURE_REPEAT_PREFIX = "repeat-feature-"
+# A level-up pick offered during creation, named for the template that grants its counter.
+CREATION_PICK_PREFIX = "creation-pick-"
 # A flavor field's write-in box, so a player may use their own words instead of the table's.
 WRITE_IN_SUFFIX = "-freeform"
 SKILL_REPLACEMENT_PREFIX = "skill-replacement-"
@@ -59,12 +62,17 @@ ROLE_LABELS = {
 
 
 def creation_view(
-    spec: CharacterSpec, rolled: dict[str, int], *, respec: bool = False
+    spec: CharacterSpec,
+    rolled: dict[str, int],
+    *,
+    respec: bool = False,
+    creation_picks: Mapping[str, tuple[Mapping[str, Any], ...]] | None = None,
 ) -> dict[str, Any]:
     """What the creation form shows. A stat in a swap group may trade values with the rest of
     its group; other stats keep their roll. A derived stat is computed, so it is not shown.
     The layout groups the panels into the rule set's categories and order; a respec hides the
-    identity panels and the flavor details, which the rebuild keeps."""
+    identity panels and the flavor details, which the rebuild keeps. `creation_picks` adds the
+    level-up picks a template buys at level 1 to that template's panel."""
     group_values: dict[str, list[int]] = {}
     for stat in spec.stats.values():
         if stat.derived is None and stat.swap_group is not None:
@@ -106,6 +114,7 @@ def creation_view(
             "picks": _picks_view(spec, template),
             "skill_picks": _skill_picks_view(spec, template),
             "feat_picks": _feat_picks_view(spec, template),
+            "creation_picks": list((creation_picks or {}).get(template.id, ())),
             "skill_grants": dict(template.skills),
             "features": [granted.feature for granted in template.features],
             "feature_choice_defaults": {
@@ -197,6 +206,9 @@ def creation_view(
                 "fields": dict(preset.fields),
                 "tables": dict(preset.tables),
                 "picks": {key: list(values) for key, values in preset.picks.items()},
+                "creation_picks": {
+                    key: list(values) for key, values in preset.creation_picks.items()
+                },
                 "feature_choices": {
                     key: list(values) for key, values in preset.feature_choices.items()
                 },
@@ -579,6 +591,30 @@ def submission_from_form(
         if replacements:
             submitted["skill_replacements"] = replacements
     return submitted
+
+
+def creation_pick_fields(
+    form: FormData,
+    templates: Mapping[str, str],
+    picks: Collection[LevelUpPick],
+    spec: CharacterSpec,
+) -> dict[str, list[str]]:
+    """The creation picks the submitted form chose, by pick id.
+
+    Each template that gives a pick's counter owns its own fields, so a class's spell picks do
+    not collide with another class's fields in the hidden template panels."""
+    chosen: dict[str, list[str]] = {}
+    for template_id in dict.fromkeys(templates.values()):
+        template = spec.templates.get(str(template_id))
+        if template is None:
+            continue
+        for pick in picks:
+            count = int(template.counters.get(pick.counter, 0))
+            for index in range(count):
+                value = form_text(form, f"{CREATION_PICK_PREFIX}{template.id}-{pick.id}-{index}")
+                if value:
+                    chosen.setdefault(pick.id, []).append(value)
+    return chosen
 
 
 def _template_is_compatible(template: Template, selected: dict[str, str]) -> bool:

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import difflib
 import json
+import logging
 import random
 import re
 import threading
@@ -97,6 +98,8 @@ from cygnusloom.services.world import (
     set_campaign_options,
 )
 from cygnusloom.services.world_support import _check_sheet_text
+
+logger = logging.getLogger(__name__)
 
 MAX_NAME = 120
 MAX_MESSAGE = 8000
@@ -361,6 +364,8 @@ def save_creation(
     follow_owner_level: bool | None = None,
     allow_respec: bool | None = None,
     defer_opening: bool = False,
+    creation_picks: Mapping[str, Sequence[str]] | None = None,
+    creation_form: Mapping[str, Any] | None = None,
 ) -> None:
     """Save the campaign options, the player character, the setting and story, the table
     genres, and the starting level together, so either all of them are saved or none is. A part
@@ -368,7 +373,8 @@ def save_creation(
     starting level, follow switch, and respec option are captured on the campaign-options
     creation page, not when the campaign is first made. `defer_opening` leaves the first
     character's opening turn unrecorded, so the table can still build its starting party and
-    start play with the party in place."""
+    start play with the party in place. `creation_picks` are the level-up picks the form
+    offered; they are validated before the character is recorded and spent after it exists."""
     campaign = get_campaign(engine, owner_id, campaign_id)
     spec = campaign_spec(library, campaign)
     brief = None
@@ -390,6 +396,21 @@ def save_creation(
         tones = _campaign_table_tones(table_tones, rule_set)
     with _exclusive(campaign_id), session_scope(engine) as db:
         state = load_state(db, campaign_id)
+        creation_world = None
+        creation_rules = None
+        if character is not None and creation_picks is not None:
+            rule_set = library.rule_sets[campaign.rule_set]
+            creation_rules = level_up_service.start_level_rules(rule_set)
+            if creation_rules is not None and creation_rules.creation_picks:
+                creation_world = library.world_content(campaign.world_template, campaign.rule_set)
+                ctx = level_up_service.tool_context(engine, campaign_id, rule_set, creation_world)
+                level_up_service.check_creation_picks(
+                    rule_set,
+                    ctx,
+                    character.submitted.get("templates", {}),
+                    creation_picks,
+                    creation_form or {},
+                )
         # Only the campaign's first character sets the shared options, setting, and genres. A
         # player joining a campaign already under way makes their character and nothing else.
         first_character = not state.pcs()
@@ -471,6 +492,21 @@ def save_creation(
             if opening:
                 record(db, campaign_id, OpeningStarted(player_id=owner_id))
         db.commit()
+        if (
+            character is not None
+            and creation_picks is not None
+            and creation_rules is not None
+            and creation_world is not None
+        ):
+            _apply_creation_picks(
+                engine,
+                campaign_id,
+                library,
+                campaign,
+                character.name,
+                creation_picks,
+                creation_form,
+            )
 
 
 def _require_party_setup(state: CampaignState) -> None:
@@ -492,6 +528,8 @@ def save_party_hireling(
     *,
     character: NewCharacter,
     wage: int = 0,
+    creation_picks: Mapping[str, Sequence[str]] | None = None,
+    creation_form: Mapping[str, Any] | None = None,
 ) -> int:
     """Add a hireling to the player's starting party from the creation form. The hireling is
     built from the same options as the player character and receives its chosen starting kit.
@@ -514,6 +552,16 @@ def save_party_hireling(
         level_rules = level_up_service.start_level_rules(rule_set)
         if level_rules is not None:
             level_up_service.check_start_level(rule_set, starting_level)
+        if creation_picks is not None and level_rules is not None and level_rules.creation_picks:
+            creation_world = library.world_content(campaign.world_template, campaign.rule_set)
+            ctx = level_up_service.tool_context(engine, campaign_id, rule_set, creation_world)
+            level_up_service.check_creation_picks(
+                rule_set,
+                ctx,
+                character.submitted.get("templates", {}),
+                creation_picks,
+                creation_form or {},
+            )
         created = create_party_hireling(
             db,
             campaign_id,
@@ -543,7 +591,51 @@ def save_party_hireling(
                 db, campaign_id, rule_set, created["name"], starting_level
             )
         db.commit()
+        if creation_picks is not None and level_rules is not None and level_rules.creation_picks:
+            _apply_creation_picks(
+                engine,
+                campaign_id,
+                library,
+                campaign,
+                created["name"],
+                creation_picks,
+                creation_form,
+            )
         return starting_level
+
+
+def _apply_creation_picks(
+    engine: Engine,
+    campaign_id: int,
+    library: ContentLibrary,
+    campaign: Campaign,
+    name: str,
+    creation_picks: Mapping[str, Sequence[str]],
+    creation_form: Mapping[str, Any] | None,
+) -> None:
+    """Spend a new character's creation picks after the character is recorded.
+
+    The form was validated first, so a refusal here means the character and its choices
+    disagreed. The picks stay banked for the normal advancement page instead of losing the
+    character, and the warning names the campaign so the gap can be fixed."""
+    rule_set = library.rule_sets.get(campaign.rule_set)
+    if rule_set is None:
+        return
+    world = library.world_content(campaign.world_template, campaign.rule_set)
+    try:
+        level_up_service.apply_creation_picks(
+            engine,
+            campaign_id,
+            rule_set,
+            world,
+            name,
+            creation_picks,
+            creation_form or {},
+        )
+    except InvalidInput as exc:
+        logger.warning(
+            "creation picks for %s in campaign %s stayed banked: %s", name, campaign_id, exc
+        )
 
 
 def remove_party_hireling(engine: Engine, player_id: int, campaign_id: int, name: str) -> str:
@@ -594,6 +686,8 @@ def respec_character(
     name: str,
     rolled: Mapping[str, int],
     submitted: Mapping[str, Any],
+    creation_picks: Mapping[str, Sequence[str]] | None = None,
+    creation_form: Mapping[str, Any] | None = None,
 ) -> int:
     """Rebuild a player character's or hireling's sheet from scratch, under the campaign's respec
     option. The character keeps their name, pronouns, description, flavor details, gear, and place
@@ -672,6 +766,16 @@ def respec_character(
             owner_level = level_up_service.owner_pc_level(state, rule_set)
             if owner_level is not None:
                 starting_level = owner_level
+        if creation_picks is not None and level_up_service.start_level_rules(rule_set) is not None:
+            creation_world = library.world_content(campaign.world_template, campaign.rule_set)
+            ctx = level_up_service.tool_context(engine, campaign_id, rule_set, creation_world)
+            level_up_service.check_creation_picks(
+                rule_set,
+                ctx,
+                rebuilt_submission.get("templates", {}),
+                creation_picks,
+                creation_form or {},
+            )
         record(
             db,
             campaign_id,
@@ -712,6 +816,16 @@ def respec_character(
                     db, campaign_id, rule_set, target.name, starting_level
                 )
         db.commit()
+        if creation_picks is not None and level_up_service.start_level_rules(rule_set) is not None:
+            _apply_creation_picks(
+                engine,
+                campaign_id,
+                library,
+                campaign,
+                target.name,
+                creation_picks,
+                creation_form,
+            )
         return starting_level
 
 

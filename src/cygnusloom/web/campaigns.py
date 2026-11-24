@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
-from collections.abc import AsyncIterator, Sequence
+from collections.abc import AsyncIterator, Mapping, Sequence
 from dataclasses import dataclass
 from types import ModuleType
 from typing import Any
@@ -18,14 +18,21 @@ from fastapi.responses import (
     StreamingResponse,
 )
 from sqlalchemy.exc import SQLAlchemyError
+from starlette.datastructures import FormData
 from starlette.responses import Response
 
 from cygnusloom import CAMPAIGN_MAJOR_VERSION
 from cygnusloom.auth.deps import page_user, verify_csrf
-from cygnusloom.content.character import NO_CAMPAIGN, NO_CHARACTER, character_schema
+from cygnusloom.content.character import (
+    NO_CAMPAIGN,
+    NO_CHARACTER,
+    CharacterSpec,
+    character_schema,
+)
 from cygnusloom.content.library import (
     CREATIVE_CATEGORY_HELP,
     TONE_HELP,
+    RuleSet,
     effective_table_genres,
 )
 from cygnusloom.db.models import User
@@ -131,6 +138,7 @@ from cygnusloom.web.character_form import (
     WRITE_IN_SUFFIX,
     campaign_submission_from_form,
     campaign_view,
+    creation_pick_fields,
     creation_view,
     pronouns_from_form,
     submission_from_form,
@@ -492,6 +500,8 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
     allow_respec: bool | None = None
     start_level = 1
     follow_owner_level: bool | None = None
+    creation_picks: dict[str, list[str]] = {}
+    creation_form: dict[str, Any] = {}
     try:
         campaign = get_campaign(engine, user.id, campaign_id)
         rule_set = library.rule_sets.get(campaign.rule_set)
@@ -553,6 +563,7 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
             problem = check_arguments(character_schema(spec), submitted)
             if problem:
                 raise InvalidInput(problem)
+            creation_picks, creation_form = _creation_pick_choices(form, submitted, spec, rule_set)
             character = NewCharacter(
                 name=form_text(form, "name"),
                 rolled=rolled,
@@ -575,6 +586,8 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
             start_level=start_level if initial_setup else None,
             follow_owner_level=follow_owner_level if initial_setup else None,
             defer_opening=initial_setup,
+            creation_picks=creation_picks,
+            creation_form=creation_form,
         )
     except InvalidInput as exc:
         return _campaign_page(
@@ -627,7 +640,8 @@ async def create_campaign_setup(request: Request, campaign_id: int) -> Response:
             except InvalidInput:
                 pending = []
             if pending:
-                # A first-level spellcaster still has its cantrip and spell choices to spend.
+                # A pick the creation form left unspent still gets its page, so no choice is
+                # silently dropped when a rule set adds a pick the form does not offer.
                 return RedirectResponse(f"/campaigns/{campaign_id}/advancement", status_code=303)
     return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
 
@@ -645,6 +659,7 @@ async def create_party_hireling(request: Request, campaign_id: int) -> Response:
     try:
         campaign = get_campaign(engine, user.id, campaign_id)
         spec = character_spec(library, campaign)
+        rule_set = library.rule_sets.get(campaign.rule_set)
         rolled = request.session.get(key)
         if not isinstance(rolled, dict):
             _roll_stats(request, user, campaign_id)
@@ -653,6 +668,7 @@ async def create_party_hireling(request: Request, campaign_id: int) -> Response:
         problem = check_arguments(character_schema(spec), submitted)
         if problem:
             raise InvalidInput(problem)
+        creation_picks, creation_form = _creation_pick_choices(form, submitted, spec, rule_set)
         character = NewCharacter(
             name=form_text(form, "name"),
             rolled=rolled,
@@ -660,7 +676,13 @@ async def create_party_hireling(request: Request, campaign_id: int) -> Response:
             pronouns=pronouns_from_form(form),
         )
         starting_level = save_party_hireling(
-            engine, library, user.id, campaign_id, character=character
+            engine,
+            library,
+            user.id,
+            campaign_id,
+            character=character,
+            creation_picks=creation_picks,
+            creation_form=creation_form,
         )
     except InvalidInput as exc:
         return _campaign_page(request, user, campaign_id, 400, str(exc), party="add")
@@ -779,6 +801,7 @@ async def submit_respec(request: Request, campaign_id: int) -> Response:
         problem = check_arguments(character_schema(spec), submitted)
         if problem:
             raise InvalidInput(problem)
+        creation_picks, creation_form = _creation_pick_choices(form, submitted, spec, rule_set)
         starting_level = respec_character(
             engine,
             library,
@@ -787,6 +810,8 @@ async def submit_respec(request: Request, campaign_id: int) -> Response:
             name=name,
             rolled=rolled,
             submitted=submitted,
+            creation_picks=creation_picks,
+            creation_form=creation_form,
         )
     except InvalidInput as exc:
         return _campaign_page(request, user, campaign_id, 400, str(exc), respec=name)
@@ -2329,7 +2354,17 @@ def _campaign_page(
                 rolled = request.session.get(_roll_key(campaign.id))
                 if not isinstance(rolled, dict) or set(rolled) != rolled_stats:
                     rolled = _roll_stats(request, user, campaign.id)
-            character = creation_view(spec, rolled, respec=respec_target is not None)
+            creation_picks = None
+            if rule_set is not None and level_up_service.has_creation_picks(rule_set):
+                pick_world = library.world_content(campaign.world_template, campaign.rule_set)
+                ctx = level_up_service.tool_context(engine, campaign.id, rule_set, pick_world)
+                creation_picks = level_up_service.creation_pick_views(rule_set, ctx)
+            character = creation_view(
+                spec,
+                rolled,
+                respec=respec_target is not None,
+                creation_picks=creation_picks,
+            )
         party_members = _party_members(
             world.state, spec, user.id, rule_set.hp_stat if rule_set is not None else None
         )
@@ -2733,6 +2768,26 @@ def _campaign_tones(campaign: Any, rule_set: Any) -> tuple[str, ...]:
         if isinstance(stored, list) and all(isinstance(item, str) for item in stored):
             return tuple(stored)
     return rule_set.table_tones if rule_set is not None else ()
+
+
+def _creation_pick_choices(
+    form: FormData,
+    submitted: Mapping[str, Any],
+    spec: CharacterSpec,
+    rule_set: RuleSet | None,
+) -> tuple[dict[str, list[str]], dict[str, Any]]:
+    """The level-up picks a creation form chose, and its raw values for pick feature choices.
+
+    A rule set without creation picks returns nothing, so the creation form and its
+    submission are unchanged for rule sets whose level choices all wait for advancement."""
+    if rule_set is None:
+        return {}, {}
+    rules = level_up_service.start_level_rules(rule_set)
+    if rules is None or not rules.creation_picks:
+        return {}, {}
+    picks = creation_pick_fields(form, submitted.get("templates", {}), rules.creation_picks, spec)
+    values = {key: value for key, value in form.multi_items() if isinstance(value, str)}
+    return picks, values
 
 
 def _creation_pending(state: Any, rule_set: Any, user_id: int) -> tuple[bool, bool]:

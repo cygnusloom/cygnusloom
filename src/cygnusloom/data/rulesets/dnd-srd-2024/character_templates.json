@@ -19,6 +19,9 @@
       "skillful": ["medicine"],
       "versatile": ["feat-alert"]
     },
+    "creation_picks": {
+      "spells": ["spell-bless", "spell-cure-wounds"]
+    },
     "feature_choices": {
       "background-asi-soldier:scores:pattern": ["1"],
       "background-asi-soldier:scores": ["str", "con"],
@@ -52,6 +55,17 @@
     "picks": {
       "class_skills": ["investigation", "insight"],
       "lineage": ["lineage-elf-high-elf"]
+    },
+    "creation_picks": {
+      "cantrips": ["spell-mage-hand", "spell-ray-of-frost", "spell-minor-illusion"],
+      "spells": [
+        "spell-shield",
+        "spell-sleep",
+        "spell-thunderwave",
+        "spell-detect-magic",
+        "spell-fog-cloud",
+        "spell-longstrider"
+      ]
     },
     "feature_choices": {
       "lineage-elf-high-elf:ability": ["int"],
@@ -89,6 +103,15 @@
     "picks": {
       "class_skills": ["history", "medicine"],
       "divine_order": ["divine-order-protector"]
+    },
+    "creation_picks": {
+      "cantrips": ["spell-thaumaturgy", "spell-light", "spell-mending"],
+      "spells": [
+        "spell-cure-wounds",
+        "spell-guiding-bolt",
+        "spell-shield-of-faith",
+        "spell-healing-word"
+      ]
     },
     "feature_choices": {
       "background-asi-acolyte:scores:pattern": ["1"],

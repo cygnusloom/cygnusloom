@@ -1351,12 +1351,17 @@
     return false;
   };
 
-  const visibleSelectsForPick = (pickId) => {
+  const pickSelectsBySuffix = (selector, pickId) => {
     const suffix = new RegExp(`-${pickId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}-(\\d+)$`);
-    return [...(form?.querySelectorAll("select") || [])]
+    return [...(form?.querySelectorAll(selector) || [])]
       .filter((select) => suffix.test(select.name || "") && !select.closest("[hidden]"))
       .sort((left, right) => Number(left.name.match(/-(\d+)$/)?.[1] ?? 0) - Number(right.name.match(/-(\d+)$/)?.[1] ?? 0));
   };
+  const visibleSelectsForPick = (pickId) => pickSelectsBySuffix("select", pickId);
+  // Creation picks have their own fields. A feature choice can share a pick id, such as Magic
+  // Initiate's cantrips, so a preset fills only the creation panel's own selects.
+  const visibleCreationSelectsForPick = (pickId) =>
+    pickSelectsBySuffix('select[name^="creation-pick-"]', pickId);
 
   const applyPresetStats = (preset) => {
     const priority = Array.isArray(preset.priority) ? preset.priority : [];
@@ -1451,6 +1456,13 @@
     refreshTaggedPicks();
     for (const [pickId, values] of Object.entries(preset.picks || {})) {
       const selects = visibleSelectsForPick(pickId);
+      [...values].forEach((value, index) => {
+        if (selects[index]) selects[index].value = value;
+      });
+    }
+    // Starting level picks, such as a wizard's first spells, sit beside the template choices.
+    for (const [pickId, values] of Object.entries(preset.creation_picks || {})) {
+      const selects = visibleCreationSelectsForPick(pickId);
       [...values].forEach((value, index) => {
         if (selects[index]) selects[index].value = value;
       });

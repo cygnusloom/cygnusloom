@@ -1190,8 +1190,13 @@ class LevelUpPick:
     feature_type: str = ""
     tags: tuple[str, ...] = ()
     exclude: tuple[str, ...] = ()
+    # Offered while a character is being built, so its choices belong on the creation form rather
+    # than a separate page after the character exists. Only feature picks take part in creation.
+    creation: bool = False
     # The rule set's functions that list the features a pick offers and apply one.
     options: Callable[..., Any] | None = None
+    # A creation pick's options before the character exists, given the template it belongs to.
+    creation_options: Callable[..., Any] | None = None
     apply: Callable[..., Any] | None = None
 
 
@@ -1222,6 +1227,11 @@ class LevelUpRules:
     # hooks take the chosen class id; the plain hooks remain for single-class characters.
     apply_level_class: Callable[..., Any] | None = None
     summary_class: Callable[..., Any] | None = None
+
+    @property
+    def creation_picks(self) -> tuple[LevelUpPick, ...]:
+        """The picks a new character chooses on the creation form."""
+        return tuple(pick for pick in self.picks.values() if pick.creation)
 
 
 @dataclass(frozen=True)
@@ -7999,6 +8009,8 @@ def _load_level_picks(
                     "feature_type",
                     "tags",
                     "exclude",
+                    "creation",
+                    "creation_options",
                     "options",
                     "apply",
                 },
@@ -8020,11 +8032,14 @@ def _load_level_picks(
                     "maximum_ref",
                     "limit_counter",
                     "stat_group",
+                    "creation",
                     "options",
                     "apply",
                 },
                 pick_label,
             )
+            if _flag(value, "creation", pick_label):
+                raise ContentError(f"{pick_label}: 'creation' is only supported for feature picks")
         counter = required_text(value, "counter", pick_label)
         if counter not in counters:
             raise ContentError(f"{pick_label}: 'counter' names no counter ({counter!r})")
@@ -8046,6 +8061,15 @@ def _load_level_picks(
             options = _level_up_function(module, options_name, pick_label)
             tags = _texts(value.get("tags", []), f"{pick_label}.tags")
             exclude = _texts(value.get("exclude", []), f"{pick_label}.exclude")
+            creation = _flag(value, "creation", pick_label)
+            creation_options_name = _optional_text(value, "creation_options", pick_label)
+            if creation_options_name is not None and not creation:
+                raise ContentError(f"{pick_label}: 'creation_options' needs 'creation' to be true")
+            creation_options = (
+                _level_up_function(module, creation_options_name, pick_label)
+                if creation_options_name is not None
+                else None
+            )
             picks[pick_id] = LevelUpPick(
                 id=pick_id,
                 label=required_text(value, "label", pick_label),
@@ -8054,7 +8078,9 @@ def _load_level_picks(
                 feature_type=feature_type,
                 tags=tags,
                 exclude=exclude,
+                creation=creation,
                 options=options,
+                creation_options=creation_options,
                 apply=apply,
             )
             continue

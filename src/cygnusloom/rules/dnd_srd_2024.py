@@ -1182,16 +1182,51 @@ def spell_options(
     found = _read_character(character, ctx)
     rules = _class_rules(found, progression, class_choice)
     target_level = level or _class_level(found, rules) or _stored_level(found)
-    max_rank = _max_rank_for(rules, progression, target_level)
+    return _class_spell_options(
+        rules,
+        progression,
+        spec,
+        pick,
+        _max_rank_for(rules, progression, target_level),
+        known=set(found.features),
+    )
+
+
+def creation_spell_options(pick: Any, ctx: ToolContext, template_id: str) -> list[dict[str, Any]]:
+    """The spells or cantrips a new character of one class can choose before it exists.
+
+    The creation form asks for a class's starting spells before the character is recorded, so
+    the class's own first-level list stands in for a character that knows nothing yet."""
+    progression = require_progression(ctx.world)
+    spec = ctx.world.character
+    rules = progression.classes.get(template_id)
+    if rules is None:
+        return []
+    return _class_spell_options(
+        rules,
+        progression,
+        spec,
+        pick,
+        _max_rank_for(rules, progression, 1),
+    )
+
+
+def _class_spell_options(
+    rules: DndClass,
+    progression: DndProgression,
+    spec: Any,
+    pick: Any,
+    max_rank: int,
+    known: set[str] | None = None,
+) -> list[dict[str, Any]]:
+    """One class's spells or cantrips, up to the rank the class can cast."""
     cantrips = pick.id == "cantrips"
-    known = {feature_id for feature_id in found.features}
+    known = known or set()
     options = []
     for rank, spell_ids in progression.spell_lists.get(rules.id, {}).items():
         if cantrips and rank != 0:
             continue
-        if not cantrips and rank == 0:
-            continue
-        if not cantrips and rank > max_rank:
+        if not cantrips and (rank == 0 or rank > max_rank):
             continue
         for spell_id in spell_ids:
             feature = spec.features.get(spell_id)

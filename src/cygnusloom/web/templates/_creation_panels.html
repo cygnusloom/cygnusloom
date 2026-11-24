@@ -180,6 +180,25 @@
         {% endfor %}
       </fieldset>
     {% endfor %}
+    {% for pick in template.creation_picks %}
+      <fieldset class="creation-panel feat-picks creation-picks" data-pick-selects="{{ template.id }}-{{ pick.id }}" data-pick-kind="feature" data-unique="true">
+        <div class="panel-heading">
+          <h3>{{ pick.label }} <span class="muted">({{ pick.available }})</span></h3>
+          <button type="button" class="secondary" data-randomize-picks>Randomize {{ pick.label|lower }}</button>
+        </div>
+        <p class="panel-hint">Choose the {{ pick.label|lower }} this character begins with. A blank choice is rolled for you, and every option explains what it does.</p>
+        {% for index in range(pick.available) %}
+        <div data-feature-pick-row>
+          {% call pick_control("creation-pick-" ~ template.id ~ "-" ~ pick.id ~ "-" ~ index, pick.label ~ " " ~ (index + 1), "Choose one of the " ~ pick.label|lower ~ " this character begins with.", "data-feature-choice", empty="Roll", roll=true, clear_label="Leave to roll") %}
+            <option value="">Roll</option>
+            {% for option in pick.options %}
+            <option value="{{ option.id }}" data-title="{{ option.name }}" data-description="{{ option.description or '' }}" data-rank="{{ option.rank }}" data-repeatable="{{ 'true' if option.repeatable else 'false' }}">{{ option.name }}{% if option.rank %} (rank {{ option.rank }}){% endif %}</option>
+            {% endfor %}
+          {% endcall %}
+        </div>
+        {% endfor %}
+      </fieldset>
+    {% endfor %}
   </div>
 {% endfor %}
 {%- endmacro %}

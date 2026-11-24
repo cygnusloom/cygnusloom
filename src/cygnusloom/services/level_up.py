@@ -11,8 +11,8 @@ from __future__ import annotations
 import inspect
 import random
 import re
-from collections.abc import Mapping
-from dataclasses import dataclass, field
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass, field, replace
 from typing import Any
 
 from sqlalchemy import Engine
@@ -150,6 +150,194 @@ def start_level_options(rule_set: RuleSet) -> tuple[int, ...]:
     """The starting levels the creation form offers, or an empty tuple without levels."""
     rules = start_level_rules(rule_set)
     return tuple(range(1, rules.max_level + 1)) if rules is not None else ()
+
+
+def has_creation_picks(rule_set: RuleSet) -> bool:
+    """Whether the rule set asks a new character for level-up picks while it is being built."""
+    rules = start_level_rules(rule_set)
+    return bool(rules is not None and rules.creation_picks)
+
+
+def creation_pick_views(
+    rule_set: RuleSet, ctx: ToolContext
+) -> Mapping[str, tuple[Mapping[str, Any], ...]]:
+    """The creation picks each template offers, by template id.
+
+    A template offers a pick when its counters give the pick's pool points at level 1, so a
+    class shows only the spells and cantrips its own starting counters buy. The rule set's
+    `creation_options` hook lists the choices before the character exists; without one, the
+    pick's feature type and tags list them."""
+    rules = start_level_rules(rule_set)
+    if rules is None or not rules.creation_picks:
+        return {}
+    spec = rule_set.character
+    views: dict[str, list[Mapping[str, Any]]] = {}
+    for template in spec.templates.values():
+        offered: list[Mapping[str, Any]] = []
+        for pick in rules.creation_picks:
+            available = int(template.counters.get(pick.counter, 0))
+            if available <= 0:
+                continue
+            options = _creation_options(rule_set, pick, ctx, template.id)
+            if not options:
+                continue
+            offered.append(
+                {
+                    "id": pick.id,
+                    "label": pick.label,
+                    "available": available,
+                    "options": options,
+                }
+            )
+        if offered:
+            views[template.id] = tuple(offered)
+    return views
+
+
+def _creation_options(
+    rule_set: RuleSet, pick: LevelUpPick, ctx: ToolContext, template_id: str
+) -> list[Mapping[str, Any]]:
+    """The options a new character may choose for one creation pick."""
+    if pick.creation_options is not None:
+        return list(pick.creation_options(pick, ctx, template_id))
+    spec = rule_set.character
+    return [
+        {
+            "id": feature.id,
+            "name": feature.name,
+            "description": feature.description,
+            "rank": feature.rank,
+            "repeatable": feature.repeatable,
+        }
+        for feature in spec.features.values()
+        if feature.feature_type == pick.feature_type
+        and (not pick.tags or feature.tag in pick.tags)
+        and feature.id not in pick.exclude
+    ]
+
+
+def check_creation_picks(
+    rule_set: RuleSet,
+    ctx: ToolContext,
+    templates: Mapping[str, str],
+    chosen: Mapping[str, Sequence[str]],
+    form: Mapping[str, Any],
+) -> None:
+    """Refuse a creation pick the chosen templates do not offer, before the character is made."""
+    rules = start_level_rules(rule_set)
+    if rules is None or not rules.creation_picks:
+        return
+    spec = rule_set.character
+    selected = []
+    seen: set[str] = set()
+    for template_id in templates.values():
+        template = spec.templates.get(str(template_id))
+        if template is None or template.id in seen:
+            continue
+        seen.add(template.id)
+        selected.append(template)
+    preview = creation_pick_views(rule_set, ctx)
+    granted = {item.feature for template in selected for item in template.features}
+    # A feature choice can teach a spell of the same type, such as Magic Initiate's cantrips.
+    # It is learned during creation, so a class pick cannot choose it a second time.
+    for name, value in form.items():
+        if not str(name).startswith("feature-choice-"):
+            continue
+        feature = spec.features.get(str(value))
+        if feature is not None:
+            granted.add(feature.id)
+    for pick in rules.creation_picks:
+        available = sum(int(template.counters.get(pick.counter, 0)) for template in selected)
+        values = [str(value) for value in chosen.get(pick.id, ()) if value]
+        if len(values) > available:
+            raise InvalidInput(
+                f"{pick.label} offers {available} pick{'' if available == 1 else 's'}; "
+                f"{len(values)} were chosen"
+            )
+        allowed: dict[str, Mapping[str, Any]] = {}
+        for template in selected:
+            for view in preview.get(template.id, ()):
+                if view["id"] == pick.id:
+                    allowed.update({str(option["id"]): option for option in view["options"]})
+        for value in values:
+            if value not in allowed:
+                raise InvalidInput(
+                    f"{value!r} is not one of the {pick.label.lower()} this character can choose"
+                )
+            feature = spec.features.get(value)
+            if feature is not None and value in granted and not feature.repeatable:
+                raise InvalidInput(f"{feature.name} is already granted by another choice")
+            if values.count(value) > 1 and not (feature is not None and feature.repeatable):
+                name = feature.name if feature is not None else value
+                raise InvalidInput(f"{name} was chosen twice")
+            _check_feature_choices(spec, value, form)
+
+
+def apply_creation_picks(
+    engine: Engine,
+    campaign_id: int,
+    rule_set: RuleSet,
+    world: WorldContent,
+    name: str,
+    chosen: Mapping[str, Sequence[str]],
+    form: Mapping[str, Any],
+) -> None:
+    """Spend the level-up picks a newly recorded character has at creation.
+
+    Blank picks roll a legal option, so a character begins complete; a pick with no legal
+    option left stays banked for the normal advancement page rather than failing creation."""
+    rules = start_level_rules(rule_set)
+    if rules is None or not rules.creation_picks:
+        return
+    creation_rules = replace(rules, picks={pick.id: pick for pick in rules.creation_picks})
+    ctx = tool_context(engine, campaign_id, rule_set, world)
+    with session_scope(engine) as db:
+        pc = load_state(db, campaign_id).characters.get(name_key(name))
+    if pc is None or pc.kind != PC_KIND:
+        raise InvalidInput(f"there is no player character named {name!r}")
+    views = pick_views(pc, rule_set, creation_rules, None, {}, ctx)
+    if not views:
+        return
+    submitted = dict(form)
+    for view in views:
+        offered = {str(option["id"]) for option in view.get("options", ())}
+        # The form was checked before creation, but a feature choice can have taught a spell
+        # since then. Keep the legal choices and roll the rest rather than leaving every pick
+        # banked because one choice became known elsewhere.
+        values: list[str] = []
+        for value in chosen.get(str(view["id"]), ()):
+            if value and str(value) in offered and str(value) not in values:
+                values.append(str(value))
+        for index, value in enumerate(_fill_creation_pick(view, values)):
+            submitted[f"pick-{view['id']}-{index}"] = value
+    page = AdvancementPage(
+        kind=PICKS,
+        character=pc.name,
+        label="Starting picks",
+        level_up=creation_rules,
+        picks=tuple(views),
+        level=_new_level(pc, rule_set, None),
+    )
+    _apply_changes(
+        page,
+        _plan_picks(page, engine, campaign_id, rule_set, ctx, submitted, ""),
+        ctx,
+        submitted,
+        "",
+    )
+
+
+def _fill_creation_pick(view: Mapping[str, Any], chosen: Sequence[str]) -> list[str]:
+    """Keep the player's choices and roll the blank picks from the options they did not take."""
+    values = [str(value) for value in chosen]
+    taken = set(values)
+    pool = [
+        str(option["id"]) for option in view.get("options", ()) if str(option["id"]) not in taken
+    ]
+    random.shuffle(pool)
+    while len(values) < int(view["available"]) and pool:
+        values.append(pool.pop())
+    return values
 
 
 def check_start_level(rule_set: RuleSet, start_level: int) -> None:
