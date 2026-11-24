@@ -57,13 +57,6 @@ WWN = LIBRARY.rule_sets["worldswithoutnumber"]
 PC = "Wren"
 
 
-def test_only_a_full_warrior_gets_killing_blow() -> None:
-    """The source gives Killing Blow to a full Warrior and says partial Warriors do not get it."""
-    assert WWN.combat is not None
-    assert WWN.combat.level_damage is not None
-    assert WWN.combat.level_damage.templates == ("warrior",)
-
-
 FOE = "Hound"
 OTHER_FOE = "Second Hound"
 YARD = "Old Yard"

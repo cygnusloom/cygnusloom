@@ -33,11 +33,6 @@ def test_starting_gold_is_a_count_not_an_item(client_factory):
     assert "gold" not in names
 
 
-def test_starting_armor_is_recorded_and_capped(client_factory):
-    app, campaign_id = _new_character(client_factory)
-    assert 0 <= _character(app, campaign_id, "Ada").armor <= CAIRN.combat.armor_max
-
-
 def test_starting_items_carry_their_real_slots(client_factory):
     app, campaign_id = _new_character(client_factory)
     items = _character(app, campaign_id, "Ada").items

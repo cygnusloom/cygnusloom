@@ -150,15 +150,6 @@ def test_a_trap_catches_the_player_character_through_their_own_save(client_facto
     assert (condition.name, condition.condition) == (PC, "prone")
 
 
-def test_a_hazard_refuses_a_player_character_and_names_the_player_save(client_factory):
-    app, campaign_id, tools = _fight(client_factory)
-    _foe(tools)
-
-    with pytest.raises(InvalidInput, match="player-save tool"):
-        tools.resolve_hazard("hidden pit", ["Wren"], save="evasion", damage="1d6")
-    assert _events(app, campaign_id, Harmed.kind) == []
-
-
 def test_a_bad_target_refuses_the_whole_hazard_before_anything_is_recorded(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools)

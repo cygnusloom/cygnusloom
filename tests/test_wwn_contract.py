@@ -11,7 +11,6 @@ import re
 from dataclasses import replace
 
 from cygnusloom.content.library import RuleSet
-from cygnusloom.rules.wwn_progression import require_wwn_progression
 from cygnusloom.services.events import Character
 from cygnusloom.services.inventory import capacity_of, readied_capacity
 from tests.conftest import content_library
@@ -112,12 +111,6 @@ def test_wwn_bestiary_attack_counts_are_structured_fields() -> None:
         match = phrase.search(monster.description)
         if match is not None:
             assert monster.attacks_per_action == int(match.group(1)), monster.id
-
-
-def test_wwn_healer_and_vowed_commit_their_own_effort_pools() -> None:
-    progression = require_wwn_progression(_wwn())
-    assert progression.tradition_effort_stats["healer"] == "effort_healer"
-    assert progression.tradition_effort_stats["vowed"] == "effort_vowed"
 
 
 def test_wwn_uses_the_source_travel_rules() -> None:

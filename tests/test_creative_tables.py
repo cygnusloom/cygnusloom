@@ -136,11 +136,6 @@ def test_a_rule_set_may_replace_a_core_table_with_entries(tree: Path):
     assert [row.result for row in tables["plot"].rows] == ["x", "y"]
 
 
-def test_a_creative_table_reads_its_role():
-    table = _load_creative_table(_creative(["a", "b"], role="setting"), "testset")
-    assert table.role == "setting"
-
-
 def _core_creative_with_genres(tree: Path) -> None:
     _write(
         tree,

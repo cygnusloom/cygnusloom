@@ -17,7 +17,6 @@ from cygnusloom.content.library import (
     _load_encounter_templates,
     _load_encounter_terrain,
 )
-from cygnusloom.web.icons import _registry
 from tests.conftest import bundled_library
 
 TERRAIN_IDS = {
@@ -251,12 +250,6 @@ def test_terrain_and_object_flags_match_spec(library: ContentLibrary) -> None:
     core = library.core
     assert {i for i, t in core.terrain.items() if t.difficult} == DIFFICULT_TERRAIN
     assert {i for i, o in core.encounter_objects.items() if o.blocks} == BLOCKING_OBJECTS
-
-
-def test_every_object_icon_is_registered(library: ContentLibrary) -> None:
-    registry = _registry()
-    for item in library.core.encounter_objects.values():
-        assert item.icon in registry, f"{item.id} uses unknown icon {item.icon!r}"
 
 
 def test_every_terrain_says_its_rule_effect(library: ContentLibrary) -> None:

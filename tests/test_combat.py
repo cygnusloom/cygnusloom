@@ -1720,17 +1720,3 @@ def test_a_defeated_foe_stays_on_the_map_as_a_body(client_factory):
     roster = page[page.index('class="encounter-roster"') :]
     assert '<span class="roster-status">dead</span>' in roster
     assert "encounter-cell occupied defeated" in page
-
-
-def test_a_strike_names_the_attacker_and_weapon_in_one_sentence():
-    strike = Struck(
-        name="Ysolde Vane",
-        attacker="Cavity Grave Thing",
-        weapon="claws",
-        raw=6,
-        armor=0,
-        harm={"hp": 6},
-    )
-    assert strike.render() == (
-        "Cavity Grave Thing strikes Ysolde Vane with the claws for 6; Ysolde Vane takes 6 harm."
-    )

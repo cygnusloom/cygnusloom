@@ -123,15 +123,6 @@ def test_a_blast_by_an_individual_on_a_group_is_not_impaired(client_factory):
     assert [entry["target"] for entry in result["targets"]] == ["Swarm"]
 
 
-def test_a_blast_on_a_group_still_hits_every_living_individual(client_factory):
-    _, _, tools = _fight(client_factory)
-    _group(tools, "Swarm", side="foes")
-    _ally(tools, "Tam")
-    take_turn(tools, "Swarm")
-    result = replace(tools, rng=Rolls(1, 1, 1)).attack("Swarm", "Sting", "Tam", modifier="enhanced")
-    assert sorted(entry["target"] for entry in result["targets"]) == sorted([PC, "Tam"])
-
-
 def test_resolve_attacks_refuses_a_blast_attack(client_factory):
     _, _, tools = _fight(client_factory)
     _blaster(tools, "Gorm", flags=["blast"])

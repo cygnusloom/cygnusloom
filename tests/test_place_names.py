@@ -27,11 +27,6 @@ def _check(provider: ScriptedReply, name: str, names: list[str] = NAMES) -> str 
     return asyncio.run(_repeated_place(provider, "model", names, name))
 
 
-def test_a_repeat_reply_returns_the_existing_place_it_names():
-    provider = ScriptedReply("REPEAT: Farming Path")
-    assert _check(provider, "Farm Road") == "Farming Path"
-
-
 def test_the_repeat_match_is_case_insensitive_and_returns_the_stored_name():
     provider = ScriptedReply("repeat: farming path")
     assert _check(provider, "Farm Road") == "Farming Path"

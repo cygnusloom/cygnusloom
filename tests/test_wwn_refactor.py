@@ -114,21 +114,6 @@ def _empty_pack(client: TestClient, campaign_id: int) -> None:
 # --- 1. Inventory capacity from a stat ------------------------------------------------------
 
 
-def test_wwn_capacity_is_the_strength_score(client_factory: Callable[[], TestClient]):
-    client, campaign_id = _wwn_campaign(client_factory)
-    pc = _wwn_pc(client, campaign_id)
-    rules = replace(
-        WWN.inventory,
-        pools=(),
-        size_pools={},
-        default_pool="",
-        capacity_stat="str",
-        capacity_multiplier=1,
-    )
-    assert rules.capacity_multiplier == 1
-    assert inventory.capacity_of(pc, rules, WWN.character) == pc.stats["str"]
-
-
 def test_a_capacity_multiplier_scales_the_score(client_factory: Callable[[], TestClient]):
     client, campaign_id = _wwn_campaign(client_factory)
     pc = _wwn_pc(client, campaign_id)

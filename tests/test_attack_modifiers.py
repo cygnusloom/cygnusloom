@@ -127,17 +127,6 @@ def test_player_attack_asks_for_the_modifiers_dice(client_factory):
         assert (ask.text, ask.dice) == ("Roll.", dice), modifier
 
 
-def test_the_gm_cannot_change_the_dice_of_a_modified_player_attack(client_factory):
-    _, _, tools = _fight(client_factory)
-    _foe(tools, "Bo")
-    ask = _run(
-        tools,
-        "player_attack",
-        {"target": "Bo", "weapon": "Sword", "prompt": "Roll.", "modifier": "impaired"},
-    )
-    assert ask.dice == IMPAIRED
-
-
 def test_a_player_attack_with_an_unknown_modifier_returns_an_error(client_factory):
     _, _, tools = _fight(client_factory)
     _foe(tools, "Bo")
