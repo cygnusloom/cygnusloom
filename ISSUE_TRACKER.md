@@ -4,7 +4,11 @@ Tackle triaged issues in the order presented (untraiged issues have no particula
 
 # Untriaged Issues
 
-None.
+* User-provided content: any data object should be providable by users. They upload or paste JSON directly, which provides rule sets, worlds, classes, kits, and anything else defined by JSON.
+* Better storytelling: research how to get the AI to tell good stories without regressing to the mean. (Needs research on the user's part.)
+* More species diversity in rule sets and worlds: dwarven blacksmiths, elven villages, human villages, traveling gnomes, and so on, so places and NPCs vary by species and culture.
+* Persistence between campaigns: new characters in the same shared world, carrying the world's state forward from campaign to campaign.
+* Use a character from one campaign in another.
 
 # Triaged Issues
 
