@@ -51,6 +51,7 @@ class CoreWorld(Protocol):
         parent: str | None = None,
         icon: str | None = None,
         summary: str | None = None,
+        majority_species: str | None = None,
     ) -> dict[str, Any]: ...
 
     def create_region(
@@ -78,6 +79,7 @@ class CoreWorld(Protocol):
         force: bool = False,
         hp_tier: str | None = None,
         pronouns: str | None = None,
+        species: str | None = None,
     ) -> dict[str, Any]: ...
 
     def update_location(
@@ -90,6 +92,7 @@ class CoreWorld(Protocol):
         force: bool = False,
         icon: str | None = None,
         summary: str | None = None,
+        majority_species: str | None = None,
     ) -> dict[str, Any]: ...
 
     def delete_location(self, name: str) -> dict[str, Any]: ...
@@ -104,6 +107,7 @@ class CoreWorld(Protocol):
         character: Mapping[str, Any] | None = None,
         armor: int | None = None,
         attacks: Sequence[Mapping[str, str]] | None = None,
+        species: str | None = None,
     ) -> dict[str, Any]: ...
 
     def update_npc_knowledge(

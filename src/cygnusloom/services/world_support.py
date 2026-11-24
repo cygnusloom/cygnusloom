@@ -213,6 +213,7 @@ def seed_campaign(
                 rules=list(spot.rules),
                 routes={key: dict(route) for key, route in spot.routes.items()},
                 location_id=spot.id,
+                majority_species=spot.majority_species,
             ),
         )
     for region in world.regions:
@@ -864,6 +865,7 @@ def create_location(
     parent: str | None = None,
     icon: str | None = None,
     summary: str | None = None,
+    majority_species: str | None = None,
 ) -> dict[str, Any]:
     state = load_state(db, campaign_id)
     name = bounded_text(name, "name", MAX_NAME)
@@ -894,10 +896,18 @@ def create_location(
             parent=inside,
             icon=icon_id,
             summary=summary_text,
+            majority_species=majority_species,
         ),
     )
     db.commit()
-    return {"created": "location", "name": name, "discovered": discovered}
+    result: dict[str, Any] = {
+        "created": "location",
+        "name": name,
+        "discovered": discovered,
+    }
+    if majority_species is not None:
+        result["majority_species"] = majority_species
+    return result
 
 
 def _ensure_on_terrain(state: CampaignState, name: str, x: float | None, y: float | None) -> None:
@@ -1207,6 +1217,7 @@ def create_npc(
     hp_tier: str | None = None,
     pronouns: str | None = None,
     important: bool = False,
+    species: str = "",
 ) -> dict[str, Any]:
     state = load_state(db, campaign_id)
     name = bounded_text(name, "name", MAX_NAME)
@@ -1239,11 +1250,12 @@ def create_npc(
         plus=plus,
         pronouns=_optional_text(pronouns, "pronouns"),
         important=important,
+        species=species,
     )
     if base is not None:
         event = _with_statblock(event, base)
     record(db, campaign_id, event)
-    return {
+    result = {
         "created": "npc",
         "name": event.name,
         "location": event.location,
@@ -1253,6 +1265,9 @@ def create_npc(
         "pronouns": event.pronouns,
         "statblock": base.id if base else None,
     }
+    if event.species:
+        result["species"] = event.species
+    return result
 
 
 def hire_hireling(
@@ -1796,6 +1811,7 @@ def update_location(
     force: bool = False,
     icon: str | None = None,
     summary: str | None = None,
+    majority_species: str | None = None,
 ) -> dict[str, Any]:
     """Change a location's description, player-facing summary, and map position. Giving x and
     y moves it. Giving off_map takes it off the map. Without any of these the position stays as
@@ -1816,6 +1832,7 @@ def update_location(
     summary_text = (
         where.summary if not summary_changed else _optional_text(summary, "summary", MAX_SUMMARY)
     )
+    majority_changed = majority_species is not None
     px, py = _coordinates(x, y)
     if where.parent is not None:
         if px is not None or py is not None:
@@ -1839,10 +1856,15 @@ def update_location(
             icon_changed=icon_changed,
             summary=summary_text,
             summary_changed=summary_changed,
+            majority_species=majority_species,
+            majority_species_changed=majority_changed,
         ),
     )
     db.commit()
-    return {"updated": "location", "name": where.name}
+    result: dict[str, Any] = {"updated": "location", "name": where.name}
+    if majority_changed:
+        result["majority_species"] = majority_species
+    return result
 
 
 def discover_location(
@@ -1902,6 +1924,7 @@ def update_npc(
     armor_max: int = 0,
     defense_base: int = 0,
     plus: str,
+    species: str | None = None,
 ) -> dict[str, Any]:
     """Change the NPC's details. Only the given fields change; quirks, if given, replace the list.
     A story-only NPC can be given its stats once, with character, armor, and attacks. An NPC who
@@ -1909,11 +1932,13 @@ def update_npc(
     hireling's guard picks up a weapon without rebuilding the sheet."""
     state = load_state(db, campaign_id)
     npc = _npc_named(state, name)
-    text_given = any(value is not None for value in (description, personality, accent, quirks))
+    text_given = any(
+        value is not None for value in (description, personality, accent, quirks, species)
+    )
     stats_given = any(value is not None for value in (character, armor, attacks))
     if not text_given and not stats_given:
         raise InvalidInput(
-            "give at least one of description, personality, accent, quirks, or stats"
+            "give at least one of description, personality, accent, quirks, species, or stats"
         )
     statted: NpcStatted | None = None
     armed: NpcArmed | None = None
@@ -1976,6 +2001,8 @@ def update_npc(
                 else bounded_text(personality, "personality", MAX_DETAIL),
                 accent=npc.accent if accent is None else bounded_text(accent, "accent", MAX_DETAIL),
                 quirks=list(npc.quirks) if quirks is None else _quirks(quirks) or [],
+                species=npc.species if species is None else species,
+                species_changed=species is not None,
             ),
         )
     if statted is not None:
@@ -1987,6 +2014,8 @@ def update_npc(
         "name": npc.name,
         "statted": statted is not None,
     }
+    if species is not None:
+        result["species"] = species
     if armed is not None:
         result["armed"] = True
     return result
@@ -2893,6 +2922,7 @@ def _npc_event(
     important: bool = False,
     rules: Sequence[str] = (),
     pronouns: str | None = None,
+    species: str = "",
 ) -> NpcAdded:
     """The event that adds an NPC. A trait or character option that is not given is picked at
     random, so the picked values are stored in the event and replays do not roll again. A
@@ -2924,6 +2954,7 @@ def _npc_event(
         important=important,
         rules=list(rules),
         pronouns=pronouns,
+        species=species,
         **sheet_fields,
     )
 

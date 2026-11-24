@@ -20,6 +20,9 @@ A new campaign can begin with a starting party. Until the player starts the game
 
 An owner who wants to start over can reset a campaign from Settings, next to the delete action. The reset removes the opening turn and everything played since, returning the table to its starting party just before the opening: the world, the campaign options, and the party's sheets and gear stay, while a player who joined after the opening builds their character again. The credits charged for the removed replies are returned, and the reset waits while the GM is writing a reply.
 
+# Peoples and cultures
+A rule set or a world may declare the peoples of its setting. A people has a name, a plural, an adjective, a one-line summary, and a longer culture note: how they live, build, dress, and deal with other peoples. Core declares no peoples: only a rule set or a world that names its peoples offers them, a world's peoples replace the rule set's, and when neither declares any the GM records no species and invents the folk of each place freely. The GM reads the peoples every turn and is told to vary settlements and NPCs by them, so a village has a people and its own customs rather than a generic crowd. When the GM creates a place where people live, it records the place's majority people; a new NPC takes that people unless the GM gives another for a traveler, settler, or exile. The GM may read a people's culture note with a lookup when a scene turns on their customs. An NPC records its people, and the GM sees it with the rest of the NPC's traits.
+
 # AI Game Master - Cygnus
 Cygnus is the AI GM. Cygnus will keep the game on track, following all the rules and not allowing any inconsistency. However, Cygnus understands that the story is for the players, so if the players insist, Cygnus will change the story or scene to better fit what story the players want to tell.
 

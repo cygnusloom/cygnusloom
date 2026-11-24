@@ -15,6 +15,7 @@ from cygnusloom.services.common import (
 from cygnusloom.services.events import (
     load_state,
 )
+from cygnusloom.services.peoples import place_majority
 from cygnusloom.services.state import WORLD_MAP_PALETTES
 from cygnusloom.services.world_support import *
 
@@ -108,7 +109,11 @@ class PlacesMixin:
         parent: str | None = None,
         icon: str | None = None,
         summary: str | None = None,
+        majority_species: str | None = None,
     ) -> dict[str, Any]:
+        majority = (
+            None if majority_species is None else place_majority(self.species, majority_species)
+        )
         with session_scope(self.engine) as db:
             return create_location(
                 db,
@@ -122,6 +127,7 @@ class PlacesMixin:
                 parent,
                 icon,
                 summary,
+                majority_species=majority,
             )
 
     def discover_location(self, name: str, summary: str | None = None) -> dict[str, Any]:
@@ -138,7 +144,11 @@ class PlacesMixin:
         force: bool = False,
         icon: str | None = None,
         summary: str | None = None,
+        majority_species: str | None = None,
     ) -> dict[str, Any]:
+        majority = (
+            None if majority_species is None else place_majority(self.species, majority_species)
+        )
         with session_scope(self.engine) as db:
             return update_location(
                 db,
@@ -151,6 +161,7 @@ class PlacesMixin:
                 force,
                 icon,
                 summary,
+                majority_species=majority,
             )
 
     def describe_world(self, description: str) -> dict[str, Any]:

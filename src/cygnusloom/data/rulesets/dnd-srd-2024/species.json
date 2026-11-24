@@ -1,0 +1,92 @@
+[
+  {
+    "type": "species",
+    "id": "dragonborn",
+    "name": "Dragonborn",
+    "plural": "dragonborn",
+    "adjective": "dragonborn",
+    "order": 0,
+    "blurb": "Dragon-blooded folk of draconic ancestry, proud and self-reliant.",
+    "culture": "Dragonborn are tall, scaled folk whose blood carries the mark of a dragon ancestor. They live in close-knit clans that value honor, self-mastery, and keeping one's word, and they often leave home to prove themselves as soldiers, smiths, or wanderers. A dragonborn's scale color echoes their ancestry, and their communities remember old alliances and old betrayals for generations."
+  },
+  {
+    "type": "species",
+    "id": "dwarf",
+    "name": "Dwarf",
+    "plural": "dwarves",
+    "adjective": "dwarven",
+    "order": 1,
+    "blurb": "Stout folk of mountain halls, stonework, and iron.",
+    "culture": "Dwarves are shorter and broader than humans, with a feel for stone, metal, and the dark. Their clans live in halls beneath mountains and hills, where craft and lineage matter and every feast is a ceremony. Dwarves remember gifts and injuries alike, and their masons and smiths are welcome in human towns, where they commonly keep their own quarter and their own gods."
+  },
+  {
+    "type": "species",
+    "id": "elf",
+    "name": "Elf",
+    "plural": "elves",
+    "adjective": "elven",
+    "order": 2,
+    "blurb": "Long-lived forest folk of keen senses and ancient memory.",
+    "culture": "Elves are slender, keen-eyed folk who live for centuries and remember what most peoples forget. Their villages grow among the trees or in hidden valleys, shaped by wood and magic rather than cut from stone. Elves are slow to trust and slower to forgive, but an elven traveler is a patient ally and a relentless enemy. Mortals rarely see an elven home; they more often meet elven rangers, scholars, and envoys far from it."
+  },
+  {
+    "type": "species",
+    "id": "gnome",
+    "name": "Gnome",
+    "plural": "gnomes",
+    "adjective": "gnomish",
+    "order": 3,
+    "blurb": "Small, inventive folk of woodland burrows and buzzing workshops.",
+    "culture": "Gnomes are small folk with quick hands and quicker minds, given to invention, illusion, and harmless mischief. They live in woodland burrows and hillside warrens full of gears, sketches, and failed experiments, and they trade those devices wherever a road goes. A gnomish workshop is noisy, crowded, and usually one spark away from disaster. Gnomes measure a person by curiosity rather than station."
+  },
+  {
+    "type": "species",
+    "id": "goliath",
+    "name": "Goliath",
+    "plural": "goliaths",
+    "adjective": "goliath",
+    "order": 4,
+    "blurb": "Towering mountain nomads of rival clans and hard country.",
+    "culture": "Goliaths stand seven feet or more, built for thin air and hard climbs. Their clans roam high passes and cold plateaus, following game and weather, and they measure worth by skill, endurance, and fairness in competition. Goliaths keep few permanent homes and little property, but they keep their word. A goliath in a lowland town is usually a scout, guide, or mercenary far from any clan."
+  },
+  {
+    "type": "species",
+    "id": "halfling",
+    "name": "Halfling",
+    "plural": "halflings",
+    "adjective": "halfling",
+    "order": 5,
+    "blurb": "Small, cheerful folk of quiet farms and comfortable homes.",
+    "culture": "Halflings are small, practical folk who value family, food, and a quiet life. Their villages are clusters of low houses and well-tended fields, and their inns are famous out of proportion to their size. Halflings avoid trouble when they can and face it squarely when they cannot; a halfling who takes up adventuring is often the steadiest member of the party. They are easy to overlook, which suits them."
+  },
+  {
+    "type": "species",
+    "id": "human",
+    "name": "Human",
+    "plural": "humans",
+    "adjective": "human",
+    "order": 6,
+    "blurb": "Ambitious, adaptable folk found in every land and trade.",
+    "culture": "Humans are the most numerous and varied of the peoples, living in kingdoms, free towns, and frontier villages. They build in whatever the land provides, adopt the customs of the places they settle, and take up every trade and calling. Human settlements are where the other peoples most often meet, so a human town may hold a dwarven smith, an elven scholar, a gnomish tinker, and a tiefling merchant without anyone finding it remarkable."
+  },
+  {
+    "type": "species",
+    "id": "orc",
+    "name": "Orc",
+    "plural": "orcs",
+    "adjective": "orcish",
+    "order": 7,
+    "blurb": "Hardy folk of fierce clans and unyielding will.",
+    "culture": "Orcs are broad-shouldered and tireless, at home in hard country that others avoid. Their clans live by herding, hunting, mining, and raiding, and they prize strength, endurance, and plain dealing. Many orcs are mercenaries or frontier settlers; others keep to their own strongholds and distrust outsiders. An orc gives respect where it is earned and expects the same in return."
+  },
+  {
+    "type": "species",
+    "id": "tiefling",
+    "name": "Tiefling",
+    "plural": "tieflings",
+    "adjective": "tiefling",
+    "order": 8,
+    "blurb": "People marked by fiendish pacts, mistrusted and self-possessed.",
+    "culture": "Tieflings carry the mark of an old fiendish bargain: horns, a tail, unusual eyes, or skin the color of embers. Many are raised among people who distrust them, so tieflings learn early to rely on themselves and to read a room quickly. They gather in tight urban communities, where their cleverness and nerve are valued, and they often take work that others will not. Their pacts are inheritance, not choice."
+  }
+]

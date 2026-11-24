@@ -1,0 +1,32 @@
+[
+  {
+    "type": "species",
+    "id": "human",
+    "name": "Human",
+    "plural": "humans",
+    "adjective": "human",
+    "order": 0,
+    "blurb": "Adaptable farmers, traders, and soldiers, the common folk of most lands.",
+    "culture": "Humans are the common folk of the settled lands: farmers, herders, traders, soldiers, and scribes. They build in timber, stone, and brick, change their customs from one valley to the next, and hold no single homeland. In most towns the market crowd is human, with a handful of other peoples passing through. Human patrons value a fair bargain, a useful skill, and a family name that can be trusted."
+  },
+  {
+    "type": "species",
+    "id": "dwarf",
+    "name": "Dwarf",
+    "plural": "dwarves",
+    "adjective": "dwarven",
+    "order": 1,
+    "blurb": "The deep folk of stone halls, craft, and long memory.",
+    "culture": "Dwarves are the deep folk, short and broad, raised in halls cut from living rock and taught that a wall is a thing you can hear. They keep to mountain holds and buried workshops, where craft, lineage, and old grudges are carefully remembered. A dwarven smith or mason may be found in human towns, prized for work no one else can match, and just as slow to be cheated. Dwarves value plain dealing and provisions for the road."
+  },
+  {
+    "type": "species",
+    "id": "elf",
+    "name": "Elf",
+    "plural": "elves",
+    "adjective": "elven",
+    "order": 2,
+    "blurb": "The old fair folk: long-lived, sharp-eyed, and slow to trust.",
+    "culture": "Elves are the old fair folk, long-lived and sharp-eyed, carrying memories that are not entirely their own. They keep to ancient forests, buried halls, and places the newer peoples have not found, and they judge strangers by what they do to old things. An elf may be courteous, curious, or cold, but rarely hasty. Elven traders and envoys visit human towns more often than whole elven settlements are seen, and they seldom speak plainly about where home is."
+  }
+]

@@ -552,6 +552,8 @@ class LocationAdded(GameEvent):
     # The world's id for this place. Authored route keys use it. None for older campaigns and
     # for places the GM invented.
     location_id: str | None = None
+    # The people most of this place's folk belong to, or "mixed", or None when not recorded.
+    majority_species: str | None = None
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         state.places[name_key(self.name)] = Place(
@@ -565,6 +567,7 @@ class LocationAdded(GameEvent):
             rules=tuple(self.rules),
             routes={key: dict(route) for key, route in self.routes.items()},
             location_id=self.location_id,
+            majority_species=self.majority_species,
         )
 
     def render(self) -> str:
@@ -807,6 +810,8 @@ class NpcAdded(GameEvent):
     accent: str
     quirks: list[str]
     pronouns: str | None = None
+    # The NPC's people, in the singular as in "Dwarf". Empty when not recorded.
+    species: str = ""
     stats: dict[str, int] = field(default_factory=dict)
     templates: dict[str, str] = field(default_factory=dict)
     features: dict[str, int] = field(default_factory=dict)
@@ -839,6 +844,7 @@ class NpcAdded(GameEvent):
             accent=self.accent,
             quirks=list(self.quirks),
             pronouns=self.pronouns,
+            species=self.species,
             stats=dict(self.stats),
             templates=dict(self.templates),
             features=dict(self.features),
@@ -1295,6 +1301,9 @@ class LocationUpdated(GameEvent):
     icon_changed: bool = False
     summary: str | None = None
     summary_changed: bool = False
+    # Old events have no majority species fields, so only a change touches them.
+    majority_species: str | None = None
+    majority_species_changed: bool = False
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         key = name_key(self.name)
@@ -1306,6 +1315,11 @@ class LocationUpdated(GameEvent):
             position=_position(self.x, self.y),
             icon=self.icon if self.icon_changed else before.icon,
             summary=self.summary if self.summary_changed else before.summary,
+            majority_species=(
+                self.majority_species
+                if self.majority_species_changed
+                else before.majority_species
+            ),
             fight_day=None if self.description != before.description else before.fight_day,
         )
 
@@ -1467,6 +1481,9 @@ class NpcUpdated(GameEvent):
     personality: str
     accent: str
     quirks: list[str]
+    # Old events have no species fields, so only a change touches them.
+    species: str = ""
+    species_changed: bool = False
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         npc = state.characters[name_key(self.name)]
@@ -1474,6 +1491,8 @@ class NpcUpdated(GameEvent):
         npc.personality = self.personality
         npc.accent = self.accent
         npc.quirks = list(self.quirks)
+        if self.species_changed:
+            npc.species = self.species
 
     def render(self) -> str:
         return f"Character updated: {self.name}."

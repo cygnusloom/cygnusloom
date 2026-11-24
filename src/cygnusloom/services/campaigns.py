@@ -1723,6 +1723,10 @@ def context_usage(
             housekeeping=rule_set.housekeeping if rule_set else None,
             character=rule_set.character if rule_set else None,
             monsters=rule_set.monsters if rule_set else None,
+            species=(
+                (world.species if world is not None else ())
+                or (rule_set.species if rule_set is not None else ())
+            ),
         ),
         present_rules_text(state, all_rules),
         campaign.setting,

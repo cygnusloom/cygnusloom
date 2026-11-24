@@ -49,6 +49,7 @@ from cygnusloom.content.library import (
     ProjectDefinition,
     RelationRules,
     RestLength,
+    Species,
     TallyRules,
     Travel,
     Wilderness,
@@ -131,6 +132,7 @@ from cygnusloom.services.events import (
 )
 from cygnusloom.services.hooks import HookContext, call_hook
 from cygnusloom.services.music import MOODS, scene_key
+from cygnusloom.services.peoples import species_by_name, species_choices
 from cygnusloom.services.recovery import recover
 from cygnusloom.services.views import (
     _character_named,
@@ -273,6 +275,8 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
     features: Mapping[str, Feature] = field(default_factory=dict)
     # The world's own items by id. give_item finds them by name.
     items: Mapping[str, ItemTemplate] = field(default_factory=dict)
+    # The peoples the GM may give to NPCs and places, from the world or else the rule set.
+    species: Sequence[Species] = field(default_factory=tuple)
     # The rule set's checks by id, such as its skill check.
     checks: Mapping[str, CheckRules] = field(default_factory=dict)
     # The rule set's conditions by id.
@@ -367,6 +371,40 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
         if not options:
             raise InvalidInput(f"there is no character table named {table!r}")
         return self.rng.choice(options).value
+
+    def lookup_species(self, name: str = "") -> dict[str, Any]:
+        """The peoples this campaign offers, with the long culture note for each. Without a
+        name it lists every people, so one call reads them all."""
+        if not self.species:
+            return {
+                "peoples": [],
+                "note": (
+                    "This rule set and world declare no peoples, so leave an NPC's species and "
+                    "a place's majority_species out."
+                ),
+            }
+        if name.strip():
+            entry = species_by_name(self.species, name)
+            if entry is None:
+                raise InvalidInput(
+                    f"{name!r} is not one of the peoples here. The peoples are "
+                    f"{species_choices(self.species)}."
+                )
+            chosen = [entry]
+        else:
+            chosen = list(self.species)
+        return {
+            "peoples": [
+                {
+                    "name": entry.name,
+                    "plural": entry.plural,
+                    "adjective": entry.adjective,
+                    "summary": entry.blurb,
+                    "culture": entry.culture,
+                }
+                for entry in chosen
+            ]
+        }
 
     def roll_creative(
         self, tables: list[str] | None = None, role: str | None = None

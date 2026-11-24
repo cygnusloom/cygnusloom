@@ -18,6 +18,7 @@ from cygnusloom.content.library import (
     ContentLibrary,
     ModuleTemplate,
     RuleSet,
+    Species,
     ToolCall,
     WorldContent,
     WorldTemplate,
@@ -665,6 +666,7 @@ def _tool_context(
     table_genres: Sequence[str] | None = None,
     modules: Mapping[str, ModuleTemplate] | None = None,
     speak_handler: Callable[[str, str, str, bool], Awaitable[None]] | None = None,
+    species: Sequence[Species] = (),
 ) -> ToolContext:
     async def speak(speaker: str, profile: str, intent: str, replace: bool) -> None:
         if speak_handler is not None:
@@ -705,6 +707,7 @@ def _tool_context(
         monsters={**rule_set.monsters, **world.monsters},
         features={**world.features},
         items={**world.items},
+        species=species,
         checks=rule_set.checks,
         conditions=rule_set.conditions,
         projects=rule_set.projects,
@@ -807,6 +810,7 @@ def _start_run(
             table_genres=effective_table_genres(campaign.table_genres, rule_set),
             modules=library.modules,
             speak_handler=queue_speech,
+            species=schema.species or rule_set.species,
         ),
         cursor=_newest(engine, campaign.id),
         opening=opening_prompt(schema),
@@ -879,6 +883,7 @@ def _world_text(run: _Run, state: CampaignState) -> str:
         housekeeping=rule_set.housekeeping,
         character=rule_set.character,
         monsters=rule_set.monsters,
+        species=run.ctx.world.species,
     )
 
 
