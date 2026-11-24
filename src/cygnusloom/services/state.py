@@ -254,8 +254,6 @@ class Character:
     summary: str = ""
     # How the GM refers to the character, such as "she/her". None if it was never recorded.
     pronouns: str | None = None
-    # An NPC's people, in the singular as in "Dwarf", or "" when it was never recorded.
-    species: str = ""
     # The character options, resolved when the character was created. See content/character.py.
     stats: dict[str, int] = field(default_factory=dict)
     templates: dict[str, str] = field(default_factory=dict)
@@ -403,6 +401,8 @@ class Character:
     # The character has no player and the table shares the part. Owners can leave a character
     # behind when they remove its player.
     unclaimed: bool = False
+    # An NPC's people, in the singular as in "Dwarf", or "" when it was never recorded.
+    species: str = ""
 
     @property
     def out_of_play(self) -> bool:

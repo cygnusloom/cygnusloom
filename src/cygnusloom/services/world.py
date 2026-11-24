@@ -275,8 +275,6 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
     features: Mapping[str, Feature] = field(default_factory=dict)
     # The world's own items by id. give_item finds them by name.
     items: Mapping[str, ItemTemplate] = field(default_factory=dict)
-    # The peoples the GM may give to NPCs and places, from the world or else the rule set.
-    species: Sequence[Species] = field(default_factory=tuple)
     # The rule set's checks by id, such as its skill check.
     checks: Mapping[str, CheckRules] = field(default_factory=dict)
     # The rule set's conditions by id.
@@ -324,6 +322,8 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
     world_terrain: Mapping[str, WorldTerrain] = field(default_factory=dict)
     # What the GM should tidy at a place earlier scenes left behind, or None for none.
     housekeeping: HousekeepingRules | None = None
+    # The peoples the GM may give to NPCs and places, from the world or else the rule set.
+    species: Sequence[Species] = field(default_factory=tuple)
 
     def roll_tables(self, tables: list[str]) -> dict[str, Any]:
         with session_scope(self.engine) as db:

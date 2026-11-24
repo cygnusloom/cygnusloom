@@ -810,8 +810,6 @@ class NpcAdded(GameEvent):
     accent: str
     quirks: list[str]
     pronouns: str | None = None
-    # The NPC's people, in the singular as in "Dwarf". Empty when not recorded.
-    species: str = ""
     stats: dict[str, int] = field(default_factory=dict)
     templates: dict[str, str] = field(default_factory=dict)
     features: dict[str, int] = field(default_factory=dict)
@@ -833,6 +831,8 @@ class NpcAdded(GameEvent):
     skills: dict[str, int] = field(default_factory=dict)
     feature_choices: dict[str, list[str]] = field(default_factory=dict)
     stat_modifiers: dict[str, int] = field(default_factory=dict)
+    # The NPC's people, in the singular as in "Dwarf". Empty when not recorded.
+    species: str = ""
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         npc = Character(
