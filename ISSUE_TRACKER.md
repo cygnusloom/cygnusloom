@@ -4,15 +4,7 @@ Tackle triaged issues in the order presented (untraiged issues have no particula
 
 # Untriaged Issues
 
-* A new ruleset and world for a zombie apocalypse with the scavenging, survival tone of Cataclysm: Dark Days Ahead. Candidates from the web search, with their licenses:
-  * Cairn 2e, already shipped (CC BY-SA 4.0): the cheapest base for a survival hack; its d20 roll-under checks, slot inventory, deprivation, and hazards already exist.
-  * Liminal Horror SRD v3.0 (CC BY 4.0; a Cairn descendant with a Doom Clock, Fallout, item tags, and conditions). Caveat: its third-party license forbids AI-generated art and text in compatible publications, so it can only serve as a mechanics reference.
-  * Breathless SRD, Fari RPGs (CC BY 4.0): survival horror written for the undead; dice that degrade as you push are a good doom-clock source, but its sheets do not map to attribute-plus-skill characters, so only the procedures would be ported.
-  * Sigil SRD / Sigil Atelier, Stormforge (Creative Commons): gritty d100 roll-under rules. Z-LAND itself is commercial and not reusable.
-  * Cataclysm: DDA is not a tabletop ruleset, but its code and content are CC BY-SA 3.0, so its monsters, items, mutations, and locations can seed a world with attribution and share-alike; Night of the Living Dead (1968) is public domain in the US for tone.
-  * World: an original setting written for the project (AGPL, like Academia Arcana) is the safe default; a Cataclysm-derived world needs a CC BY-SA 3.0 notice on that content.
-  * Engine gaps for the feel: no crafting or recipes, vehicles, base building, noise and aggro, or infection model; survival needs, conditions, counters, timers, hazards, items, and currency already exist.
-  * Open questions for triage: a new ruleset or a Cairn survival hack; how much crunch (crafting, infection, vehicles) is in scope; an original setting or an adaptation.
+* (none)
 
 # Triaged Issues
 
@@ -24,3 +16,10 @@ Order below is the work order. Each entry lists the decisions made in triage.
 4. Better storytelling. Blocked on the user's research. Symptoms to keep in mind: generic, safe prose; samey NPCs and plots; weak pacing and consequences. The research decides which to target; no code work starts until it lands.
 5. Human-written SPEC and README. The owner writes or rewrites `SPEC.md` and `README.md` themselves. Decided: agents do not author or rewrite their prose; they may only correct factual drift and keep the instructions accurate.
 6. Human review of the UI wording. A person reads the visible UI copy and edits it directly to remove AI-heavy language: buttons, labels, headings, help text, flash messages, and dialogs. Decided: the owner makes the wording changes directly. Out of scope: GM prompts and tool descriptions, bundled content prose, and code comments.
+7. Hordes: a zombie-apocalypse ruleset and the `unwritten-apocalypse` world. Design spec in `src/cygnusloom/data/rulesets/hordes/SPEC.md`.
+   * PbtA: 2d6 + stat + skill, 10+/7–9/6–; no initiative, rounds, grid turns, or monster attack rolls.
+   * Five stats; six playbooks; shared moves; playbook kits and knowledge moves; practice-based skills; gear progression; no XP.
+   * 0–6 harm track and conditions; rare infection; Rejection for cybernetics; Dread for occult relics.
+   * Hordes are magnitude 1–5 threats drawn by a noise clock and split into individual zombies; eldritch entities and strange horrors are threats.
+   * All eight crunch systems are in scope; NPCs are AI-GM-first with clocks, followers, and factions; the world is a short description with setting tables.
+   * Content is original; Cataclysm-derived content needs a CC BY-SA 3.0 notice; confirm the "Hordes" name. Next: Phase 0 implementation.
