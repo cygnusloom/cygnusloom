@@ -1,5 +1,5 @@
 {% extends "campaign_base.html" %}
-{% from "macros.html" import choice_panel, text_panel %}
+{% from "macros.html" import choice_panel, optional_panel, text_panel %}
 {% from "_creation_panels.html" import name_panel, pronouns_panel, stats_panel, template_panel, field_panel, feature_choices_panel, skill_replacements_panel %}
 {% block title %}{% if respec %}Respec {{ respec.name }}{% elif hireling %}Add a hireling{% elif party_setup and not show_character %}Your party{% elif show_options %}Create your campaign{% else %}Create your character{% endif %} · {{ campaign.name }}{% endblock %}
 {% block play %}
@@ -102,46 +102,40 @@
     <section class="creation-section campaign-options-panel" aria-labelledby="options-title">
       <h2 id="options-title">Campaign options</h2>
       {% if show_options %}
-      <p class="muted">These options are shared by every character in the campaign, and they are chosen once. Each panel explains what it changes; use the dice button to roll one or the randomize buttons to fill the form.</p>
+      <p class="muted">These options are shared by every character in the campaign, and they are chosen once. Open a panel to read what it changes; use the dice button to roll one or the randomize buttons to fill the form.</p>
+      {% endif %}
       <div class="creation-grid">
+        {% if show_options %}
         {% for field in options.choice_fields %}
           {{ choice_panel("campaign-" ~ field.id, field.name, field.options, field.description, selected=field.value) }}
         {% endfor %}
         {% for field in options.text_fields %}
           {{ text_panel("campaign-" ~ field.id, field.name, field.description) }}
         {% endfor %}
-      </div>
-      {% endif %}
-      {% if show_setting %}
-      <div class="creation-grid campaign-brief">
-        {% if start_levels|length > 1 %}
-        <section class="creation-panel" aria-labelledby="panel-start-level">
-          <details class="optional-options"{% if start_level > 1 %} open{% endif %}>
-            <summary id="panel-start-level">Starting level</summary>
-            <p class="muted">Where this campaign's characters begin. It is set to level 1 by default; raise it when the story starts with seasoned adventurers.</p>
-            <label class="show-hidden-option"><input type="checkbox" name="follow_owner_level" value="1"{% if follow_owner_level %} checked{% endif %}> New characters follow the campaign owner's character level</label>
-            <input type="hidden" name="follow_owner_level" value="0">
-            <label>
-              Starting level
-              <select name="start_level">
-                {% for level in start_levels %}
-                  <option value="{{ level }}"{% if level == start_level %} selected{% endif %}>Level {{ level }}</option>
-                {% endfor %}
-              </select>
-            </label>
-            <p class="muted">The first character begins here, and every level above 1 is gained right after creation on the normal level-up pages, so their player chooses each level's gains and picks. While following, a character joining later begins at the owner's current level and this value keeps up with it; turn following off to keep a fixed level.</p>
-          </details>
-        </section>
         {% endif %}
-        <section class="creation-panel" aria-labelledby="panel-setting">
-          <details class="optional-options"{% if campaign_setting %} open{% endif %}>
-            <summary id="panel-setting">Setting / story (optional)</summary>
-            <label>
-              <textarea name="setting" rows="6" maxlength="4000" placeholder="Describe the kind of setting or story you want to play. Leave blank to let the world and rule set lead." aria-labelledby="panel-setting">{{ campaign_setting }}</textarea>
-            </label>
-            <p class="muted">Tell Cygnus what kind of world or story you want. Blank is ignored.</p>
-          </details>
-        </section>
+        {% if show_setting %}
+        {% if start_levels|length > 1 %}
+        {% call optional_panel("panel-start-level", "Starting level", start_level > 1) %}
+          <p class="muted">Where this campaign's characters begin. It is set to level 1 by default; raise it when the story starts with seasoned adventurers.</p>
+          <label class="show-hidden-option"><input type="checkbox" name="follow_owner_level" value="1"{% if follow_owner_level %} checked{% endif %}> New characters follow the campaign owner's character level</label>
+          <input type="hidden" name="follow_owner_level" value="0">
+          <label>
+            Starting level
+            <select name="start_level">
+              {% for level in start_levels %}
+                <option value="{{ level }}"{% if level == start_level %} selected{% endif %}>Level {{ level }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <p class="muted">The first character begins here, and every level above 1 is gained right after creation on the normal level-up pages, so their player chooses each level's gains and picks. While following, a character joining later begins at the owner's current level and this value keeps up with it; turn following off to keep a fixed level.</p>
+        {% endcall %}
+        {% endif %}
+        {% call optional_panel("panel-setting", "Setting / story (optional)", campaign_setting) %}
+          <label>
+            <textarea name="setting" rows="3" maxlength="4000" placeholder="Describe the kind of setting or story you want to play. Leave blank to let the world and rule set lead." aria-labelledby="panel-setting">{{ campaign_setting }}</textarea>
+          </label>
+          <p class="muted">Tell Cygnus what kind of world or story you want. Blank is ignored.</p>
+        {% endcall %}
         <section class="creation-panel table-genres" aria-labelledby="panel-table-genres">
           <details class="creative-sources-details">
             <summary id="panel-table-genres">Creative sources</summary>
@@ -164,19 +158,16 @@
             {% endif %}
           </details>
         </section>
-        <section class="creation-panel campaign-tracking" aria-labelledby="panel-tracking">
-          <h3 id="panel-tracking">Tracking</h3>
-          <p class="muted">Both are on by default. Turn one off when this story should not track it.</p>
+        {% call optional_panel("panel-survival", "Survival Options", not track_inventory or not track_survival_needs) %}
           <label><input type="checkbox" name="use_inventory_space" value="1"{% if track_inventory %} checked{% endif %}> Track item slots and their limits</label>
           <label><input type="checkbox" name="use_survival_needs" value="1"{% if track_survival_needs %} checked{% endif %}> Track food, water, and rest needs</label>
-        </section>
-        <section class="creation-panel campaign-respec" aria-labelledby="panel-respec">
-          <h3 id="panel-respec">Character rebuilding</h3>
-          <p class="muted">Off by default. Turning it on lets each player rebuild their own character and hirelings from scratch: levels and experience are refunded, and they choose their stats, skills, and features again.</p>
+        {% endcall %}
+        {% call optional_panel("panel-respec", "Character rebuilding", allow_respec) %}
           <label><input type="checkbox" name="allow_respec" value="1"{% if allow_respec %} checked{% endif %}> Let players respec their characters</label>
-        </section>
+          <p class="muted">Lets a player rebuild their character or hireling from scratch. The character keeps their name, story, and gear; levels, picks, stats, skills, and features start over. Nothing can be rebuilt during a turn or an encounter.</p>
+        {% endcall %}
+        {% endif %}
       </div>
-      {% endif %}
     </section>
     {% endif %}
     {% if show_character %}

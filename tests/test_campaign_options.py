@@ -160,6 +160,78 @@ def test_the_settings_page_shows_the_rule_sets_campaign_options(
     assert "Let players respec their characters" in page
 
 
+def _details_around(page: str, summary_id: str) -> str:
+    """The opening <details> tag that holds the summary with this id."""
+    before = page[: page.index(f'<summary id="{summary_id}">')]
+    return before[before.rindex("<details") :]
+
+
+def test_campaign_option_panels_stay_compact_until_opened(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _cairn_campaign(client_factory)
+    page = client.get(f"/campaigns/{campaign_id}").text
+
+    # Tracking is now Survival Options, collapsed, and no longer explains itself.
+    assert '<summary id="panel-survival">Survival Options</summary>' in page
+    assert ">Tracking<" not in page
+    assert "Both are on by default" not in page
+    assert " open" not in _details_around(page, "panel-survival")
+    assert " open" not in _details_around(page, "panel-respec")
+    # A closed panel still submits its switches.
+    assert 'name="use_inventory_space" value="1" checked' in page
+    assert 'name="use_survival_needs" value="1" checked' in page
+    assert 'name="allow_respec"' in page
+
+
+def test_the_settings_page_collapses_survival_and_rebuilding(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _cairn_ready(client_factory)
+    page = client.get(f"/campaigns/{campaign_id}").text
+
+    assert '<summary id="settings-survival-panel">Survival Options</summary>' in page
+    assert '<summary id="settings-respec-panel">Character rebuilding</summary>' in page
+    assert "Without inventory space" not in page
+    assert " open" not in _details_around(page, "settings-survival-panel")
+    assert " open" not in _details_around(page, "settings-respec-panel")
+
+    # A setting that is no longer at its default opens its panel, so the owner can see it.
+    with Session(client.app.state.engine) as db:
+        campaign = db.get(Campaign, campaign_id)
+        assert campaign is not None
+        campaign.use_inventory_space = False
+        campaign.allow_respec = True
+        db.add(campaign)
+        db.commit()
+
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert " open" in _details_around(page, "settings-survival-panel")
+    assert " open" in _details_around(page, "settings-respec-panel")
+
+
+def test_starting_level_is_a_collapsed_option_in_settings(
+    client_factory: Callable[[], TestClient],
+):
+    _, campaign_id = _wwn_campaign(client_factory)
+    client = _signed_in(client_factory)
+    page = client.get(f"/campaigns/{campaign_id}").text
+
+    assert '<summary id="settings-start-level-panel">Starting level</summary>' in page
+    assert " open" not in _details_around(page, "settings-start-level-panel")
+
+    with Session(client.app.state.engine) as db:
+        campaign = db.get(Campaign, campaign_id)
+        assert campaign is not None
+        campaign.follow_owner_level = False
+        campaign.start_level = 4
+        db.add(campaign)
+        db.commit()
+
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert " open" in _details_around(page, "settings-start-level-panel")
+
+
 def test_a_campaign_option_with_one_value_is_fixed_and_not_asked():
     """The SRD has one experience track, so the engine fills it in rather than offering a
     choice. A rule set with a real track choice still asks, and a fixed value is still set."""

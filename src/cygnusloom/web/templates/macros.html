@@ -296,6 +296,17 @@
   </section>
 {%- endmacro %}
 
+{# A campaign option that stays one compact summary line until its player opens it. #}
+{# Its content is passed with `call`, so the option looks like the other panels when open. #}
+{% macro optional_panel(id, label, open=false) -%}
+  <section class="creation-panel" aria-labelledby="{{ id }}">
+    <details class="optional-options"{% if open %} open{% endif %}>
+      <summary id="{{ id }}">{{ label }}</summary>
+      {{ caller() }}
+    </details>
+  </section>
+{%- endmacro %}
+
 {# A skill or feature pick: a readable summary, a dice button, and a searchable dialog of rich
    options. The native select stays in the form for submission and for the constraint script. #}
 {% macro pick_control(name, label, hint=None, select_attributes="", empty="Roll one", roll=true, clear_label="Leave to roll", clear=true) -%}
