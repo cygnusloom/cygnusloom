@@ -4,7 +4,15 @@ Tackle triaged issues in the order presented (untraiged issues have no particula
 
 # Untriaged Issues
 
-None.
+* A new ruleset and world for a zombie apocalypse with the scavenging, survival tone of Cataclysm: Dark Days Ahead. Candidates from the web search, with their licenses:
+  * Cairn 2e, already shipped (CC BY-SA 4.0): the cheapest base for a survival hack; its d20 roll-under checks, slot inventory, deprivation, and hazards already exist.
+  * Liminal Horror SRD v3.0 (CC BY 4.0; a Cairn descendant with a Doom Clock, Fallout, item tags, and conditions). Caveat: its third-party license forbids AI-generated art and text in compatible publications, so it can only serve as a mechanics reference.
+  * Breathless SRD, Fari RPGs (CC BY 4.0): survival horror written for the undead; dice that degrade as you push are a good doom-clock source, but its sheets do not map to attribute-plus-skill characters, so only the procedures would be ported.
+  * Sigil SRD / Sigil Atelier, Stormforge (Creative Commons): gritty d100 roll-under rules. Z-LAND itself is commercial and not reusable.
+  * Cataclysm: DDA is not a tabletop ruleset, but its code and content are CC BY-SA 3.0, so its monsters, items, mutations, and locations can seed a world with attribution and share-alike; Night of the Living Dead (1968) is public domain in the US for tone.
+  * World: an original setting written for the project (AGPL, like Academia Arcana) is the safe default; a Cataclysm-derived world needs a CC BY-SA 3.0 notice on that content.
+  * Engine gaps for the feel: no crafting or recipes, vehicles, base building, noise and aggro, or infection model; survival needs, conditions, counters, timers, hazards, items, and currency already exist.
+  * Open questions for triage: a new ruleset or a Cairn survival hack; how much crunch (crafting, infection, vehicles) is in scope; an original setting or an adaptation.
 
 # Triaged Issues
 
