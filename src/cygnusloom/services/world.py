@@ -24,6 +24,7 @@ from cygnusloom.content.library import (
     TABLE_GENRES,
     TONES,
     AdvancementRules,
+    CampaignClockDefinition,
     CheckRules,
     ClockRules,
     CombatRules,
@@ -37,6 +38,7 @@ from cygnusloom.content.library import (
     FactionAssetDefinition,
     Hooks,
     HousekeepingRules,
+    ImprovementDefinition,
     InventoryRules,
     JourneyRules,
     LevelUpRules,
@@ -47,11 +49,14 @@ from cygnusloom.content.library import (
     MoveRules,
     PeriodRules,
     ProjectDefinition,
+    RecipeDefinition,
     RelationRules,
     RestLength,
     Species,
     TallyRules,
+    ThreatDefinition,
     Travel,
+    VehicleDefinition,
     Wilderness,
     WorldTerrain,
 )
@@ -63,8 +68,12 @@ from cygnusloom.services import aid, combat, custom_features, encounters, morale
 from cygnusloom.services import attacks as attack_modifiers
 from cygnusloom.services import checks as checks_service
 from cygnusloom.services import clock as clock_service
+from cygnusloom.services import clocks as clocks_service
 from cygnusloom.services import counters as counters_service
+from cygnusloom.services import crafting as crafting_service
 from cygnusloom.services import factions as factions_service
+from cygnusloom.services import harm as harm_service
+from cygnusloom.services import improvements as improvements_service
 from cygnusloom.services import inventory as inventory_service
 from cygnusloom.services import magic as magic_service
 from cygnusloom.services import market as market_service
@@ -75,8 +84,11 @@ from cygnusloom.services import periods as periods_service
 from cygnusloom.services import relations as relations_service
 from cygnusloom.services import rests as rests_service
 from cygnusloom.services import tallies as tallies_service
+from cygnusloom.services import threats as threats_service
 from cygnusloom.services import timers as timers_service
+from cygnusloom.services import vehicles as vehicles_service
 from cygnusloom.services import wilderness as wilderness_service
+from cygnusloom.services.effects import EffectContext, run_effects
 from cygnusloom.services.campaign_switches import survival_needs_enabled
 from cygnusloom.services.common import (
     InvalidInput,
@@ -109,10 +121,14 @@ from cygnusloom.services.events import (
     GrappleStarted,
     Harmed,
     Item,
+    ItemAmmoChanged,
+    ItemRemoved,
+    ItemUsesSet,
     MaxChanged,
     ModuleUsed,
     MusicCued,
     NarrationUndone,
+    NpcAgendaSet,
     ProjectAbandoned,
     ProjectAdvanced,
     ProjectStarted,
@@ -282,6 +298,12 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
     projects: Mapping[str, ProjectDefinition] = field(default_factory=dict)
     # The rule set's faction assets by id, such as Infantry or Smugglers.
     faction_assets: Mapping[str, FactionAssetDefinition] = field(default_factory=dict)
+    # The rule set's campaign clocks, threats, vehicles, recipes, and improvements by id.
+    campaign_clocks: Mapping[str, CampaignClockDefinition] = field(default_factory=dict)
+    threats: Mapping[str, ThreatDefinition] = field(default_factory=dict)
+    vehicles: Mapping[str, VehicleDefinition] = field(default_factory=dict)
+    recipes: Mapping[str, RecipeDefinition] = field(default_factory=dict)
+    improvements: Mapping[str, ImprovementDefinition] = field(default_factory=dict)
     dice_tables: Mapping[str, DiceTable] = field(default_factory=dict)
     # Mini story seeds and the rule set's default genre selection, for seed browsing.
     modules: Mapping[str, ModuleTemplate] = field(default_factory=dict)
@@ -1001,6 +1023,10 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
         stat: str | None = None,
         roll: int | None = None,
         spell: str = "",
+        target: str = "",
+        weapon: str = "",
+        skill: str = "",
+        practice: bool = True,
     ) -> dict[str, Any]:
         try:
             move_id = resolve_id(self.moves, move, kind="move", names=lambda rules: (rules.label,))
@@ -1028,9 +1054,23 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 roll=roll,
                 magic=self.magic,
                 spell=spell,
+                target=target,
+                weapon=weapon,
+                skill=skill,
+                practice=practice,
+                clock_definitions=self.campaign_clocks,
+                item_sizes=self.item_sizes,
             )
 
-    def choose_move_option(self, move: str, band: str, choice: str) -> dict[str, Any]:
+    def choose_move_option(
+        self,
+        move: str,
+        band: str,
+        choice: str,
+        target: str = "",
+        skill: str = "",
+        weapon: str = "",
+    ) -> dict[str, Any]:
         """Pick one of the choices a move band offered the player after their roll."""
         with session_scope(self.engine) as db:
             return moves_service.choose_option(
@@ -1046,7 +1086,486 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 conditions=self.conditions,
                 counters=self.counters,
                 spec=self.character,
+                target=target,
+                skill=skill,
+                weapon=weapon,
+                clock_definitions=self.campaign_clocks,
+                item_sizes=self.item_sizes,
             )
+
+    def _effect_context(self) -> EffectContext:
+        return EffectContext(
+            rng=self.rng,
+            combat=self.combat,
+            counters=self.counters,
+            conditions=self.conditions,
+            spec=self.character,
+            clock_definitions=self.campaign_clocks,
+            item_sizes=self.item_sizes,
+        )
+
+    def apply_harm(
+        self,
+        target: str,
+        amount: int,
+        cause: str = "",
+        piercing: bool = False,
+        armor: int | None = None,
+    ) -> dict[str, Any]:
+        """Apply harm to a character, NPC, or threat. No turn or encounter is needed."""
+        with session_scope(self.engine) as db:
+            return harm_service.apply_harm(
+                db,
+                self.campaign_id,
+                target,
+                amount,
+                cause=cause,
+                cx=self._effect_context(),
+                plus=self.plus,
+                armor=armor,
+                piercing=piercing,
+            )
+
+    def start_clock(
+        self,
+        name: str,
+        segments: int = 6,
+        visible: bool = True,
+        description: str = "",
+    ) -> dict[str, Any]:
+        """Start a named campaign clock; a known definition supplies its default size."""
+        with session_scope(self.engine) as db:
+            definition = clocks_service.definition_for(name, self.campaign_clocks)
+            if definition is None:
+                definition = CampaignClockDefinition(
+                    id=name,
+                    label=name,
+                    description=description,
+                    segments=max(1, segments),
+                    visible=visible,
+                )
+            clock = clocks_service.ensure_clock(db, self.campaign_id, name, definition)
+            return clocks_service.clock_view(clock)
+
+    def advance_clock(
+        self,
+        name: str,
+        amount: int = 1,
+        reason: str = "",
+        set_to: int | None = None,
+    ) -> dict[str, Any]:
+        """Advance or set a campaign clock, firing the definition's thresholds."""
+        with session_scope(self.engine) as db:
+            definition = clocks_service.definition_for(name, self.campaign_clocks)
+            if definition is not None:
+                clocks_service.ensure_clock(db, self.campaign_id, name, definition)
+            return clocks_service.advance_clock(
+                db,
+                self.campaign_id,
+                name,
+                amount,
+                cause=reason,
+                definitions=self.campaign_clocks,
+                cx=self._effect_context(),
+                plus=self.plus,
+                set_to=set_to,
+            )
+
+    def end_clock(self, name: str, reason: str = "") -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            ended = clocks_service.end_clock(db, self.campaign_id, name, cause=reason)
+            return {"clock": name, "ended": ended}
+
+    def list_clocks(self) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return {"clocks": clocks_service.clock_views(load_state(db, self.campaign_id))}
+
+    def advance_noise(self, amount: int = 1, reason: str = "") -> dict[str, Any]:
+        """Advance the shared noise clock; a missing one starts at zero."""
+        return self.advance_clock("noise", amount, reason)
+
+    def create_threat(
+        self,
+        threat: str,
+        name: str = "",
+        magnitude: int | None = None,
+        location: str = "",
+        note: str = "",
+    ) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return threats_service.create_threat(
+                db,
+                self.campaign_id,
+                threat,
+                self.threats,
+                name=name,
+                magnitude=magnitude,
+                location=location,
+                notes=note,
+            )
+
+    def list_threats(self) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return {"threats": threats_service.threat_views(load_state(db, self.campaign_id))}
+
+    def get_threat(self, threat: str) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            state = load_state(db, self.campaign_id)
+            found = threats_service._find(state, threat)
+            if found is None:
+                raise InvalidInput(f"there is no threat named {threat!r}")
+            return threats_service.threat_view(found)
+
+    def harm_threat(
+        self, threat: str, amount: int, cause: str = "", piercing: bool = False
+    ) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return threats_service.harm_threat(
+                db,
+                self.campaign_id,
+                threat,
+                amount,
+                cause=cause,
+                piercing=piercing,
+            )
+
+    def threat_move(
+        self,
+        threat: str,
+        move: str,
+        target: str = "",
+        harm: int = 0,
+        cause: str = "",
+    ) -> dict[str, Any]:
+        """Record a threat's move, and apply its harm to a character when it reaches one."""
+        with session_scope(self.engine) as db:
+            state = load_state(db, self.campaign_id)
+            found = threats_service._find(state, threat)
+            if found is None:
+                raise InvalidInput(f"there is no threat named {threat!r}")
+            record(
+                db,
+                self.campaign_id,
+                threats_service.ThreatAdvanced(
+                    id=found.id,
+                    name=found.name,
+                    magnitude=found.magnitude,
+                    note=f"uses {move}" + (f" on {target}" if target else ""),
+                ),
+            )
+            result: dict[str, Any] = {"threat": found.name, "move": move, "target": target}
+            if target and (harm or found.attack):
+                result["harm"] = harm_service.apply_harm(
+                    db,
+                    self.campaign_id,
+                    target,
+                    harm or found.attack,
+                    cause=cause or f"{found.name}: {move}",
+                    cx=self._effect_context(),
+                    plus=self.plus,
+                    piercing=False,
+                )
+            db.commit()
+            return result
+
+    def split_horde(
+        self,
+        threat: str,
+        zombie: str = "walker",
+        count: int = 3,
+        reason: str = "",
+    ) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return threats_service.split_horde(
+                db,
+                self.campaign_id,
+                threat,
+                self.threats,
+                zombie=zombie,
+                count=count,
+                reason=reason,
+            )
+
+    def merge_horde(self, threats: list[str], horde: str = "", reason: str = "") -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return threats_service.merge_horde(
+                db,
+                self.campaign_id,
+                threats,
+                self.threats,
+                horde=horde,
+                reason=reason,
+            )
+
+    def remove_threat(self, threat: str, reason: str = "") -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return {
+                "threat": threat,
+                "removed": threats_service.remove_threat(
+                    db, self.campaign_id, threat, reason=reason
+                ),
+            }
+
+    def create_vehicle(
+        self, vehicle: str, name: str = "", location: str = "", note: str = ""
+    ) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return vehicles_service.create_vehicle(
+                db,
+                self.campaign_id,
+                vehicle,
+                self.vehicles,
+                name=name,
+                location=location,
+                note=note,
+            )
+
+    def list_vehicles(self) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return {"vehicles": vehicles_service.vehicle_views(load_state(db, self.campaign_id))}
+
+    def damage_vehicle(self, vehicle: str, amount: int, cause: str = "") -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return vehicles_service.damage_vehicle(
+                db, self.campaign_id, vehicle, amount, cause=cause
+            )
+
+    def refuel_vehicle(self, vehicle: str, amount: int = 1, cause: str = "") -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return vehicles_service.refuel_vehicle(
+                db, self.campaign_id, vehicle, amount, cause=cause
+            )
+
+    def repair_vehicle(self, vehicle: str, amount: int = 1, cause: str = "") -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return vehicles_service.repair_vehicle(
+                db, self.campaign_id, vehicle, amount, cause=cause
+            )
+
+    def remove_vehicle(self, vehicle: str, reason: str = "") -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return {
+                "vehicle": vehicle,
+                "removed": vehicles_service.remove_vehicle(
+                    db, self.campaign_id, vehicle, reason=reason
+                ),
+            }
+
+    def craft(self, character: str, recipe: str, total: int) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return crafting_service.craft(
+                db,
+                self.campaign_id,
+                character,
+                recipe,
+                total,
+                spec=self.character,
+                recipes=self.recipes,
+            )
+
+    def salvage(
+        self,
+        character: str,
+        total: int,
+        difficulty: int = 8,
+        parts_item: str = "parts",
+        amount: int = 1,
+    ) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return crafting_service.salvage(
+                db,
+                self.campaign_id,
+                character,
+                total=total,
+                difficulty=difficulty,
+                spec=self.character,
+                parts_item=parts_item,
+                amount=amount,
+            )
+
+    def repair_item(
+        self,
+        character: str,
+        item: str,
+        total: int,
+        difficulty: int = 8,
+        condition: str = "",
+    ) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return crafting_service.repair_item(
+                db,
+                self.campaign_id,
+                character,
+                item,
+                total=total,
+                difficulty=difficulty,
+                spec=self.character,
+                condition=condition,
+            )
+
+    def trade(self, giver: str, receiver: str, give: str, receive: str) -> dict[str, Any]:
+        """Swap one carried item for another. Both sides must hold what they offer."""
+        with session_scope(self.engine) as db:
+            rules = _required(self.inventory, "inventory")
+            first = inventory_service.transfer_item(
+                db, self.campaign_id, rules, giver, receiver, give
+            )
+            second = inventory_service.transfer_item(
+                db, self.campaign_id, rules, receiver, giver, receive
+            )
+            db.commit()
+            return {"giver": giver, "receiver": receiver, "gave": first, "got": second}
+
+    def improve_site(
+        self, site: str, improvement: str, character: str, total: int
+    ) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return improvements_service.improve_site(
+                db,
+                self.campaign_id,
+                site,
+                improvement,
+                character,
+                total=total,
+                spec=self.character,
+                definitions=self.improvements,
+            )
+
+    def damage_base(self, site: str, amount: int = 1, cause: str = "") -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return improvements_service.damage_base(
+                db, self.campaign_id, site, amount, cause=cause
+            )
+
+    def repair_base(self, site: str, amount: int = 1, cause: str = "") -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return improvements_service.repair_base(
+                db, self.campaign_id, site, amount, cause=cause
+            )
+
+    def list_improvements(self, site: str = "") -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return {
+                "improvements": improvements_service.improvement_views(
+                    load_state(db, self.campaign_id), site
+                )
+            }
+
+    def set_npc_agenda(self, name: str, agenda: str) -> dict[str, Any]:
+        """Record what an NPC wants next."""
+        with session_scope(self.engine) as db:
+            state = load_state(db, self.campaign_id)
+            character = state.characters.get(name_key(name))
+            if character is None:
+                raise InvalidInput(f"there is no character named {name!r}")
+            record(db, self.campaign_id, NpcAgendaSet(name=character.name, agenda=agenda))
+            db.commit()
+            return {"name": character.name, "agenda": agenda}
+
+    def train_skill(self, character: str, skill: str, ticks: int = 1, cause: str = "") -> dict[str, Any]:
+        """Add practice ticks to a skill outside a move, such as during downtime."""
+        with session_scope(self.engine) as db:
+            if skill not in self.character.skills:
+                raise InvalidInput(f"there is no skill named {skill!r}")
+            run_effects(
+                db,
+                self.campaign_id,
+                character,
+                [{"op": "practice", "skill": skill, "delta": max(1, ticks)}],
+                self._effect_context(),
+                cause or f"{skill} training",
+                plus=self.plus,
+            )
+            db.commit()
+            return {"character": character, "skill": skill, "ticks": ticks}
+
+    def learn_move(self, character: str, feature: str, cause: str = "") -> dict[str, Any]:
+        """Learn a knowledge move, which the rule set represents as a feature."""
+        with session_scope(self.engine) as db:
+            found = self.character.features.get(feature)
+            if found is None:
+                raise InvalidInput(f"there is no feature named {feature!r}")
+            state = load_state(db, self.campaign_id)
+            if name_key(character) not in state.characters:
+                raise InvalidInput(f"there is no character named {character!r}")
+            record(
+                db,
+                self.campaign_id,
+                FeatureLearned(
+                    name=character,
+                    feature=found.id,
+                    feature_name=found.name,
+                    cause=cause or "learned",
+                ),
+            )
+            db.commit()
+            return {"character": character, "feature": found.id, "name": found.name}
+
+    def reload(self, character: str, weapon: str) -> dict[str, Any]:
+        """Fill a firearm from a matching ammunition bundle."""
+        with session_scope(self.engine) as db:
+            state = load_state(db, self.campaign_id)
+            actor = state.characters.get(name_key(character))
+            if actor is None:
+                raise InvalidInput(f"there is no character named {character!r}")
+            held = next(
+                (item for item in actor.items if same_item_name(item.name, weapon)), None
+            )
+            if held is None:
+                raise InvalidInput(f"{actor.name} carries no {weapon!r}")
+            if not held.capacity:
+                raise InvalidInput(f"{held.name} does not take ammunition")
+            need = held.capacity - held.loaded
+            if need <= 0:
+                return {"weapon": held.name, "loaded": held.loaded, "reloaded": 0}
+            ammunition = next(
+                (
+                    item
+                    for item in actor.items
+                    if item.caliber
+                    and item.caliber == held.caliber
+                    and item.uses > 0
+                    and item.name != held.name
+                ),
+                None,
+            )
+            if ammunition is None:
+                raise InvalidInput(f"{actor.name} has no {held.caliber} ammunition")
+            take = min(need, ammunition.uses)
+            left = ammunition.uses - take
+            if left <= 0:
+                record(db, self.campaign_id, ItemRemoved(name=actor.name, item=ammunition.name))
+            else:
+                record(
+                    db,
+                    self.campaign_id,
+                    ItemUsesSet(
+                        name=actor.name,
+                        item=ammunition.name,
+                        uses=left,
+                        cause=f"loaded into {held.name}",
+                    ),
+                )
+            record(
+                db,
+                self.campaign_id,
+                ItemAmmoChanged(
+                    name=actor.name,
+                    item=held.name,
+                    loaded=held.loaded + take,
+                    capacity=held.capacity,
+                    cause="reload",
+                ),
+            )
+            db.commit()
+            return {"weapon": held.name, "loaded": held.loaded + take, "reloaded": take}
+
+    def roll_loot(self, table: str, reason: str = "") -> dict[str, Any]:
+        """Roll a loot table; the GM reads the result and grants the item."""
+        result = self.roll_tables([table])
+        if reason:
+            result["reason"] = reason
+        return result
 
     def _weapon_item(self, name: str) -> ItemTemplate | None:
         """The item a player character's attack with `name` uses: the rule set's or world's

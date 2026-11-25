@@ -12,9 +12,11 @@ from typing import Any
 from sqlmodel import Session
 
 from cygnusloom.content.character import CharacterSpec
+from cygnusloom.content.character import ItemTemplate
 from cygnusloom.content.library import (
     ALL_CONDITIONS,
     PICKED,
+    CampaignClockDefinition,
     CombatRules,
     ConditionRules,
     CounterRules,
@@ -27,12 +29,19 @@ from cygnusloom.services.events import (
     ConditionAdded,
     CounterChanged,
     EffectNoted,
+    ItemAdded,
+    ItemAmmoChanged,
+    ItemConditionChanged,
+    ItemRemoved,
     MaxChanged,
+    SkillPracticed,
+    VehicleUpdated,
     current,
     load_state,
     name_key,
     record,
 )
+from cygnusloom.services.state import alias_key
 
 
 @dataclass
@@ -49,6 +58,17 @@ class EffectContext:
     counters: Mapping[str, CounterRules] = field(default_factory=dict)
     conditions: Mapping[str, ConditionRules] = field(default_factory=dict)
     spec: CharacterSpec | None = None
+    # The target, weapon, and skill a move band named, resolved for `$target`, `$weapon`,
+    # and `$skill`.
+    target: str = ""
+    weapon: str = ""
+    skill: str = ""
+    # A stable key for the current scene, so practice ticks land once per scene.
+    scene: str = ""
+    # Campaign clock definitions by id, for `noise` and `clock` effects.
+    clock_definitions: Mapping[str, CampaignClockDefinition] = field(default_factory=dict)
+    # Item size to inventory slots, for granting items from effects.
+    item_sizes: Mapping[str, int] = field(default_factory=dict)
 
 
 def _refresh_defense(db: Session, campaign_id: int, name: str, cx: EffectContext) -> None:
@@ -188,6 +208,276 @@ def _run_retire(
     record(db, campaign_id, CharacterRetired(name=name, cause=cause))
 
 
+def _find_item_template(cx: EffectContext, key: str) -> ItemTemplate | None:
+    if cx.spec is None:
+        return None
+    template = cx.spec.items.get(key)
+    if template is not None:
+        return template
+    wanted = name_key(key)
+    return next(
+        (item for item in cx.spec.items.values() if name_key(item.name) == wanted),
+        None,
+    )
+
+
+def _carried_item(db: Session, campaign_id: int, name: str, key: str):
+    character = load_state(db, campaign_id).characters[name_key(name)]
+    wanted = name_key(key)
+    return next((item for item in character.items if name_key(item.name) == wanted), None)
+
+
+def _run_harm(
+    db: Session,
+    campaign_id: int,
+    name: str,
+    op: Mapping[str, Any],
+    cx: EffectContext,
+    cause: str,
+    plus: str,
+) -> None:
+    target = op.get("target", "$target")
+    if target == "$target":
+        target = cx.target
+    if target == "self":
+        target = name
+    if not target:
+        raise ValueError("this harm effect needs a target")
+    amount = int(op.get("amount", 0))
+    piercing = bool(op.get("piercing", False))
+    weapon = op.get("weapon", "")
+    if weapon == "$weapon":
+        weapon = cx.weapon
+    if weapon:
+        template = _find_item_template(cx, weapon)
+        if template is not None:
+            amount = template.harm or amount
+            piercing = piercing or template.piercing
+    from cygnusloom.services.harm import apply_harm
+
+    apply_harm(
+        db,
+        campaign_id,
+        target,
+        amount,
+        cause=cause,
+        cx=cx,
+        plus=plus,
+        piercing=piercing,
+    )
+
+
+def _run_ammo(
+    db: Session,
+    campaign_id: int,
+    name: str,
+    op: Mapping[str, Any],
+    cx: EffectContext,
+    cause: str,
+    plus: str,
+) -> None:
+    weapon = op.get("weapon", "$weapon")
+    if weapon == "$weapon":
+        weapon = cx.weapon
+    if not weapon:
+        raise ValueError("this ammo effect needs a weapon")
+    held = _carried_item(db, campaign_id, name, weapon)
+    if held is None:
+        raise ValueError(f"{name} is not carrying {weapon!r}")
+    rounds = int(op.get("rounds", 1))
+    loaded = max(0, held.loaded - rounds)
+    record(
+        db,
+        campaign_id,
+        ItemAmmoChanged(
+            name=name,
+            item=held.name,
+            loaded=loaded,
+            capacity=held.capacity,
+            cause=cause,
+        ),
+    )
+
+
+def _run_noise(
+    db: Session,
+    campaign_id: int,
+    name: str,
+    op: Mapping[str, Any],
+    cx: EffectContext,
+    cause: str,
+    plus: str,
+) -> None:
+    clock = str(op.get("clock", "noise"))
+    amount = int(op.get("delta", 1))
+    from cygnusloom.services.clocks import advance_clock
+
+    advance_clock(
+        db,
+        campaign_id,
+        clock,
+        amount,
+        cause=f"noise: {cause}",
+        definitions=cx.clock_definitions,
+        cx=cx,
+        plus=plus,
+    )
+
+
+def _run_clock(
+    db: Session,
+    campaign_id: int,
+    name: str,
+    op: Mapping[str, Any],
+    cx: EffectContext,
+    cause: str,
+    plus: str,
+) -> None:
+    from cygnusloom.services.clocks import advance_clock
+
+    advance_clock(
+        db,
+        campaign_id,
+        str(op["id"]),
+        int(op.get("delta", 0)),
+        cause=cause,
+        definitions=cx.clock_definitions,
+        cx=cx,
+        plus=plus,
+        set_to=op.get("set"),
+    )
+
+
+def _run_practice(
+    db: Session,
+    campaign_id: int,
+    name: str,
+    op: Mapping[str, Any],
+    cx: EffectContext,
+    cause: str,
+    plus: str,
+) -> None:
+    if cx.spec is None or cx.spec.skill_progression is None:
+        return
+    skill = op.get("skill", "$skill")
+    if skill == "$skill":
+        skill = cx.skill
+    if not skill:
+        return
+    progression = cx.spec.skill_progression
+    if not progression.practice_thresholds:
+        return
+    character = load_state(db, campaign_id).characters[name_key(name)]
+    before = character.practice.get(skill, 0)
+    delta = int(op.get("delta", 1))
+    top = progression.practice_thresholds[-1]
+    after = min(top, before + delta)
+    rank_before = character.skills.get(skill, progression.untrained)
+    rank_after = rank_before
+    for index, threshold in enumerate(progression.practice_thresholds):
+        if after >= threshold:
+            rank_after = max(rank_after, progression.first_level + index)
+    rank_after = min(progression.maximum, rank_after)
+    if rank_after != rank_before:
+        after = 0
+    record(
+        db,
+        campaign_id,
+        SkillPracticed(
+            name=character.name,
+            skill=skill,
+            skill_name=cx.spec.skills[skill].name,
+            ticks=after,
+            rank_before=rank_before,
+            rank_after=rank_after,
+            scene=cx.scene,
+            cause=cause,
+        ),
+    )
+
+
+def _run_item(
+    db: Session,
+    campaign_id: int,
+    name: str,
+    op: Mapping[str, Any],
+    cx: EffectContext,
+    cause: str,
+    plus: str,
+) -> None:
+    if cx.spec is None:
+        return
+    template = cx.spec.items[op["item"]]
+    mode = op.get("mode", "grant")
+    if mode == "grant":
+        record(
+            db,
+            campaign_id,
+            ItemAdded(
+                name=name,
+                item=template.name,
+                size=template.size,
+                slots=cx.item_sizes.get(template.size, 1),
+                kind_of_item=template.tag,
+                cause=cause,
+                text=template.description,
+                uses=template.uses,
+                max_uses=template.uses,
+                damage=template.damage,
+                rules=list(template.rules),
+                flags=list(template.flags),
+                loaded=template.capacity,
+                capacity=template.capacity,
+                caliber=template.caliber,
+                condition=template.condition,
+            ),
+        )
+    elif mode == "consume":
+        record(db, campaign_id, ItemRemoved(name=name, item=template.name))
+    else:
+        record(
+            db,
+            campaign_id,
+            ItemConditionChanged(
+                name=name,
+                item=template.name,
+                condition=op.get("condition", "worn"),
+                cause=cause,
+            ),
+        )
+
+
+def _run_vehicle(
+    db: Session,
+    campaign_id: int,
+    name: str,
+    op: Mapping[str, Any],
+    cx: EffectContext,
+    cause: str,
+    plus: str,
+) -> None:
+    state = load_state(db, campaign_id)
+    key = alias_key(op["vehicle"])
+    vehicle = state.vehicles.get(key)
+    if vehicle is None:
+        vehicle = next(
+            (v for v in state.vehicles.values() if alias_key(v.name) == key), None
+        )
+    if vehicle is None:
+        raise ValueError(f"there is no vehicle named {op['vehicle']!r}")
+    record(
+        db,
+        campaign_id,
+        VehicleUpdated(
+            id=vehicle.id,
+            name=vehicle.name,
+            condition=op.get("condition"),
+            fuel=op.get("fuel"),
+            note=cause,
+        ),
+    )
+
+
 @dataclass(frozen=True)
 class EffectExecutor:
     """One effect op's runtime: the function that runs it, and whether the character's defense
@@ -209,6 +499,13 @@ EFFECT_EXECUTORS: Mapping[str, EffectExecutor] = {
     "end_condition": EffectExecutor(_run_end_condition),
     "retire": EffectExecutor(_run_retire),
     "raise_stat": EffectExecutor(_run_raise_stat, refresh_defense=True),
+    "harm": EffectExecutor(_run_harm),
+    "ammo": EffectExecutor(_run_ammo),
+    "noise": EffectExecutor(_run_noise),
+    "clock": EffectExecutor(_run_clock),
+    "practice": EffectExecutor(_run_practice),
+    "item": EffectExecutor(_run_item),
+    "vehicle": EffectExecutor(_run_vehicle),
 }
 
 
@@ -275,6 +572,17 @@ def change_counter(
         )
         _refresh_defense(db, campaign_id, name, cx)
     db.commit()
+    for threshold in sorted(rules.thresholds):
+        if before < threshold <= after:
+            run_effects(
+                db,
+                campaign_id,
+                name,
+                rules.thresholds[threshold],
+                cx,
+                f"{rules.label} reaches {threshold}",
+                plus=plus,
+            )
     if rules.full and rules.maximum is not None and before < rules.maximum <= after:
         run_effects(db, campaign_id, name, rules.full, cx, f"{rules.label} filled", plus=plus)
 

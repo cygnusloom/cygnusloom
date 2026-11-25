@@ -557,6 +557,9 @@ def _prompt_shown(ask: Ask) -> PromptShown:
         roll=ask.roll,
         total=ask.total,
         character=ask.character,
+        target=ask.target,
+        skill=ask.skill,
+        weapon=ask.weapon,
     )
 
 
@@ -712,6 +715,11 @@ def _tool_context(
         conditions=rule_set.conditions,
         projects=rule_set.projects,
         faction_assets=rule_set.faction_assets,
+        campaign_clocks=rule_set.campaign_clocks,
+        threats=rule_set.threats,
+        vehicles=rule_set.vehicles,
+        recipes=rule_set.recipes,
+        improvements=rule_set.improvements,
         modules=modules or {},
         table_genres=genres,
         table_tones=rule_set.table_tones,
@@ -2814,7 +2822,14 @@ async def _answer(
         prompt = turn.prompt
         if prompt is None or not prompt.choices:
             raise InvalidInput("there is no choice to make")
-        result = run.ctx.world.choose_move_option(prompt.move, prompt.band, answer.choice)
+        result = run.ctx.world.choose_move_option(
+            prompt.move,
+            prompt.band,
+            answer.choice,
+            target=prompt.target,
+            skill=prompt.skill,
+            weapon=prompt.weapon,
+        )
         _record(
             run.engine,
             run.campaign_id,

@@ -98,6 +98,7 @@ TABLE_GENRES = (
     "generic",
     "fantasy",
     "magicschool",
+    "apocalypse",
 )
 GENERIC_GENRE = "generic"
 # The mood a module is written for. A campaign's selected tones narrow which mini modules the
@@ -117,6 +118,7 @@ CREATIVE_CATEGORY_HELP = {
     "generic": "Fits any setting without assuming a particular world.",
     "fantasy": "Magic, old ruins, and pre-industrial worlds.",
     "magicschool": "A school of magic, its students, staff, and intrigues.",
+    "apocalypse": "A modern world after a collapse: ruins, scarcity, and the dead.",
 }
 TONE_HELP = {
     "grim": "Bleak, dangerous, and morally costly.",
@@ -1126,6 +1128,8 @@ class CounterRules:
     maximum: int | None
     initial: int
     full: tuple[Mapping[str, Any], ...]
+    # Effects that fire when the counter crosses a value upward, such as harm 4 or infection 3.
+    thresholds: Mapping[int, tuple[Mapping[str, Any], ...]] = field(default_factory=dict)
     # What the counter means, for rule-set authors and lookup tools.
     description: str = ""
 
@@ -1379,8 +1383,14 @@ class MoveRules:
     stat_choice: tuple[str, ...] = ()
     # The skill the move is made with, added at its level. Empty when the move has no skill.
     skill: str = ""
+    # The skills the player may choose from instead of a fixed `skill`. Empty otherwise.
+    skill_choice: tuple[str, ...] = ()
     # Minimum skill contribution, or None when a negative level applies without a floor.
     skill_floor: int | None = 0
+    # A feature the character must hold before the move can be rolled. Empty when open.
+    requires_feature: str = ""
+    # The move names a target, so `roll_move` must be given one.
+    targeted: bool = False
     # The move is only open once the character holds every stored condition.
     needs_all_conditions: bool = False
     # Free-form tags a reaction can match, such as "spell" or "social".
@@ -1633,6 +1643,9 @@ class CombatRules:
     # The grid reach and sight limits for attacks, or None when the rule set does not limit an
     # attack by the distance between the attacker and its target.
     ranges: RangeRules | None = None
+    # How combat is resolved: "turns" for initiative and encounters, or "moves" for a
+    # conversation of rolls with no initiative, rounds, or turn order.
+    mode: str = "turns"
 
     @property
     def damage(self) -> tuple[DamageStep, ...]:
@@ -2170,6 +2183,91 @@ class FactionAssetDefinition:
     qualities: tuple[str, ...] = ()
 
 
+@dataclass(frozen=True)
+class CampaignClockDefinition:
+    """A named progress track a campaign may start, such as noise or a horde's attention."""
+
+    id: str
+    label: str
+    description: str
+    segments: int = 6
+    visible: bool = True
+    initial: int = 0
+    thresholds: Mapping[int, tuple[Mapping[str, Any], ...]] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class ThreatDefinition:
+    """A non-character danger, such as a zombie, a horde, or a horror. `harm` is how much harm
+    it takes to break; `attack` is how much harm it deals."""
+
+    id: str
+    name: str
+    kind: str
+    description: str
+    harm: int
+    armor: int = 0
+    attack: int = 0
+    tags: tuple[str, ...] = ()
+    moves: tuple[str, ...] = ()
+    magnitude: int = 0
+    icon: str | None = None
+
+
+@dataclass(frozen=True)
+class VehicleDefinition:
+    """A party vehicle's starting stats."""
+
+    id: str
+    name: str
+    description: str
+    speed: str
+    handling: int
+    armor: int
+    condition_max: int
+    fuel_max: int
+    seats: int
+    cargo: int
+    noise: int
+    icon: str | None = None
+
+
+@dataclass(frozen=True)
+class RecipeDefinition:
+    """A source-defined crafting, repair, or salvage recipe."""
+
+    id: str
+    name: str
+    description: str
+    inputs: tuple[Mapping[str, Any], ...]
+    tools: tuple[str, ...]
+    skill: str
+    difficulty: int
+    hours: int
+    output: Mapping[str, Any]
+    risk: str = ""
+    icon: str | None = None
+
+
+@dataclass(frozen=True)
+class ImprovementDefinition:
+    """A source-defined shelter improvement, such as a well or a watchtower."""
+
+    id: str
+    name: str
+    description: str
+    cost: tuple[Mapping[str, Any], ...]
+    hours: int
+    skill: str
+    difficulty: int
+    defense: int = 0
+    security: int = 0
+    comfort: int = 0
+    storage: int = 0
+    requires: tuple[str, ...] = ()
+    icon: str | None = None
+
+
 MAGIC_CAPABILITIES = ("item", "prepared", "move", "none")
 TRAVEL_CAPABILITIES = ("terrain", "narrative", "watches", "none")
 SOCIAL_CAPABILITIES = (
@@ -2183,8 +2281,10 @@ SOCIAL_CAPABILITIES = (
     "projects",
     "periods",
 )
+COMBAT_MODES = ("encounters", "moves", "none")
 # A capability path a `requires` or `enabled_by` entry may name. A dotted path under `social`
-# asks for one social system, such as "social.conditions".
+# asks for one social system, such as "social.conditions"; `combat.encounters` and
+# `combat.moves` separate turn-based combat from a conversation of moves.
 CAPABILITY_PATHS = frozenset(
     {
         "magic",
@@ -2192,6 +2292,8 @@ CAPABILITY_PATHS = frozenset(
         "wilderness",
         "dungeon",
         "combat",
+        "combat.encounters",
+        "combat.moves",
         "social",
         *(f"social.{name}" for name in SOCIAL_CAPABILITIES),
     }
@@ -2213,6 +2315,9 @@ class Capabilities:
     dungeon: bool = False
     # Whether the rule set resolves combat with initiative, attacks, and encounters.
     combat: bool = False
+    # How that combat works: "encounters" for turns and initiative, "moves" for a
+    # conversation with no turn order, or "none" for no combat at all.
+    combat_mode: str = "encounters"
     # The social systems the rule set defines, from SOCIAL_CAPABILITIES.
     social: tuple[str, ...] = ()
 
@@ -2227,7 +2332,11 @@ class Capabilities:
         if path == "dungeon":
             return self.dungeon
         if path == "combat":
-            return self.combat
+            return self.combat and self.combat_mode != "none"
+        if path == "combat.encounters":
+            return self.combat and self.combat_mode == "encounters"
+        if path == "combat.moves":
+            return self.combat and self.combat_mode == "moves"
         if path == "social":
             return bool(self.social)
         if path.startswith("social."):
@@ -2246,6 +2355,10 @@ class Capabilities:
             return self.dungeon in values
         if path == "combat":
             return self.combat in values
+        if path == "combat.encounters":
+            return (self.combat and self.combat_mode == "encounters") in values
+        if path == "combat.moves":
+            return (self.combat and self.combat_mode == "moves") in values
         if path == "social":
             return any(value in self.social for value in values)
         return False
@@ -2292,6 +2405,16 @@ class RuleSet:
     projects: Mapping[str, ProjectDefinition] = field(default_factory=dict)
     # Source-defined faction assets, by id, such as a unit of Infantry or a ring of Smugglers.
     faction_assets: Mapping[str, FactionAssetDefinition] = field(default_factory=dict)
+    # Named campaign clocks a Hordes-style campaign may start, by id.
+    campaign_clocks: Mapping[str, CampaignClockDefinition] = field(default_factory=dict)
+    # Non-character dangers, by id.
+    threats: Mapping[str, ThreatDefinition] = field(default_factory=dict)
+    # Party vehicles, by id.
+    vehicles: Mapping[str, VehicleDefinition] = field(default_factory=dict)
+    # Crafting, repair, and salvage recipes, by id.
+    recipes: Mapping[str, RecipeDefinition] = field(default_factory=dict)
+    # Shelter improvements, by id.
+    improvements: Mapping[str, ImprovementDefinition] = field(default_factory=dict)
     progression: ProgressionRules = field(default_factory=ProgressionRules)
     time: TimeRules = field(default_factory=TimeRules)
     items: ItemRules = field(default_factory=ItemRules)
@@ -2847,6 +2970,11 @@ RULE_SET_DEFINITION_TYPES = frozenset(
         "world_terrain",
         "project",
         "faction_asset",
+        "campaign_clock",
+        "threat",
+        "vehicle",
+        "recipe",
+        "improvement",
         "rule_data",
         "tool_call",
         "dice_table",
@@ -2864,7 +2992,7 @@ def _load_capabilities(value: object, label: str) -> Capabilities:
         raise ContentError(f"{label}: 'capabilities' must be an object")
     check_keys(
         value,
-        {"magic", "travel", "wilderness", "dungeon", "combat", "social"},
+        {"magic", "travel", "wilderness", "dungeon", "combat", "combat_mode", "social"},
         f"{label}: capabilities",
     )
     magic = value.get("magic", "none")
@@ -2887,6 +3015,11 @@ def _load_capabilities(value: object, label: str) -> Capabilities:
     ):
         if not isinstance(setting, bool):
             raise ContentError(f"{label}: capabilities {key!r} must be true or false")
+    combat_mode = value.get("combat_mode", "encounters")
+    if combat_mode not in COMBAT_MODES:
+        raise ContentError(
+            f"{label}: capabilities 'combat_mode' must be one of {', '.join(COMBAT_MODES)}"
+        )
     raw_social = value.get("social", [])
     if not isinstance(raw_social, list) or not all(
         isinstance(item, str) and item for item in raw_social
@@ -2906,6 +3039,7 @@ def _load_capabilities(value: object, label: str) -> Capabilities:
         wilderness=wilderness,
         dungeon=dungeon,
         combat=combat,
+        combat_mode=combat_mode,
         social=tuple(raw_social),
     )
 
@@ -2937,7 +3071,13 @@ def _infer_capabilities(
         travel = "watches"
     wilderness = any(d.type == "wilderness" for d in defs)
     dungeon = any(d.type == "rule_data" and d.id == "dungeon" for d in defs)
-    combat = any(d.type == "combat" for d in defs)
+    combat_definition = next((d for d in defs if d.type == "combat"), None)
+    combat = combat_definition is not None
+    combat_mode = "encounters"
+    if combat_definition is not None:
+        declared_mode = combat_definition.data.get("mode", "encounters")
+        if declared_mode in COMBAT_MODES:
+            combat_mode = declared_mode
     if permissive:
         social = SOCIAL_CAPABILITIES
         # Core authors the shared combat and travel tools before any rule set contributes
@@ -2968,6 +3108,7 @@ def _infer_capabilities(
         wilderness=wilderness,
         dungeon=dungeon,
         combat=combat,
+        combat_mode=combat_mode,
         social=tuple(social),
     )
 
@@ -4861,10 +5002,26 @@ def _build_rule_set(
         raise ContentError(f"{label}: 'npc_hp_stat' {npc_hp_stat!r} is not a stat of this rule set")
     projects = _load_projects(definitions, checks, template)
     faction_assets = _load_faction_assets(definitions, template)
+    campaign_clocks = _load_campaign_clocks(
+        definitions, character, stored_conditions, frozenset(counters), template
+    )
+    threats = _load_threats(definitions, character, template)
+    vehicles = _load_vehicles(definitions, character, template)
+    recipes = _load_recipes(definitions, character, template)
+    improvements = _load_improvements(definitions, character, template)
     enum_sources = {
         "moves": sorted(moves),
         "stats": sorted(character.stats),
         "skills": sorted(character.skills),
+        "items": sorted(character.items),
+        "weapons": sorted(
+            item.id for item in character.items.values() if item.harm or item.damage
+        ),
+        "clocks": sorted(campaign_clocks),
+        "threats": sorted(threats),
+        "vehicles": sorted(vehicles),
+        "recipes": sorted(recipes),
+        "improvements": sorted(improvements),
         # Item sizes and rest lengths keep the order their data file declares, so a tool's
         # choices match the rule set's own listing rather than an alphabetical rewrite.
         "item_sizes": list(item_sizes),
@@ -4943,6 +5100,11 @@ def _build_rule_set(
         checks=checks,
         projects=projects,
         faction_assets=faction_assets,
+        campaign_clocks=campaign_clocks,
+        threats=threats,
+        vehicles=vehicles,
+        recipes=recipes,
+        improvements=improvements,
         progression=ProgressionRules(
             counters=counters,
             advancements=advancements,
@@ -5473,6 +5635,7 @@ def _load_combat(
         {
             "type",
             "id",
+            "mode",
             "python_module",
             "damage",
             "check_die",
@@ -5530,15 +5693,28 @@ def _load_combat(
         if module_id not in modules:
             raise ContentError(f"{label}: unknown python_module {module_id!r}")
         module = modules[module_id]
-    damage = _load_damage(data, character, label)
-    check_die = required_text(data, "check_die", label)
-    if not re.fullmatch(r"1d[0-9]+", check_die) or int(check_die[2:]) < 2:
+    mode = _choice(data, "mode", COMBAT_MODES, "encounters", label)
+    if mode == "moves":
+        damage = _load_damage(data, character, label) if "damage" in data else ()
+        check_die = data.get("check_die", "1d6")
+    else:
+        damage = _load_damage(data, character, label)
+        check_die = required_text(data, "check_die", label)
+    if not isinstance(check_die, str) or not re.fullmatch(r"1d[0-9]+", check_die):
+        raise ContentError(f"{label}: 'check_die' must be a single die such as '1d20'")
+    if int(check_die[2:]) < 2:
         raise ContentError(f"{label}: 'check_die' must be a single die such as '1d20'")
     check_sides = int(check_die[2:])
-    initiative_stat = required_text(data, "initiative_stat", label)
-    if initiative_stat not in character.stats:
+    initiative_stat = data.get("initiative_stat", "")
+    if not isinstance(initiative_stat, str):
+        raise ContentError(f"{label}: 'initiative_stat' must be a stat id")
+    if initiative_stat and initiative_stat not in character.stats:
         raise ContentError(f"{label}: 'initiative_stat' names no stat ({initiative_stat!r})")
+    if mode != "moves" and not initiative_stat:
+        raise ContentError(f"{label}: 'initiative_stat' is required for turn-based combat")
     defeat_data = data.get("defeat")
+    if defeat_data is None and mode == "moves":
+        defeat_data = {"player_character": "dying", "npc": "dead"}
     if not isinstance(defeat_data, Mapping):
         raise ContentError(f"{label}: 'defeat' must be an object")
     # The labels are an open map: `player_character`, `player_character_dead`, `important_npc`,
@@ -5576,6 +5752,7 @@ def _load_combat(
     level_damage = _load_level_damage(data, character, label)
     return CombatRules(
         id=definition.id,
+        mode=mode,
         check_die=check_die,
         check_sides=check_sides,
         initiative_stat=initiative_stat,
@@ -7672,6 +7849,337 @@ def _load_faction_assets(
     return loaded
 
 
+THREAT_KINDS = ("zombie", "horde", "horror", "survivor", "animal", "hazard")
+
+
+def _load_campaign_clocks(
+    definitions: list[Definition],
+    character: CharacterSpec,
+    conditions: frozenset[str],
+    counters: frozenset[str],
+    template: str,
+) -> dict[str, CampaignClockDefinition]:
+    """Named progress clocks a campaign may start, by id."""
+    clocks: dict[str, CampaignClockDefinition] = {}
+    for d in definitions:
+        if d.type != "campaign_clock":
+            continue
+        label = f"{template}: campaign clock {d.id}"
+        if d.id in clocks:
+            raise ContentError(f"{template}: duplicate campaign clock {d.id!r}")
+        check_keys(
+            d.data,
+            {
+                "type",
+                "id",
+                "label",
+                "description",
+                "segments",
+                "visible",
+                "initial",
+                "thresholds",
+            },
+            label,
+        )
+        segments = _whole(d.data, "segments", label, 1) if "segments" in d.data else 6
+        if segments > 12:
+            raise ContentError(f"{label}: 'segments' must be at most 12")
+        initial = _whole(d.data, "initial", label, 0) if "initial" in d.data else 0
+        if initial > segments:
+            raise ContentError(f"{label}: 'initial' is above 'segments'")
+        thresholds: dict[int, tuple[Mapping[str, Any], ...]] = {}
+        threshold_data = d.data.get("thresholds", {})
+        if not isinstance(threshold_data, Mapping):
+            raise ContentError(f"{label}: 'thresholds' must map values to effect lists")
+        for key, effects_data in threshold_data.items():
+            try:
+                at = int(key)
+            except (TypeError, ValueError):
+                raise ContentError(f"{label}: threshold {key!r} is not a whole number") from None
+            if at < 1 or at > segments:
+                raise ContentError(f"{label}: threshold {at} is outside the clock")
+            effects, _ = _check_effects(
+                effects_data, label, character, conditions, False, counters=counters
+            )
+            if effects:
+                thresholds[at] = effects
+        clocks[d.id] = CampaignClockDefinition(
+            id=d.id,
+            label=required_text(d.data, "label", label),
+            description=_optional_text(d.data, "description", label) or "",
+            segments=segments,
+            visible=_flag_default(d.data, "visible", label, True),
+            initial=initial,
+            thresholds=thresholds,
+        )
+    return clocks
+
+
+def _load_threats(
+    definitions: list[Definition], character: CharacterSpec, template: str
+) -> dict[str, ThreatDefinition]:
+    """Non-character dangers such as zombies, hordes, and horrors, by id."""
+    threats: dict[str, ThreatDefinition] = {}
+    for d in definitions:
+        if d.type != "threat":
+            continue
+        label = f"{template}: threat {d.id}"
+        if d.id in threats:
+            raise ContentError(f"{template}: duplicate threat {d.id!r}")
+        check_keys(
+            d.data,
+            {
+                "type",
+                "id",
+                "name",
+                "kind",
+                "description",
+                "harm",
+                "armor",
+                "attack",
+                "tags",
+                "moves",
+                "magnitude",
+                "icon",
+                "looks_like",
+            },
+            label,
+        )
+        kind = required_text(d.data, "kind", label)
+        if kind not in THREAT_KINDS:
+            raise ContentError(f"{label}: 'kind' must be one of {', '.join(THREAT_KINDS)}")
+        magnitude = _whole(d.data, "magnitude", label, 0) if "magnitude" in d.data else 0
+        if magnitude > 5:
+            raise ContentError(f"{label}: 'magnitude' must be at most 5")
+        if kind == "horde" and magnitude == 0:
+            raise ContentError(f"{label}: a horde needs a 'magnitude'")
+        threats[d.id] = ThreatDefinition(
+            id=d.id,
+            name=required_text(d.data, "name", label),
+            kind=kind,
+            description=_optional_text(d.data, "description", label) or "",
+            harm=_whole(d.data, "harm", label, 1),
+            armor=_whole(d.data, "armor", label, 0) if "armor" in d.data else 0,
+            attack=_whole(d.data, "attack", label, 0) if "attack" in d.data else 0,
+            tags=_names(d.data, "tags", label),
+            moves=_names(d.data, "moves", label),
+            magnitude=magnitude,
+            icon=_definition_icon(d.data, label, "skull"),
+        )
+    return threats
+
+
+def _load_vehicles(
+    definitions: list[Definition], character: CharacterSpec, template: str
+) -> dict[str, VehicleDefinition]:
+    """Party vehicles and their starting stats, by id."""
+    vehicles: dict[str, VehicleDefinition] = {}
+    for d in definitions:
+        if d.type != "vehicle":
+            continue
+        label = f"{template}: vehicle {d.id}"
+        if d.id in vehicles:
+            raise ContentError(f"{template}: duplicate vehicle {d.id!r}")
+        check_keys(
+            d.data,
+            {
+                "type",
+                "id",
+                "name",
+                "description",
+                "speed",
+                "handling",
+                "armor",
+                "condition_max",
+                "fuel_max",
+                "seats",
+                "cargo",
+                "noise",
+                "icon",
+                "looks_like",
+            },
+            label,
+        )
+        vehicles[d.id] = VehicleDefinition(
+            id=d.id,
+            name=required_text(d.data, "name", label),
+            description=_optional_text(d.data, "description", label) or "",
+            speed=required_text(d.data, "speed", label),
+            handling=(
+                _optional_signed_whole(d.data, "handling", label)
+                if "handling" in d.data
+                else 0
+            ),
+            armor=_whole(d.data, "armor", label, 0) if "armor" in d.data else 0,
+            condition_max=(
+                _whole(d.data, "condition_max", label, 1)
+                if "condition_max" in d.data
+                else 6
+            ),
+            fuel_max=_whole(d.data, "fuel_max", label, 0) if "fuel_max" in d.data else 6,
+            seats=_whole(d.data, "seats", label, 1) if "seats" in d.data else 2,
+            cargo=_whole(d.data, "cargo", label, 0) if "cargo" in d.data else 0,
+            noise=_whole(d.data, "noise", label, 0) if "noise" in d.data else 2,
+            icon=_definition_icon(d.data, label, "backpack"),
+        )
+    return vehicles
+
+
+def _load_item_list(
+    value: object,
+    label: str,
+    items: Mapping[str, ItemTemplate],
+    *,
+    key: str = "item",
+) -> tuple[Mapping[str, Any], ...]:
+    """A list of item references such as recipe inputs or improvement costs."""
+    if value is None:
+        return ()
+    if not isinstance(value, list) or not value:
+        raise ContentError(f"{label}: '{key}' entries must be a non-empty list")
+    found: list[Mapping[str, Any]] = []
+    for entry in value:
+        if not isinstance(entry, Mapping):
+            raise ContentError(f"{label}: each '{key}' entry must be an object")
+        item_id = required_text(entry, key, label)
+        if item_id not in items:
+            raise ContentError(f"{label}: '{key}' names no item ({item_id!r})")
+        uses = _whole(entry, "uses", label, 0) if "uses" in entry else 1
+        found.append({"item": item_id, "uses": uses})
+    return tuple(found)
+
+
+def _load_recipes(
+    definitions: list[Definition],
+    character: CharacterSpec,
+    template: str,
+) -> dict[str, RecipeDefinition]:
+    """Crafting, repair, and salvage recipes, by id."""
+    recipes: dict[str, RecipeDefinition] = {}
+    for d in definitions:
+        if d.type != "recipe":
+            continue
+        label = f"{template}: recipe {d.id}"
+        if d.id in recipes:
+            raise ContentError(f"{template}: duplicate recipe {d.id!r}")
+        check_keys(
+            d.data,
+            {
+                "type",
+                "id",
+                "name",
+                "description",
+                "inputs",
+                "tools",
+                "skill",
+                "difficulty",
+                "hours",
+                "output",
+                "risk",
+                "icon",
+                "looks_like",
+            },
+            label,
+        )
+        skill = required_text(d.data, "skill", label)
+        if skill not in character.skills:
+            raise ContentError(f"{label}: 'skill' names no skill ({skill!r})")
+        tools = _names(d.data, "tools", label)
+        for tool in tools:
+            if tool not in character.items:
+                raise ContentError(f"{label}: 'tools' names no item ({tool!r})")
+        output = d.data.get("output")
+        if not isinstance(output, Mapping):
+            raise ContentError(f"{label}: 'output' must be an object")
+        output_item = required_text(output, "item", label)
+        if output_item not in character.items:
+            raise ContentError(f"{label}: output names no item ({output_item!r})")
+        recipes[d.id] = RecipeDefinition(
+            id=d.id,
+            name=required_text(d.data, "name", label),
+            description=_optional_text(d.data, "description", label) or "",
+            inputs=_load_item_list(d.data.get("inputs"), label, character.items),
+            tools=tools,
+            skill=skill,
+            difficulty=_whole(d.data, "difficulty", label, 1)
+            if "difficulty" in d.data
+            else 8,
+            hours=_whole(d.data, "hours", label, 0) if "hours" in d.data else 1,
+            output={
+                "item": output_item,
+                "uses": _whole(output, "uses", label, 0) if "uses" in output else 0,
+                "condition": output.get("condition", "serviceable"),
+            },
+            risk=_optional_text(d.data, "risk", label) or "",
+            icon=_definition_icon(d.data, label, "book"),
+        )
+    return recipes
+
+
+def _load_improvements(
+    definitions: list[Definition],
+    character: CharacterSpec,
+    template: str,
+) -> dict[str, ImprovementDefinition]:
+    """Shelter improvements, by id, with their project costs and effects."""
+    improvements: dict[str, ImprovementDefinition] = {}
+    for d in definitions:
+        if d.type != "improvement":
+            continue
+        label = f"{template}: improvement {d.id}"
+        if d.id in improvements:
+            raise ContentError(f"{template}: duplicate improvement {d.id!r}")
+        check_keys(
+            d.data,
+            {
+                "type",
+                "id",
+                "name",
+                "description",
+                "cost",
+                "hours",
+                "skill",
+                "difficulty",
+                "defense",
+                "security",
+                "comfort",
+                "storage",
+                "requires",
+                "icon",
+                "looks_like",
+            },
+            label,
+        )
+        skill = required_text(d.data, "skill", label)
+        if skill not in character.skills:
+            raise ContentError(f"{label}: 'skill' names no skill ({skill!r})")
+        improvements[d.id] = ImprovementDefinition(
+            id=d.id,
+            name=required_text(d.data, "name", label),
+            description=_optional_text(d.data, "description", label) or "",
+            cost=_load_item_list(d.data.get("cost"), label, character.items),
+            hours=_whole(d.data, "hours", label, 0) if "hours" in d.data else 4,
+            skill=skill,
+            difficulty=_whole(d.data, "difficulty", label, 1)
+            if "difficulty" in d.data
+            else 8,
+            defense=_whole(d.data, "defense", label, 0) if "defense" in d.data else 0,
+            security=_whole(d.data, "security", label, 0) if "security" in d.data else 0,
+            comfort=_whole(d.data, "comfort", label, 0) if "comfort" in d.data else 0,
+            storage=_whole(d.data, "storage", label, 0) if "storage" in d.data else 0,
+            requires=_names(d.data, "requires", label),
+            icon=_definition_icon(d.data, label, "campfire"),
+        )
+    for improvement in improvements.values():
+        for required in improvement.requires:
+            if required not in improvements:
+                raise ContentError(
+                    f"{template}: improvement {improvement.id!r} requires unknown "
+                    f"improvement {required!r}"
+                )
+    return improvements
+
+
 def _load_conditions(
     definitions: list[Definition],
     character: CharacterSpec,
@@ -7786,7 +8294,17 @@ def _load_counters(
             raise ContentError(f"{template}: duplicate counter {d.id!r}")
         check_keys(
             d.data,
-            {"type", "id", "label", "description", "min", "max", "initial", "full"},
+            {
+                "type",
+                "id",
+                "label",
+                "description",
+                "min",
+                "max",
+                "initial",
+                "full",
+                "thresholds",
+            },
             label,
         )
         minimum = _optional_signed_whole(d.data, "min", label)
@@ -7799,6 +8317,24 @@ def _load_counters(
         )
         if full and maximum is None:
             raise ContentError(f"{label}: 'full' needs a 'max'")
+        thresholds: dict[int, tuple[Mapping[str, Any], ...]] = {}
+        threshold_data = d.data.get("thresholds", {})
+        if not isinstance(threshold_data, Mapping):
+            raise ContentError(f"{label}: 'thresholds' must map values to effect lists")
+        for key, effects_data in threshold_data.items():
+            try:
+                at = int(key)
+            except (TypeError, ValueError):
+                raise ContentError(f"{label}: threshold {key!r} is not a whole number") from None
+            if at < minimum or (maximum is not None and at > maximum):
+                raise ContentError(f"{label}: threshold {at} is outside the counter's range")
+            if at in thresholds:
+                raise ContentError(f"{label}: threshold {at} is repeated")
+            effects, _ = _check_effects(
+                effects_data, label, character, conditions, False, counters=ids
+            )
+            if effects:
+                thresholds[at] = effects
         counters[d.id] = CounterRules(
             id=d.id,
             label=required_text(d.data, "label", label),
@@ -7806,6 +8342,7 @@ def _load_counters(
             maximum=maximum,
             initial=initial,
             full=full,
+            thresholds=thresholds,
             description=_optional_text(d.data, "description", label) or "",
         )
     return counters
@@ -8548,7 +9085,10 @@ def _load_moves(
                 "stat_choice",
                 "needs_all_conditions",
                 "skill",
+                "skill_choice",
                 "skill_floor",
+                "requires_feature",
+                "targeted",
                 "bands",
                 "tags",
             },
@@ -8576,6 +9116,20 @@ def _load_moves(
             raise ContentError(f"{label}: 'skill' must be the id of a skill")
         if skill and skill not in character.skills:
             raise ContentError(f"{label}: 'skill' names no skill ({skill!r})")
+        skill_choice = _text_list(d.data.get("skill_choice", []), f"{label}: skill_choice")
+        if skill and skill_choice:
+            raise ContentError(f"{label}: give 'skill' or 'skill_choice', not both")
+        for skill_id in skill_choice:
+            if skill_id not in character.skills:
+                raise ContentError(f"{label}: 'skill_choice' names no skill ({skill_id!r})")
+        requires_feature = d.data.get("requires_feature", "")
+        if not isinstance(requires_feature, str):
+            raise ContentError(f"{label}: 'requires_feature' must be a feature id")
+        if requires_feature and requires_feature not in character.features:
+            raise ContentError(
+                f"{label}: 'requires_feature' names no feature ({requires_feature!r})"
+            )
+        targeted = _flag_default(d.data, "targeted", label, False)
         skill_floor = d.data.get("skill_floor", 0)
         if skill_floor is not None and (
             isinstance(skill_floor, bool) or not isinstance(skill_floor, int)
@@ -8595,7 +9149,10 @@ def _load_moves(
             bands=_load_bands(d.data.get("bands"), character, stored, counters, label),
             stat_choice=stat_choice,
             skill=skill,
+            skill_choice=tuple(skill_choice),
             skill_floor=skill_floor,
+            requires_feature=requires_feature,
+            targeted=targeted,
             needs_all_conditions=needs_all,
             tags=tuple(tags),
         )
@@ -8959,6 +9516,92 @@ class EffectOpRules:
 
 # Every effect op the rule set's JSON may use, in the order the engine reports them. Adding an op
 # means registering its keys and check here and its executor in services.effects.
+def _check_harm(op: Mapping[str, Any], check: _EffectCheck) -> None:
+    target = op.get("target", "$target")
+    if not isinstance(target, str) or not target.strip():
+        raise ContentError(f"{check.label}: 'harm.target' must be '$target', 'self', or a name")
+    amount = op.get("amount", 0)
+    if isinstance(amount, bool) or not isinstance(amount, int) or amount < 0:
+        raise ContentError(f"{check.label}: 'harm.amount' must be a whole number of 0 or more")
+    if "weapon" in op and (not isinstance(op["weapon"], str) or not op["weapon"].strip()):
+        raise ContentError(f"{check.label}: 'harm.weapon' must be an item name or '$weapon'")
+    if "piercing" in op and not isinstance(op["piercing"], bool):
+        raise ContentError(f"{check.label}: 'harm.piercing' must be true or false")
+
+
+def _check_ammo(op: Mapping[str, Any], check: _EffectCheck) -> None:
+    if not isinstance(op.get("weapon", "$weapon"), str) or not op.get("weapon", "$weapon"):
+        raise ContentError(f"{check.label}: 'ammo.weapon' must be an item name or '$weapon'")
+    rounds = op.get("rounds", 1)
+    if isinstance(rounds, bool) or not isinstance(rounds, int) or rounds < 1:
+        raise ContentError(f"{check.label}: 'ammo.rounds' must be at least 1")
+
+
+def _check_noise(op: Mapping[str, Any], check: _EffectCheck) -> None:
+    delta = op.get("delta", 1)
+    if isinstance(delta, bool) or not isinstance(delta, int):
+        raise ContentError(f"{check.label}: 'noise.delta' must be a whole number")
+    if "clock" in op and (not isinstance(op["clock"], str) or not op["clock"].strip()):
+        raise ContentError(f"{check.label}: 'noise.clock' must be a clock name")
+
+
+def _check_clock(op: Mapping[str, Any], check: _EffectCheck) -> None:
+    if not isinstance(op.get("id"), str) or not op["id"].strip():
+        raise ContentError(f"{check.label}: 'clock.id' must be a clock name")
+    if "delta" in op and (
+        isinstance(op["delta"], bool) or not isinstance(op["delta"], int)
+    ):
+        raise ContentError(f"{check.label}: 'clock.delta' must be a whole number")
+    if "set" in op and (isinstance(op["set"], bool) or not isinstance(op["set"], int)):
+        raise ContentError(f"{check.label}: 'clock.set' must be a whole number")
+    if "delta" not in op and "set" not in op:
+        raise ContentError(f"{check.label}: 'clock' needs 'delta' or 'set'")
+
+
+def _check_practice(op: Mapping[str, Any], check: _EffectCheck) -> None:
+    skill = op.get("skill", "$skill")
+    if not isinstance(skill, str) or not skill.strip():
+        raise ContentError(f"{check.label}: 'practice.skill' must be a skill or '$skill'")
+    if skill != "$skill" and skill not in check.character.skills:
+        raise ContentError(f"{check.label}: 'practice.skill' names no skill ({skill!r})")
+    delta = op.get("delta", 1)
+    if isinstance(delta, bool) or not isinstance(delta, int) or delta < 1:
+        raise ContentError(f"{check.label}: 'practice.delta' must be at least 1")
+
+
+def _check_item(op: Mapping[str, Any], check: _EffectCheck) -> None:
+    item_id = op.get("item", "")
+    if not isinstance(item_id, str) or not item_id.strip():
+        raise ContentError(f"{check.label}: 'item.item' must be an item id")
+    if item_id not in check.character.items:
+        raise ContentError(f"{check.label}: 'item.item' names no item ({item_id!r})")
+    mode = op.get("mode", "grant")
+    if mode not in ("grant", "consume", "condition"):
+        raise ContentError(f"{check.label}: 'item.mode' must be grant, consume, or condition")
+    if mode == "condition":
+        condition = op.get("condition", "")
+        if condition not in ("fine", "serviceable", "worn", "broken"):
+            raise ContentError(f"{check.label}: 'item.condition' must be a known condition")
+
+
+def _check_vehicle(op: Mapping[str, Any], check: _EffectCheck) -> None:
+    vehicle = op.get("vehicle", "")
+    if not isinstance(vehicle, str) or not vehicle.strip():
+        raise ContentError(f"{check.label}: 'vehicle.vehicle' must be a vehicle name")
+    if "condition" in op and (
+        isinstance(op["condition"], bool)
+        or not isinstance(op["condition"], int)
+        or op["condition"] < 0
+    ):
+        raise ContentError(f"{check.label}: 'vehicle.condition' must be 0 or more")
+    if "fuel" in op and (
+        isinstance(op["fuel"], bool) or not isinstance(op["fuel"], int) or op["fuel"] < 0
+    ):
+        raise ContentError(f"{check.label}: 'vehicle.fuel' must be 0 or more")
+    if "condition" not in op and "fuel" not in op:
+        raise ContentError(f"{check.label}: 'vehicle' needs 'condition' or 'fuel'")
+
+
 EFFECT_RULES: Mapping[str, EffectOpRules] = {
     "note": EffectOpRules(frozenset({"op", "text"}), _check_note),
     "set_max": EffectOpRules(frozenset({"op", "stat", "dice", "mode"}), _check_set_max),
@@ -8971,6 +9614,19 @@ EFFECT_RULES: Mapping[str, EffectOpRules] = {
     "end_condition": EffectOpRules(frozenset({"op", "id"}), _check_end_condition, move_only=True),
     "retire": EffectOpRules(frozenset({"op"}), _check_retire),
     "raise_stat": EffectOpRules(frozenset({"op", "stat", "delta", "cap"}), _check_raise_stat),
+    "harm": EffectOpRules(
+        frozenset({"op", "target", "amount", "weapon", "piercing"}), _check_harm, move_only=True
+    ),
+    "ammo": EffectOpRules(frozenset({"op", "weapon", "rounds"}), _check_ammo, move_only=True),
+    "noise": EffectOpRules(frozenset({"op", "delta", "clock"}), _check_noise, move_only=True),
+    "clock": EffectOpRules(frozenset({"op", "id", "delta", "set"}), _check_clock, move_only=True),
+    "practice": EffectOpRules(frozenset({"op", "skill", "delta"}), _check_practice, move_only=True),
+    "item": EffectOpRules(
+        frozenset({"op", "item", "mode", "condition"}), _check_item, move_only=True
+    ),
+    "vehicle": EffectOpRules(
+        frozenset({"op", "vehicle", "condition", "fuel"}), _check_vehicle, move_only=True
+    ),
 }
 
 

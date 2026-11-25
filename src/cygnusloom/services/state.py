@@ -159,6 +159,12 @@ class Item:
     flags: tuple[str, ...] = ()
     # True when the item is readied, false when it is stowed and needs an action to retrieve.
     ready: bool = True
+    # A firearm's loaded rounds, magazine capacity, and caliber.
+    loaded: int = 0
+    capacity: int = 0
+    caliber: str = ""
+    # An item's condition: fine, serviceable, worn, or broken.
+    condition: str = "serviceable"
 
 
 def _position(x: float | None, y: float | None) -> Position | None:
@@ -403,6 +409,11 @@ class Character:
     unclaimed: bool = False
     # An NPC's people, in the singular as in "Dwarf", or "" when it was never recorded.
     species: str = ""
+    # Practice ticks by skill id, and the scene each skill last ticked in.
+    practice: dict[str, int] = field(default_factory=dict)
+    practice_scene: dict[str, str] = field(default_factory=dict)
+    # What an NPC wants next, in the GM's words. Empty for characters that do not need one.
+    agenda: str = ""
 
     @property
     def out_of_play(self) -> bool:
@@ -472,6 +483,81 @@ class Project:
     currency: str = ""
     owner: str = ""
     abandoned: bool = False
+
+
+@dataclass
+class CampaignClock:
+    """A named progress track in the campaign, such as noise, a horde's attention, or a
+    faction front. `filled` counts the segments; the definition's thresholds fire when crossed."""
+
+    id: str
+    name: str
+    definition: str
+    segments: int
+    filled: int = 0
+    visible: bool = True
+    description: str = ""
+
+
+@dataclass
+class Threat:
+    """A non-character danger: a zombie, a horde, a horror, or a hostile band. `harm` is its
+    remaining capacity; `harm_max` is where it started."""
+
+    id: str
+    name: str
+    kind: str
+    definition: str
+    description: str = ""
+    harm: int = 1
+    harm_max: int = 1
+    armor: int = 0
+    attack: int = 0
+    tags: list[str] = field(default_factory=list)
+    moves: list[str] = field(default_factory=list)
+    magnitude: int = 0
+    location: str = ""
+    conditions: list[str] = field(default_factory=list)
+    notes: list[str] = field(default_factory=list)
+    broken: bool = False
+    visible: bool = True
+
+
+@dataclass
+class Vehicle:
+    """A party vehicle with its own fuel, condition, and cargo."""
+
+    id: str
+    name: str
+    definition: str
+    description: str = ""
+    speed: str = ""
+    handling: int = 0
+    armor: int = 0
+    condition: int = 6
+    condition_max: int = 6
+    fuel: int = 6
+    fuel_max: int = 6
+    seats: int = 2
+    cargo: int = 0
+    noise: int = 2
+    location: str = ""
+    notes: list[str] = field(default_factory=list)
+
+
+@dataclass
+class SiteImprovement:
+    """One shelter improvement, tracked as a project against a site."""
+
+    id: str
+    site: str
+    improvement: str
+    name: str
+    progress: int = 0
+    target: int = 1
+    completed: bool = False
+    condition: int = 6
+    notes: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -781,6 +867,14 @@ class CampaignState:
     options: dict[str, str] = field(default_factory=dict)
     # Long-running efforts by name without case, such as projects, research, and faction turns.
     projects: dict[str, Project] = field(default_factory=dict)
+    # Named campaign clocks by stable id, such as noise or a horde's attention.
+    campaign_clocks: dict[str, CampaignClock] = field(default_factory=dict)
+    # Non-character dangers by stable id.
+    threats: dict[str, Threat] = field(default_factory=dict)
+    # Party vehicles by stable id.
+    vehicles: dict[str, Vehicle] = field(default_factory=dict)
+    # Shelter improvements by stable id.
+    improvements: dict[str, SiteImprovement] = field(default_factory=dict)
     summary: str = ""
     through: int = 0
     turn: Turn | None = None

@@ -133,10 +133,19 @@ ITEM_KEYS = frozenset(
         "price",
         "armor_mode",
         "currency",
+        "harm",
+        "piercing",
+        "caliber",
+        "capacity",
+        "loud",
+        "range_text",
+        "trade_value",
+        "condition",
         "icon",
         "looks_like",
     }
 )
+ITEM_CONDITIONS = ("fine", "serviceable", "worn", "broken")
 # What a reaction may do to that roll.
 REACTION_EFFECT_OPS = (
     "raise_band",
@@ -186,13 +195,15 @@ class SkillReplacements:
 
 @dataclass(frozen=True)
 class SkillProgression:
-    """Untrained and trained skill levels, including the creation and advancement limits."""
+    """Untrained and trained skill levels, including the creation and advancement limits.
+    `practice_thresholds` are the total practice ticks each rank needs, such as (3, 6)."""
 
     untrained: int
     first_level: int
     creation_maximum: int
     maximum: int
     creation_replacements: SkillReplacements | None = None
+    practice_thresholds: tuple[int, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -547,6 +558,21 @@ class ItemTemplate:
     armor_mode: str = "add"
     # A coin. Its amount is tracked as a count rather than as a carried object.
     currency: bool = False
+    # The fixed harm a PbtA weapon deals, or 0 when the item uses damage dice.
+    harm: int = 0
+    # Whether the item's harm ignores armor.
+    piercing: bool = False
+    # A firearm's caliber and magazine capacity, or empty/0 for a non-firearm.
+    caliber: str = ""
+    capacity: int = 0
+    # How much noise the item adds when used.
+    loud: int = 0
+    # A weapon's range in plain words, such as "close/near". Empty for melee-only items.
+    range_text: str = ""
+    # A barter value used when the rule set has no currency.
+    trade_value: int = 0
+    # The item's starting condition: fine, serviceable, worn, or broken.
+    condition: str = "serviceable"
     # The icon the item shows, resolved from `icon` or `looks_like` when the content loads.
     icon: str | None = None
     # The definition or icon whose looks this one borrows. Kept for authors and lookups.
@@ -1826,9 +1852,13 @@ def _skill_progression(
     if not isinstance(value, Mapping):
         raise ContentError(f"{label} must be an object")
     keys = {"untrained", "first_level", "creation_maximum", "maximum"}
-    if not keys <= set(value) or set(value) - keys - {"creation_replacements"}:
+    if not keys <= set(value) or set(value) - keys - {
+        "creation_replacements",
+        "practice_thresholds",
+    }:
         raise ContentError(
-            f"{label} needs {', '.join(sorted(keys))} and optional 'creation_replacements'"
+            f"{label} needs {', '.join(sorted(keys))} and optional 'creation_replacements' "
+            "and 'practice_thresholds'"
         )
     levels: dict[str, int] = {}
     for key in keys:
@@ -1838,6 +1868,22 @@ def _skill_progression(
         levels[key] = level
     if not levels["first_level"] <= levels["creation_maximum"] <= levels["maximum"]:
         raise ContentError(f"{label} limits must be in increasing order")
+    practice: tuple[int, ...] = ()
+    if "practice_thresholds" in value:
+        thresholds = value["practice_thresholds"]
+        if (
+            not isinstance(thresholds, list)
+            or not thresholds
+            or not all(
+                isinstance(tick, int) and not isinstance(tick, bool) and tick > 0
+                for tick in thresholds
+            )
+            or list(thresholds) != sorted(set(thresholds))
+        ):
+            raise ContentError(
+                f"{label} 'practice_thresholds' must be increasing positive whole numbers"
+            )
+        practice = tuple(thresholds)
     replacement_data = value.get("creation_replacements")
     replacements = None
     if "creation_replacements" in value:
@@ -1863,6 +1909,7 @@ def _skill_progression(
         creation_maximum=levels["creation_maximum"],
         maximum=levels["maximum"],
         creation_replacements=replacements,
+        practice_thresholds=practice,
     )
 
 
@@ -2271,6 +2318,24 @@ def load_item(
     category = data.get("category", "")
     if not isinstance(category, str):
         raise ContentError(f"{label}: 'category' must be text")
+    harm = _amount(data, "harm", label)
+    piercing = data.get("piercing", False)
+    if not isinstance(piercing, bool):
+        raise ContentError(f"{label}: 'piercing' must be true or false")
+    caliber = data.get("caliber", "")
+    if not isinstance(caliber, str):
+        raise ContentError(f"{label}: 'caliber' must be text")
+    capacity = _amount(data, "capacity", label)
+    if capacity and not caliber.strip():
+        raise ContentError(f"{label}: a 'capacity' needs a 'caliber'")
+    loud = _amount(data, "loud", label)
+    range_text = data.get("range_text", "")
+    if not isinstance(range_text, str):
+        raise ContentError(f"{label}: 'range_text' must be text")
+    trade_value = _amount(data, "trade_value", label)
+    condition = data.get("condition", "serviceable")
+    if condition not in ITEM_CONDITIONS:
+        raise ContentError(f"{label}: 'condition' must be one of {', '.join(ITEM_CONDITIONS)}")
     if "price" in data:
         price: int | None = data["price"]
         if isinstance(price, bool) or not isinstance(price, int) or price < 0:
@@ -2333,6 +2398,14 @@ def load_item(
         price=price,
         armor_mode=armor_mode,
         currency=currency,
+        harm=harm,
+        piercing=piercing,
+        caliber=caliber,
+        capacity=capacity,
+        loud=loud,
+        range_text=range_text,
+        trade_value=trade_value,
+        condition=condition,
         icon=resolved,
         looks_like=looks_like,
     )
