@@ -1,0 +1,145 @@
+[
+  {
+    "type": "counter",
+    "id": "harm",
+    "label": "Harm",
+    "description": "A 0-6 harm track. At 4 the character is wounded; at 6 they are dying.",
+    "min": 0,
+    "max": 6,
+    "initial": 0,
+    "thresholds": {
+      "4": [
+        {
+          "op": "condition",
+          "id": "wounded"
+        }
+      ],
+      "6": [
+        {
+          "op": "condition",
+          "id": "dying"
+        }
+      ]
+    },
+    "full": [
+      {
+        "op": "note",
+        "text": "At 6 harm the character is dying and a death clock begins."
+      }
+    ]
+  },
+  {
+    "type": "counter",
+    "id": "infection",
+    "label": "Infection",
+    "description": "A 0-4 infection clock. At 3 fever sets in; at 4 the character is infected.",
+    "min": 0,
+    "max": 4,
+    "initial": 0,
+    "thresholds": {
+      "3": [
+        {
+          "op": "condition",
+          "id": "fever"
+        }
+      ],
+      "4": [
+        {
+          "op": "condition",
+          "id": "infected"
+        }
+      ]
+    },
+    "full": [
+      {
+        "op": "note",
+        "text": "At 4 infection the character is turning without treatment."
+      }
+    ]
+  },
+  {
+    "type": "counter",
+    "id": "rejection",
+    "label": "Rejection",
+    "description": "A 0-6 cybernetic rejection track. At 3 rejected; at 5 stunned; at 6 dying.",
+    "min": 0,
+    "max": 6,
+    "initial": 0,
+    "thresholds": {
+      "3": [
+        {
+          "op": "condition",
+          "id": "rejected"
+        }
+      ],
+      "5": [
+        {
+          "op": "condition",
+          "id": "stunned"
+        }
+      ],
+      "6": [
+        {
+          "op": "condition",
+          "id": "dying"
+        }
+      ]
+    },
+    "full": [
+      {
+        "op": "note",
+        "text": "At 6 Rejection the body rejects the implant; the character is dying."
+      }
+    ]
+  },
+  {
+    "type": "counter",
+    "id": "dread",
+    "label": "Dread",
+    "description": "A 0-6 occult dread track. At 3 reeling; at 5 shaken; at 6 panicked.",
+    "min": 0,
+    "max": 6,
+    "initial": 0,
+    "thresholds": {
+      "3": [
+        {
+          "op": "condition",
+          "id": "reeling"
+        }
+      ],
+      "5": [
+        {
+          "op": "condition",
+          "id": "shaken"
+        }
+      ],
+      "6": [
+        {
+          "op": "condition",
+          "id": "panicked"
+        }
+      ]
+    },
+    "full": [
+      {
+        "op": "note",
+        "text": "At 6 Dread the character breaks in some way only the fiction can name."
+      }
+    ]
+  },
+  {
+    "type": "counter",
+    "id": "morale",
+    "label": "Morale",
+    "description": "Follower morale, 0-3. At 3 the follower panics and must be calmed.",
+    "min": 0,
+    "max": 3,
+    "initial": 0,
+    "full": [
+      {
+        "op": "condition",
+        "id": "panicked"
+      }
+    ]
+  }
+]

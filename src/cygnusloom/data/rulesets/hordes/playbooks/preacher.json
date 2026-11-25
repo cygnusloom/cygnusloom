@@ -1,0 +1,30 @@
+[
+  {
+    "type": "template",
+    "id": "preacher",
+    "kind": "playbook",
+    "icon": "book",
+    "name": "Preacher",
+    "description": "You carried a word and a rite into the ruins, and people still listen. Some of what is out there listens too, which is either a calling or a problem.",
+    "names": "survivor-names",
+    "stats": {
+      "presence": 1
+    },
+    "skills": {
+      "persuasion": 1,
+      "survival": 1
+    },
+    "features": [
+      "occult-lore"
+    ],
+    "items": [
+      "relic",
+      "pistol",
+      "holy-book",
+      "candles",
+      "salt",
+      "9mm-rounds"
+    ],
+    "order": 4
+  }
+]

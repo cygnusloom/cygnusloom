@@ -1,0 +1,95 @@
+[
+  {
+    "type": "character_template",
+    "id": "standard-soldier",
+    "role": "warrior",
+    "name": "The Soldier",
+    "icon": "sword",
+    "name_suggestion": "Doyle",
+    "pronouns": "he/him",
+    "description": "A soldier with a rifle, a vest, and a habit of standing where the trouble is. The party's line when everything is noise.",
+    "priority": [
+      "grit",
+      "reflexes",
+      "wits",
+      "presence",
+      "know_how"
+    ],
+    "templates": {
+      "playbook": "soldier"
+    },
+    "fields": {
+      "drive": "Protect someone who cannot protect themselves",
+      "burden": "A promise made to the dead",
+      "scar": "A bite scar you keep covered",
+      "look": "A uniform worn without the patches",
+      "background": "Soldier, guard, or cop",
+      "shelter_duty": "Watch the wall and the dark",
+      "personal_item": "A dented canteen with a name scratched into it"
+    },
+    "picks": {},
+    "grants": {}
+  },
+  {
+    "type": "character_template",
+    "id": "standard-preacher",
+    "role": "magic",
+    "name": "The Preacher",
+    "icon": "book",
+    "name_suggestion": "Mara",
+    "pronouns": "she/her",
+    "description": "A preacher with a relic, a book, and a voice that holds people together. The closest thing to magic the winter has left.",
+    "priority": [
+      "presence",
+      "wits",
+      "grit",
+      "know_how",
+      "reflexes"
+    ],
+    "templates": {
+      "playbook": "preacher"
+    },
+    "fields": {
+      "drive": "Find a cure, or the truth about the fall",
+      "burden": "A relic you should have thrown away",
+      "scar": "A voice ruined by smoke",
+      "look": "A clean coat, somehow, and dirty boots",
+      "background": "Preacher, funeral worker, or con artist",
+      "shelter_duty": "Teach the children and the newcomers",
+      "personal_item": "A photograph of people you no longer name aloud"
+    },
+    "picks": {},
+    "grants": {}
+  },
+  {
+    "type": "character_template",
+    "id": "standard-medic",
+    "role": "support",
+    "name": "The Medic",
+    "icon": "herbalism-kit",
+    "name_suggestion": "Iris",
+    "pronouns": "they/them",
+    "description": "A medic with a stocked kit, steady hands, and a clear-eyed view of what can and cannot be saved.",
+    "priority": [
+      "know_how",
+      "wits",
+      "presence",
+      "grit",
+      "reflexes"
+    ],
+    "templates": {
+      "playbook": "medic"
+    },
+    "fields": {
+      "drive": "Keep one person alive",
+      "burden": "A person who depends on you",
+      "scar": "A hand that never healed straight",
+      "look": "Layers of scavenged clothing and a broken watch",
+      "background": "Nurse, paramedic, or orderly",
+      "shelter_duty": "Tend the sick and the wounded",
+      "personal_item": "A stethoscope that still works"
+    },
+    "picks": {},
+    "grants": {}
+  }
+]

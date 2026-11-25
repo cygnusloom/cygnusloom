@@ -1,0 +1,30 @@
+[
+  {
+    "type": "template",
+    "id": "mechanic",
+    "kind": "playbook",
+    "icon": "tinkers-tools",
+    "name": "Mechanic",
+    "description": "You can hear what is wrong with an engine from across the yard. What the dead have not taken, the weather is trying to, and you are the one who keeps it running.",
+    "names": "survivor-names",
+    "stats": {
+      "know_how": 1
+    },
+    "skills": {
+      "mechanics": 1,
+      "driving": 1
+    },
+    "features": [
+      "vehicle-repair"
+    ],
+    "items": [
+      "toolkit",
+      "shotgun",
+      "fuel-can",
+      "parts",
+      "wrench",
+      "12ga-shells"
+    ],
+    "order": 3
+  }
+]

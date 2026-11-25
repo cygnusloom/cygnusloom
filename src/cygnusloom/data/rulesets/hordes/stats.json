@@ -1,0 +1,37 @@
+[
+  {
+    "type": "stat",
+    "id": "grit",
+    "name": "Grit",
+    "preset": "stats",
+    "description": "Endurance, nerve, and holding on. Melee brawling, defense, the harm move, and resisting infection."
+  },
+  {
+    "type": "stat",
+    "id": "reflexes",
+    "name": "Reflexes",
+    "preset": "stats",
+    "description": "Speed, aim, and reaction. Shooting, sneaking, fleeing, driving, and athletics."
+  },
+  {
+    "type": "stat",
+    "id": "wits",
+    "name": "Wits",
+    "preset": "stats",
+    "description": "Attention, memory, and cunning. Assessing, scavenging, foraging, tracking, and occult lore."
+  },
+  {
+    "type": "stat",
+    "id": "presence",
+    "name": "Presence",
+    "preset": "stats",
+    "description": "Will, leadership, and empathy. Persuading, commanding, trading, and facing horror."
+  },
+  {
+    "type": "stat",
+    "id": "know_how",
+    "name": "Know-how",
+    "preset": "stats",
+    "description": "Craft, repair, medicine, and tech. Fixing, treating, crafting, salvaging, and knowledge moves."
+  }
+]

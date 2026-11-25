@@ -1,0 +1,396 @@
+[
+  {
+    "type": "improvement",
+    "id": "barricade",
+    "name": "Barricade",
+    "description": "A braced wall of scrap across the weak side of the shelter.",
+    "cost": [
+      {
+        "item": "parts",
+        "uses": 2
+      }
+    ],
+    "hours": 2,
+    "skill": "mechanics",
+    "difficulty": 8,
+    "defense": 1,
+    "security": 0,
+    "comfort": 0,
+    "storage": 0,
+    "requires": [],
+    "icon": "fence"
+  },
+  {
+    "type": "improvement",
+    "id": "gate",
+    "name": "Gate",
+    "description": "A reinforced gate that can be shut and held.",
+    "cost": [
+      {
+        "item": "parts",
+        "uses": 4
+      }
+    ],
+    "hours": 4,
+    "skill": "mechanics",
+    "difficulty": 9,
+    "defense": 2,
+    "security": 0,
+    "comfort": 0,
+    "storage": 0,
+    "requires": [
+      "barricade"
+    ],
+    "icon": "gate"
+  },
+  {
+    "type": "improvement",
+    "id": "watchtower",
+    "name": "Watchtower",
+    "description": "A raised post with a view of the approach.",
+    "cost": [
+      {
+        "item": "parts",
+        "uses": 4
+      }
+    ],
+    "hours": 4,
+    "skill": "mechanics",
+    "difficulty": 8,
+    "defense": 0,
+    "security": 2,
+    "comfort": 0,
+    "storage": 0,
+    "requires": [],
+    "icon": "tower"
+  },
+  {
+    "type": "improvement",
+    "id": "alarm",
+    "name": "Alarm",
+    "description": "A tripwire and bell system around the perimeter.",
+    "cost": [
+      {
+        "item": "parts",
+        "uses": 2
+      },
+      {
+        "item": "batteries",
+        "uses": 1
+      }
+    ],
+    "hours": 2,
+    "skill": "mechanics",
+    "difficulty": 8,
+    "defense": 0,
+    "security": 2,
+    "comfort": 0,
+    "storage": 0,
+    "requires": [],
+    "icon": "bell"
+  },
+  {
+    "type": "improvement",
+    "id": "well",
+    "name": "Well",
+    "description": "A covered well inside the wall, with a clean bucket.",
+    "cost": [
+      {
+        "item": "parts",
+        "uses": 3
+      }
+    ],
+    "hours": 6,
+    "skill": "mechanics",
+    "difficulty": 8,
+    "defense": 0,
+    "security": 0,
+    "comfort": 1,
+    "storage": 0,
+    "requires": [],
+    "icon": "well"
+  },
+  {
+    "type": "improvement",
+    "id": "rain_catcher",
+    "name": "Rain Catcher",
+    "description": "Gutters and barrels that turn weather into water.",
+    "cost": [
+      {
+        "item": "parts",
+        "uses": 2
+      }
+    ],
+    "hours": 3,
+    "skill": "mechanics",
+    "difficulty": 7,
+    "defense": 0,
+    "security": 0,
+    "comfort": 1,
+    "storage": 0,
+    "requires": [],
+    "icon": "water"
+  },
+  {
+    "type": "improvement",
+    "id": "garden",
+    "name": "Garden",
+    "description": "A walled plot of soil and seed, and a reason to stay.",
+    "cost": [
+      {
+        "item": "seeds",
+        "uses": 1
+      },
+      {
+        "item": "fertilizer",
+        "uses": 1
+      },
+      {
+        "item": "parts",
+        "uses": 1
+      }
+    ],
+    "hours": 6,
+    "skill": "survival",
+    "difficulty": 8,
+    "defense": 0,
+    "security": 0,
+    "comfort": 2,
+    "storage": 0,
+    "requires": [],
+    "icon": "garden"
+  },
+  {
+    "type": "improvement",
+    "id": "smokehouse",
+    "name": "Smokehouse",
+    "description": "A shed that turns fresh meat into stores.",
+    "cost": [
+      {
+        "item": "parts",
+        "uses": 3
+      },
+      {
+        "item": "fuel-can",
+        "uses": 1
+      }
+    ],
+    "hours": 5,
+    "skill": "survival",
+    "difficulty": 8,
+    "defense": 0,
+    "security": 0,
+    "comfort": 1,
+    "storage": 2,
+    "requires": [],
+    "icon": "oven"
+  },
+  {
+    "type": "improvement",
+    "id": "solar_panel",
+    "name": "Solar Panel",
+    "description": "A panel and battery bank that give the shelter light.",
+    "cost": [
+      {
+        "item": "solar-panel",
+        "uses": 1
+      },
+      {
+        "item": "batteries",
+        "uses": 1
+      },
+      {
+        "item": "parts",
+        "uses": 2
+      }
+    ],
+    "hours": 6,
+    "skill": "mechanics",
+    "difficulty": 9,
+    "defense": 0,
+    "security": 0,
+    "comfort": 1,
+    "storage": 0,
+    "requires": [],
+    "icon": "crystal"
+  },
+  {
+    "type": "improvement",
+    "id": "generator",
+    "name": "Generator",
+    "description": "A generator that runs the lights, the radio, or the infirmary.",
+    "cost": [
+      {
+        "item": "parts",
+        "uses": 4
+      },
+      {
+        "item": "fuel-can",
+        "uses": 1
+      }
+    ],
+    "hours": 6,
+    "skill": "mechanics",
+    "difficulty": 9,
+    "defense": 0,
+    "security": 0,
+    "comfort": 2,
+    "storage": 0,
+    "requires": [
+      "solar_panel"
+    ],
+    "icon": "anvil"
+  },
+  {
+    "type": "improvement",
+    "id": "workshop",
+    "name": "Workshop",
+    "description": "A bench, tools, and a place to make and repair.",
+    "cost": [
+      {
+        "item": "toolkit",
+        "uses": 1
+      },
+      {
+        "item": "parts",
+        "uses": 3
+      }
+    ],
+    "hours": 6,
+    "skill": "mechanics",
+    "difficulty": 8,
+    "defense": 0,
+    "security": 0,
+    "comfort": 0,
+    "storage": 2,
+    "requires": [],
+    "icon": "smiths-tools"
+  },
+  {
+    "type": "improvement",
+    "id": "infirmary",
+    "name": "Infirmary",
+    "description": "Clean beds, a stove, and a locked cabinet of medicine.",
+    "cost": [
+      {
+        "item": "medkit",
+        "uses": 1
+      },
+      {
+        "item": "clean-cloth",
+        "uses": 2
+      }
+    ],
+    "hours": 6,
+    "skill": "medicine",
+    "difficulty": 8,
+    "defense": 0,
+    "security": 0,
+    "comfort": 2,
+    "storage": 0,
+    "requires": [
+      "well"
+    ],
+    "icon": "herbalism-kit"
+  },
+  {
+    "type": "improvement",
+    "id": "radio_room",
+    "name": "Radio Room",
+    "description": "A quiet room, a working radio, and an antenna above the roof.",
+    "cost": [
+      {
+        "item": "radio",
+        "uses": 1
+      },
+      {
+        "item": "radio-parts",
+        "uses": 2
+      },
+      {
+        "item": "batteries",
+        "uses": 1
+      }
+    ],
+    "hours": 4,
+    "skill": "mechanics",
+    "difficulty": 9,
+    "defense": 0,
+    "security": 1,
+    "comfort": 0,
+    "storage": 0,
+    "requires": [],
+    "icon": "observatory"
+  },
+  {
+    "type": "improvement",
+    "id": "armory",
+    "name": "Armory",
+    "description": "A locked store for weapons and ammunition.",
+    "cost": [
+      {
+        "item": "parts",
+        "uses": 3
+      },
+      {
+        "item": "lockpicks",
+        "uses": 1
+      }
+    ],
+    "hours": 3,
+    "skill": "mechanics",
+    "difficulty": 8,
+    "defense": 0,
+    "security": 2,
+    "comfort": 0,
+    "storage": 2,
+    "requires": [],
+    "icon": "weapon-rack"
+  },
+  {
+    "type": "improvement",
+    "id": "garage",
+    "name": "Garage",
+    "description": "A roof, a pit, and a door wide enough for a truck.",
+    "cost": [
+      {
+        "item": "parts",
+        "uses": 5
+      },
+      {
+        "item": "toolkit",
+        "uses": 1
+      }
+    ],
+    "hours": 8,
+    "skill": "mechanics",
+    "difficulty": 9,
+    "defense": 0,
+    "security": 0,
+    "comfort": 0,
+    "storage": 3,
+    "requires": [],
+    "icon": "wagon"
+  },
+  {
+    "type": "improvement",
+    "id": "cold_cellar",
+    "name": "Cold Cellar",
+    "description": "A deep, cold store that slows spoilage through the winter.",
+    "cost": [
+      {
+        "item": "parts",
+        "uses": 3
+      }
+    ],
+    "hours": 4,
+    "skill": "mechanics",
+    "difficulty": 8,
+    "defense": 0,
+    "security": 0,
+    "comfort": 1,
+    "storage": 3,
+    "requires": [],
+    "icon": "barrel"
+  }
+]

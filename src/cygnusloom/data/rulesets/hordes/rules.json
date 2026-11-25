@@ -1,0 +1,112 @@
+[
+  {
+    "type": "rule",
+    "id": "rule-cybernetic-cyber-eye",
+    "text": "Cyber Eye: An eye implant: +1 to aimed shots and low-light vision. Installing or attuning it adds 1 Rejection. Rejection 3 brings fever and tremor, 5 a seizure, and 6 rejection or death. Cybernetics Configuration and Field Surgery install one; a dead implant is inert."
+  },
+  {
+    "type": "rule",
+    "id": "rule-cybernetic-targeting-link",
+    "text": "Targeting Link: A military targeting link: +1 Firearms. Installing or attuning it adds 2 Rejection. Rejection 3 brings fever and tremor, 5 a seizure, and 6 rejection or death. Cybernetics Configuration and Field Surgery install one; a dead implant is inert."
+  },
+  {
+    "type": "rule",
+    "id": "rule-cybernetic-subdermal-armor",
+    "text": "Subdermal Armor: Woven armor under the skin: +1 armor, obvious to scanners. Installing or attuning it adds 2 Rejection. Rejection 3 brings fever and tremor, 5 a seizure, and 6 rejection or death. Cybernetics Configuration and Field Surgery install one; a dead implant is inert."
+  },
+  {
+    "type": "rule",
+    "id": "rule-cybernetic-prosthetic-arm",
+    "text": "Prosthetic Arm: A powered prosthetic: +1 Grit for feats of strength. Installing or attuning it adds 1 Rejection. Rejection 3 brings fever and tremor, 5 a seizure, and 6 rejection or death. Cybernetics Configuration and Field Surgery install one; a dead implant is inert."
+  },
+  {
+    "type": "rule",
+    "id": "rule-cybernetic-prosthetic-leg",
+    "text": "Prosthetic Leg: A powered leg: +1 Athletics and no penalty from a ruined leg. Installing or attuning it adds 1 Rejection. Rejection 3 brings fever and tremor, 5 a seizure, and 6 rejection or death. Cybernetics Configuration and Field Surgery install one; a dead implant is inert."
+  },
+  {
+    "type": "rule",
+    "id": "rule-cybernetic-neural-jack",
+    "text": "Neural Jack: A skull port: +1 Computer Use and a direct interface with machines. Installing or attuning it adds 2 Rejection. Rejection 3 brings fever and tremor, 5 a seizure, and 6 rejection or death. Cybernetics Configuration and Field Surgery install one; a dead implant is inert."
+  },
+  {
+    "type": "rule",
+    "id": "rule-cybernetic-adrenal-pump",
+    "text": "Adrenal Pump: An implant that once per scene adds +1 to a physical roll, and is addictive. Installing or attuning it adds 2 Rejection. Rejection 3 brings fever and tremor, 5 a seizure, and 6 rejection or death. Cybernetics Configuration and Field Surgery install one; a dead implant is inert."
+  },
+  {
+    "type": "rule",
+    "id": "rule-cybernetic-data-port",
+    "text": "Data Port: A visible data port: store and read drives, +1 to recall. Installing or attuning it adds 1 Rejection. Rejection 3 brings fever and tremor, 5 a seizure, and 6 rejection or death. Cybernetics Configuration and Field Surgery install one; a dead implant is inert."
+  },
+  {
+    "type": "rule",
+    "id": "rule-cybernetic-built-in-tool",
+    "text": "Built-in Tool: A folding tool in the forearm: a tool without hands. Installing or attuning it adds 1 Rejection. Rejection 3 brings fever and tremor, 5 a seizure, and 6 rejection or death. Cybernetics Configuration and Field Surgery install one; a dead implant is inert."
+  },
+  {
+    "type": "rule",
+    "id": "rule-cybernetic-black-market-heart",
+    "text": "Black-Market Heart: A replacement heart that ignores one dying result. Rare and dangerous. Installing or attuning it adds 3 Rejection. Rejection 3 brings fever and tremor, 5 a seizure, and 6 rejection or death. Cybernetics Configuration and Field Surgery install one; a dead implant is inert."
+  },
+  {
+    "type": "rule",
+    "id": "rule-relic-relic",
+    "text": "Relic: A saint's finger in a tin case. Once, it steadies someone who is dying. Using or attuning it adds 1 Dread. Dread 3 brings nightmares, 5 obsession, and 6 a breaking. Occult Lore identifies it; rest, community, or giving it up reduce Dread."
+  },
+  {
+    "type": "rule",
+    "id": "rule-relic-saint-finger",
+    "text": "Saint's Finger: A preserved finger in a reliquary. Once, it stabilizes a dying character. Using or attuning it adds 1 Dread. Dread 3 brings nightmares, 5 obsession, and 6 a breaking. Occult Lore identifies it; rest, community, or giving it up reduce Dread."
+  },
+  {
+    "type": "rule",
+    "id": "rule-relic-black-mirror",
+    "text": "Black Mirror: A small mirror that shows a place you know. Something looks back. Using or attuning it adds 2 Dread. Dread 3 brings nightmares, 5 obsession, and 6 a breaking. Occult Lore identifies it; rest, community, or giving it up reduce Dread."
+  },
+  {
+    "type": "rule",
+    "id": "rule-relic-grimoire",
+    "text": "Grimoire: A book of rites whose pages change when no one is watching. Using or attuning it adds 2 Dread. Dread 3 brings nightmares, 5 obsession, and 6 a breaking. Occult Lore identifies it; rest, community, or giving it up reduce Dread."
+  },
+  {
+    "type": "rule",
+    "id": "rule-relic-mourning-mask",
+    "text": "Mourning Mask: A mask that lets you speak with the dead. They remember you. Using or attuning it adds 2 Dread. Dread 3 brings nightmares, 5 obsession, and 6 a breaking. Occult Lore identifies it; rest, community, or giving it up reduce Dread."
+  },
+  {
+    "type": "rule",
+    "id": "rule-relic-bone-idol",
+    "text": "Bone Idol: A carved idol: +1 to one roll, once per scene. It wants offerings. Using or attuning it adds 2 Dread. Dread 3 brings nightmares, 5 obsession, and 6 a breaking. Occult Lore identifies it; rest, community, or giving it up reduce Dread."
+  },
+  {
+    "type": "rule",
+    "id": "rule-relic-iron-bell",
+    "text": "Iron Bell: A bell that drives off a horror. It is heard for miles. Using or attuning it adds 2 Dread. Dread 3 brings nightmares, 5 obsession, and 6 a breaking. Occult Lore identifies it; rest, community, or giving it up reduce Dread."
+  },
+  {
+    "type": "rule",
+    "id": "rule-relic-grave-candle",
+    "text": "Grave Candle: A candle whose light the dead avoid. It burns cold. Using or attuning it adds 1 Dread. Dread 3 brings nightmares, 5 obsession, and 6 a breaking. Occult Lore identifies it; rest, community, or giving it up reduce Dread."
+  },
+  {
+    "type": "rule",
+    "id": "rule-relic-chained-book",
+    "text": "Chained Book: Ask a question of something old. It asks one back. Using or attuning it adds 3 Dread. Dread 3 brings nightmares, 5 obsession, and 6 a breaking. Occult Lore identifies it; rest, community, or giving it up reduce Dread."
+  },
+  {
+    "type": "rule",
+    "id": "rule-relic-reliquary",
+    "text": "Reliquary: A heavy reliquary: +1 armor against the eldritch. Obvious and slow. Using or attuning it adds 2 Dread. Dread 3 brings nightmares, 5 obsession, and 6 a breaking. Occult Lore identifies it; rest, community, or giving it up reduce Dread."
+  },
+  {
+    "type": "rule",
+    "id": "rule-relic-holy-book",
+    "text": "Holy Book: A worn book of scripture and rites. It steadies the hand and the voice. Using or attuning it adds 1 Dread. Dread 3 brings nightmares, 5 obsession, and 6 a breaking. Occult Lore identifies it; rest, community, or giving it up reduce Dread."
+  },
+  {
+    "type": "rule",
+    "id": "rule-ward",
+    "text": "A ward of salt, candle, and rite keeps a horror at bay for a scene. It is not a wall: it holds only while the rite and the threshold hold."
+  }
+]

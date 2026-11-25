@@ -1,0 +1,57 @@
+[
+  {
+    "type": "character_field",
+    "id": "drive",
+    "name": "Drive",
+    "flavor": true,
+    "description": "What keeps you going when the world has stopped.",
+    "table": "drive"
+  },
+  {
+    "type": "character_field",
+    "id": "burden",
+    "name": "Burden",
+    "flavor": true,
+    "description": "What you carry that is not in your pack.",
+    "table": "burden"
+  },
+  {
+    "type": "character_field",
+    "id": "scar",
+    "name": "Scar",
+    "flavor": true,
+    "description": "The mark the first winter left on you.",
+    "table": "scar"
+  },
+  {
+    "type": "character_field",
+    "id": "look",
+    "name": "Look",
+    "flavor": true,
+    "description": "One concrete visual detail people remember.",
+    "table": "look"
+  },
+  {
+    "type": "character_field",
+    "id": "background",
+    "name": "Background",
+    "flavor": true,
+    "description": "What you did before the dead rose.",
+    "table": "background"
+  },
+  {
+    "type": "character_field",
+    "id": "shelter_duty",
+    "name": "Shelter Duty",
+    "flavor": true,
+    "description": "What you do at the base: watch, cook, fix, teach, or tend.",
+    "table": "shelter_duty"
+  },
+  {
+    "type": "character_field",
+    "id": "personal_item",
+    "name": "Personal Item",
+    "flavor": true,
+    "description": "One thing that is yours alone."
+  }
+]

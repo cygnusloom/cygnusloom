@@ -1,0 +1,158 @@
+[
+  {
+    "type": "campaign_clock",
+    "id": "noise",
+    "label": "Noise",
+    "description": "How loud the party has been. At 3 the dead stir; at 6 a horde arrives.",
+    "segments": 6,
+    "visible": true,
+    "thresholds": {
+      "3": [
+        {
+          "op": "note",
+          "text": "The dead stir: distant moans and movement at the edge of the scene."
+        }
+      ],
+      "4": [
+        {
+          "op": "note",
+          "text": "Nearby hordes turn toward the noise."
+        }
+      ],
+      "5": [
+        {
+          "op": "note",
+          "text": "A horde is close; the next loud action may bring it."
+        }
+      ],
+      "6": [
+        {
+          "op": "note",
+          "text": "A horde arrives, or the current horde grows."
+        }
+      ]
+    }
+  },
+  {
+    "type": "campaign_clock",
+    "id": "horde_pressure",
+    "label": "Horde Pressure",
+    "description": "The nearest horde's attention over days. At 6 it reaches the shelter or the current site.",
+    "segments": 6,
+    "visible": false,
+    "thresholds": {
+      "3": [
+        {
+          "op": "note",
+          "text": "The horde is drifting closer; more of the dead are on the roads."
+        }
+      ],
+      "5": [
+        {
+          "op": "note",
+          "text": "The horde is near enough to hear; quiet and distance matter now."
+        }
+      ],
+      "6": [
+        {
+          "op": "note",
+          "text": "The horde reaches the shelter or the current site."
+        }
+      ]
+    }
+  },
+  {
+    "type": "campaign_clock",
+    "id": "site_danger",
+    "label": "Site Danger",
+    "description": "How much trouble a site has noticed the party. At 3 and 5 a complication arrives; at 6 the site turns on them.",
+    "segments": 6,
+    "visible": false,
+    "thresholds": {
+      "3": [
+        {
+          "op": "note",
+          "text": "A complication, omen, or threat arrives."
+        }
+      ],
+      "5": [
+        {
+          "op": "note",
+          "text": "A second complication arrives; the site is fully alert."
+        }
+      ],
+      "6": [
+        {
+          "op": "note",
+          "text": "The site turns on the party: a hard move, a collapse, or a swarm."
+        }
+      ]
+    }
+  },
+  {
+    "type": "campaign_clock",
+    "id": "base_defense",
+    "label": "Base Defense",
+    "description": "How close an assault is to overrunning the shelter.",
+    "segments": 6,
+    "visible": true,
+    "thresholds": {
+      "4": [
+        {
+          "op": "note",
+          "text": "The perimeter is breached in one place."
+        }
+      ],
+      "6": [
+        {
+          "op": "note",
+          "text": "The base is overrun; defenders must fall back or lose the shelter."
+        }
+      ]
+    }
+  },
+  {
+    "type": "campaign_clock",
+    "id": "chase_escape",
+    "label": "Chase Escape",
+    "description": "At 6 on this clock the party gets away.",
+    "segments": 6,
+    "visible": true,
+    "thresholds": {
+      "3": [
+        {
+          "op": "note",
+          "text": "The pursuit is falling behind, but the road ahead is not clear."
+        }
+      ],
+      "6": [
+        {
+          "op": "note",
+          "text": "The party gets away."
+        }
+      ]
+    }
+  },
+  {
+    "type": "campaign_clock",
+    "id": "chase_pursuit",
+    "label": "Chase Pursuit",
+    "description": "At 6 on this clock the party is caught, boxed in, or crashes.",
+    "segments": 6,
+    "visible": false,
+    "thresholds": {
+      "3": [
+        {
+          "op": "note",
+          "text": "The pursuit is closing; something on the road goes wrong."
+        }
+      ],
+      "6": [
+        {
+          "op": "note",
+          "text": "The party is caught, boxed in, or crashes."
+        }
+      ]
+    }
+  }
+]

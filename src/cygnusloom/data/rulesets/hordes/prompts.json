@@ -1,0 +1,126 @@
+[
+  {
+    "type": "prompt",
+    "id": "encounter_start",
+    "remove": true
+  },
+  {
+    "type": "prompt",
+    "id": "encounter_turn_resources",
+    "remove": true
+  },
+  {
+    "type": "prompt",
+    "id": "hazards",
+    "remove": true
+  },
+  {
+    "type": "prompt",
+    "id": "moves_not_turns",
+    "requires": [
+      "combat.moves"
+    ],
+    "step": "state",
+    "text": "Combat is a conversation, not a mode. There is no initiative, no round, no turn order, and no grid. The fiction decides who acts and when. When an action triggers a move, call roll_move and resolve its band. On a 6-, make a hard move; otherwise describe the changed situation and ask what happens next. Never call start_encounter, begin_turn, attack, or any turn-based tool, and never ask the player to wait for a turn."
+  },
+  {
+    "type": "prompt",
+    "id": "threats_do_not_roll",
+    "requires": [
+      "combat.moves"
+    ],
+    "step": "state",
+    "text": "Threats do not attack-roll and do not take turns. When a threat attacks, describe the attack as a move, then use threat_move or apply_harm if the character ignores it, exposes themselves, or rolls a 6-. A character avoids harm by Defending, Defying Danger, taking cover, or getting clear. Do not invent a hit the fiction has not earned."
+  },
+  {
+    "type": "prompt",
+    "id": "fictional_positioning",
+    "step": "state",
+    "text": "Positioning is fictional: close, near, far, behind cover, upstairs, across the street. Decide what is possible from the fiction, not from a grid. A foe out of reach or behind cover cannot be engaged until someone changes the situation. Say plainly when an action is impossible and what would make it possible."
+  },
+  {
+    "type": "prompt",
+    "id": "harm_is_state",
+    "step": "state",
+    "text": "Harm is engine state, not narration. Apply it with apply_harm or a move's harm effect, and let the engine apply armor, thresholds, and dying. At 4 harm the character is wounded; at 6 they are dying. When someone takes 2 or more harm in one hit, or any harm while wounded, call for the Harm Move. Never narrate a hit without recording its harm, and never narrate a death the engine has not recorded."
+  },
+  {
+    "type": "prompt",
+    "id": "no_turn_narration",
+    "step": "narration",
+    "text": "Never use the language of turns, rounds, initiative, hit points, or turns ending. There is no order and no end-of-turn button. Describe what happens, what changes, and what is now in danger, then stop on a question the player can answer."
+  },
+  {
+    "type": "prompt",
+    "id": "ammo_and_noise",
+    "step": "state",
+    "text": "Firearms spend loaded rounds and make noise. A shot's band applies its ammo and noise effects; a 6- may jam or run dry. Reloading spends a matching ammunition bundle and takes a moment. Raise the noise clock for shots, engines, alarms, and shouts; quiet work and distance lower it. At 3 the dead stir; at 5 a horde is close; at 6 it arrives."
+  },
+  {
+    "type": "prompt",
+    "id": "survival_needs",
+    "step": "state",
+    "text": "Each character, follower, and dependant needs one food and one water per day. Track it when the campaign tracks survival needs. Packs and stores are finite; spoilage, theft, and contamination are real. A day without water or food brings Dehydrated or Starving. Do not let a good Forage roll turn the apocalypse into a picnic."
+  },
+  {
+    "type": "prompt",
+    "id": "shelter_and_weather",
+    "step": "state",
+    "text": "A safe rest needs a shelter: the base, a sealed room, an enclosed vehicle, or a camp with a watch and a fire. Without one, rest is interrupted and the night brings noise or trouble. The first winter brings cold, rain, snow, and wind. Exposure causes Exhausted or Fever; fuel, warm clothing, and a roof matter."
+  },
+  {
+    "type": "prompt",
+    "id": "infection_and_medicine",
+    "step": "state",
+    "text": "Infection is rare and serious, not automatic on every bite. After a deep bite, a dirty wound, contaminated water, or unsterile surgery, call for Resist Infection. Treat with Treat, Field Surgery, antibiotics, or rest; advanced infection needs a rare serum or an amputation. Medicine is scarce: every medkit use is a choice."
+  },
+  {
+    "type": "prompt",
+    "id": "cybernetics_rejection",
+    "step": "state",
+    "text": "Each implant adds Rejection when installed or attuned. At 3 Rejection the character is rejected; at 5 stunned; at 6 dying. Cybernetics Configuration and Field Surgery install one. A clean clinic is safer than a field install, and a dead implant is inert. Maintenance and anti-rejection medicine are loot, not a reset button."
+  },
+  {
+    "type": "prompt",
+    "id": "occult_dread",
+    "step": "state",
+    "text": "Occult relics add Dread when attuned or used. At 3 the character is reeling; at 5 shaken; at 6 panicked or broken. Face Horror marks Dread in the presence of an eldritch entity or strange horror. Occult Lore identifies a relic, its price, and what would hurt the thing behind it. Relics are bargains, not magic items."
+  },
+  {
+    "type": "prompt",
+    "id": "scavenging_sites",
+    "step": "state",
+    "text": "A site has a danger clock, a loot profile, and a tier. Each Scavenge or Salvage roll advances time and noise; at 3 and 5 on the site danger clock a complication, omen, or threat arrives. Roll the site tables and the loot tables with roll_tables or roll_creative before inventing loot. Loot has rarity and condition, and getting it home is part of the score."
+  },
+  {
+    "type": "prompt",
+    "id": "crafting_barter",
+    "step": "state",
+    "text": "Crafting and repair consume real inputs and tools; call for the check, then pass its total to craft, repair_item, or improve_site. There is no currency: barter item for item with trade, and let scarcity, relationship, and Persuade or Trade shift the deal. A settlement has wants and has. Do not invent a shop with unlimited stock."
+  },
+  {
+    "type": "prompt",
+    "id": "base_and_followers",
+    "step": "state",
+    "text": "The base is a shared place with defense, security, comfort, stores, and people. Improvements are projects with materials, time, and a check. An assault is a hard move framed by the fiction, not an encounter: defenders Defend, Shoot, Fix, Command, and Treat. Damage applies to people, improvements, and stores. Followers eat, need shelter, and can leave; Order Follower settles whether they obey."
+  },
+  {
+    "type": "prompt",
+    "id": "npc_agendas_and_clocks",
+    "step": "state",
+    "text": "Named NPCs have a goal and an instinct. Record what they want with set_npc_agenda and move them without turns. Off-screen factions and fronts live on campaign clocks; advance them on time jumps and between expeditions, then show the result as a rumour, a price, a patrol, a raid, or a changed settlement. Do not run a full simulation or a turn-based NPC fight."
+  },
+  {
+    "type": "prompt",
+    "id": "skill_practice_and_knowledge",
+    "step": "state",
+    "text": "Skills rise through practice: three ticks to rank 1 and six total to rank 2. A move marks one tick in its skill once per scene; training and teaching add ticks with train_skill. Knowledge moves are learned, not assumed: a playbook grants one, and others come from a teacher, a manual, or difficult experimentation with learn_move. Never roll a knowledge move the character has not learned."
+  },
+  {
+    "type": "prompt",
+    "id": "first_winter_opening",
+    "unwritten_only": true,
+    "step": "state",
+    "text": "Open in the first winter after the dead rose. Roll the setting tables with roll_creative(role=\"setting\") for the cause, region, season, shelter, settlement, faction, threat, and omen, then record them with record_settings. Build the starting shelter and one or two people who share it, give the shelter one fragile improvement and a few days of stores, and end the opening on a concrete pressure that cannot wait. Do not explain the cause or name a published setting; the origin stays unwritten."
+  }
+]

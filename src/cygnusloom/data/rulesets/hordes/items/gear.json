@@ -1,0 +1,219 @@
+[
+  {
+    "type": "item",
+    "id": "large-pack",
+    "name": "Large Pack",
+    "description": "A frame pack that carries more than a person should.",
+    "size": "bulky",
+    "uses": 0,
+    "trade_value": 2,
+    "icon": "backpack"
+  },
+  {
+    "type": "item",
+    "id": "lockpicks",
+    "name": "Lockpicks",
+    "description": "A roll of picks and tension wrenches, mostly intact.",
+    "size": "tiny",
+    "uses": 4,
+    "trade_value": 3,
+    "icon": "thieves-tools"
+  },
+  {
+    "type": "item",
+    "id": "flashlight",
+    "name": "Flashlight",
+    "description": "A heavy flashlight with a weak beam and a spare battery.",
+    "size": "small",
+    "uses": 6,
+    "trade_value": 2,
+    "icon": "torch-item",
+    "timer_hours": 4,
+    "timer_label": "Flashlight"
+  },
+  {
+    "type": "item",
+    "id": "toolkit",
+    "name": "Toolkit",
+    "description": "A mechanics' toolkit in a steel case. The tools outlive the vehicles.",
+    "size": "bulky",
+    "uses": 0,
+    "trade_value": 5,
+    "icon": "tinkers-tools"
+  },
+  {
+    "type": "item",
+    "id": "radio",
+    "name": "Radio",
+    "description": "A handheld radio, patched into a frequency that still has voices on it.",
+    "size": "small",
+    "uses": 6,
+    "trade_value": 5,
+    "icon": "bell",
+    "timer_hours": 6,
+    "timer_label": "Radio"
+  },
+  {
+    "type": "item",
+    "id": "handcuffs",
+    "name": "Handcuffs",
+    "description": "A pair of steel handcuffs with the key on a wire.",
+    "size": "small",
+    "uses": 0,
+    "trade_value": 2,
+    "icon": "manacles"
+  },
+  {
+    "type": "item",
+    "id": "batteries",
+    "name": "Batteries",
+    "description": "Four batteries of mixed sizes, still holding a charge.",
+    "size": "small",
+    "uses": 4,
+    "trade_value": 3,
+    "icon": "component-pouch"
+  },
+  {
+    "type": "item",
+    "id": "solar-panel",
+    "name": "Solar Panel",
+    "description": "A folding solar panel. Heavy, fragile, and worth a winter.",
+    "size": "bulky",
+    "uses": 0,
+    "trade_value": 8,
+    "icon": "crystal"
+  },
+  {
+    "type": "item",
+    "id": "radio-parts",
+    "name": "Radio Parts",
+    "description": "Coils, wire, and a cracked transceiver that still works.",
+    "size": "small",
+    "uses": 3,
+    "trade_value": 3,
+    "icon": "component-pouch"
+  },
+  {
+    "type": "item",
+    "id": "computer",
+    "name": "Laptop",
+    "description": "A sealed laptop with a working battery. The data may be worth more than the machine.",
+    "size": "normal",
+    "uses": 6,
+    "trade_value": 7,
+    "icon": "wondrous-item"
+  },
+  {
+    "type": "item",
+    "id": "data-drive",
+    "name": "Data Drive",
+    "description": "A drive with a label someone thought was important.",
+    "size": "tiny",
+    "uses": 0,
+    "trade_value": 4,
+    "icon": "scroll"
+  },
+  {
+    "type": "item",
+    "id": "repair-manual",
+    "name": "Repair Manual",
+    "description": "A workshop manual for an engine you may never find.",
+    "size": "small",
+    "uses": 0,
+    "trade_value": 3,
+    "icon": "book"
+  },
+  {
+    "type": "item",
+    "id": "cook-pot",
+    "name": "Cook Pot",
+    "description": "A steel pot with a lid. Boils water, cooks food, and makes noise.",
+    "size": "normal",
+    "uses": 0,
+    "trade_value": 2,
+    "icon": "pot"
+  },
+  {
+    "type": "item",
+    "id": "barricade",
+    "name": "Barricade",
+    "description": "A braced panel of scrap and timber, ready to set against a door or gate.",
+    "size": "bulky",
+    "uses": 0,
+    "trade_value": 3,
+    "icon": "fence"
+  },
+  {
+    "type": "item",
+    "id": "rope",
+    "name": "Rope",
+    "description": "Thirty feet of climbing rope, worn but sound.",
+    "size": "normal",
+    "uses": 0,
+    "trade_value": 2,
+    "icon": "rope"
+  },
+  {
+    "type": "item",
+    "id": "lighter",
+    "name": "Lighter",
+    "description": "A windproof lighter with fluid left in it.",
+    "size": "tiny",
+    "uses": 6,
+    "trade_value": 1,
+    "icon": "torch-item"
+  },
+  {
+    "type": "item",
+    "id": "water-filter",
+    "name": "Water Filter",
+    "description": "A hand-pump filter that makes bad water drinkable.",
+    "size": "normal",
+    "uses": 6,
+    "trade_value": 5,
+    "icon": "waterskin"
+  },
+  {
+    "type": "item",
+    "id": "clean-cloth",
+    "name": "Clean Cloth",
+    "description": "Boiled and folded cloth for bandages and clean work.",
+    "size": "small",
+    "uses": 4,
+    "trade_value": 1,
+    "icon": "cloak"
+  },
+  {
+    "type": "item",
+    "id": "lab-chemicals",
+    "name": "Lab Chemicals",
+    "description": "A crate of reagents, solvents, and things with warning labels.",
+    "size": "normal",
+    "uses": 4,
+    "trade_value": 4,
+    "icon": "alchemists-supplies"
+  },
+  {
+    "type": "item",
+    "id": "ward-charm",
+    "name": "Ward Charm",
+    "description": "A salt-and-candle ward bound to a threshold for a scene.",
+    "size": "tiny",
+    "uses": 1,
+    "trade_value": 3,
+    "icon": "amulet",
+    "rules": [
+      "rule-ward"
+    ]
+  },
+  {
+    "type": "item",
+    "id": "duct-tape",
+    "name": "Duct Tape",
+    "description": "A roll of tape that holds the world together for one more day.",
+    "size": "tiny",
+    "uses": 4,
+    "trade_value": 1,
+    "icon": "component-pouch"
+  }
+]

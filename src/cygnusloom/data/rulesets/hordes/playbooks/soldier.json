@@ -1,0 +1,31 @@
+[
+  {
+    "type": "template",
+    "id": "soldier",
+    "kind": "playbook",
+    "icon": "sword",
+    "name": "Soldier",
+    "description": "You were trained to hold a line, and the line is wherever you are standing. You know how to keep a weapon working and how to make a radio call that someone answers.",
+    "names": "survivor-names",
+    "stats": {
+      "grit": 1
+    },
+    "skills": {
+      "firearms": 1,
+      "melee": 1
+    },
+    "features": [
+      "radio-operation"
+    ],
+    "items": [
+      "rifle",
+      "pistol",
+      "ballistic-vest",
+      "knife",
+      "9mm-rounds",
+      "helmet",
+      "rations"
+    ],
+    "order": 0
+  }
+]
