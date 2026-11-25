@@ -119,6 +119,23 @@ def test_a_campaign_has_a_compendium_view(
     assert 'data-compendium-tab="world"' in page
 
 
+def test_the_standalone_page_shows_the_peoples_of_the_setting(
+    client_factory: Callable[[], TestClient],
+):
+    client = signed_in_client(client_factory)
+    page = client.get(
+        "/compendium?rule_set=worldswithoutnumber&world_template=unwritten-world"
+    ).text
+    assert 'id="section-peoples"' in page
+    assert '<article class="compendium-entry" id="compendium-peoples-dwarf"' in page
+    assert "The deep folk of stone halls, craft, and long memory." in page
+    assert "Dwarves are the deep folk, short and broad" in page
+
+    # A rule set with no peoples shows no peoples chapter.
+    cairn = client.get("/compendium?rule_set=cairn2e&world_template=twin-lakes").text
+    assert 'id="section-peoples"' not in cairn
+
+
 def test_the_character_panel_links_its_sheet_to_the_compendium(
     client_factory: Callable[[], TestClient],
 ):

@@ -1,10 +1,10 @@
 """A sourcebook-style compendium built from a rule set, a world, and a campaign's live state.
 
 The compendium holds what a player could read in a sourcebook: the rule set's monsters, abilities,
-items, character options, skills, conditions, and lore rules; a world's own monsters, features,
-regions, and place names; and a campaign's discovered places, encountered creatures, and custom
-items. It never reads GM-only text: NPC descriptions, notes, settings, the journal, encounter maps,
-undiscovered places, world rules, and world tables all stay out.
+items, character options, skills, conditions, and lore rules; a world's peoples, its own monsters,
+features, regions, and place names; and a campaign's discovered places, encountered creatures, and
+custom items. It never reads GM-only text: NPC descriptions, notes, settings, the journal, encounter
+maps, undiscovered places, world rules, and world tables all stay out.
 """
 
 from __future__ import annotations
@@ -51,6 +51,7 @@ from cygnusloom.content.library import (
     RestLength,
     RuleSet,
     ShopService,
+    Species,
     TallyRules,
     Travel,
     Wilderness,
@@ -123,6 +124,7 @@ GROUP_ORDER = {
 # Every chapter, and the tab it lives in, in reading order.
 SECTION_ORDER = (
     ("world", "world", "The World"),
+    ("peoples", "world", "Peoples"),
     ("places", "world", "Places"),
     ("factions", "world", "Factions"),
     ("terrain", "world", "Terrain"),
@@ -330,6 +332,18 @@ def _build(
             icon=world.icon,
         ),
     )
+    # The peoples of the setting. A world's own list replaces the rule set's, so each entry says
+    # which side it came from. A people's culture note is player-facing lore, not a GM secret.
+    peoples = world.species or rule_set.species
+    people_source = "world" if world.species else "rules"
+    for people in peoples:
+        add(
+            "peoples",
+            f"people:{people.id}",
+            _people_draft(people, people_source),
+            "species",
+            (people.id, people.name, people.plural, people.adjective, name_key(people.name)),
+        )
     location_names = {location.id: location.name for location in world.locations}
     for region in world.regions:
         terrain = rule_set.world_terrain.get(region.terrain)
@@ -723,6 +737,7 @@ def _build(
         "place": "places",
         "stat": "stats",
         "skill": "skills",
+        "species": "peoples",
         "template": "options",
         "condition": "conditions",
         "counter": "advancement",
@@ -734,9 +749,20 @@ def _build(
         for category, section_id in section_for.items()
     }
     # A character sheet prints names, so its links follow the reader-facing names rather than the
-    # ids used by tools. Fields win over tables when a field and a table share a name.
+    # ids used by tools. Fields win over tables when a field and a table share a name. A character
+    # option wins over a people with the same name, such as a D&D species template, while a people
+    # wins over a feature that shares its name, such as the WWN nonhuman origin foci.
     sheet_links: dict[str, str] = {}
-    for category in ("table", "stat", "skill", "template", "ability", "item", "condition"):
+    for category in (
+        "table",
+        "stat",
+        "skill",
+        "ability",
+        "item",
+        "condition",
+        "species",
+        "template",
+    ):
         sheet_links.update(links[category])
     sheet_links.update(links["counter"])
     sheet_links.update(links["field"])
@@ -769,6 +795,27 @@ def _alias(aliases: list[tuple[str, str]], names: Sequence[str], key: str) -> No
 
 def _monster_aliases(monster: MonsterTemplate) -> tuple[str, ...]:
     return (monster.id, monster.name, name_key(monster.name))
+
+
+def _people_draft(people: Species, source: str) -> _Draft:
+    """A people as a reader meets it: the one-line summary the GM reads every turn, and the
+    longer culture note looked up when a scene turns on their customs. The plural and adjective
+    are tags, so a search for "dwarven" reaches the dwarves. A tag that merely repeats the
+    name, as Dragonborn's do, is left out."""
+    named = people.name.casefold()
+    tags = tuple(
+        dict.fromkeys(
+            value for value in (people.plural, people.adjective) if value.casefold() != named
+        )
+    )
+    return _Draft(
+        name=people.name,
+        summary=people.blurb,
+        text=people.culture,
+        source=source,
+        tags=tags,
+        group="Peoples",
+    )
 
 
 def _monster_draft(
