@@ -1,0 +1,30 @@
+[
+  {
+    "type": "template",
+    "id": "scavenger",
+    "kind": "playbook",
+    "icon": "backpack",
+    "name": "Scavenger",
+    "description": "You know which houses are worth opening, which streets have gone quiet, and when to leave. The ruins are a catalogue and you are the only one who can read it.",
+    "names": "survivor-names",
+    "stats": {
+      "wits": 1
+    },
+    "skills": {
+      "scavenging": 1,
+      "stealth": 1
+    },
+    "features": [
+      "computer-use"
+    ],
+    "items": [
+      "crowbar",
+      "light-pistol",
+      "large-pack",
+      "lockpicks",
+      "flashlight",
+      "9mm-rounds"
+    ],
+    "order": 2
+  }
+]

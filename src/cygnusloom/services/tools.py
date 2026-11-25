@@ -203,6 +203,10 @@ class Ask:
     # The character the prompt is for, when its tool names one. Its player answers the prompt;
     # empty keeps the prompt with the player whose message opened the turn.
     character: str = ""
+    # The target, skill, and weapon the move names, so a band choice can apply its effects.
+    target: str = ""
+    skill: str = ""
+    weapon: str = ""
 
 
 @dataclass(frozen=True)
@@ -636,6 +640,9 @@ async def run_tool(
             details=_details(tool, shown),
             optional=optional,
             character=character,
+            target=str(arguments.get("target", "") or ""),
+            skill=str(arguments.get("skill", "") or ""),
+            weapon=str(arguments.get("weapon", "") or ""),
         )
     prompt_text = str(arguments.get(PROMPT_ARGUMENT, ""))
     details = _details(tool, arguments)
@@ -679,6 +686,9 @@ async def run_tool(
                 roll=_whole(payload.get("roll")),
                 total=_whole(payload.get("total")),
                 character=character,
+                target=str(payload.get("target", "") or ""),
+                skill=str(payload.get("skill", "") or ""),
+                weapon=str(payload.get("weapon", "") or ""),
             )
     return result
 

@@ -1,0 +1,38 @@
+[
+  {
+    "type": "python_module",
+    "id": "hordes",
+    "module": "cygnusloom.rules.hordes"
+  },
+  {
+    "type": "rest",
+    "id": "hordes",
+    "lengths": {
+      "moments": {
+        "parts": 1,
+        "full": false,
+        "ends": []
+      },
+      "night": {
+        "until": "morning",
+        "full": true,
+        "ends": [
+          "rest"
+        ]
+      },
+      "day": {
+        "days": 1,
+        "full": true,
+        "ends": [
+          "rest"
+        ]
+      }
+    }
+  },
+  {
+    "type": "hooks",
+    "id": "hordes",
+    "python_module": "hordes",
+    "after_rest": "after_rest"
+  }
+]

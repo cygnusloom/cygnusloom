@@ -397,6 +397,10 @@ def _carry_starting_items(
             flags=tuple(flags),
             uses=template.uses,
             max_uses=template.uses,
+            loaded=template.capacity,
+            capacity=template.capacity,
+            caliber=template.caliber,
+            condition=template.condition,
         )
         for _ in range(count):
             inventory_service.carry_item(

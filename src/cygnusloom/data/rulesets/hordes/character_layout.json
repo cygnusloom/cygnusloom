@@ -1,0 +1,44 @@
+[
+  {
+    "type": "character_layout",
+    "id": "creation",
+    "sections": [
+      {
+        "id": "identity",
+        "label": "Identity",
+        "items": [
+          "name",
+          "pronouns"
+        ]
+      },
+      {
+        "id": "playbook",
+        "label": "Playbook",
+        "items": [
+          "template-playbook"
+        ]
+      },
+      {
+        "id": "stats",
+        "label": "Stats",
+        "items": [
+          "stats"
+        ]
+      },
+      {
+        "id": "details",
+        "label": "Details",
+        "items": [
+          "fields"
+        ]
+      },
+      {
+        "id": "choices",
+        "label": "Feature choices",
+        "items": [
+          "feature-choices"
+        ]
+      }
+    ]
+  }
+]

@@ -1,0 +1,954 @@
+[
+  {
+    "type": "tool_call",
+    "id": "roll_move",
+    "description": "Ask the player to roll a move for their character: 2d6 plus the move's stat and skill. Give the target for a targeted move and the weapon it uses.",
+    "parameters": {
+      "properties": {
+        "prompt": {
+          "type": "string",
+          "description": "What the GM says to invite the roll. The player sees this text."
+        },
+        "move": {
+          "type": "string",
+          "description": "The move to roll.",
+          "enum_from": "moves"
+        },
+        "character": {
+          "type": "string",
+          "description": "The name of the character who rolls."
+        },
+        "modifier": {
+          "type": "integer",
+          "description": "A situational modifier from the story, not conditions; the engine adds conditions itself."
+        },
+        "stat": {
+          "type": "string",
+          "description": "The stat to roll, for a move the player chooses one for.",
+          "enum_from": "stats"
+        },
+        "target": {
+          "type": "string",
+          "description": "The character or threat the move is aimed at."
+        },
+        "weapon": {
+          "type": "string",
+          "description": "The weapon the move uses, when it uses one.",
+          "enum_from": "weapons"
+        },
+        "skill": {
+          "type": "string",
+          "description": "The skill the move uses, for a move the player chooses one for.",
+          "enum_from": "skills"
+        },
+        "practice": {
+          "type": "boolean",
+          "description": "Whether this use marks practice. Defaults to true."
+        }
+      },
+      "required": [
+        "prompt",
+        "move",
+        "character"
+      ]
+    },
+    "player_input": {
+      "param": "roll",
+      "move_param": "move",
+      "character_param": "character",
+      "details": "The engine adds the move's stat, the chosen skill, and conditions. Roll only the dice."
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "apply_harm",
+    "description": "Apply harm to a character, NPC, or threat. Armor subtracts unless the harm pierces it; no turn or encounter is needed.",
+    "parameters": {
+      "properties": {
+        "target": {
+          "type": "string",
+          "description": "The character, NPC, or threat that takes the harm."
+        },
+        "amount": {
+          "type": "integer",
+          "description": "How much harm before armor."
+        },
+        "cause": {
+          "type": "string",
+          "description": "What caused the harm, in the story."
+        },
+        "piercing": {
+          "type": "boolean",
+          "description": "True when the harm ignores armor. Defaults to false."
+        },
+        "armor": {
+          "type": "integer",
+          "description": "Armor to use instead of the target's own, when the fiction calls for it."
+        }
+      },
+      "required": [
+        "target",
+        "amount",
+        "cause"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "apply_condition",
+    "description": "Give a character a condition the story has put on them, such as wounded, pinned, or panicked.",
+    "parameters": {
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the character."
+        },
+        "condition": {
+          "type": "string",
+          "description": "The condition to add."
+        },
+        "cause": {
+          "type": "string",
+          "description": "What in the story caused it."
+        }
+      },
+      "required": [
+        "name",
+        "condition",
+        "cause"
+      ]
+    },
+    "world_method": "add_condition"
+  },
+  {
+    "type": "tool_call",
+    "id": "clear_condition",
+    "description": "End a condition a character has, when its ending happens in the story.",
+    "parameters": {
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the character."
+        },
+        "condition": {
+          "type": "string",
+          "description": "The condition to end."
+        },
+        "how": {
+          "type": "string",
+          "description": "What ended it: a trigger the condition names, or gm."
+        }
+      },
+      "required": [
+        "name",
+        "condition",
+        "how"
+      ]
+    },
+    "world_method": "end_condition"
+  },
+  {
+    "type": "tool_call",
+    "id": "adjust_counter",
+    "description": "Change a character's harm, infection, Rejection, Dread, or morale when the fiction moves it outside a move.",
+    "parameters": {
+      "properties": {
+        "character": {
+          "type": "string",
+          "description": "The name of the character."
+        },
+        "counter": {
+          "type": "string",
+          "description": "Which counter to change.",
+          "enum_from": "counters"
+        },
+        "change": {
+          "type": "integer",
+          "description": "How much to add (positive) or remove (negative)."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Why the counter changed."
+        }
+      },
+      "required": [
+        "character",
+        "counter",
+        "change"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "start_clock",
+    "description": "Start a named campaign clock, such as noise, horde pressure, a faction front, or a chase.",
+    "parameters": {
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The clock's name; a content clock uses its id."
+        },
+        "segments": {
+          "type": "integer",
+          "description": "How many segments the clock has. Defaults to 6."
+        },
+        "visible": {
+          "type": "boolean",
+          "description": "Whether the players can see it. Defaults to true."
+        },
+        "description": {
+          "type": "string",
+          "description": "What the clock tracks, when it is new."
+        }
+      },
+      "required": [
+        "name"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "advance_clock",
+    "description": "Advance or set a campaign clock, firing its thresholds. Use it when the fiction moves a front, a chase, or the noise.",
+    "parameters": {
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The clock's name."
+        },
+        "amount": {
+          "type": "integer",
+          "description": "How many segments to advance. Defaults to 1."
+        },
+        "reason": {
+          "type": "string",
+          "description": "What advanced it."
+        },
+        "set_to": {
+          "type": "integer",
+          "description": "Set the clock to this value instead of advancing it."
+        }
+      },
+      "required": [
+        "name"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "end_clock",
+    "description": "End a campaign clock when what it tracked is over or no longer matters.",
+    "parameters": {
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The clock's name."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Why it ended."
+        }
+      },
+      "required": [
+        "name"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "list_clocks",
+    "description": "List the campaign clocks and their current segments.",
+    "lookup": true
+  },
+  {
+    "type": "tool_call",
+    "id": "advance_noise",
+    "description": "Raise or lower the noise clock when the party is loud or quiet.",
+    "parameters": {
+      "properties": {
+        "amount": {
+          "type": "integer",
+          "description": "How much to add (positive) or remove (negative). Defaults to 1."
+        },
+        "reason": {
+          "type": "string",
+          "description": "What made the noise, or what quieted it."
+        }
+      }
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "create_threat",
+    "description": "Create a threat at a location: a zombie, a horde, a horror, a survivor band, or an animal. Threats do not take turns.",
+    "parameters": {
+      "properties": {
+        "threat": {
+          "type": "string",
+          "description": "The threat definition to use.",
+          "enum_from": "threats"
+        },
+        "name": {
+          "type": "string",
+          "description": "A display name, such as 'the walker at the door'."
+        },
+        "magnitude": {
+          "type": "integer",
+          "description": "A horde's magnitude, from 0 to 5.",
+          "minimum": 0,
+          "maximum": 5
+        },
+        "location": {
+          "type": "string",
+          "description": "Where the threat is."
+        },
+        "note": {
+          "type": "string",
+          "description": "Anything the GM should remember about it."
+        }
+      },
+      "required": [
+        "threat"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "list_threats",
+    "description": "List the active threats, their harm, armor, and location.",
+    "lookup": true
+  },
+  {
+    "type": "tool_call",
+    "id": "get_threat",
+    "description": "Show one threat's harm, armor, moves, tags, and location.",
+    "parameters": {
+      "properties": {
+        "threat": {
+          "type": "string",
+          "description": "The threat's name or id."
+        }
+      },
+      "required": [
+        "threat"
+      ]
+    },
+    "lookup": true
+  },
+  {
+    "type": "tool_call",
+    "id": "harm_threat",
+    "description": "Apply harm to a threat. Its armor subtracts unless the harm pierces it.",
+    "parameters": {
+      "properties": {
+        "threat": {
+          "type": "string",
+          "description": "The threat's name or id."
+        },
+        "amount": {
+          "type": "integer",
+          "description": "How much harm before armor."
+        },
+        "cause": {
+          "type": "string",
+          "description": "What caused the harm."
+        },
+        "piercing": {
+          "type": "boolean",
+          "description": "True when the harm ignores armor. Defaults to false."
+        }
+      },
+      "required": [
+        "threat",
+        "amount"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "threat_move",
+    "description": "Record a threat's move, and apply its harm to a character when the move reaches one.",
+    "parameters": {
+      "properties": {
+        "threat": {
+          "type": "string",
+          "description": "The threat's name or id."
+        },
+        "move": {
+          "type": "string",
+          "description": "The move it makes, such as surge or bite."
+        },
+        "target": {
+          "type": "string",
+          "description": "The character the move reaches, if any."
+        },
+        "harm": {
+          "type": "integer",
+          "description": "Harm to apply, overriding the threat's attack value."
+        },
+        "cause": {
+          "type": "string",
+          "description": "What the move looks like in the story."
+        }
+      },
+      "required": [
+        "threat",
+        "move"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "split_horde",
+    "description": "Break a horde into individual zombies, lowering its magnitude or removing it.",
+    "parameters": {
+      "properties": {
+        "threat": {
+          "type": "string",
+          "description": "The horde's name or id."
+        },
+        "zombie": {
+          "type": "string",
+          "description": "The zombie definition to create.",
+          "enum_from": "threats"
+        },
+        "count": {
+          "type": "integer",
+          "description": "How many zombies to create, from 1 to 12."
+        },
+        "reason": {
+          "type": "string",
+          "description": "What made it split."
+        }
+      },
+      "required": [
+        "threat"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "merge_horde",
+    "description": "Merge a group of threats into a single horde.",
+    "parameters": {
+      "properties": {
+        "threats": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The threats to merge."
+        },
+        "horde": {
+          "type": "string",
+          "description": "The horde definition to use.",
+          "enum_from": "threats"
+        },
+        "reason": {
+          "type": "string",
+          "description": "What drew them together."
+        }
+      },
+      "required": [
+        "threats"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "remove_threat",
+    "description": "Remove a threat that is destroyed, driven off, or gone from the story.",
+    "parameters": {
+      "properties": {
+        "threat": {
+          "type": "string",
+          "description": "The threat's name or id."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Why it is gone."
+        }
+      },
+      "required": [
+        "threat"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "create_vehicle",
+    "description": "Create a party vehicle, such as a car, truck, or boat, with its fuel and condition.",
+    "parameters": {
+      "properties": {
+        "vehicle": {
+          "type": "string",
+          "description": "The vehicle definition to use.",
+          "enum_from": "vehicles"
+        },
+        "name": {
+          "type": "string",
+          "description": "A display name, such as 'the blue pickup'."
+        },
+        "location": {
+          "type": "string",
+          "description": "Where it is kept."
+        },
+        "note": {
+          "type": "string",
+          "description": "Anything the GM should remember about it."
+        }
+      },
+      "required": [
+        "vehicle"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "list_vehicles",
+    "description": "List the party's vehicles, their fuel, condition, and location.",
+    "lookup": true
+  },
+  {
+    "type": "tool_call",
+    "id": "damage_vehicle",
+    "description": "Damage a vehicle's condition from a crash, gunfire, or a hazard.",
+    "parameters": {
+      "properties": {
+        "vehicle": {
+          "type": "string",
+          "description": "The vehicle's name or id."
+        },
+        "amount": {
+          "type": "integer",
+          "description": "How many points of condition to remove."
+        },
+        "cause": {
+          "type": "string",
+          "description": "What damaged it."
+        }
+      },
+      "required": [
+        "vehicle",
+        "amount"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "refuel_vehicle",
+    "description": "Add fuel to a vehicle, spending a fuel item the party holds.",
+    "parameters": {
+      "properties": {
+        "vehicle": {
+          "type": "string",
+          "description": "The vehicle's name or id."
+        },
+        "amount": {
+          "type": "integer",
+          "description": "How many points of fuel to add. Defaults to 1."
+        },
+        "cause": {
+          "type": "string",
+          "description": "Where the fuel came from."
+        }
+      },
+      "required": [
+        "vehicle"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "repair_vehicle",
+    "description": "Repair a vehicle's condition with parts and time.",
+    "parameters": {
+      "properties": {
+        "vehicle": {
+          "type": "string",
+          "description": "The vehicle's name or id."
+        },
+        "amount": {
+          "type": "integer",
+          "description": "How many points of condition to restore. Defaults to 1."
+        },
+        "cause": {
+          "type": "string",
+          "description": "What was repaired."
+        }
+      },
+      "required": [
+        "vehicle"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "remove_vehicle",
+    "description": "Remove a vehicle that is destroyed, abandoned, or stolen.",
+    "parameters": {
+      "properties": {
+        "vehicle": {
+          "type": "string",
+          "description": "The vehicle's name or id."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Why it is gone."
+        }
+      },
+      "required": [
+        "vehicle"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "craft",
+    "description": "Make an item from a recipe after the player's crafting check, spending the inputs.",
+    "parameters": {
+      "properties": {
+        "character": {
+          "type": "string",
+          "description": "The name of the character doing the work."
+        },
+        "recipe": {
+          "type": "string",
+          "description": "The recipe to make.",
+          "enum_from": "recipes"
+        },
+        "total": {
+          "type": "integer",
+          "description": "The crafting check total."
+        }
+      },
+      "required": [
+        "character",
+        "recipe",
+        "total"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "salvage",
+    "description": "Strip a site or wreck for parts after the player's check, into a parts item.",
+    "parameters": {
+      "properties": {
+        "character": {
+          "type": "string",
+          "description": "The name of the character doing the work."
+        },
+        "total": {
+          "type": "integer",
+          "description": "The salvage check total."
+        },
+        "difficulty": {
+          "type": "integer",
+          "description": "The difficulty the check must meet. Defaults to 8."
+        },
+        "parts_item": {
+          "type": "string",
+          "description": "The item the salvage becomes.",
+          "enum_from": "items",
+          "default": "parts"
+        },
+        "amount": {
+          "type": "integer",
+          "description": "How many uses of parts to recover. Defaults to 1."
+        }
+      },
+      "required": [
+        "character",
+        "total"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "repair_item",
+    "description": "Restore one step of a carried item's condition after the player's repair check.",
+    "parameters": {
+      "properties": {
+        "character": {
+          "type": "string",
+          "description": "The name of the character doing the work."
+        },
+        "item": {
+          "type": "string",
+          "description": "The item to repair.",
+          "enum_from": "items"
+        },
+        "total": {
+          "type": "integer",
+          "description": "The repair check total."
+        },
+        "difficulty": {
+          "type": "integer",
+          "description": "The difficulty the check must meet. Defaults to 8."
+        },
+        "condition": {
+          "type": "string",
+          "description": "The condition to set, when the fiction fixes it.",
+          "enum": [
+            "fine",
+            "serviceable",
+            "worn",
+            "broken"
+          ]
+        }
+      },
+      "required": [
+        "character",
+        "item",
+        "total"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "trade",
+    "description": "Swap one held item for another between two people, after the deal is struck.",
+    "parameters": {
+      "properties": {
+        "giver": {
+          "type": "string",
+          "description": "The name of the person giving an item."
+        },
+        "receiver": {
+          "type": "string",
+          "description": "The name of the person giving the other item."
+        },
+        "give": {
+          "type": "string",
+          "description": "The item the giver hands over.",
+          "enum_from": "items"
+        },
+        "receive": {
+          "type": "string",
+          "description": "The item the receiver hands over.",
+          "enum_from": "items"
+        }
+      },
+      "required": [
+        "giver",
+        "receiver",
+        "give",
+        "receive"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "improve_site",
+    "description": "Build a shelter improvement after the player's check, spending its cost.",
+    "parameters": {
+      "properties": {
+        "site": {
+          "type": "string",
+          "description": "The place where it is built."
+        },
+        "improvement": {
+          "type": "string",
+          "description": "The improvement to build.",
+          "enum_from": "improvements"
+        },
+        "character": {
+          "type": "string",
+          "description": "The name of the character doing the work."
+        },
+        "total": {
+          "type": "integer",
+          "description": "The building check total."
+        }
+      },
+      "required": [
+        "site",
+        "improvement",
+        "character",
+        "total"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "damage_base",
+    "description": "Damage a shelter's condition in an assault, fire, or storm.",
+    "parameters": {
+      "properties": {
+        "site": {
+          "type": "string",
+          "description": "The shelter."
+        },
+        "amount": {
+          "type": "integer",
+          "description": "How many points of condition to remove. Defaults to 1."
+        },
+        "cause": {
+          "type": "string",
+          "description": "What damaged it."
+        }
+      },
+      "required": [
+        "site"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "repair_base",
+    "description": "Restore a shelter's condition with parts and work.",
+    "parameters": {
+      "properties": {
+        "site": {
+          "type": "string",
+          "description": "The shelter."
+        },
+        "amount": {
+          "type": "integer",
+          "description": "How many points of condition to restore. Defaults to 1."
+        },
+        "cause": {
+          "type": "string",
+          "description": "What was repaired."
+        }
+      },
+      "required": [
+        "site"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "list_improvements",
+    "description": "List the shelter's improvements, their progress, and their condition.",
+    "parameters": {
+      "properties": {
+        "site": {
+          "type": "string",
+          "description": "Limit the list to one shelter."
+        }
+      }
+    },
+    "lookup": true
+  },
+  {
+    "type": "tool_call",
+    "id": "set_npc_agenda",
+    "description": "Record what an NPC wants next, so their off-screen moves stay consistent.",
+    "parameters": {
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The NPC's name."
+        },
+        "agenda": {
+          "type": "string",
+          "description": "What they want and what they will do about it."
+        }
+      },
+      "required": [
+        "name",
+        "agenda"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "train_skill",
+    "description": "Add practice ticks to a skill outside a move, during downtime or teaching.",
+    "parameters": {
+      "properties": {
+        "character": {
+          "type": "string",
+          "description": "The name of the character learning."
+        },
+        "skill": {
+          "type": "string",
+          "description": "The skill to practise.",
+          "enum_from": "skills"
+        },
+        "ticks": {
+          "type": "integer",
+          "description": "How many ticks to add. Defaults to 1."
+        },
+        "cause": {
+          "type": "string",
+          "description": "What the training was."
+        }
+      },
+      "required": [
+        "character",
+        "skill"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "learn_move",
+    "description": "Teach a character a knowledge move they have earned through teaching, a manual, or experiment.",
+    "parameters": {
+      "properties": {
+        "character": {
+          "type": "string",
+          "description": "The name of the character learning."
+        },
+        "feature": {
+          "type": "string",
+          "description": "The knowledge move feature to learn.",
+          "enum_from": "features"
+        },
+        "cause": {
+          "type": "string",
+          "description": "How they learned it."
+        }
+      },
+      "required": [
+        "character",
+        "feature"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "reload",
+    "description": "Fill a firearm from a matching ammunition bundle the character carries.",
+    "parameters": {
+      "properties": {
+        "character": {
+          "type": "string",
+          "description": "The name of the character reloading."
+        },
+        "weapon": {
+          "type": "string",
+          "description": "The firearm to reload.",
+          "enum_from": "weapons"
+        }
+      },
+      "required": [
+        "character",
+        "weapon"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "roll_loot",
+    "description": "Roll on a loot, site, weather, road, trade, base, rumour, job, zombie, horde, horror, or NPC table.",
+    "parameters": {
+      "properties": {
+        "table": {
+          "type": "string",
+          "description": "The dice table to roll."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Why the roll is being made."
+        }
+      },
+      "required": [
+        "table"
+      ]
+    }
+  }
+]

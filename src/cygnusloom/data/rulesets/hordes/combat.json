@@ -1,0 +1,19 @@
+[
+  {
+    "type": "combat",
+    "id": "hordes",
+    "mode": "moves",
+    "dying_hours": 24,
+    "dying_rounds": 0,
+    "armor_max": 3,
+    "unarmed": {
+      "damage": "1d2",
+      "names": [
+        "unarmed",
+        "fist",
+        "kick"
+      ],
+      "skill": "melee"
+    }
+  }
+]

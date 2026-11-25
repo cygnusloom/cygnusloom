@@ -1,0 +1,327 @@
+[
+  {
+    "type": "item",
+    "id": "rifle",
+    "name": "Rifle",
+    "description": "A bolt-action hunting rifle, scoped and well kept. Loud enough to be heard across the valley.",
+    "size": "bulky",
+    "uses": 0,
+    "trade_value": 6,
+    "harm": 3,
+    "piercing": false,
+    "range_text": "near/far",
+    "weapon_properties": [
+      "loud 2",
+      "scoped"
+    ],
+    "skill": "firearms",
+    "caliber": ".308",
+    "capacity": 5,
+    "loud": 2,
+    "icon": "crossbow"
+  },
+  {
+    "type": "item",
+    "id": "pistol",
+    "name": "Pistol",
+    "description": "A reliable 9mm pistol, easy to carry and easy to hear.",
+    "size": "small",
+    "uses": 0,
+    "trade_value": 4,
+    "harm": 2,
+    "piercing": false,
+    "range_text": "close/near",
+    "weapon_properties": [
+      "loud 1",
+      "concealable"
+    ],
+    "skill": "firearms",
+    "caliber": "9mm",
+    "capacity": 12,
+    "loud": 1,
+    "icon": "weapon"
+  },
+  {
+    "type": "item",
+    "id": "light-pistol",
+    "name": "Light Pistol",
+    "description": "A small 9mm pistol that hides in a coat pocket and rattles when it fires.",
+    "size": "tiny",
+    "uses": 0,
+    "trade_value": 3,
+    "harm": 2,
+    "piercing": false,
+    "range_text": "close/near",
+    "weapon_properties": [
+      "loud 1",
+      "concealable"
+    ],
+    "skill": "firearms",
+    "caliber": "9mm",
+    "capacity": 8,
+    "loud": 1,
+    "icon": "weapon"
+  },
+  {
+    "type": "item",
+    "id": "revolver",
+    "name": "Revolver",
+    "description": "A six-shot .38 revolver. It does not jam, and it does not hold many rounds.",
+    "size": "small",
+    "uses": 0,
+    "trade_value": 4,
+    "harm": 2,
+    "piercing": false,
+    "range_text": "close/near",
+    "weapon_properties": [
+      "loud 1",
+      "reliable"
+    ],
+    "skill": "firearms",
+    "caliber": ".38",
+    "capacity": 6,
+    "loud": 1,
+    "icon": "weapon"
+  },
+  {
+    "type": "item",
+    "id": "shotgun",
+    "name": "Shotgun",
+    "description": "A pump shotgun. Devastating at close range, slow to reload, and loud enough to wake the street.",
+    "size": "bulky",
+    "uses": 0,
+    "trade_value": 5,
+    "harm": 3,
+    "piercing": false,
+    "range_text": "close/near",
+    "weapon_properties": [
+      "loud 2",
+      "spread",
+      "slow reload"
+    ],
+    "skill": "firearms",
+    "caliber": "12ga",
+    "capacity": 5,
+    "loud": 2,
+    "icon": "crossbow"
+  },
+  {
+    "type": "item",
+    "id": "smg",
+    "name": "SMG",
+    "description": "A compact 9mm submachine gun. It empties a magazine fast and tells everyone where you are.",
+    "size": "normal",
+    "uses": 0,
+    "trade_value": 6,
+    "harm": 2,
+    "piercing": false,
+    "range_text": "close/near",
+    "weapon_properties": [
+      "loud 2",
+      "auto"
+    ],
+    "skill": "firearms",
+    "caliber": "9mm",
+    "capacity": 30,
+    "loud": 2,
+    "icon": "weapon"
+  },
+  {
+    "type": "item",
+    "id": "assault-rifle",
+    "name": "Assault Rifle",
+    "description": "A select-fire 5.56 rifle. The sound of one is a local event.",
+    "size": "bulky",
+    "uses": 0,
+    "trade_value": 8,
+    "harm": 3,
+    "piercing": false,
+    "range_text": "near/far",
+    "weapon_properties": [
+      "loud 3",
+      "auto"
+    ],
+    "skill": "firearms",
+    "caliber": "5.56",
+    "capacity": 30,
+    "loud": 3,
+    "icon": "crossbow"
+  },
+  {
+    "type": "item",
+    "id": "knife",
+    "name": "Knife",
+    "description": "A fixed-blade knife. Quiet, useful, and never far from hand.",
+    "size": "tiny",
+    "uses": 0,
+    "trade_value": 2,
+    "harm": 1,
+    "piercing": false,
+    "range_text": "close",
+    "weapon_properties": [
+      "quick",
+      "concealable"
+    ],
+    "skill": "melee",
+    "icon": "kit-knife"
+  },
+  {
+    "type": "item",
+    "id": "baton",
+    "name": "Baton",
+    "description": "A weighted police baton. Good for keeping a door clear.",
+    "size": "normal",
+    "uses": 0,
+    "trade_value": 2,
+    "harm": 2,
+    "piercing": false,
+    "range_text": "close",
+    "weapon_properties": [
+      "heavy"
+    ],
+    "skill": "melee",
+    "icon": "club"
+  },
+  {
+    "type": "item",
+    "id": "crowbar",
+    "name": "Crowbar",
+    "description": "A steel crowbar: a key, a lever, and a weapon in one.",
+    "size": "normal",
+    "uses": 0,
+    "trade_value": 3,
+    "harm": 2,
+    "piercing": false,
+    "range_text": "close",
+    "weapon_properties": [
+      "heavy"
+    ],
+    "skill": "melee",
+    "icon": "crowbar"
+  },
+  {
+    "type": "item",
+    "id": "wrench",
+    "name": "Wrench",
+    "description": "A heavy adjustable wrench, for machines and for people.",
+    "size": "small",
+    "uses": 0,
+    "trade_value": 2,
+    "harm": 1,
+    "piercing": false,
+    "range_text": "close",
+    "weapon_properties": [
+      "heavy"
+    ],
+    "skill": "melee",
+    "icon": "tool"
+  },
+  {
+    "type": "item",
+    "id": "axe",
+    "name": "Axe",
+    "description": "A wood axe with a split handle. Slow, heavy, and final.",
+    "size": "normal",
+    "uses": 0,
+    "trade_value": 3,
+    "harm": 3,
+    "piercing": false,
+    "range_text": "close",
+    "weapon_properties": [
+      "heavy",
+      "slow"
+    ],
+    "skill": "melee",
+    "icon": "axe"
+  },
+  {
+    "type": "item",
+    "id": "spear",
+    "name": "Spear",
+    "description": "A length of pipe with a knife lashed to one end. Reach matters.",
+    "size": "bulky",
+    "uses": 0,
+    "trade_value": 2,
+    "harm": 2,
+    "piercing": false,
+    "range_text": "close/near",
+    "weapon_properties": [
+      "reach"
+    ],
+    "skill": "melee",
+    "icon": "spear"
+  },
+  {
+    "type": "item",
+    "id": "bow",
+    "name": "Bow",
+    "description": "A hunting bow and a handful of arrows. Silent, slow, and quiet to carry.",
+    "size": "bulky",
+    "uses": 0,
+    "trade_value": 3,
+    "harm": 2,
+    "piercing": false,
+    "range_text": "near/far",
+    "weapon_properties": [
+      "silent",
+      "slow"
+    ],
+    "skill": "firearms",
+    "icon": "bow"
+  },
+  {
+    "type": "item",
+    "id": "crossbow",
+    "name": "Crossbow",
+    "description": "A crossbow that trades a long reload for silence and reach.",
+    "size": "bulky",
+    "uses": 0,
+    "trade_value": 4,
+    "harm": 3,
+    "piercing": false,
+    "range_text": "near",
+    "weapon_properties": [
+      "silent",
+      "slow reload"
+    ],
+    "skill": "firearms",
+    "icon": "crossbow"
+  },
+  {
+    "type": "item",
+    "id": "molotov",
+    "name": "Molotov",
+    "description": "A bottle of fuel with a rag for a fuse. Fire, area, and noise.",
+    "size": "small",
+    "uses": 0,
+    "trade_value": 2,
+    "harm": 3,
+    "piercing": false,
+    "range_text": "near",
+    "weapon_properties": [
+      "fire",
+      "loud 2",
+      "area"
+    ],
+    "skill": "athletics",
+    "icon": "oil-flask"
+  },
+  {
+    "type": "item",
+    "id": "grenade",
+    "name": "Grenade",
+    "description": "A fragmentation grenade, old but intact. Everyone hears it.",
+    "size": "tiny",
+    "uses": 0,
+    "trade_value": 6,
+    "harm": 4,
+    "piercing": false,
+    "range_text": "near",
+    "weapon_properties": [
+      "loud 4",
+      "area"
+    ],
+    "skill": "athletics",
+    "icon": "ammunition"
+  }
+]

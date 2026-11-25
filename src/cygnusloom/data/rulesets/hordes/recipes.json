@@ -1,0 +1,434 @@
+[
+  {
+    "type": "recipe",
+    "id": "reload-9mm",
+    "name": "Reload 9mm",
+    "description": "Press fresh 9mm rounds from components.",
+    "inputs": [
+      {
+        "item": "9mm-components",
+        "uses": 1
+      },
+      {
+        "item": "parts",
+        "uses": 1
+      }
+    ],
+    "tools": [
+      "toolkit"
+    ],
+    "skill": "mechanics",
+    "difficulty": 8,
+    "hours": 1,
+    "output": {
+      "item": "9mm-rounds",
+      "uses": 20,
+      "condition": "serviceable"
+    },
+    "risk": "A bad batch jams on a 7-9 or 6-.",
+    "icon": "book"
+  },
+  {
+    "type": "recipe",
+    "id": "reload-12ga",
+    "name": "Reload 12ga",
+    "description": "Load shotgun shells from hulls, wads, and shot.",
+    "inputs": [
+      {
+        "item": "12ga-components",
+        "uses": 1
+      },
+      {
+        "item": "parts",
+        "uses": 1
+      }
+    ],
+    "tools": [
+      "toolkit"
+    ],
+    "skill": "mechanics",
+    "difficulty": 8,
+    "hours": 1,
+    "output": {
+      "item": "12ga-shells",
+      "uses": 10,
+      "condition": "serviceable"
+    },
+    "risk": "A weak crimp fails at the worst moment.",
+    "icon": "book"
+  },
+  {
+    "type": "recipe",
+    "id": "antiseptic",
+    "name": "Antiseptic",
+    "description": "Brew a sharp, clear antiseptic from lab stock.",
+    "inputs": [
+      {
+        "item": "lab-chemicals",
+        "uses": 1
+      },
+      {
+        "item": "clean-cloth",
+        "uses": 1
+      },
+      {
+        "item": "water",
+        "uses": 1
+      }
+    ],
+    "tools": [
+      "cook-pot"
+    ],
+    "skill": "medicine",
+    "difficulty": 9,
+    "hours": 1,
+    "output": {
+      "item": "antiseptic",
+      "uses": 3,
+      "condition": "serviceable"
+    },
+    "risk": "The fumes are dangerous in a closed room.",
+    "icon": "book"
+  },
+  {
+    "type": "recipe",
+    "id": "purified-water",
+    "name": "Purified Water",
+    "description": "Boil and settle bad water into something drinkable.",
+    "inputs": [
+      {
+        "item": "water",
+        "uses": 1
+      },
+      {
+        "item": "fuel-can",
+        "uses": 1
+      }
+    ],
+    "tools": [
+      "cook-pot"
+    ],
+    "skill": "survival",
+    "difficulty": 8,
+    "hours": 1,
+    "output": {
+      "item": "water",
+      "uses": 3,
+      "condition": "serviceable"
+    },
+    "risk": "Boiling makes smoke and noise.",
+    "icon": "book"
+  },
+  {
+    "type": "recipe",
+    "id": "smoked-meat",
+    "name": "Smoked Meat",
+    "description": "Salt and smoke fresh meat so it keeps.",
+    "inputs": [
+      {
+        "item": "meat",
+        "uses": 1
+      },
+      {
+        "item": "salt",
+        "uses": 1
+      },
+      {
+        "item": "fuel-can",
+        "uses": 1
+      }
+    ],
+    "tools": [
+      "cook-pot"
+    ],
+    "skill": "survival",
+    "difficulty": 8,
+    "hours": 4,
+    "output": {
+      "item": "smoked-meat",
+      "uses": 3,
+      "condition": "serviceable"
+    },
+    "risk": "The smoke carries a long way.",
+    "icon": "book"
+  },
+  {
+    "type": "recipe",
+    "id": "improvised-ammo",
+    "name": "Improvised Ammo",
+    "description": "Make unreliable ammunition from scrap and chemicals.",
+    "inputs": [
+      {
+        "item": "parts",
+        "uses": 1
+      },
+      {
+        "item": "lab-chemicals",
+        "uses": 1
+      }
+    ],
+    "tools": [
+      "toolkit"
+    ],
+    "skill": "mechanics",
+    "difficulty": 9,
+    "hours": 1,
+    "output": {
+      "item": "improvised-ammo",
+      "uses": 6,
+      "condition": "serviceable"
+    },
+    "risk": "Improvised rounds jam on a 7-9 or 6-.",
+    "icon": "book"
+  },
+  {
+    "type": "recipe",
+    "id": "barricade",
+    "name": "Barricade",
+    "description": "Build a braced panel that can be set against a door or gate.",
+    "inputs": [
+      {
+        "item": "parts",
+        "uses": 2
+      }
+    ],
+    "tools": [
+      "toolkit"
+    ],
+    "skill": "mechanics",
+    "difficulty": 8,
+    "hours": 2,
+    "output": {
+      "item": "barricade",
+      "uses": 0,
+      "condition": "serviceable"
+    },
+    "risk": "A rushed barricade gives way under real weight.",
+    "icon": "book"
+  },
+  {
+    "type": "recipe",
+    "id": "biodiesel",
+    "name": "Biodiesel",
+    "description": "Render a fuel source and chemicals into diesel.",
+    "inputs": [
+      {
+        "item": "fuel-can",
+        "uses": 1
+      },
+      {
+        "item": "lab-chemicals",
+        "uses": 1
+      }
+    ],
+    "tools": [
+      "toolkit",
+      "cook-pot"
+    ],
+    "skill": "mechanics",
+    "difficulty": 9,
+    "hours": 4,
+    "output": {
+      "item": "biodiesel",
+      "uses": 4,
+      "condition": "serviceable"
+    },
+    "risk": "Bad biodiesel ruins an engine.",
+    "icon": "book"
+  },
+  {
+    "type": "recipe",
+    "id": "field-surgery-kit",
+    "name": "Field Surgery Kit",
+    "description": "Sterilize cloth and pack a surgery kit for the field.",
+    "inputs": [
+      {
+        "item": "clean-cloth",
+        "uses": 2
+      },
+      {
+        "item": "antiseptic",
+        "uses": 1
+      }
+    ],
+    "tools": [
+      "toolkit"
+    ],
+    "skill": "medicine",
+    "difficulty": 8,
+    "hours": 1,
+    "output": {
+      "item": "field-surgery-kit",
+      "uses": 2,
+      "condition": "serviceable"
+    },
+    "risk": "A non-sterile kit carries infection.",
+    "icon": "book"
+  },
+  {
+    "type": "recipe",
+    "id": "ward",
+    "name": "Ward",
+    "description": "Set salt and candle against a threshold, and speak the rite.",
+    "inputs": [
+      {
+        "item": "salt",
+        "uses": 1
+      },
+      {
+        "item": "candles",
+        "uses": 1
+      }
+    ],
+    "tools": [
+      "relic"
+    ],
+    "skill": "survival",
+    "difficulty": 9,
+    "hours": 1,
+    "output": {
+      "item": "ward-charm",
+      "uses": 1,
+      "condition": "serviceable"
+    },
+    "risk": "The thing behind the ward notices the rite.",
+    "icon": "book"
+  },
+  {
+    "type": "recipe",
+    "id": "bandages",
+    "name": "Bandages",
+    "description": "Cut and boil cloth into clean bandages.",
+    "inputs": [
+      {
+        "item": "clean-cloth",
+        "uses": 2
+      }
+    ],
+    "tools": [
+      "cook-pot"
+    ],
+    "skill": "medicine",
+    "difficulty": 7,
+    "hours": 1,
+    "output": {
+      "item": "bandages",
+      "uses": 3,
+      "condition": "serviceable"
+    },
+    "risk": "Dirty cloth does more harm than good.",
+    "icon": "book"
+  },
+  {
+    "type": "recipe",
+    "id": "painkillers",
+    "name": "Painkillers",
+    "description": "Compound a batch of painkillers from lab stock.",
+    "inputs": [
+      {
+        "item": "lab-chemicals",
+        "uses": 1
+      }
+    ],
+    "tools": [
+      "toolkit"
+    ],
+    "skill": "medicine",
+    "difficulty": 9,
+    "hours": 2,
+    "output": {
+      "item": "painkillers",
+      "uses": 4,
+      "condition": "serviceable"
+    },
+    "risk": "A bad batch is addictive and weak.",
+    "icon": "book"
+  },
+  {
+    "type": "recipe",
+    "id": "antibiotics",
+    "name": "Antibiotics",
+    "description": "Grow and refine a course of antibiotics.",
+    "inputs": [
+      {
+        "item": "lab-chemicals",
+        "uses": 2
+      }
+    ],
+    "tools": [
+      "toolkit"
+    ],
+    "skill": "medicine",
+    "difficulty": 10,
+    "hours": 4,
+    "output": {
+      "item": "antibiotics",
+      "uses": 3,
+      "condition": "serviceable"
+    },
+    "risk": "Contamination makes the batch useless.",
+    "icon": "book"
+  },
+  {
+    "type": "recipe",
+    "id": "radio-repair",
+    "name": "Radio Repair",
+    "description": "Replace the burnt components and bring a radio back.",
+    "inputs": [
+      {
+        "item": "radio-parts",
+        "uses": 1
+      },
+      {
+        "item": "batteries",
+        "uses": 1
+      }
+    ],
+    "tools": [
+      "toolkit"
+    ],
+    "skill": "mechanics",
+    "difficulty": 8,
+    "hours": 2,
+    "output": {
+      "item": "radio",
+      "uses": 6,
+      "condition": "serviceable"
+    },
+    "risk": "The repair draws a signal you did not want.",
+    "icon": "book"
+  },
+  {
+    "type": "recipe",
+    "id": "water-filter",
+    "name": "Water Filter",
+    "description": "Build a hand-pump filter from parts and cloth.",
+    "inputs": [
+      {
+        "item": "parts",
+        "uses": 1
+      },
+      {
+        "item": "clean-cloth",
+        "uses": 2
+      },
+      {
+        "item": "lab-chemicals",
+        "uses": 1
+      }
+    ],
+    "tools": [
+      "toolkit"
+    ],
+    "skill": "mechanics",
+    "difficulty": 9,
+    "hours": 3,
+    "output": {
+      "item": "water-filter",
+      "uses": 6,
+      "condition": "serviceable"
+    },
+    "risk": "A bad seal lets contamination through.",
+    "icon": "book"
+  }
+]

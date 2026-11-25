@@ -1,0 +1,83 @@
+[
+  {
+    "type": "world_terrain",
+    "id": "highway",
+    "name": "Highway",
+    "color": "#8c8a86",
+    "pattern": "tiles",
+    "ink": "#4b4a47",
+    "rule": "Open road, often blocked by wrecks and abandoned cars. Travel is 3 miles per hour on foot, or much faster by vehicle; a road is also where hordes drift."
+  },
+  {
+    "type": "world_terrain",
+    "id": "farmland",
+    "name": "Farmland",
+    "color": "#a3a35a",
+    "pattern": "tufts",
+    "ink": "#5c5c34",
+    "rule": "Fields, fences, and farm buildings. Travel is 2 miles per hour on foot; forage is possible in season, and barns make good shelter."
+  },
+  {
+    "type": "world_terrain",
+    "id": "suburbs",
+    "name": "Suburbs",
+    "color": "#9a8f80",
+    "pattern": "bricks",
+    "ink": "#4f4840",
+    "rule": "Street after street of houses and fences. Travel is 2 miles per hour; every house is a possible site and every corner a possible ambush."
+  },
+  {
+    "type": "world_terrain",
+    "id": "city",
+    "name": "City",
+    "color": "#6f6b66",
+    "pattern": "bricks",
+    "ink": "#3a3734",
+    "rule": "Dense streets, towers, and rubble. Travel is 1.5 miles per hour; noise carries and the dead gather. Sites are rich and dangerous."
+  },
+  {
+    "type": "world_terrain",
+    "id": "forest",
+    "name": "Forest",
+    "color": "#4f6b45",
+    "pattern": "trees",
+    "ink": "#2c3a26",
+    "rule": "Woodland, overgrown since the fall. Travel is 1.5 to 2 miles per hour; cover is good, forage is possible, and sightlines are short."
+  },
+  {
+    "type": "world_terrain",
+    "id": "hills",
+    "name": "Hills",
+    "color": "#7d7a5c",
+    "pattern": "ridges",
+    "ink": "#454332",
+    "rule": "Rolling or broken high ground. Travel is 1.5 miles per hour; a ridge gives a view and makes a bad place to be seen on."
+  },
+  {
+    "type": "world_terrain",
+    "id": "water",
+    "name": "Water",
+    "color": "#4b7186",
+    "pattern": "waves",
+    "ink": "#2a3f4a",
+    "rule": "Rivers, lakes, and coast. A boat makes about 4 miles per hour; swimming is slow and dangerous, and water is both a barrier and a supply."
+  },
+  {
+    "type": "world_terrain",
+    "id": "ruins",
+    "name": "Ruins",
+    "color": "#7f7465",
+    "pattern": "ridges",
+    "ink": "#3f382f",
+    "rule": "Burned or collapsed ground. Travel is 1.5 miles per hour, and rubble hides site entrances and the dead."
+  },
+  {
+    "type": "world_terrain",
+    "id": "industrial",
+    "name": "Industrial Belt",
+    "color": "#726f6b",
+    "pattern": "bricks",
+    "ink": "#3d3b38",
+    "rule": "Warehouses, rail yards, and plants. Travel is 2 miles per hour; the buildings are large sites, and machines can be loud."
+  }
+]

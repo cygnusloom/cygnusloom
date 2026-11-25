@@ -1,0 +1,110 @@
+[
+  {
+    "type": "item",
+    "id": "9mm-rounds",
+    "name": "9mm Rounds",
+    "description": "A box of twenty 9mm rounds. Common, and therefore almost money.",
+    "size": "tiny",
+    "uses": 20,
+    "trade_value": 2,
+    "caliber": "9mm",
+    "icon": "ammunition"
+  },
+  {
+    "type": "item",
+    "id": "12ga-shells",
+    "name": "12ga Shells",
+    "description": "Ten shotgun shells, buckshot and slugs mixed.",
+    "size": "small",
+    "uses": 10,
+    "trade_value": 3,
+    "caliber": "12ga",
+    "icon": "ammunition"
+  },
+  {
+    "type": "item",
+    "id": "308-rounds",
+    "name": ".308 Rounds",
+    "description": "Ten rifle rounds. Scarce, and worth carrying carefully.",
+    "size": "small",
+    "uses": 10,
+    "trade_value": 4,
+    "caliber": ".308",
+    "icon": "ammunition"
+  },
+  {
+    "type": "item",
+    "id": "556-rounds",
+    "name": "5.56 Rounds",
+    "description": "Twenty intermediate rifle rounds.",
+    "size": "small",
+    "uses": 20,
+    "trade_value": 5,
+    "caliber": "5.56",
+    "icon": "ammunition"
+  },
+  {
+    "type": "item",
+    "id": "38-rounds",
+    "name": ".38 Rounds",
+    "description": "Twelve revolver rounds in a paper box.",
+    "size": "tiny",
+    "uses": 12,
+    "trade_value": 3,
+    "caliber": ".38",
+    "icon": "ammunition"
+  },
+  {
+    "type": "item",
+    "id": "arrows",
+    "name": "Arrows",
+    "description": "A quiver of hunting arrows, some reused more than once.",
+    "size": "normal",
+    "uses": 12,
+    "trade_value": 1,
+    "icon": "quiver"
+  },
+  {
+    "type": "item",
+    "id": "bolts",
+    "name": "Crossbow Bolts",
+    "description": "Six crossbow bolts, two with bent fletching.",
+    "size": "small",
+    "uses": 6,
+    "trade_value": 2,
+    "icon": "quiver"
+  },
+  {
+    "type": "item",
+    "id": "improvised-ammo",
+    "name": "Improvised Ammo",
+    "description": "Reloads made from scrap and hope. They fire, usually, and they jam.",
+    "size": "small",
+    "uses": 6,
+    "trade_value": 1,
+    "icon": "ammunition",
+    "condition": "worn"
+  },
+  {
+    "type": "item",
+    "id": "9mm-components",
+    "name": "9mm Components",
+    "description": "Cases, primers, and powder for reloading 9mm.",
+    "size": "tiny",
+    "uses": 10,
+    "trade_value": 2,
+    "caliber": "9mm",
+    "icon": "ammunition"
+  },
+  {
+    "type": "item",
+    "id": "12ga-components",
+    "name": "12ga Components",
+    "description": "Hulls, wads, and shot for reloading shotgun shells.",
+    "size": "small",
+    "uses": 10,
+    "trade_value": 2,
+    "caliber": "12ga",
+    "icon": "ammunition"
+  }
+]

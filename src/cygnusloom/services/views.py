@@ -62,6 +62,12 @@ from cygnusloom.services.geometry import contains, representative_point, signed_
 from cygnusloom.services.hooks import HookContext, call_hook
 from cygnusloom.services.objects import visible_objects
 from cygnusloom.services.peoples import MIXED_PEOPLES
+from cygnusloom.services.state import (
+    CampaignClock,
+    SiteImprovement,
+    Threat,
+    Vehicle,
+)
 
 # The map always shows at least this many kilometers from its center, and leaves a margin.
 MIN_MAP_RADIUS_KM = 1.0
@@ -216,6 +222,11 @@ class CharacterSheetView:
     # The character's current and maximum hit points, when the rule set has an HP stat.
     hp: int | None = None
     hp_max: int | None = None
+    # The character's harm counter, when the rule set has one: its current value, its
+    # maximum, and the values at which its thresholds fire.
+    harm: int | None = None
+    harm_max: int | None = None
+    harm_thresholds: tuple[int, ...] = ()
     # The character's armor class, when the rule set tracks defense as a target number.
     defense: int | None = None
     abilities: tuple[FeatureLink, ...] = ()
@@ -266,6 +277,12 @@ class SceneView:
     # The player character's own sheet, and the sheets of every hireling the player plays for.
     pc_sheet: CharacterSheetView | None = None
     hireling_sheets: tuple[CharacterSheetView, ...] = ()
+    # Campaign progress clocks, threats, vehicles, and shelter improvements, when the rule set
+    # or the campaign has them. Hidden entries stay out of the player's view.
+    clocks: tuple[CampaignClock, ...] = ()
+    threats: tuple[Threat, ...] = ()
+    vehicles: tuple[Vehicle, ...] = ()
+    improvements: tuple[SiteImprovement, ...] = ()
 
     @property
     def pack(self) -> PackView | None:
@@ -293,6 +310,12 @@ class PackItem:
     ready: bool = True
     equipped: str = ""
     entry: str = ""
+    # A firearm's loaded rounds, magazine capacity, and caliber.
+    loaded: int = 0
+    capacity: int = 0
+    caliber: str = ""
+    # The item's condition, such as serviceable, worn, or broken.
+    condition: str = "serviceable"
     # The carried item's own icon, when its feature definition names one. Templates fall back to
     # the icon of the item's kind or damage.
     icon: str = ""
@@ -929,6 +952,7 @@ def scene_view(
     relations: Mapping[str, RelationRules] | None = None,
     *,
     conditions: Mapping[str, ConditionRules] | None = None,
+    counters: Mapping[str, CounterRules] | None = None,
     pc: Character | None = None,
     item_links: Mapping[str, str] | None = None,
     ability_links: Mapping[str, str] | None = None,
@@ -973,6 +997,7 @@ def scene_view(
             sheet=sheet,
             hp=points[0] if points is not None else None,
             hp_max=points[1] if points is not None else None,
+            **_harm_track(spec, pc, counters),
             defense=pc.armor if pc.defense_tracked else None,
             abilities=abilities,
             prepared=_prepared_links(spec, pc, ability_entries),
@@ -999,6 +1024,7 @@ def scene_view(
         controlled,
         spec,
         conditions,
+        counters,
         ability_entries,
         sheet_entries,
         wage_currency=wage_currency,
@@ -1033,6 +1059,19 @@ def scene_view(
         sheet_links=sheet_entries,
         pc_sheet=pc_sheet,
         hireling_sheets=hireling_sheets,
+        clocks=tuple(clock for clock in state.campaign_clocks.values() if clock.visible),
+        threats=tuple(threat for threat in state.threats.values() if threat.visible),
+        vehicles=tuple(state.vehicles.values()),
+        improvements=tuple(
+            sorted(
+                state.improvements.values(),
+                key=lambda improvement: (
+                    improvement.completed,
+                    improvement.site.casefold(),
+                    improvement.name.casefold(),
+                ),
+            )
+        ),
     )
 
 
@@ -2042,10 +2081,30 @@ def _controlled_hirelings(state: CampaignState, pc: Character | None) -> tuple[C
     return tuple(sorted(found, key=lambda character: name_key(character.name)))
 
 
+def _harm_track(
+    spec: CharacterSpec,
+    character: Character,
+    counters: Mapping[str, CounterRules] | None = None,
+) -> dict[str, object]:
+    """The harm counter as a sheet track, when the rule set has one."""
+    reference = spec.counters.get("harm")
+    rules = counters.get("harm") if counters is not None else None
+    if reference is None and rules is None:
+        return {}
+    initial = reference.initial if reference is not None else rules.initial
+    maximum = rules.maximum if rules is not None else reference.maximum
+    return {
+        "harm": character.counters.get("harm", initial),
+        "harm_max": maximum,
+        "harm_thresholds": tuple(sorted(rules.thresholds)) if rules is not None else (),
+    }
+
+
 def _hireling_sheets(
     hirelings: tuple[Character, ...],
     spec: CharacterSpec,
     conditions: Mapping[str, ConditionRules] | None,
+    counters: Mapping[str, CounterRules] | None,
     ability_entries: Mapping[str, str],
     sheet_entries: Mapping[str, str],
     *,
@@ -2071,6 +2130,7 @@ def _hireling_sheets(
                 sheet=lines,
                 hp=points[0] if points is not None else None,
                 hp_max=points[1] if points is not None else None,
+                **_harm_track(spec, character, counters),
                 defense=character.armor if character.defense_tracked else None,
                 abilities=_feature_links(spec, character, ability_entries),
                 prepared=_prepared_links(spec, character, ability_entries),
@@ -2139,6 +2199,10 @@ def _inventory_view(
                 equipped=equipped,
                 entry=links.get(item.name) or links.get(name_key(item.name)) or "",
                 icon=item_icons.get(name_key(item.name), ""),
+                loaded=item.loaded,
+                capacity=item.capacity,
+                caliber=item.caliber,
+                condition=item.condition,
             )
         )
     pack = PackView(
@@ -2269,6 +2333,9 @@ def _sheet_sections(
             if counter_id in ("level", "xp"):
                 identity.append((label, value))
             elif not counter_id.startswith("slot_"):
+                # Harm has its own pips track on the sheet, so it is not repeated as a chip.
+                if counter_id == "harm" and "harm" in spec.counters:
+                    continue
                 entry = sheet_entries.get(label, "")
                 if amount != 0 or counter_id == "hit_dice":
                     resources.append(SheetResource(label=label, value=amount, entry=entry))

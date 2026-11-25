@@ -19,8 +19,10 @@
   <li>
     {% set icon = item.icon or item_icon_id(item.kind, item.damage, item_kind_icons) %}{% if icon %}<img class="item-icon" src="{{ icon_path(icon) }}" alt="">{% endif %}{% if item.entry %}<a href="#{{ item.entry }}" data-view-link="compendium"><strong>{{ item.name }}</strong></a>{% else %}<strong>{{ item.name }}</strong>{% endif %}
     {% if item.size %}{{ item.size }}, {% endif %}{% if item.slots %}{{ item.slots }} slot{{ "" if item.slots == 1 else "s" }}{% else %}no slots{% endif %}
+    {% if item.capacity > 0 %}· <span class="item-ammo">{{ item.loaded }}/{{ item.capacity }}{% if item.caliber %} {{ item.caliber }}{% endif %}</span>{% endif %}
     {% if item.max_uses > 0 %}· {{ item.uses }} uses left{% endif %}
     {% if item.kind %}<span class="muted">({{ item.kind|capitalize }})</span>{% endif %}
+    {% if item.condition and item.condition != "serviceable" %}<span class="item-condition {{ item.condition }}">{{ item.condition|capitalize }}</span>{% endif %}
     {% if inventory.pack.has_readied %}· {{ "Readied" if item.ready else "Stowed" }}{% endif %}
     {% if item.equipped %}· {{ item.equipped }}{% endif %}
   </li>

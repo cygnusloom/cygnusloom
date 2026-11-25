@@ -1,0 +1,62 @@
+[
+  {
+    "type": "item",
+    "id": "ballistic-vest",
+    "name": "Ballistic Vest",
+    "description": "A police-issue vest, past its date and still good.",
+    "size": "normal",
+    "uses": 0,
+    "trade_value": 5,
+    "armor": 2,
+    "armor_mode": "add",
+    "icon": "chain-mail"
+  },
+  {
+    "type": "item",
+    "id": "helmet",
+    "name": "Helmet",
+    "description": "A hard helmet with a strap that mostly fits. It protects the head, when you remember it.",
+    "size": "normal",
+    "uses": 0,
+    "trade_value": 2,
+    "armor": 1,
+    "armor_mode": "add",
+    "icon": "helm"
+  },
+  {
+    "type": "item",
+    "id": "leather-jacket",
+    "name": "Leather Jacket",
+    "description": "Heavy leather. It stops teeth and not much else.",
+    "size": "normal",
+    "uses": 0,
+    "trade_value": 2,
+    "armor": 1,
+    "armor_mode": "add",
+    "icon": "leather-armor"
+  },
+  {
+    "type": "item",
+    "id": "riot-gear",
+    "name": "Riot Gear",
+    "description": "A full riot suit, heavy and obvious, with a cracked visor.",
+    "size": "bulky",
+    "uses": 0,
+    "trade_value": 8,
+    "armor": 3,
+    "armor_mode": "add",
+    "icon": "plate-armor"
+  },
+  {
+    "type": "item",
+    "id": "plate-carrier",
+    "name": "Plate Carrier",
+    "description": "A plate carrier with one ceramic plate still intact.",
+    "size": "normal",
+    "uses": 0,
+    "trade_value": 6,
+    "armor": 2,
+    "armor_mode": "add",
+    "icon": "chain-mail"
+  }
+]

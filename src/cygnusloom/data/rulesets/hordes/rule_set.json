@@ -1,0 +1,88 @@
+[
+  {
+    "type": "rule_set",
+    "id": "hordes",
+    "icon": "undead",
+    "name": "Hordes",
+    "blurb": "Zombie survival in the first winter after the dead rose: scavenging, shelter, and the horde at the edge of hearing.",
+    "description": "A Powered by the Apocalypse survival game for a modern world in its first winter after the dead rose. Characters scavenge the ruins, hold a shelter, barter for medicine and fuel, nurse wounds and infection, and listen for the horde. Fights are a conversation of moves, not turns: there is no initiative, no rounds, and no attack roll for a threat. The cause of the fall is unwritten. The GM invents the region, the shelter, the survivors, and the trouble from the setting tables.",
+    "plus": "sum",
+    "item_sizes": {
+      "tiny": 0,
+      "small": 1,
+      "normal": 1,
+      "bulky": 2,
+      "huge": 3
+    },
+    "stat_presets": {
+      "stats": {
+        "values": [
+          -1,
+          0,
+          1,
+          1,
+          2
+        ],
+        "swap_group": "stats"
+      }
+    },
+    "skill_progression": {
+      "untrained": 0,
+      "first_level": 1,
+      "creation_maximum": 1,
+      "maximum": 2,
+      "practice_thresholds": [
+        3,
+        6
+      ]
+    },
+    "table_genres": [
+      "generic",
+      "apocalypse"
+    ],
+    "table_tones": [
+      "grim",
+      "mystery",
+      "adventure"
+    ],
+    "condition_ends": [
+      "rest",
+      "treat",
+      "scene",
+      "day",
+      "time",
+      "aid",
+      "food",
+      "water",
+      "calm",
+      "safety",
+      "surgery",
+      "ritual",
+      "distance",
+      "stand",
+      "move",
+      "attack",
+      "shot",
+      "used",
+      "treatment"
+    ],
+    "recommended_worlds": [
+      "unwritten-apocalypse"
+    ],
+    "capabilities": {
+      "magic": "none",
+      "travel": "none",
+      "wilderness": false,
+      "dungeon": false,
+      "combat": true,
+      "combat_mode": "moves",
+      "social": [
+        "conditions",
+        "counters",
+        "moves",
+        "factions",
+        "projects"
+      ]
+    }
+  }
+]

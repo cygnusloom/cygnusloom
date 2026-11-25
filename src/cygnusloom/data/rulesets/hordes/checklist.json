@@ -1,0 +1,44 @@
+[
+  {
+    "type": "checklist",
+    "id": "turn",
+    "items": [
+      {
+        "id": "scene",
+        "text": "where the scene is, what changed, and what is now in danger"
+      },
+      {
+        "id": "cast",
+        "text": "the scene's cast: who stays or moves, who leaves, and where each can be found"
+      },
+      {
+        "id": "characters",
+        "text": "new or met people, and anyone hurt, missing, or dead"
+      },
+      {
+        "id": "clocks",
+        "text": "noise, horde pressure, site danger, chases, faction fronts, and base defense"
+      },
+      {
+        "id": "threats",
+        "text": "the threats present, their harm, and the moves they make"
+      },
+      {
+        "id": "harm",
+        "text": "harm, armor, conditions, infection, Rejection, Dread, and morale the action calls for"
+      },
+      {
+        "id": "survival",
+        "text": "food, water, shelter, weather, fuel, and ammo spent or found"
+      },
+      {
+        "id": "notes",
+        "text": "settled facts, clues, promises, debts, secrets, and changes to people or places"
+      },
+      {
+        "id": "storylines",
+        "text": "the focused thread's summary says what this action changed, and anything resolved or deactivated"
+      }
+    ]
+  }
+]

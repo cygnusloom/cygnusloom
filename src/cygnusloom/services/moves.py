@@ -13,6 +13,7 @@ from cygnusloom.content.character import CharacterSpec, Feature
 from cygnusloom.content.library import (
     ALL_STATS,
     HIGHEST,
+    CampaignClockDefinition,
     CombatRules,
     ConditionRules,
     CounterRules,
@@ -39,6 +40,8 @@ from cygnusloom.services.events import (
     roll_breakdown,
 )
 from cygnusloom.services.injuries import EffectContext, run_effects
+from cygnusloom.services.music import scene_key
+from cygnusloom.services.state import alias_key
 
 
 def band_for(move: MoveRules, total: int) -> MoveBand:
@@ -95,6 +98,13 @@ def make_move(
     roll: int | None = None,
     magic: MagicRules | None = None,
     spell: str = "",
+    target: str = "",
+    weapon: str = "",
+    skill: str = "",
+    practice: bool = True,
+    scene: str = "",
+    clock_definitions: Mapping[str, CampaignClockDefinition] | None = None,
+    item_sizes: Mapping[str, int] | None = None,
 ) -> dict[str, object]:
     """Roll `move` for the character, record the result, and run the band's effects. The effects
     carry their own events, so the outcome shows up in the campaign's history either way. A move
@@ -109,6 +119,36 @@ def make_move(
     character = state.characters.get(name_key(name))
     if character is None:
         raise InvalidInput(f"there is no character named {name!r}")
+    if not scene:
+        scene = scene_key(state)
+    if move.requires_feature and character.features.get(move.requires_feature, 0) <= 0:
+        raise InvalidInput(
+            f"{move.label} must be learned first; teach it, read a manual, or experiment"
+        )
+    if move.targeted:
+        if not target.strip():
+            raise InvalidInput(f"{move.label} needs a target")
+        target = target.strip()
+        known = (
+            name_key(target) in state.characters
+            or alias_key(target) in state.threats
+            or any(alias_key(threat.name) == alias_key(target) for threat in state.threats.values())
+        )
+        if not known:
+            raise InvalidInput(f"there is no character or threat named {target!r}")
+    if move.skill_choice:
+        if not skill.strip():
+            raise InvalidInput(
+                f"{move.label} needs a skill: choose one of {list(move.skill_choice)}"
+            )
+        skill = skill.strip()
+        if skill not in move.skill_choice:
+            raise InvalidInput(
+                f"{move.label} uses {', '.join(move.skill_choice)}, not {skill!r}"
+            )
+    elif skill and move.skill and skill != move.skill:
+        raise InvalidInput(f"{move.label} always uses {move.skill}, not {skill!r}")
+    chosen_skill = move.skill or skill
     if stat is not None and not stat.strip():
         stat = None
     if stat is not None and move.stat != HIGHEST:
@@ -152,21 +192,23 @@ def make_move(
         roll = roll_total(move.dice, rng, plus=plus)
     else:
         roll = whole_number(roll, "roll", 0, 1000)
-    stat_bonus = 0
+    stat_part = 0
+    condition_part = 0
     if rolled_stat is not None:
         if spec is not None:
-            stat_bonus = character.modifier(spec, rolled_stat)
+            stat_part = character.modifier(spec, rolled_stat)
         else:
-            stat_bonus = modifier_value(character, rolled_stat)
-        stat_bonus += condition_bonus(character, conditions, rolled_stat)
-    if move.skill:
+            stat_part = modifier_value(character, rolled_stat)
+        condition_part = condition_bonus(character, conditions, rolled_stat)
+    skill_part = 0
+    if chosen_skill:
         if spec is None:
             raise InvalidInput(f"{move.label} needs the rule set's skill rules")
-        skill_bonus = spec.skill_level(character.skills, move.skill)
+        skill_part = spec.skill_level(character.skills, chosen_skill)
         if move.skill_floor is not None:
-            skill_bonus = max(move.skill_floor, skill_bonus)
-        stat_bonus += skill_bonus
-    bonus = stat_bonus + modifier
+            skill_part = max(move.skill_floor, skill_part)
+    statistic_bonus = stat_part + condition_part + skill_part
+    bonus = statistic_bonus + modifier
     total = roll + bonus
     band = band_for(move, total)
     triggered = None
@@ -210,6 +252,9 @@ def make_move(
             text=band.text,
             cause=cause,
             stat=rolled_stat or "",
+            skill=chosen_skill,
+            target=target,
+            weapon=weapon,
             breakdown=roll_breakdown(
                 move.dice,
                 [roll],
@@ -218,8 +263,15 @@ def make_move(
                         spec.stats[rolled_stat].name
                         if spec is not None and rolled_stat in spec.stats
                         else (rolled_stat or "stat").replace("_", " "),
-                        stat_bonus,
+                        stat_part,
                     ),
+                    (
+                        spec.skills[chosen_skill].name
+                        if spec is not None and chosen_skill in spec.skills
+                        else chosen_skill.replace("_", " "),
+                        skill_part,
+                    ),
+                    ("condition", condition_part),
                     ("situational", modifier),
                 ],
                 total,
@@ -247,19 +299,51 @@ def make_move(
             ),
         )
     db.commit()
+    effect_context = EffectContext(
+        rng=rng,
+        combat=combat,
+        counters=counters,
+        conditions=conditions,
+        spec=spec,
+        target=target,
+        weapon=weapon,
+        skill=chosen_skill,
+        scene=scene,
+        clock_definitions=clock_definitions or {},
+        item_sizes=item_sizes or {},
+    )
     run_effects(
         db,
         campaign_id,
         name,
         band.effects,
-        EffectContext(rng=rng, combat=combat, counters=counters, conditions=conditions, spec=spec),
+        effect_context,
         cause or move.label,
         plus=plus,
     )
+    if chosen_skill and practice and (not scene or character.practice_scene.get(chosen_skill) != scene):
+        run_effects(
+            db,
+            campaign_id,
+            name,
+            [{"op": "practice", "skill": chosen_skill}],
+            effect_context,
+            f"{move.label} practice",
+            plus=plus,
+        )
     result: dict[str, object] = {"move": move.label}
     if move.stat == HIGHEST:
         result["stat"] = rolled_stat
-    result.update(roll=roll, bonus=bonus, total=total, band=band.label, text=band.text)
+    result.update(
+        roll=roll,
+        bonus=bonus,
+        total=total,
+        band=band.label,
+        text=band.text,
+        target=target,
+        skill=chosen_skill,
+        weapon=weapon,
+    )
     if band.choices:
         # The player picks one before the reply goes on. Their effects run in choose_option, not
         # here, so the roll alone never spends the cost of the band.
@@ -285,6 +369,12 @@ def choose_option(
     conditions: Mapping[str, ConditionRules],
     counters: Mapping[str, CounterRules],
     spec: CharacterSpec | None = None,
+    target: str = "",
+    skill: str = "",
+    weapon: str = "",
+    scene: str = "",
+    clock_definitions: Mapping[str, CampaignClockDefinition] | None = None,
+    item_sizes: Mapping[str, int] | None = None,
 ) -> dict[str, object]:
     """Pick one of the choices a move band offered, and run its effects. `move` is the move's id
     or label, as `make_move` returns it. The choice must belong to a band the character's roll
@@ -348,7 +438,19 @@ def choose_option(
         campaign_id,
         made.name,
         option.effects,
-        EffectContext(rng=rng, combat=combat, counters=counters, conditions=conditions, spec=spec),
+        EffectContext(
+            rng=rng,
+            combat=combat,
+            counters=counters,
+            conditions=conditions,
+            spec=spec,
+            target=target or made.target,
+            weapon=weapon or made.weapon,
+            skill=skill or made.skill,
+            scene=scene,
+            clock_definitions=clock_definitions or {},
+            item_sizes=item_sizes or {},
+        ),
         f"{rules.label}: {option.label}",
         plus=plus,
     )

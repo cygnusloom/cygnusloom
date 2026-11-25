@@ -269,6 +269,9 @@ def test_a_move_rolls_its_dice_and_records_the_band(client_factory: Callable[[],
         "total": 10,
         "band": "Strong",
         "text": "It works.",
+        "skill": "",
+        "target": "",
+        "weapon": "",
     }
     [event] = _move_events(app, campaign_id)
     assert (event.name, event.move, event.roll, event.total, event.band) == (

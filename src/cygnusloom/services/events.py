@@ -31,6 +31,11 @@ from cygnusloom.services.state import (  # noqa: F401
     CAMPAIGN_WIDE,
     CHARS_PER_TOKEN,
     DEFAULT_DIMENSION,
+    CampaignClock,
+    SiteImprovement,
+    Threat,
+    Vehicle,
+    alias_key,
     FOES_SIDE,
     MORALE_LABELS,
     NPC_KIND,
@@ -2116,6 +2121,10 @@ class PromptShown(GameEvent):
     # The character the prompt is for; its player answers it. Empty in older logs, which keeps
     # the prompt with the turn's opener.
     character: str = ""
+    # The target, skill, and weapon the move names, so a band choice can apply its effects.
+    target: str = ""
+    skill: str = ""
+    weapon: str = ""
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         _open_turn(state).prompt = Ask(
@@ -2130,6 +2139,9 @@ class PromptShown(GameEvent):
             optional=tuple(self.optional),
             reaction=self.reaction or None,
             character=self.character,
+            target=self.target,
+            skill=self.skill,
+            weapon=self.weapon,
         )
 
 
@@ -4814,6 +4826,10 @@ class MoveMade(GameEvent):
     cause: str = ""
     # The stat the roll added, or "" when the move rolled none.
     stat: str = ""
+    # The skill the roll added, the target it was aimed at, and the weapon it used.
+    skill: str = ""
+    target: str = ""
+    weapon: str = ""
     # How the roll reached its total, when the engine recorded it.
     breakdown: dict[str, Any] | None = None
 
@@ -5262,6 +5278,10 @@ class ItemAdded(GameEvent):
     rules: list[str] = field(default_factory=list)
     flags: list[str] = field(default_factory=list)
     ready: bool = True
+    loaded: int = 0
+    capacity: int = 0
+    caliber: str = ""
+    condition: str = "serviceable"
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         character = state.characters[name_key(self.name)]
@@ -5278,6 +5298,10 @@ class ItemAdded(GameEvent):
                 rules=tuple(self.rules),
                 flags=tuple(self.flags),
                 ready=self.ready,
+                loaded=self.loaded,
+                capacity=self.capacity,
+                caliber=self.caliber,
+                condition=self.condition,
             )
         )
 
@@ -5436,6 +5460,478 @@ class ItemRemoved(GameEvent):
 
     def render(self) -> str:
         return f"{self.name} loses {self.item}."
+
+
+@dataclass(frozen=True)
+class ItemAmmoChanged(GameEvent):
+    """A firearm's loaded rounds changed after a shot or a reload."""
+
+    kind: ClassVar[str] = "character.item_ammo_changed"
+
+    name: str
+    item: str
+    loaded: int
+    capacity: int = 0
+    cause: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        character = state.characters[name_key(self.name)]
+        for index, held in enumerate(character.items):
+            if name_key(held.name) == name_key(self.item):
+                character.items[index] = replace(
+                    held, loaded=self.loaded, capacity=self.capacity or held.capacity
+                )
+                return
+
+    def render(self) -> str:
+        capacity = f"/{self.capacity}" if self.capacity else ""
+        text = f"{self.name}'s {self.item} has {self.loaded}{capacity} rounds"
+        return f"{text} ({self.cause})." if self.cause else f"{text}."
+
+
+@dataclass(frozen=True)
+class ItemConditionChanged(GameEvent):
+    """An item, vehicle, or improvement's condition changed. `target_kind` is item, vehicle, or
+    site; `target` is its name or id."""
+
+    kind: ClassVar[str] = "character.item_condition_changed"
+
+    name: str
+    item: str
+    condition: str
+    cause: str = ""
+    target_kind: str = "item"
+    target: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        if self.target_kind == "vehicle":
+            vehicle = state.vehicles.get(alias_key(self.target or self.item))
+            if vehicle is not None:
+                vehicle.notes.append(f"Condition is {self.condition}.")
+            return
+        character = state.characters[name_key(self.name)]
+        for index, held in enumerate(character.items):
+            if name_key(held.name) == name_key(self.item):
+                character.items[index] = replace(held, condition=self.condition)
+                return
+
+    def render(self) -> str:
+        text = f"{self.name}'s {self.item} is {self.condition}"
+        return f"{text} ({self.cause})." if self.cause else f"{text}."
+
+
+@dataclass(frozen=True)
+class SkillPracticed(GameEvent):
+    """A skill gained a practice tick, and may have risen a rank."""
+
+    kind: ClassVar[str] = "skill.practiced"
+
+    name: str
+    skill: str
+    skill_name: str
+    ticks: int
+    rank_before: int = 0
+    rank_after: int = 0
+    scene: str = ""
+    cause: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        character = state.characters[name_key(self.name)]
+        character.practice[self.skill] = self.ticks
+        if self.scene:
+            character.practice_scene[self.skill] = self.scene
+        if self.rank_after != self.rank_before:
+            character.skills[self.skill] = self.rank_after
+
+    def render(self) -> str:
+        if self.rank_after != self.rank_before:
+            return f"{self.name}'s {self.skill_name} rises to rank {self.rank_after}."
+        text = f"{self.name} practices {self.skill_name} ({self.ticks} ticks)"
+        return f"{text} ({self.cause})." if self.cause else f"{text}."
+
+
+@dataclass(frozen=True)
+class NpcAgendaSet(GameEvent):
+    """The GM recorded what an NPC wants next. It is the GM's private record."""
+
+    kind: ClassVar[str] = "npc.agenda_set"
+    hidden: ClassVar[bool] = True
+    channel: ClassVar[Channel] = Channel.INTERNAL
+
+    name: str
+    agenda: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        character = state.characters.get(name_key(self.name))
+        if character is not None:
+            character.agenda = self.agenda
+
+
+@dataclass(frozen=True)
+class CampaignClockStarted(GameEvent):
+    """A named progress clock began."""
+
+    kind: ClassVar[str] = "campaign_clock.started"
+
+    id: str
+    name: str
+    definition: str
+    segments: int
+    filled: int = 0
+    visible: bool = True
+    description: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.campaign_clocks[alias_key(self.id or self.name)] = CampaignClock(
+            id=alias_key(self.id or self.name),
+            name=self.name,
+            definition=self.definition,
+            segments=self.segments,
+            filled=self.filled,
+            visible=self.visible,
+            description=self.description,
+        )
+
+    def render(self) -> str:
+        return f"The {self.name} clock begins at {self.filled} of {self.segments}."
+
+
+@dataclass(frozen=True)
+class CampaignClockAdvanced(GameEvent):
+    """A named progress clock advanced or was set back."""
+
+    kind: ClassVar[str] = "campaign_clock.advanced"
+
+    id: str
+    name: str
+    filled: int
+    segments: int
+    reason: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        clock = state.campaign_clocks.get(alias_key(self.id or self.name))
+        if clock is None:
+            return
+        clock.filled = self.filled
+        clock.segments = self.segments
+
+    def render(self) -> str:
+        text = f"The {self.name} clock is {self.filled} of {self.segments}"
+        return f"{text} ({self.reason})." if self.reason else f"{text}."
+
+
+@dataclass(frozen=True)
+class CampaignClockEnded(GameEvent):
+    """A named progress clock ended or was removed."""
+
+    kind: ClassVar[str] = "campaign_clock.ended"
+
+    id: str
+    name: str
+    reason: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.campaign_clocks.pop(alias_key(self.id or self.name), None)
+
+    def render(self) -> str:
+        text = f"The {self.name} clock ends"
+        return f"{text} ({self.reason})." if self.reason else f"{text}."
+
+
+@dataclass(frozen=True)
+class ThreatAdded(GameEvent):
+    """A non-character danger entered play."""
+
+    kind: ClassVar[str] = "threat.added"
+    hidden: ClassVar[bool] = True
+
+    id: str
+    name: str
+    kind_of_threat: str = "zombie"
+    definition: str = ""
+    description: str = ""
+    harm: int = 1
+    harm_max: int = 1
+    armor: int = 0
+    attack: int = 0
+    tags: list[str] = field(default_factory=list)
+    moves: list[str] = field(default_factory=list)
+    magnitude: int = 0
+    location: str = ""
+    visible: bool = True
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.threats[alias_key(self.id or self.name)] = Threat(
+            id=alias_key(self.id or self.name),
+            name=self.name,
+            kind=self.kind_of_threat,
+            definition=self.definition,
+            description=self.description,
+            harm=self.harm,
+            harm_max=self.harm_max,
+            armor=self.armor,
+            attack=self.attack,
+            tags=list(self.tags),
+            moves=list(self.moves),
+            magnitude=self.magnitude,
+            location=self.location,
+            visible=self.visible,
+        )
+
+    def render(self) -> str:
+        return f"A {self.name} enters the scene."
+
+
+@dataclass(frozen=True)
+class ThreatHarmed(GameEvent):
+    """A threat lost harm. At 0 it breaks, flees, or disperses."""
+
+    kind: ClassVar[str] = "threat.harmed"
+
+    id: str
+    name: str
+    amount: int
+    harm: int
+    harm_max: int
+    cause: str = ""
+    broken: bool = False
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        threat = state.threats.get(alias_key(self.id or self.name))
+        if threat is None:
+            return
+        threat.harm = self.harm
+        threat.harm_max = self.harm_max
+        threat.broken = self.broken
+
+    def render(self) -> str:
+        text = f"{self.name} takes {self.amount} harm ({self.harm} left)"
+        if self.broken:
+            text = f"{text} and breaks"
+        return f"{text} ({self.cause})." if self.cause else f"{text}."
+
+
+@dataclass(frozen=True)
+class ThreatAdvanced(GameEvent):
+    """A threat's magnitude or notes changed, such as a horde growing or splitting."""
+
+    kind: ClassVar[str] = "threat.advanced"
+    hidden: ClassVar[bool] = True
+
+    id: str
+    name: str
+    magnitude: int = 0
+    note: str = ""
+    location: str | None = None
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        threat = state.threats.get(alias_key(self.id or self.name))
+        if threat is None:
+            return
+        threat.magnitude = self.magnitude
+        if self.note:
+            threat.notes.append(self.note)
+        if self.location is not None:
+            threat.location = self.location
+
+    def render(self) -> str:
+        text = f"{self.name} is now magnitude {self.magnitude}"
+        return f"{text} ({self.note})." if self.note else f"{text}."
+
+
+@dataclass(frozen=True)
+class ThreatRemoved(GameEvent):
+    """A threat left play, whether broken, driven off, or gone."""
+
+    kind: ClassVar[str] = "threat.removed"
+
+    id: str
+    name: str
+    reason: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.threats.pop(alias_key(self.id or self.name), None)
+
+    def render(self) -> str:
+        text = f"{self.name} is gone"
+        return f"{text} ({self.reason})." if self.reason else f"{text}."
+
+
+@dataclass(frozen=True)
+class VehicleAdded(GameEvent):
+    """A party vehicle was acquired."""
+
+    kind: ClassVar[str] = "vehicle.added"
+
+    id: str
+    name: str
+    definition: str = ""
+    description: str = ""
+    speed: str = ""
+    handling: int = 0
+    armor: int = 0
+    condition: int = 6
+    condition_max: int = 6
+    fuel: int = 6
+    fuel_max: int = 6
+    seats: int = 2
+    cargo: int = 0
+    noise: int = 2
+    location: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.vehicles[alias_key(self.id or self.name)] = Vehicle(
+            id=alias_key(self.id or self.name),
+            name=self.name,
+            definition=self.definition,
+            description=self.description,
+            speed=self.speed,
+            handling=self.handling,
+            armor=self.armor,
+            condition=self.condition,
+            condition_max=self.condition_max,
+            fuel=self.fuel,
+            fuel_max=self.fuel_max,
+            seats=self.seats,
+            cargo=self.cargo,
+            noise=self.noise,
+            location=self.location,
+        )
+
+    def render(self) -> str:
+        return f"The party has a {self.name}."
+
+
+@dataclass(frozen=True)
+class VehicleUpdated(GameEvent):
+    """A vehicle's condition, fuel, or location changed."""
+
+    kind: ClassVar[str] = "vehicle.updated"
+
+    id: str
+    name: str
+    condition: int | None = None
+    condition_max: int | None = None
+    fuel: int | None = None
+    fuel_max: int | None = None
+    location: str | None = None
+    note: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        vehicle = state.vehicles.get(alias_key(self.id or self.name))
+        if vehicle is None:
+            return
+        if self.condition is not None:
+            vehicle.condition = self.condition
+        if self.condition_max is not None:
+            vehicle.condition_max = self.condition_max
+        if self.fuel is not None:
+            vehicle.fuel = self.fuel
+        if self.fuel_max is not None:
+            vehicle.fuel_max = self.fuel_max
+        if self.location is not None:
+            vehicle.location = self.location
+        if self.note:
+            vehicle.notes.append(self.note)
+
+    def render(self) -> str:
+        text = f"The {self.name} is at condition {self.condition}, fuel {self.fuel}"
+        return f"{text} ({self.note})." if self.note else f"{text}."
+
+
+@dataclass(frozen=True)
+class VehicleRemoved(GameEvent):
+    """A vehicle was lost, sold, or abandoned."""
+
+    kind: ClassVar[str] = "vehicle.removed"
+
+    id: str
+    name: str
+    reason: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.vehicles.pop(alias_key(self.id or self.name), None)
+
+    def render(self) -> str:
+        text = f"The party loses the {self.name}"
+        return f"{text} ({self.reason})." if self.reason else f"{text}."
+
+
+@dataclass(frozen=True)
+class ImprovementAdded(GameEvent):
+    """A shelter improvement began as a project."""
+
+    kind: ClassVar[str] = "improvement.added"
+
+    id: str
+    site: str
+    improvement: str
+    name: str
+    target: int = 1
+    note: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.improvements[alias_key(self.id or self.name)] = SiteImprovement(
+            id=alias_key(self.id or self.name),
+            site=self.site,
+            improvement=self.improvement,
+            name=self.name,
+            target=self.target,
+        )
+
+    def render(self) -> str:
+        return f"Work begins on {self.name} at {self.site}."
+
+
+@dataclass(frozen=True)
+class ImprovementAdvanced(GameEvent):
+    """A shelter improvement gained progress or was damaged."""
+
+    kind: ClassVar[str] = "improvement.advanced"
+
+    id: str
+    name: str
+    progress: int | None = None
+    condition: int | None = None
+    completed: bool | None = None
+    note: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        improvement = state.improvements.get(alias_key(self.id or self.name))
+        if improvement is None:
+            return
+        if self.progress is not None:
+            improvement.progress = self.progress
+        if self.condition is not None:
+            improvement.condition = self.condition
+        if self.completed is not None:
+            improvement.completed = self.completed
+        if self.note:
+            improvement.notes.append(self.note)
+
+    def render(self) -> str:
+        if self.completed:
+            return f"{self.name} is finished."
+        text = f"{self.name} is at {self.progress}"
+        return f"{text} ({self.note})." if self.note else f"{text}."
+
+
+@dataclass(frozen=True)
+class ImprovementRemoved(GameEvent):
+    """A shelter improvement was destroyed or abandoned."""
+
+    kind: ClassVar[str] = "improvement.removed"
+
+    id: str
+    name: str
+    reason: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.improvements.pop(alias_key(self.id or self.name), None)
+
+    def render(self) -> str:
+        text = f"{self.name} is lost"
+        return f"{text} ({self.reason})." if self.reason else f"{text}."
 
 
 @dataclass(frozen=True)

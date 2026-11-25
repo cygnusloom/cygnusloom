@@ -1,0 +1,30 @@
+[
+  {
+    "type": "template",
+    "id": "cop",
+    "kind": "playbook",
+    "icon": "shield",
+    "name": "Cop",
+    "description": "The badge is gone but the habits are not. You know how to talk to frightened people, how to search a building, and when a situation has stopped being a conversation.",
+    "names": "survivor-names",
+    "stats": {
+      "reflexes": 1
+    },
+    "skills": {
+      "firearms": 1,
+      "persuasion": 1
+    },
+    "features": [
+      "radio-operation"
+    ],
+    "items": [
+      "pistol",
+      "ballistic-vest",
+      "baton",
+      "radio",
+      "handcuffs",
+      "9mm-rounds"
+    ],
+    "order": 5
+  }
+]
