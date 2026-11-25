@@ -1,0 +1,102 @@
+[
+  {
+    "type": "item",
+    "id": "rations",
+    "name": "Rations",
+    "description": "Three days of dense, joyless food.",
+    "size": "normal",
+    "uses": 3,
+    "trade_value": 2,
+    "icon": "rations"
+  },
+  {
+    "type": "item",
+    "id": "canned-food",
+    "name": "Canned Food",
+    "description": "Two cans with the labels gone. They keep forever.",
+    "size": "small",
+    "uses": 2,
+    "trade_value": 2,
+    "icon": "food"
+  },
+  {
+    "type": "item",
+    "id": "dried-food",
+    "name": "Dried Food",
+    "description": "Dried meat and fruit in a cloth bag. Light, salty, and lasting.",
+    "size": "small",
+    "uses": 3,
+    "trade_value": 2,
+    "icon": "food"
+  },
+  {
+    "type": "item",
+    "id": "water",
+    "name": "Water",
+    "description": "A full water container. Three days for one careful person.",
+    "size": "normal",
+    "uses": 3,
+    "trade_value": 1,
+    "icon": "waterskin"
+  },
+  {
+    "type": "item",
+    "id": "smoked-meat",
+    "name": "Smoked Meat",
+    "description": "Meat smoked over a low fire. It lasts if the smokehouse holds.",
+    "size": "normal",
+    "uses": 3,
+    "trade_value": 2,
+    "icon": "food"
+  },
+  {
+    "type": "item",
+    "id": "meat",
+    "name": "Meat",
+    "description": "Fresh meat, wrapped in cloth. It will not keep.",
+    "size": "normal",
+    "uses": 2,
+    "trade_value": 1,
+    "icon": "food"
+  },
+  {
+    "type": "item",
+    "id": "seeds",
+    "name": "Seeds",
+    "description": "A packet of vegetable seeds for a garden that might survive the winter.",
+    "size": "tiny",
+    "uses": 4,
+    "trade_value": 3,
+    "icon": "plant"
+  },
+  {
+    "type": "item",
+    "id": "fertilizer",
+    "name": "Fertilizer",
+    "description": "A sack of fertilizer. It grows food, and it can be made into worse things.",
+    "size": "normal",
+    "uses": 4,
+    "trade_value": 2,
+    "icon": "sack"
+  },
+  {
+    "type": "item",
+    "id": "salt",
+    "name": "Salt",
+    "description": "A cloth bag of coarse salt. It preserves food and marks thresholds.",
+    "size": "small",
+    "uses": 6,
+    "trade_value": 2,
+    "icon": "jar"
+  },
+  {
+    "type": "item",
+    "id": "candles",
+    "name": "Candles",
+    "description": "A bundle of candles. Light, warmth, and a quiet ritual.",
+    "size": "small",
+    "uses": 6,
+    "trade_value": 1,
+    "icon": "candle"
+  }
+]

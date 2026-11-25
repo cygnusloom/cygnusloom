@@ -1,0 +1,309 @@
+[
+  {
+    "type": "condition",
+    "id": "wounded",
+    "label": "Wounded",
+    "description": "-1 to physical rolls until the harm falls below 4 or the wound is treated.",
+    "ends": [
+      "rest",
+      "treat"
+    ],
+    "modifies": {
+      "grit": -1,
+      "reflexes": -1
+    },
+    "on_end": []
+  },
+  {
+    "type": "condition",
+    "id": "dying",
+    "label": "Dying",
+    "description": "At 6 harm the character is dying. They can crawl, speak, or take one last action the GM allows.",
+    "ends": [
+      "aid",
+      "surgery"
+    ],
+    "dying": true,
+    "modifies": {
+      "*": -1
+    },
+    "on_end": []
+  },
+  {
+    "type": "condition",
+    "id": "bleeding",
+    "label": "Bleeding",
+    "description": "The wound will not close. Treated, it stops; untreated, it costs harm and time.",
+    "ends": [
+      "treat",
+      "rest"
+    ],
+    "modifies": {
+      "*": -1
+    },
+    "on_end": []
+  },
+  {
+    "type": "condition",
+    "id": "broken",
+    "label": "Broken",
+    "description": "A limb or a bone is useless. -2 to actions that use it.",
+    "ends": [
+      "surgery",
+      "time"
+    ],
+    "modifies": {
+      "*": -2
+    },
+    "on_end": []
+  },
+  {
+    "type": "condition",
+    "id": "stunned",
+    "label": "Stunned",
+    "description": "-1 to all rolls, and you cannot defend.",
+    "ends": [
+      "scene"
+    ],
+    "modifies": {
+      "*": -1
+    },
+    "on_end": []
+  },
+  {
+    "type": "condition",
+    "id": "pinned",
+    "label": "Pinned",
+    "description": "You cannot move, and you are -1 to all rolls.",
+    "ends": [
+      "move",
+      "scene"
+    ],
+    "modifies": {
+      "*": -1
+    },
+    "on_end": []
+  },
+  {
+    "type": "condition",
+    "id": "panicked",
+    "label": "Panicked",
+    "description": "-1 Presence and Wits while the panic holds.",
+    "ends": [
+      "calm",
+      "scene"
+    ],
+    "modifies": {
+      "presence": -1,
+      "wits": -1
+    },
+    "on_end": []
+  },
+  {
+    "type": "condition",
+    "id": "exhausted",
+    "label": "Exhausted",
+    "description": "-1 to all rolls until you rest.",
+    "ends": [
+      "rest"
+    ],
+    "modifies": {
+      "*": -1
+    },
+    "on_end": []
+  },
+  {
+    "type": "condition",
+    "id": "dehydrated",
+    "label": "Dehydrated",
+    "description": "-1 Reflexes until you drink.",
+    "ends": [
+      "water"
+    ],
+    "modifies": {
+      "reflexes": -1
+    },
+    "on_end": []
+  },
+  {
+    "type": "condition",
+    "id": "starving",
+    "label": "Starving",
+    "description": "-1 Grit until you eat.",
+    "ends": [
+      "food"
+    ],
+    "modifies": {
+      "grit": -1
+    },
+    "on_end": []
+  },
+  {
+    "type": "condition",
+    "id": "fever",
+    "label": "Fever",
+    "description": "-1 to all rolls. Infection or sickness has its teeth in you.",
+    "ends": [
+      "treatment",
+      "time"
+    ],
+    "modifies": {
+      "*": -1
+    },
+    "on_end": []
+  },
+  {
+    "type": "condition",
+    "id": "infected",
+    "label": "Infected",
+    "description": "The infection clock is at its worst. Without treatment, the body turns.",
+    "ends": [
+      "treatment"
+    ],
+    "on_end": []
+  },
+  {
+    "type": "condition",
+    "id": "reeling",
+    "label": "Reeling",
+    "description": "-1 Wits while the mind will not settle.",
+    "ends": [
+      "rest",
+      "calm"
+    ],
+    "modifies": {
+      "wits": -1
+    },
+    "on_end": []
+  },
+  {
+    "type": "condition",
+    "id": "shaken",
+    "label": "Shaken",
+    "description": "-1 Presence until you feel safe again.",
+    "ends": [
+      "safety",
+      "rest"
+    ],
+    "modifies": {
+      "presence": -1
+    },
+    "on_end": []
+  },
+  {
+    "type": "condition",
+    "id": "blinded",
+    "label": "Blinded",
+    "description": "-2 to sight-based rolls until the scene ends or someone helps.",
+    "ends": [
+      "scene",
+      "aid"
+    ],
+    "modifies": {
+      "reflexes": -2,
+      "wits": -2
+    },
+    "on_end": []
+  },
+  {
+    "type": "condition",
+    "id": "deafened",
+    "label": "Deafened",
+    "description": "You cannot hear, and you are -1 to awareness.",
+    "ends": [
+      "aid",
+      "time"
+    ],
+    "modifies": {
+      "wits": -1
+    },
+    "on_end": []
+  },
+  {
+    "type": "condition",
+    "id": "prone",
+    "label": "Prone",
+    "description": "-1 to melee, and getting up costs a moment.",
+    "ends": [
+      "stand"
+    ],
+    "modifies": {
+      "grit": -1
+    },
+    "on_end": []
+  },
+  {
+    "type": "condition",
+    "id": "hidden",
+    "label": "Hidden",
+    "description": "+1 to Stealth, and an attack from hiding adds +1 harm.",
+    "ends": [
+      "move",
+      "attack"
+    ],
+    "on_end": []
+  },
+  {
+    "type": "condition",
+    "id": "aiming",
+    "label": "Aiming",
+    "description": "+1 to the next shot.",
+    "ends": [
+      "shot",
+      "scene"
+    ],
+    "on_end": []
+  },
+  {
+    "type": "condition",
+    "id": "inspired",
+    "label": "Inspired",
+    "description": "+1 to one roll, then the feeling passes.",
+    "ends": [
+      "used",
+      "scene"
+    ],
+    "modifies": {
+      "*": 1
+    },
+    "on_end": []
+  },
+  {
+    "type": "condition",
+    "id": "marked",
+    "label": "Marked",
+    "description": "A horror knows where you are.",
+    "ends": [
+      "ritual",
+      "distance"
+    ],
+    "on_end": []
+  },
+  {
+    "type": "condition",
+    "id": "rejected",
+    "label": "Rejected",
+    "description": "-1 Know-how while the implant fights the body. At 6 Rejection the character is dying.",
+    "ends": [
+      "treatment"
+    ],
+    "modifies": {
+      "know_how": -1
+    },
+    "on_end": []
+  },
+  {
+    "type": "condition",
+    "id": "addicted",
+    "label": "Addicted",
+    "description": "Without the substance, -1 to all rolls.",
+    "ends": [
+      "treatment",
+      "time"
+    ],
+    "modifies": {
+      "*": -1
+    },
+    "on_end": []
+  }
+]

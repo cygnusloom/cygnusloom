@@ -1,0 +1,997 @@
+[
+  {
+    "type": "table",
+    "id": "drive",
+    "name": "Drive",
+    "options": [
+      "Protect someone who cannot protect themselves",
+      "Find a cure, or the truth about the fall",
+      "Build something that lasts past you",
+      "See the world that comes after",
+      "Get the people you lost back",
+      "Prove you are still worth something"
+    ]
+  },
+  {
+    "type": "table",
+    "id": "burden",
+    "name": "Burden",
+    "options": [
+      "A debt you cannot repay",
+      "A wound that will not close",
+      "A person who depends on you",
+      "A secret that would break the camp",
+      "A relic you should have thrown away",
+      "A promise made to the dead"
+    ]
+  },
+  {
+    "type": "table",
+    "id": "scar",
+    "name": "Scar",
+    "options": [
+      "A bite scar you keep covered",
+      "A hand that never healed straight",
+      "A voice ruined by smoke",
+      "A tattoo from a crew that no longer exists",
+      "A missing ear, or the tip of one",
+      "A face people recognize from before"
+    ]
+  },
+  {
+    "type": "table",
+    "id": "look",
+    "name": "Look",
+    "options": [
+      "Layers of scavenged clothing and a broken watch",
+      "A clean coat, somehow, and dirty boots",
+      "A hospital bracelet you never took off",
+      "A mask pushed up on your forehead",
+      "Hair cut with a knife in a hurry",
+      "A uniform worn without the patches"
+    ]
+  },
+  {
+    "type": "table",
+    "id": "background",
+    "name": "Background",
+    "options": [
+      "Nurse, paramedic, or orderly",
+      "Mechanic, driver, or hauler",
+      "Teacher, clerk, or student",
+      "Soldier, guard, or cop",
+      "Farmer, hunter, or ranger",
+      "Preacher, funeral worker, or con artist"
+    ]
+  },
+  {
+    "type": "table",
+    "id": "shelter_duty",
+    "name": "Shelter Duty",
+    "options": [
+      "Watch the wall and the dark",
+      "Cook, ration, and keep the stores",
+      "Fix, patch, and maintain",
+      "Teach the children and the newcomers",
+      "Tend the sick and the wounded",
+      "Keep the accounts and the peace"
+    ]
+  },
+  {
+    "type": "table",
+    "id": "survivor-names",
+    "name": "Survivor Names",
+    "options": [
+      "Mara",
+      "Doyle",
+      "Kestrel",
+      "Nia",
+      "Rook",
+      "Sable",
+      "Tobin",
+      "Vale",
+      "Iris",
+      "Mack",
+      "Juno",
+      "Oren",
+      "Cass",
+      "Briar",
+      "Hollis",
+      "Wren"
+    ]
+  },
+  {
+    "type": "table",
+    "id": "station-names",
+    "name": "Station Names",
+    "options": [
+      "Ninewillow",
+      "Cold Harbour",
+      "The Cut",
+      "Ridgeway",
+      "Salt Flats",
+      "Old Mill",
+      "The Quarry",
+      "Bellweather"
+    ]
+  },
+  {
+    "type": "table",
+    "id": "npc-drive-words",
+    "name": "NPC Drives",
+    "options": [
+      "to be owed a favour",
+      "to get out before winter",
+      "to be forgiven",
+      "to be in charge",
+      "to keep one person alive",
+      "to find out what happened here"
+    ]
+  },
+  {
+    "type": "table",
+    "id": "npc-burden-words",
+    "name": "NPC Burdens",
+    "options": [
+      "a sick child",
+      "a debt to a raider crew",
+      "a secret about the shelter",
+      "a dead partner's gear",
+      "a habit that is killing them",
+      "a name they are hiding"
+    ]
+  },
+  {
+    "type": "table",
+    "id": "npc-quirk-words",
+    "name": "NPC Quirks",
+    "options": [
+      "counts exits when entering a room",
+      "never sits with their back to a door",
+      "offers food to strangers",
+      "laughs at the wrong moment",
+      "writes everything down",
+      "hums while working"
+    ]
+  },
+  {
+    "type": "dice_table",
+    "id": "site-type",
+    "name": "Site Type",
+    "genres": [
+      "apocalypse"
+    ],
+    "dice": "1d6",
+    "rows": [
+      {
+        "roll": "1",
+        "result": "A house with its door still locked and the family car gone"
+      },
+      {
+        "roll": "2",
+        "result": "A corner store, picked over but not empty"
+      },
+      {
+        "roll": "3",
+        "result": "A pharmacy with a shutter half down"
+      },
+      {
+        "roll": "4",
+        "result": "A school with the gym doors chained"
+      },
+      {
+        "roll": "5",
+        "result": "A hardware store with a delivery truck outside"
+      },
+      {
+        "roll": "6",
+        "result": "A hospital, police station, or supermarket with power still flickering"
+      }
+    ]
+  },
+  {
+    "type": "dice_table",
+    "id": "loot-scientific",
+    "name": "Scientific Loot",
+    "genres": [
+      "apocalypse"
+    ],
+    "dice": "1d6",
+    "rows": [
+      {
+        "roll": "1",
+        "result": "A box of antibiotics, half used"
+      },
+      {
+        "roll": "2",
+        "result": "A working water filter and a bag of tablets"
+      },
+      {
+        "roll": "3",
+        "result": "A crate of batteries and a solar charger"
+      },
+      {
+        "roll": "4",
+        "result": "A sealed lab kit with chemicals and glass"
+      },
+      {
+        "roll": "5",
+        "result": "A case of insulin or blood bags, still cold"
+      },
+      {
+        "roll": "6",
+        "result": "A prototype serum with a handwritten label"
+      }
+    ]
+  },
+  {
+    "type": "dice_table",
+    "id": "loot-cybernetic",
+    "name": "Cybernetic Loot",
+    "genres": [
+      "apocalypse"
+    ],
+    "dice": "1d6",
+    "rows": [
+      {
+        "roll": "1",
+        "result": "A cheap sight implant in a cracked case"
+      },
+      {
+        "roll": "2",
+        "result": "A targeting link, still in its military packaging"
+      },
+      {
+        "roll": "3",
+        "result": "A prosthetic limb with a worn socket"
+      },
+      {
+        "roll": "4",
+        "result": "A neural jack and a coil of interface cable"
+      },
+      {
+        "roll": "5",
+        "result": "A black-market heart in a cooling box"
+      },
+      {
+        "roll": "6",
+        "result": "A clinic cabinet of implants, one of them missing"
+      }
+    ]
+  },
+  {
+    "type": "dice_table",
+    "id": "loot-occult",
+    "name": "Occult Loot",
+    "genres": [
+      "apocalypse"
+    ],
+    "dice": "1d6",
+    "rows": [
+      {
+        "roll": "1",
+        "result": "A saint's finger in a tin reliquary"
+      },
+      {
+        "roll": "2",
+        "result": "A black mirror wrapped in newspaper"
+      },
+      {
+        "roll": "3",
+        "result": "A grimoire with pages that do not match the binding"
+      },
+      {
+        "roll": "4",
+        "result": "A mourning mask that smells of earth"
+      },
+      {
+        "roll": "5",
+        "result": "A bone idol with fresh offerings"
+      },
+      {
+        "roll": "6",
+        "result": "A chained book that is warm to the touch"
+      }
+    ]
+  },
+  {
+    "type": "dice_table",
+    "id": "loot-knowledge",
+    "name": "Knowledge Loot",
+    "genres": [
+      "apocalypse"
+    ],
+    "dice": "1d6",
+    "rows": [
+      {
+        "roll": "1",
+        "result": "A pocket map with three shelters marked"
+      },
+      {
+        "roll": "2",
+        "result": "A repair manual for a truck you do not have"
+      },
+      {
+        "roll": "3",
+        "result": "A notebook of names, passwords, and routes"
+      },
+      {
+        "roll": "4",
+        "result": "A folder of research notes in a dead scientist's hand"
+      },
+      {
+        "roll": "5",
+        "result": "A key with a room number and no building"
+      },
+      {
+        "roll": "6",
+        "result": "A codebook for a radio network still on the air"
+      }
+    ]
+  },
+  {
+    "type": "dice_table",
+    "id": "loot-condition",
+    "name": "Loot Condition",
+    "genres": [
+      "apocalypse"
+    ],
+    "dice": "1d6",
+    "rows": [
+      {
+        "roll": "1",
+        "result": "Broken: useful only as parts"
+      },
+      {
+        "roll": "2",
+        "result": "Worn: works, but not for long"
+      },
+      {
+        "roll": "3",
+        "result": "Serviceable: it does the job"
+      },
+      {
+        "roll": "4",
+        "result": "Serviceable: it does the job"
+      },
+      {
+        "roll": "5",
+        "result": "Fine: well kept and worth bartering"
+      },
+      {
+        "roll": "6",
+        "result": "Fine, with something extra in the case"
+      }
+    ]
+  },
+  {
+    "type": "dice_table",
+    "id": "weather",
+    "name": "Weather",
+    "genres": [
+      "apocalypse"
+    ],
+    "dice": "1d6",
+    "rows": [
+      {
+        "roll": "1",
+        "result": "Clear and cold; the ground is iron hard"
+      },
+      {
+        "roll": "2",
+        "result": "Low cloud and a thin, freezing drizzle"
+      },
+      {
+        "roll": "3",
+        "result": "Snow that hides the road and muffles sound"
+      },
+      {
+        "roll": "4",
+        "result": "Wind that carries noise and brings the smell of smoke"
+      },
+      {
+        "roll": "5",
+        "result": "A thaw: mud, meltwater, and things coming loose"
+      },
+      {
+        "roll": "6",
+        "result": "A storm front: stay put, or pay for it"
+      }
+    ]
+  },
+  {
+    "type": "dice_table",
+    "id": "road-event",
+    "name": "Road Event",
+    "genres": [
+      "apocalypse"
+    ],
+    "dice": "1d6",
+    "rows": [
+      {
+        "roll": "1",
+        "result": "A wreck across the road, doors open, no bodies"
+      },
+      {
+        "roll": "2",
+        "result": "A checkpoint of salvaged cars and nervous people"
+      },
+      {
+        "roll": "3",
+        "result": "A bridge with one lane clear and a watcher above"
+      },
+      {
+        "roll": "4",
+        "result": "A dog pack shadowing the party at a distance"
+      },
+      {
+        "roll": "5",
+        "result": "A survivor walking the wrong way, refusing to stop"
+      },
+      {
+        "roll": "6",
+        "result": "A horde crossing the road ahead, not yet aware"
+      }
+    ]
+  },
+  {
+    "type": "dice_table",
+    "id": "trade-good",
+    "name": "Trade Good",
+    "genres": [
+      "apocalypse"
+    ],
+    "dice": "1d6",
+    "rows": [
+      {
+        "roll": "1",
+        "result": "Ammunition, matched to a common caliber"
+      },
+      {
+        "roll": "2",
+        "result": "Medicine: antibiotics, painkillers, or bandages"
+      },
+      {
+        "roll": "3",
+        "result": "Fuel, still in a sealed can"
+      },
+      {
+        "roll": "4",
+        "result": "Food that keeps: cans, dried meat, or salt"
+      },
+      {
+        "roll": "5",
+        "result": "Parts, tools, or a working battery"
+      },
+      {
+        "roll": "6",
+        "result": "A favour, a name, or a safe place to sleep"
+      }
+    ]
+  },
+  {
+    "type": "dice_table",
+    "id": "base-trouble",
+    "name": "Base Trouble",
+    "genres": [
+      "apocalypse"
+    ],
+    "dice": "1d6",
+    "rows": [
+      {
+        "roll": "1",
+        "result": "The well is low and someone is taking more than their share"
+      },
+      {
+        "roll": "2",
+        "result": "A watch falls asleep and a dead one gets inside the fence"
+      },
+      {
+        "roll": "3",
+        "result": "Two families stop speaking over a storeroom key"
+      },
+      {
+        "roll": "4",
+        "result": "The generator fails and the cold gets into the infirmary"
+      },
+      {
+        "roll": "5",
+        "result": "A newcomer arrives with a story that does not hold up"
+      },
+      {
+        "roll": "6",
+        "result": "A faction sends word: pay, join, or be treated as a threat"
+      }
+    ]
+  },
+  {
+    "type": "dice_table",
+    "id": "rumour",
+    "name": "Rumour",
+    "genres": [
+      "apocalypse"
+    ],
+    "dice": "1d6",
+    "rows": [
+      {
+        "roll": "1",
+        "result": "There is a working clinic two days east, with a doctor and no guards"
+      },
+      {
+        "roll": "2",
+        "result": "A military convoy went into the hills and never came out"
+      },
+      {
+        "roll": "3",
+        "result": "The dead do not go near the old quarry"
+      },
+      {
+        "roll": "4",
+        "result": "A crew is paying well for fuel, and asking no questions"
+      },
+      {
+        "roll": "5",
+        "result": "Someone is broadcasting on the radio at night"
+      },
+      {
+        "roll": "6",
+        "result": "The shelter's previous owner left something in the cellar"
+      }
+    ]
+  },
+  {
+    "type": "dice_table",
+    "id": "job",
+    "name": "Job",
+    "genres": [
+      "apocalypse"
+    ],
+    "dice": "1d6",
+    "rows": [
+      {
+        "roll": "1",
+        "result": "Fetch a specific item from a site before someone else does"
+      },
+      {
+        "roll": "2",
+        "result": "Escort a survivor and their family to another settlement"
+      },
+      {
+        "roll": "3",
+        "result": "Clear a road, a bridge, or a building of the dead"
+      },
+      {
+        "roll": "4",
+        "result": "Find a missing person, or what is left of them"
+      },
+      {
+        "roll": "5",
+        "result": "Guard a trade meeting that both sides expect to go wrong"
+      },
+      {
+        "roll": "6",
+        "result": "Repair something that the shelter cannot survive without"
+      }
+    ]
+  },
+  {
+    "type": "dice_table",
+    "id": "zombie-variant",
+    "name": "Zombie Variant",
+    "genres": [
+      "apocalypse"
+    ],
+    "dice": "1d6",
+    "rows": [
+      {
+        "roll": "1",
+        "result": "Walker: slow, relentless, and never alone"
+      },
+      {
+        "roll": "2",
+        "result": "Runner: fast, fragile, and loud"
+      },
+      {
+        "roll": "3",
+        "result": "Crawler: low, quiet, and easy to miss"
+      },
+      {
+        "roll": "4",
+        "result": "Bloater: swollen, slow, and dangerous when burst"
+      },
+      {
+        "roll": "5",
+        "result": "Spitter: keeps its distance and burns what it hits"
+      },
+      {
+        "roll": "6",
+        "result": "Brute: strong enough to break a door or a person"
+      }
+    ]
+  },
+  {
+    "type": "dice_table",
+    "id": "horde-behavior",
+    "name": "Horde Behavior",
+    "genres": [
+      "apocalypse"
+    ],
+    "dice": "1d6",
+    "rows": [
+      {
+        "roll": "1",
+        "result": "Drifting: it follows an old habit, not the party"
+      },
+      {
+        "roll": "2",
+        "result": "Stirring: something has its attention"
+      },
+      {
+        "roll": "3",
+        "result": "Feeding: it has stopped, for now"
+      },
+      {
+        "roll": "4",
+        "result": "Hunting: it has a direction and a reason"
+      },
+      {
+        "roll": "5",
+        "result": "Surrounding: it is spreading to cut off escape"
+      },
+      {
+        "roll": "6",
+        "result": "Breaking: it is coming through, whatever stands in the way"
+      }
+    ]
+  },
+  {
+    "type": "dice_table",
+    "id": "horror-sign",
+    "name": "Horror Sign",
+    "genres": [
+      "apocalypse"
+    ],
+    "dice": "1d6",
+    "rows": [
+      {
+        "roll": "1",
+        "result": "Every dog in the area has stopped barking"
+      },
+      {
+        "roll": "2",
+        "result": "A door closes on the other side of the room"
+      },
+      {
+        "roll": "3",
+        "result": "The light bends toward one corner"
+      },
+      {
+        "roll": "4",
+        "result": "Your own voice answers from somewhere else"
+      },
+      {
+        "roll": "5",
+        "result": "The dead will not come near this place"
+      },
+      {
+        "roll": "6",
+        "result": "Something has written your name, correctly"
+      }
+    ]
+  },
+  {
+    "type": "dice_table",
+    "id": "npc-drive",
+    "name": "NPC Drive",
+    "genres": [
+      "apocalypse"
+    ],
+    "dice": "1d6",
+    "rows": [
+      {
+        "roll": "1",
+        "result": "to be owed a favour"
+      },
+      {
+        "roll": "2",
+        "result": "to get out before winter"
+      },
+      {
+        "roll": "3",
+        "result": "to be forgiven"
+      },
+      {
+        "roll": "4",
+        "result": "to be in charge"
+      },
+      {
+        "roll": "5",
+        "result": "to keep one person alive"
+      },
+      {
+        "roll": "6",
+        "result": "to find out what happened here"
+      }
+    ]
+  },
+  {
+    "type": "dice_table",
+    "id": "npc-burden",
+    "name": "NPC Burden",
+    "genres": [
+      "apocalypse"
+    ],
+    "dice": "1d6",
+    "rows": [
+      {
+        "roll": "1",
+        "result": "a sick child"
+      },
+      {
+        "roll": "2",
+        "result": "a debt to a raider crew"
+      },
+      {
+        "roll": "3",
+        "result": "a secret about the shelter"
+      },
+      {
+        "roll": "4",
+        "result": "a dead partner's gear"
+      },
+      {
+        "roll": "5",
+        "result": "a habit that is killing them"
+      },
+      {
+        "roll": "6",
+        "result": "a name they are hiding"
+      }
+    ]
+  },
+  {
+    "type": "dice_table",
+    "id": "npc-quirk",
+    "name": "NPC Quirk",
+    "genres": [
+      "apocalypse"
+    ],
+    "dice": "1d6",
+    "rows": [
+      {
+        "roll": "1",
+        "result": "counts exits when entering a room"
+      },
+      {
+        "roll": "2",
+        "result": "never sits with their back to a door"
+      },
+      {
+        "roll": "3",
+        "result": "offers food to strangers"
+      },
+      {
+        "roll": "4",
+        "result": "laughs at the wrong moment"
+      },
+      {
+        "roll": "5",
+        "result": "writes everything down"
+      },
+      {
+        "roll": "6",
+        "result": "hums while working"
+      }
+    ]
+  },
+  {
+    "type": "dice_table",
+    "id": "name",
+    "name": "Names",
+    "genres": [
+      "apocalypse"
+    ],
+    "dice": "1d6",
+    "rows": [
+      {
+        "roll": "1",
+        "result": "Mara"
+      },
+      {
+        "roll": "2",
+        "result": "Doyle"
+      },
+      {
+        "roll": "3",
+        "result": "Kestrel"
+      },
+      {
+        "roll": "4",
+        "result": "Nia"
+      },
+      {
+        "roll": "5",
+        "result": "Rook"
+      },
+      {
+        "roll": "6",
+        "result": "Sable"
+      }
+    ]
+  },
+  {
+    "type": "dice_table",
+    "id": "site-complication",
+    "name": "Site Complication",
+    "genres": [
+      "apocalypse"
+    ],
+    "dice": "1d6",
+    "rows": [
+      {
+        "roll": "1",
+        "result": "A door is barred from the inside"
+      },
+      {
+        "roll": "2",
+        "result": "Fresh tracks, not yours"
+      },
+      {
+        "roll": "3",
+        "result": "A body that is not dead yet"
+      },
+      {
+        "roll": "4",
+        "result": "A camera, still powered"
+      },
+      {
+        "roll": "5",
+        "result": "A trap built for people"
+      },
+      {
+        "roll": "6",
+        "result": "Someone is already here, and hiding"
+      }
+    ]
+  },
+  {
+    "type": "dice_table",
+    "id": "site-omen",
+    "name": "Site Omen",
+    "genres": [
+      "apocalypse"
+    ],
+    "dice": "1d6",
+    "rows": [
+      {
+        "roll": "1",
+        "result": "The building is colder inside than out"
+      },
+      {
+        "roll": "2",
+        "result": "Every clock stopped at the same time"
+      },
+      {
+        "roll": "3",
+        "result": "The dead are arranged, not fallen"
+      },
+      {
+        "roll": "4",
+        "result": "A meal set for a family that is gone"
+      },
+      {
+        "roll": "5",
+        "result": "The walls are marked with a sign you have seen before"
+      },
+      {
+        "roll": "6",
+        "result": "Nothing has been looted, which means something is wrong"
+      }
+    ]
+  },
+  {
+    "type": "dice_table",
+    "id": "survivor-crew",
+    "name": "Survivor Crew",
+    "genres": [
+      "apocalypse"
+    ],
+    "dice": "1d6",
+    "rows": [
+      {
+        "roll": "1",
+        "result": "A family with a truck and no fuel"
+      },
+      {
+        "roll": "2",
+        "result": "Rival scavengers who know the same sites you do"
+      },
+      {
+        "roll": "3",
+        "result": "A militia patrol that expects obedience"
+      },
+      {
+        "roll": "4",
+        "result": "A cult that believes the dead are a lesson"
+      },
+      {
+        "roll": "5",
+        "result": "A trader with a route and a guard"
+      },
+      {
+        "roll": "6",
+        "result": "Deserters with uniforms and no orders"
+      }
+    ]
+  },
+  {
+    "type": "dice_table",
+    "id": "animal",
+    "name": "Animal",
+    "genres": [
+      "apocalypse"
+    ],
+    "dice": "1d6",
+    "rows": [
+      {
+        "roll": "1",
+        "result": "A dog pack, hungry and unafraid"
+      },
+      {
+        "roll": "2",
+        "result": "A bear, territorial and slow to commit"
+      },
+      {
+        "roll": "3",
+        "result": "Crows that follow the party"
+      },
+      {
+        "roll": "4",
+        "result": "A deer, and the thing that is hunting it"
+      },
+      {
+        "roll": "5",
+        "result": "Rats in the walls, and a smell that does not belong"
+      },
+      {
+        "roll": "6",
+        "result": "Something large that leaves no tracks"
+      }
+    ]
+  },
+  {
+    "type": "dice_table",
+    "id": "faction-front",
+    "name": "Faction Front",
+    "genres": [
+      "apocalypse"
+    ],
+    "dice": "1d6",
+    "rows": [
+      {
+        "roll": "1",
+        "result": "They are recruiting, by persuasion first"
+      },
+      {
+        "roll": "2",
+        "result": "They are moving into a site the party needs"
+      },
+      {
+        "roll": "3",
+        "result": "They are demanding a toll on the road"
+      },
+      {
+        "roll": "4",
+        "result": "They are looking for a person the party knows"
+      },
+      {
+        "roll": "5",
+        "result": "They are preparing for a raid"
+      },
+      {
+        "roll": "6",
+        "result": "They are falling apart, and taking the area with them"
+      }
+    ]
+  }
+]

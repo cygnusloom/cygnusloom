@@ -1,0 +1,162 @@
+[
+  {
+    "type": "creative_table",
+    "role": "setting",
+    "id": "apocalypse-cause",
+    "name": "Cause of the Fall",
+    "genres": [
+      "apocalypse"
+    ],
+    "source": "Original content written for Cygnus Loom.",
+    "entries": [
+      "A laboratory leak that was covered up until the dead were already in the streets",
+      "A plague that moved faster than any quarantine, and burned out only after the cities did",
+      "A ritual performed in a place no one can now find, by people who thought they were saving something",
+      "A strange rain that fell for three days and left the living unchanged",
+      "A war that ended when neither side could bury its dead",
+      "No one agrees. The survivors have six stories and each one is true to somebody",
+      "A cure that worked, and then stopped working",
+      "Something came up out of the ground, and the dead followed it"
+    ]
+  },
+  {
+    "type": "creative_table",
+    "role": "setting",
+    "id": "region",
+    "name": "Region",
+    "genres": [
+      "apocalypse"
+    ],
+    "source": "Original content written for Cygnus Loom.",
+    "entries": [
+      "A rural county of farms, feed stores, and long straight roads where the nearest town is an hour away",
+      "A small city with a hospital, a university, and a river that divides the survivors",
+      "A coast of fishing towns, salt marsh, and a road that floods at high tide",
+      "A mountain valley of logging roads and a pass that closes with the first heavy snow",
+      "Suburbs that run into each other for miles, with a school and a mall as landmarks",
+      "An industrial belt of warehouses, rail yards, and a chemical plant on the edge of town",
+      "A lake district of summer cabins and one year-round store",
+      "A border country of checkpoints, empty bases, and people who crossed the line to get here"
+    ]
+  },
+  {
+    "type": "creative_table",
+    "role": "setting",
+    "id": "season",
+    "name": "Season",
+    "genres": [
+      "apocalypse"
+    ],
+    "source": "Original content written for Cygnus Loom.",
+    "entries": [
+      "First winter: hard frost, short days, and the dead slowing in the cold",
+      "Late autumn: rain, mud, and the last chance to lay in food",
+      "A thaw that reveals what the snow kept",
+      "A wet summer of insects, rot, and long days",
+      "A dry summer of fire risk and water quarrels",
+      "The first clear week after weeks of storm",
+      "A false spring that will not last",
+      "Deep winter: the roads are closed and so is the shelter"
+    ]
+  },
+  {
+    "type": "creative_table",
+    "role": "setting",
+    "id": "shelter",
+    "name": "Starting Shelter",
+    "genres": [
+      "apocalypse"
+    ],
+    "source": "Original content written for Cygnus Loom.",
+    "entries": [
+      "A farmhouse with a well, a cellar, and too many windows",
+      "A school gym with one working door and a generator that needs fuel",
+      "An apartment block stairwell sealed on the ground floor",
+      "A church with a strong door and a congregation that does not agree",
+      "A warehouse office above a loading bay",
+      "A garage behind a chain-link fence and a gate that can be reinforced",
+      "A roadside motel with a courtyard wall",
+      "A boat moored in a sheltered inlet"
+    ]
+  },
+  {
+    "type": "creative_table",
+    "role": "setting",
+    "id": "settlement",
+    "name": "Nearest Settlement",
+    "genres": [
+      "apocalypse"
+    ],
+    "source": "Original content written for Cygnus Loom.",
+    "entries": [
+      "A fortified gas station that trades fuel and news",
+      "A council-run town with a wall, rules, and a waiting list",
+      "A market in an old supermarket, open two days a week",
+      "A dock where boats come in and people are not asked too much",
+      "A militia camp that calls itself a town",
+      "A farm co-op that will trade food for labour",
+      "A hospital annex run by a doctor with too few supplies",
+      "A rail depot where a crew controls the only bridge"
+    ]
+  },
+  {
+    "type": "creative_table",
+    "role": "setting",
+    "id": "faction",
+    "name": "Local Power",
+    "genres": [
+      "apocalypse"
+    ],
+    "source": "Original content written for Cygnus Loom.",
+    "entries": [
+      "A militia captain who keeps the roads open and expects to be obeyed",
+      "A trade league that sets prices and remembers who would not join",
+      "A church that feeds anyone who attends, and asks for more than food",
+      "A family that owns the only working well and knows it",
+      "A rival scavenger crew with a truck, a leader, and a grudge",
+      "A remnant of the old government with a radio and no authority",
+      "A gang that runs the bridge and calls it a toll",
+      "A doctor's network that trades medicine for protection"
+    ]
+  },
+  {
+    "type": "creative_table",
+    "role": "setting",
+    "id": "threat",
+    "name": "Local Threat",
+    "genres": [
+      "apocalypse"
+    ],
+    "source": "Original content written for Cygnus Loom.",
+    "entries": [
+      "A horde drifting along the river road, not yet pointed at anything",
+      "A raider crew that takes people as well as supplies",
+      "A cult that opens doors and lets the dead in",
+      "A horror in the woods that the animals avoid",
+      "A militia that treats every stranger as a spy",
+      "A site full of noise that draws the dead",
+      "An infected animal pack with a territory",
+      "A rival crew that knows where the shelter is"
+    ]
+  },
+  {
+    "type": "creative_table",
+    "role": "setting",
+    "id": "omen",
+    "name": "First Omen",
+    "genres": [
+      "apocalypse"
+    ],
+    "source": "Original content written for Cygnus Loom.",
+    "entries": [
+      "Every dog in the valley barks at the same hour",
+      "The dead are walking in a line, away from something",
+      "A radio plays a voice that should not be broadcasting",
+      "The frost forms in a pattern around the shelter",
+      "A survivor arrives with a story and no gear",
+      "The birds leave a place all at once",
+      "A door that was locked is open",
+      "The night is too quiet, and it has a direction"
+    ]
+  }
+]

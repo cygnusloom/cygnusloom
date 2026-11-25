@@ -1,0 +1,82 @@
+[
+  {
+    "type": "feature",
+    "id": "radio-operation",
+    "name": "Radio Operation",
+    "feature_type": "trait",
+    "tag": "knowledge",
+    "rank": 0,
+    "icon": "bell",
+    "description": "A knowledge move. Call for help, intercept a signal, jam a frequency, or reach a distant station. It must be learned from a teacher, a manual, or hard experimentation before it can be rolled."
+  },
+  {
+    "type": "feature",
+    "id": "computer-use",
+    "name": "Computer Use",
+    "feature_type": "trait",
+    "tag": "knowledge",
+    "rank": 0,
+    "icon": "wondrous-item",
+    "description": "A knowledge move. Recover data, hack a system, control a machine, or read a drive. It must be learned from a teacher, a manual, or hard experimentation before it can be rolled."
+  },
+  {
+    "type": "feature",
+    "id": "cybernetics-configuration",
+    "name": "Cybernetics Configuration",
+    "feature_type": "trait",
+    "tag": "knowledge",
+    "rank": 0,
+    "icon": "rod",
+    "description": "A knowledge move. Install, calibrate, maintain, or safely disable an implant. It must be learned from a teacher, a manual, or hard experimentation before it can be rolled."
+  },
+  {
+    "type": "feature",
+    "id": "field-surgery",
+    "name": "Field Surgery",
+    "feature_type": "trait",
+    "tag": "knowledge",
+    "rank": 0,
+    "icon": "kit-knife",
+    "description": "A knowledge move. Stabilize, remove a bullet, amputate, or install an implant in the field. It must be learned from a teacher, a manual, or hard experimentation before it can be rolled."
+  },
+  {
+    "type": "feature",
+    "id": "vehicle-repair",
+    "name": "Vehicle Repair",
+    "feature_type": "trait",
+    "tag": "knowledge",
+    "rank": 0,
+    "icon": "wagon",
+    "description": "A knowledge move. Fix, modify, or jury-rig a vehicle when ordinary repairs are not enough. It must be learned from a teacher, a manual, or hard experimentation before it can be rolled."
+  },
+  {
+    "type": "feature",
+    "id": "occult-lore",
+    "name": "Occult Lore",
+    "feature_type": "trait",
+    "tag": "knowledge",
+    "rank": 0,
+    "icon": "idol",
+    "description": "A knowledge move. Identify a relic, a rite, a sign, or an eldritch weakness. It must be learned from a teacher, a manual, or hard experimentation before it can be rolled."
+  },
+  {
+    "type": "feature",
+    "id": "demolitions",
+    "name": "Demolitions",
+    "feature_type": "trait",
+    "tag": "knowledge",
+    "rank": 0,
+    "icon": "alchemists-supplies",
+    "description": "A knowledge move. Place, disarm, or improvise explosives and breaching charges. It must be learned from a teacher, a manual, or hard experimentation before it can be rolled."
+  },
+  {
+    "type": "feature",
+    "id": "chemistry",
+    "name": "Chemistry",
+    "feature_type": "trait",
+    "tag": "knowledge",
+    "rank": 0,
+    "icon": "potion",
+    "description": "A knowledge move. Make drugs, fuel, purification, poisons, and medicine from raw stock. It must be learned from a teacher, a manual, or hard experimentation before it can be rolled."
+  }
+]

@@ -1,0 +1,1561 @@
+[
+  {
+    "type": "move",
+    "id": "assess",
+    "label": "Assess",
+    "description": "When you study a place, a person, or a threat, roll +Wits.",
+    "dice": "2d6",
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "Ask the GM two questions about it. The answers are true and useful."
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "Ask the GM one question. The answer is true, but it costs time, noise, or exposure."
+      },
+      {
+        "label": "6-",
+        "text": "The GM reveals a danger you missed, or something notices you first."
+      }
+    ],
+    "stat": "wits",
+    "tags": [
+      "exploration"
+    ]
+  },
+  {
+    "type": "move",
+    "id": "sneak",
+    "label": "Sneak",
+    "description": "When you move unseen or unheard, roll +Reflexes with Stealth.",
+    "dice": "2d6",
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "You get there unseen and unheard."
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "You get there, but leave a sign, are seen, or lose something on the way."
+      },
+      {
+        "label": "6-",
+        "text": "You are caught, cornered, or ambushed.",
+        "effects": [
+          {
+            "op": "condition",
+            "id": "pinned"
+          }
+        ]
+      }
+    ],
+    "stat": "reflexes",
+    "skill": "stealth",
+    "tags": [
+      "exploration"
+    ]
+  },
+  {
+    "type": "move",
+    "id": "scavenge",
+    "label": "Scavenge",
+    "description": "When you search a site for supplies, roll +Wits with Scavenging.",
+    "dice": "2d6",
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "You find what you need, and something extra."
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "You find something useful, but choose one: it takes time, it makes noise, it is in poor condition, or a complication arrives.",
+        "choices": [
+          {
+            "id": "time",
+            "label": "It takes time",
+            "text": "The search takes longer than you wanted.",
+            "effects": [
+              {
+                "op": "note",
+                "text": "The search takes time and the scene moves on."
+              }
+            ]
+          },
+          {
+            "id": "noise",
+            "label": "It makes noise",
+            "text": "Something shifts and falls.",
+            "effects": [
+              {
+                "op": "noise",
+                "delta": 1
+              }
+            ]
+          },
+          {
+            "id": "condition",
+            "label": "It is in poor condition",
+            "text": "The loot is worn or broken.",
+            "effects": [
+              {
+                "op": "note",
+                "text": "The loot is in poor condition."
+              }
+            ]
+          },
+          {
+            "id": "complication",
+            "label": "A complication arrives",
+            "text": "Someone or something else is here.",
+            "effects": [
+              {
+                "op": "note",
+                "text": "A complication arrives at the site."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "label": "6-",
+        "text": "Nothing useful, or something dangerous. The GM makes a move.",
+        "effects": [
+          {
+            "op": "noise",
+            "delta": 1
+          }
+        ]
+      }
+    ],
+    "stat": "wits",
+    "skill": "scavenging",
+    "tags": [
+      "exploration"
+    ]
+  },
+  {
+    "type": "move",
+    "id": "forage",
+    "label": "Forage",
+    "description": "When you find food and water in the wild, roll +Wits with Survival.",
+    "dice": "2d6",
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "You find food and water for the day, and a little extra."
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "You find one of the two, or both with a cost: time, distance, or contamination."
+      },
+      {
+        "label": "6-",
+        "text": "Nothing, or something contaminated. The GM makes a move.",
+        "effects": [
+          {
+            "op": "condition",
+            "id": "dehydrated"
+          }
+        ]
+      }
+    ],
+    "stat": "wits",
+    "skill": "survival",
+    "tags": [
+      "survival"
+    ]
+  },
+  {
+    "type": "move",
+    "id": "track",
+    "label": "Track",
+    "description": "When you follow a trail or read the ground, roll +Wits with Survival.",
+    "dice": "2d6",
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "You follow the trail, and learn something useful about what made it."
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "You follow it, but lose time or take a risk."
+      },
+      {
+        "label": "6-",
+        "text": "You lose the trail, or walk into danger."
+      }
+    ],
+    "stat": "wits",
+    "skill": "survival",
+    "tags": [
+      "survival"
+    ]
+  },
+  {
+    "type": "move",
+    "id": "fix",
+    "label": "Fix",
+    "description": "When you repair or jury-rig gear, roll +Know-how with Mechanics.",
+    "dice": "2d6",
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "It works, and works better than before."
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "It works, but it needs parts, time, or a new condition."
+      },
+      {
+        "label": "6-",
+        "text": "It breaks worse. The GM makes a move."
+      }
+    ],
+    "stat": "know_how",
+    "skill": "mechanics",
+    "tags": [
+      "craft"
+    ]
+  },
+  {
+    "type": "move",
+    "id": "treat",
+    "label": "Treat",
+    "description": "When you treat a wound or a condition, roll +Know-how with Medicine.",
+    "dice": "2d6",
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "Clear 1 harm and one condition, or stabilize a dying character.",
+        "effects": [
+          {
+            "op": "counter",
+            "id": "harm",
+            "delta": -1
+          }
+        ]
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "Stabilize, or clear one thing with a cost: supplies, time, or risk.",
+        "effects": [
+          {
+            "op": "counter",
+            "id": "harm",
+            "delta": -1
+          }
+        ]
+      },
+      {
+        "label": "6-",
+        "text": "It worsens, or infection sets in.",
+        "effects": [
+          {
+            "op": "counter",
+            "id": "infection",
+            "delta": 1
+          }
+        ]
+      }
+    ],
+    "stat": "know_how",
+    "skill": "medicine",
+    "tags": [
+      "medicine"
+    ]
+  },
+  {
+    "type": "move",
+    "id": "persuade",
+    "label": "Persuade",
+    "description": "When you talk someone into something, roll +Presence with Persuasion.",
+    "dice": "2d6",
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "They agree, and they do not hold it against you."
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "They agree, with a price, a favour, or a condition."
+      },
+      {
+        "label": "6-",
+        "text": "They refuse, take offence, or raise the price."
+      }
+    ],
+    "stat": "presence",
+    "skill": "persuasion",
+    "tags": [
+      "social"
+    ]
+  },
+  {
+    "type": "move",
+    "id": "command",
+    "label": "Command",
+    "description": "When you order followers or civilians, roll +Presence with Persuasion.",
+    "dice": "2d6",
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "They act, and they hold."
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "They act with hesitation, or at a cost."
+      },
+      {
+        "label": "6-",
+        "text": "They refuse, freeze, or panic.",
+        "effects": [
+          {
+            "op": "condition",
+            "id": "panicked"
+          }
+        ]
+      }
+    ],
+    "stat": "presence",
+    "skill": "persuasion",
+    "tags": [
+      "social"
+    ]
+  },
+  {
+    "type": "move",
+    "id": "trade",
+    "label": "Trade",
+    "description": "When you barter goods or services, roll +Presence with Persuasion.",
+    "dice": "2d6",
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "A fair deal, and something extra."
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "A deal with a catch: a condition, a debt, or a poor exchange."
+      },
+      {
+        "label": "6-",
+        "text": "No deal, or a bad reputation."
+      }
+    ],
+    "stat": "presence",
+    "skill": "persuasion",
+    "tags": [
+      "social"
+    ]
+  },
+  {
+    "type": "move",
+    "id": "engage",
+    "label": "Engage",
+    "description": "When you fight hand to hand, roll +Grit or +Reflexes with Melee.",
+    "dice": "2d6",
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "You deal harm and keep control of the fight.",
+        "effects": [
+          {
+            "op": "harm",
+            "target": "$target",
+            "amount": 1,
+            "piercing": false,
+            "weapon": "$weapon"
+          }
+        ]
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "You deal harm, and suffer a consequence.",
+        "effects": [
+          {
+            "op": "harm",
+            "target": "$target",
+            "amount": 1,
+            "piercing": false,
+            "weapon": "$weapon"
+          }
+        ],
+        "choices": [
+          {
+            "id": "hurt",
+            "label": "Take a hit",
+            "text": "You take harm in return.",
+            "effects": [
+              {
+                "op": "harm",
+                "target": "self",
+                "amount": 1,
+                "piercing": false
+              }
+            ]
+          },
+          {
+            "id": "pinned",
+            "label": "Get pinned",
+            "text": "You are driven back and held.",
+            "effects": [
+              {
+                "op": "condition",
+                "id": "pinned"
+              }
+            ]
+          },
+          {
+            "id": "bleeding",
+            "label": "Start bleeding",
+            "text": "The wound is worse than it looked.",
+            "effects": [
+              {
+                "op": "condition",
+                "id": "bleeding"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "label": "6-",
+        "text": "You miss, and the GM makes a hard move.",
+        "effects": [
+          {
+            "op": "condition",
+            "id": "stunned"
+          }
+        ]
+      }
+    ],
+    "stat_choice": [
+      "grit",
+      "reflexes"
+    ],
+    "skill": "melee",
+    "targeted": true,
+    "tags": [
+      "combat"
+    ]
+  },
+  {
+    "type": "move",
+    "id": "shoot",
+    "label": "Shoot",
+    "description": "When you fire a ranged weapon at a target, roll +Reflexes with Firearms.",
+    "dice": "2d6",
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "You hit and choose an effect: pin them, drive them back, or break their cover.",
+        "effects": [
+          {
+            "op": "harm",
+            "target": "$target",
+            "amount": 1,
+            "piercing": false,
+            "weapon": "$weapon"
+          },
+          {
+            "op": "ammo",
+            "weapon": "$weapon",
+            "rounds": 1
+          },
+          {
+            "op": "noise",
+            "delta": 1
+          }
+        ]
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "You hit, but choose one: expose yourself, spend extra ammo, or take a consequence.",
+        "effects": [
+          {
+            "op": "harm",
+            "target": "$target",
+            "amount": 1,
+            "piercing": false,
+            "weapon": "$weapon"
+          },
+          {
+            "op": "ammo",
+            "weapon": "$weapon",
+            "rounds": 1
+          },
+          {
+            "op": "noise",
+            "delta": 1
+          }
+        ],
+        "choices": [
+          {
+            "id": "exposed",
+            "label": "Expose yourself",
+            "text": "You have to step out to make the shot.",
+            "effects": [
+              {
+                "op": "condition",
+                "id": "pinned"
+              }
+            ]
+          },
+          {
+            "id": "ammo",
+            "label": "Spend extra ammo",
+            "text": "You empty more of the magazine than you meant to.",
+            "effects": [
+              {
+                "op": "ammo",
+                "weapon": "$weapon",
+                "rounds": 2
+              }
+            ]
+          },
+          {
+            "id": "consequence",
+            "label": "Take a consequence",
+            "text": "The shot costs you something.",
+            "effects": [
+              {
+                "op": "harm",
+                "target": "self",
+                "amount": 1,
+                "piercing": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "label": "6-",
+        "text": "You miss, jam, or run dry. The GM makes a move.",
+        "effects": [
+          {
+            "op": "ammo",
+            "weapon": "$weapon",
+            "rounds": 1
+          },
+          {
+            "op": "noise",
+            "delta": 1
+          }
+        ]
+      }
+    ],
+    "stat": "reflexes",
+    "skill": "firearms",
+    "targeted": true,
+    "tags": [
+      "combat"
+    ]
+  },
+  {
+    "type": "move",
+    "id": "defend",
+    "label": "Defend",
+    "description": "When you hold a line, protect someone, or get clear, roll +Grit with Melee or Athletics.",
+    "dice": "2d6",
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "You hold, redirect, or get someone clear without harm."
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "You hold, but take harm or a cost.",
+        "choices": [
+          {
+            "id": "harm",
+            "label": "Take harm",
+            "text": "You hold and pay for it.",
+            "effects": [
+              {
+                "op": "harm",
+                "target": "self",
+                "amount": 1,
+                "piercing": false
+              }
+            ]
+          },
+          {
+            "id": "pinned",
+            "label": "Give ground",
+            "text": "You are pushed back and pinned.",
+            "effects": [
+              {
+                "op": "condition",
+                "id": "pinned"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "label": "6-",
+        "text": "You are overrun.",
+        "effects": [
+          {
+            "op": "condition",
+            "id": "prone"
+          }
+        ]
+      }
+    ],
+    "stat": "grit",
+    "skill_choice": [
+      "melee",
+      "athletics"
+    ],
+    "tags": [
+      "combat"
+    ]
+  },
+  {
+    "type": "move",
+    "id": "defy_danger",
+    "label": "Defy Danger",
+    "description": "When you react to immediate danger, roll +the stat your approach uses and the skill it fits.",
+    "dice": "2d6",
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "You avoid it cleanly."
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "You avoid the worst of it, and choose a cost.",
+        "choices": [
+          {
+            "id": "harm",
+            "label": "Take harm",
+            "text": "You get clear, but not clean.",
+            "effects": [
+              {
+                "op": "harm",
+                "target": "self",
+                "amount": 1,
+                "piercing": false
+              }
+            ]
+          },
+          {
+            "id": "lost",
+            "label": "Lose something",
+            "text": "Something you were carrying is gone or broken.",
+            "effects": [
+              {
+                "op": "note",
+                "text": "You lose or break something in the scramble."
+              }
+            ]
+          },
+          {
+            "id": "condition",
+            "label": "Take a condition",
+            "text": "The effort leaves you exposed.",
+            "effects": [
+              {
+                "op": "condition",
+                "id": "stunned"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "label": "6-",
+        "text": "You suffer it, and the GM makes a hard move.",
+        "effects": [
+          {
+            "op": "condition",
+            "id": "prone"
+          }
+        ]
+      }
+    ],
+    "stat_choice": [
+      "grit",
+      "reflexes",
+      "wits",
+      "presence",
+      "know_how"
+    ],
+    "skill_choice": [
+      "firearms",
+      "melee",
+      "athletics",
+      "stealth",
+      "scavenging",
+      "survival",
+      "mechanics",
+      "medicine",
+      "driving",
+      "persuasion"
+    ],
+    "tags": [
+      "danger"
+    ]
+  },
+  {
+    "type": "move",
+    "id": "flee",
+    "label": "Flee",
+    "description": "When you run, drive, or slip away, roll +Reflexes with Athletics or Driving.",
+    "dice": "2d6",
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "You escape."
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "You escape, but at a cost: something is left behind, or someone is hurt."
+      },
+      {
+        "label": "6-",
+        "text": "You are trapped, separated, or worse.",
+        "effects": [
+          {
+            "op": "condition",
+            "id": "panicked"
+          }
+        ]
+      }
+    ],
+    "stat": "reflexes",
+    "skill_choice": [
+      "athletics",
+      "driving"
+    ],
+    "tags": [
+      "danger"
+    ]
+  },
+  {
+    "type": "move",
+    "id": "drive",
+    "label": "Drive",
+    "description": "When you control a vehicle under pressure, roll +Reflexes with Driving.",
+    "dice": "2d6",
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "You keep control and gain the advantage."
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "You keep control, but the vehicle or the situation pays for it."
+      },
+      {
+        "label": "6-",
+        "text": "You crash, stall, or lose control.",
+        "effects": [
+          {
+            "op": "condition",
+            "id": "stunned"
+          }
+        ]
+      }
+    ],
+    "stat": "reflexes",
+    "skill": "driving",
+    "tags": [
+      "vehicle"
+    ]
+  },
+  {
+    "type": "move",
+    "id": "craft",
+    "label": "Craft",
+    "description": "When you make something from parts, roll +Know-how with Mechanics.",
+    "dice": "2d6",
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "It works, and it is solid."
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "It works, with a flaw, a shortage, or a shorter life."
+      },
+      {
+        "label": "6-",
+        "text": "The materials are wasted, or the failure is dangerous.",
+        "effects": [
+          {
+            "op": "noise",
+            "delta": 1
+          }
+        ]
+      }
+    ],
+    "stat": "know_how",
+    "skill": "mechanics",
+    "tags": [
+      "craft"
+    ]
+  },
+  {
+    "type": "move",
+    "id": "salvage",
+    "label": "Salvage",
+    "description": "When you strip a site or a wreck for parts, roll +Wits with Scavenging.",
+    "dice": "2d6",
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "You get the parts, and something extra."
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "You get parts, but at a cost: time, noise, or a hazard."
+      },
+      {
+        "label": "6-",
+        "text": "Nothing useful, or a hazard. The GM makes a move."
+      }
+    ],
+    "stat": "wits",
+    "skill": "scavenging",
+    "tags": [
+      "craft"
+    ]
+  },
+  {
+    "type": "move",
+    "id": "recuperate",
+    "label": "Recuperate",
+    "description": "When you rest and recover under pressure, roll +Grit or +Presence with Survival or Medicine.",
+    "dice": "2d6",
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "Clear 1 harm and shake off a condition.",
+        "effects": [
+          {
+            "op": "counter",
+            "id": "harm",
+            "delta": -1
+          },
+          {
+            "op": "end_condition",
+            "id": "exhausted"
+          }
+        ]
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "Clear some of it, with a cost: time, shelter, or supplies.",
+        "effects": [
+          {
+            "op": "counter",
+            "id": "harm",
+            "delta": -1
+          }
+        ]
+      },
+      {
+        "label": "6-",
+        "text": "The rest is interrupted, or it does not take.",
+        "effects": [
+          {
+            "op": "condition",
+            "id": "exhausted"
+          }
+        ]
+      }
+    ],
+    "stat_choice": [
+      "grit",
+      "presence"
+    ],
+    "skill_choice": [
+      "survival",
+      "medicine"
+    ],
+    "tags": [
+      "survival"
+    ]
+  },
+  {
+    "type": "move",
+    "id": "harm_move",
+    "label": "Harm Move",
+    "description": "When you take 2 or more harm in one hit, or any harm while wounded, roll +Grit.",
+    "dice": "2d6",
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "You keep your feet and can still act."
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "Choose one: drop what you are holding, lose your position, hesitate, or take a condition.",
+        "choices": [
+          {
+            "id": "drop",
+            "label": "Drop what you are holding",
+            "text": "It clatters away from you.",
+            "effects": [
+              {
+                "op": "note",
+                "text": "You drop what you are holding."
+              }
+            ]
+          },
+          {
+            "id": "position",
+            "label": "Lose your position",
+            "text": "You are driven back or exposed.",
+            "effects": [
+              {
+                "op": "note",
+                "text": "You lose your position."
+              }
+            ]
+          },
+          {
+            "id": "hesitate",
+            "label": "Hesitate",
+            "text": "The moment gets away from you.",
+            "effects": [
+              {
+                "op": "condition",
+                "id": "stunned"
+              }
+            ]
+          },
+          {
+            "id": "condition",
+            "label": "Take a condition",
+            "text": "The hit leaves a mark.",
+            "effects": [
+              {
+                "op": "condition",
+                "id": "bleeding"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "label": "6-",
+        "text": "The GM makes a hard move: worse harm, separation, capture, or lost gear.",
+        "effects": [
+          {
+            "op": "condition",
+            "id": "panicked"
+          }
+        ]
+      }
+    ],
+    "stat": "grit",
+    "tags": [
+      "harm"
+    ]
+  },
+  {
+    "type": "move",
+    "id": "resist_infection",
+    "label": "Resist Infection",
+    "description": "When a deep bite, dirty wound, or contamination puts infection in you, roll +Grit with Survival.",
+    "dice": "2d6",
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "No infection takes hold."
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "The infection starts slowly. Mark 1 infection.",
+        "effects": [
+          {
+            "op": "counter",
+            "id": "infection",
+            "delta": 1
+          }
+        ]
+      },
+      {
+        "label": "6-",
+        "text": "The infection takes hold fast. Mark 2 infection.",
+        "effects": [
+          {
+            "op": "counter",
+            "id": "infection",
+            "delta": 2
+          }
+        ]
+      }
+    ],
+    "stat": "grit",
+    "skill": "survival",
+    "tags": [
+      "harm",
+      "survival"
+    ]
+  },
+  {
+    "type": "move",
+    "id": "face_horror",
+    "label": "Face Horror",
+    "description": "When you confront an eldritch entity or a strange horror, roll +Presence.",
+    "dice": "2d6",
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "You hold yourself together."
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "You mark Dread, or take a condition.",
+        "effects": [
+          {
+            "op": "counter",
+            "id": "dread",
+            "delta": 1
+          }
+        ],
+        "choices": [
+          {
+            "id": "shaken",
+            "label": "Shaken",
+            "text": "Your nerve is gone for now.",
+            "effects": [
+              {
+                "op": "condition",
+                "id": "shaken"
+              }
+            ]
+          },
+          {
+            "id": "reeling",
+            "label": "Reeling",
+            "text": "Your mind will not settle.",
+            "effects": [
+              {
+                "op": "condition",
+                "id": "reeling"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "label": "6-",
+        "text": "You panic, mark 2 Dread, and the GM makes a hard move.",
+        "effects": [
+          {
+            "op": "counter",
+            "id": "dread",
+            "delta": 2
+          },
+          {
+            "op": "condition",
+            "id": "panicked"
+          }
+        ]
+      }
+    ],
+    "stat": "presence",
+    "tags": [
+      "horror"
+    ]
+  },
+  {
+    "type": "move",
+    "id": "order_follower",
+    "label": "Order Follower",
+    "description": "When you send a follower into danger, roll +Presence with Persuasion.",
+    "dice": "2d6",
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "They do it, and they come back."
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "They do it, with hesitation, or at a cost."
+      },
+      {
+        "label": "6-",
+        "text": "They refuse, freeze, or break.",
+        "effects": [
+          {
+            "op": "counter",
+            "id": "morale",
+            "delta": 1
+          }
+        ]
+      }
+    ],
+    "stat": "presence",
+    "skill": "persuasion",
+    "tags": [
+      "social"
+    ]
+  },
+  {
+    "type": "move",
+    "id": "train",
+    "label": "Train",
+    "description": "When you spend downtime learning, roll +Know-how or +Wits.",
+    "dice": "2d6",
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "You learn the knowledge move, or add practice to a skill."
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "You make progress, with time, cost, or partial understanding."
+      },
+      {
+        "label": "6-",
+        "text": "No progress, or a dangerous mistake."
+      }
+    ],
+    "stat_choice": [
+      "know_how",
+      "wits"
+    ],
+    "tags": [
+      "downtime"
+    ]
+  },
+  {
+    "type": "move",
+    "id": "skill_check",
+    "label": "Skill Check",
+    "description": "When the outcome of an ordinary task is uncertain, roll +the stat and the skill that fit the work.",
+    "dice": "2d6",
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "It works."
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "It works, with a cost or a complication."
+      },
+      {
+        "label": "6-",
+        "text": "It fails, or it costs more than you meant to spend."
+      }
+    ],
+    "stat_choice": [
+      "grit",
+      "reflexes",
+      "wits",
+      "presence",
+      "know_how"
+    ],
+    "skill_choice": [
+      "firearms",
+      "melee",
+      "athletics",
+      "stealth",
+      "scavenging",
+      "survival",
+      "mechanics",
+      "medicine",
+      "driving",
+      "persuasion"
+    ],
+    "tags": [
+      "check"
+    ]
+  },
+  {
+    "type": "move",
+    "id": "radio_operation",
+    "label": "Radio Operation",
+    "description": "When you call for help, intercept a signal, jam a frequency, or reach a distant station, roll +Wits.",
+    "dice": "2d6",
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "You get through, clearly, and learn something worth the call."
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "You get through, but the signal is weak, overheard, or costly in time.",
+        "effects": [
+          {
+            "op": "noise",
+            "delta": 1
+          }
+        ]
+      },
+      {
+        "label": "6-",
+        "text": "Static, a hostile voice, or nothing at all. The GM makes a move.",
+        "effects": [
+          {
+            "op": "noise",
+            "delta": 1
+          }
+        ]
+      }
+    ],
+    "stat": "wits",
+    "requires_feature": "radio-operation",
+    "tags": [
+      "knowledge"
+    ]
+  },
+  {
+    "type": "move",
+    "id": "computer_use",
+    "label": "Computer Use",
+    "description": "When you recover data, hack a system, control a machine, or read a drive, roll +Know-how with Mechanics.",
+    "dice": "2d6",
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "You get what you came for, and the system does not notice."
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "You get it, but leave a trace, trip an alarm, or lose time."
+      },
+      {
+        "label": "6-",
+        "text": "The system locks you out, or something responds.",
+        "effects": [
+          {
+            "op": "noise",
+            "delta": 1
+          }
+        ]
+      }
+    ],
+    "stat": "know_how",
+    "skill": "mechanics",
+    "requires_feature": "computer-use",
+    "tags": [
+      "knowledge"
+    ]
+  },
+  {
+    "type": "move",
+    "id": "cybernetics_configuration",
+    "label": "Cybernetics Configuration",
+    "description": "When you install, calibrate, maintain, or disable an implant, roll +Know-how with Medicine.",
+    "dice": "2d6",
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "The implant works cleanly, and Rejection does not rise."
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "It works, but the body complains. Mark 1 Rejection.",
+        "effects": [
+          {
+            "op": "counter",
+            "id": "rejection",
+            "delta": 1
+          }
+        ]
+      },
+      {
+        "label": "6-",
+        "text": "The implant fights the body. Mark 2 Rejection and take a condition.",
+        "effects": [
+          {
+            "op": "counter",
+            "id": "rejection",
+            "delta": 2
+          },
+          {
+            "op": "condition",
+            "id": "rejected"
+          }
+        ]
+      }
+    ],
+    "stat": "know_how",
+    "skill": "medicine",
+    "requires_feature": "cybernetics-configuration",
+    "tags": [
+      "knowledge"
+    ]
+  },
+  {
+    "type": "move",
+    "id": "field_surgery",
+    "label": "Field Surgery",
+    "description": "When you stabilize, remove a bullet, amputate, or install an implant in the field, roll +Know-how with Medicine.",
+    "dice": "2d6",
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "The work is clean. Clear the bleeding and stabilize the patient.",
+        "effects": [
+          {
+            "op": "end_condition",
+            "id": "bleeding"
+          }
+        ]
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "The work holds, but it costs supplies or leaves a condition.",
+        "effects": [
+          {
+            "op": "end_condition",
+            "id": "bleeding"
+          }
+        ]
+      },
+      {
+        "label": "6-",
+        "text": "It goes badly: bleeding, infection, and the GM makes a move.",
+        "effects": [
+          {
+            "op": "condition",
+            "id": "bleeding"
+          },
+          {
+            "op": "counter",
+            "id": "infection",
+            "delta": 1
+          }
+        ]
+      }
+    ],
+    "stat": "know_how",
+    "skill": "medicine",
+    "requires_feature": "field-surgery",
+    "tags": [
+      "knowledge",
+      "medicine"
+    ]
+  },
+  {
+    "type": "move",
+    "id": "vehicle_repair",
+    "label": "Vehicle Repair",
+    "description": "When you fix, modify, or jury-rig a vehicle, roll +Know-how with Mechanics.",
+    "dice": "2d6",
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "The vehicle is sound, and you improve something while you are in there."
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "It runs, but it needs parts, time, or a new condition."
+      },
+      {
+        "label": "6-",
+        "text": "It fails worse, or the repair draws attention.",
+        "effects": [
+          {
+            "op": "noise",
+            "delta": 1
+          }
+        ]
+      }
+    ],
+    "stat": "know_how",
+    "skill": "mechanics",
+    "requires_feature": "vehicle-repair",
+    "tags": [
+      "knowledge",
+      "vehicle"
+    ]
+  },
+  {
+    "type": "move",
+    "id": "occult_lore",
+    "label": "Occult Lore",
+    "description": "When you identify a relic, a rite, a sign, or an eldritch weakness, roll +Wits.",
+    "dice": "2d6",
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "You know what it is, what it wants, and what would hurt it."
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "You learn something true, and it costs you. Mark 1 Dread.",
+        "effects": [
+          {
+            "op": "counter",
+            "id": "dread",
+            "delta": 1
+          }
+        ]
+      },
+      {
+        "label": "6-",
+        "text": "You learn too much. Mark 1 Dread and take a condition.",
+        "effects": [
+          {
+            "op": "counter",
+            "id": "dread",
+            "delta": 1
+          },
+          {
+            "op": "condition",
+            "id": "marked"
+          }
+        ]
+      }
+    ],
+    "stat": "wits",
+    "requires_feature": "occult-lore",
+    "tags": [
+      "knowledge",
+      "horror"
+    ]
+  },
+  {
+    "type": "move",
+    "id": "demolitions",
+    "label": "Demolitions",
+    "description": "When you place, disarm, or improvise explosives, roll +Know-how with Mechanics.",
+    "dice": "2d6",
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "The charge does exactly what you meant it to do."
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "It works, but late, loud, or short. The GM says which.",
+        "effects": [
+          {
+            "op": "noise",
+            "delta": 2
+          }
+        ]
+      },
+      {
+        "label": "6-",
+        "text": "It goes off early, badly, or not at all. The GM makes a move.",
+        "effects": [
+          {
+            "op": "noise",
+            "delta": 3
+          },
+          {
+            "op": "condition",
+            "id": "stunned"
+          }
+        ]
+      }
+    ],
+    "stat": "know_how",
+    "skill": "mechanics",
+    "requires_feature": "demolitions",
+    "tags": [
+      "knowledge"
+    ]
+  },
+  {
+    "type": "move",
+    "id": "chemistry",
+    "label": "Chemistry",
+    "description": "When you make drugs, fuel, purification, poisons, or medicine, roll +Know-how with Medicine.",
+    "dice": "2d6",
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "The batch is clean and potent."
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "It works, but it is weak, unstable, or short a dose."
+      },
+      {
+        "label": "6-",
+        "text": "The work spoils, or something in it is dangerous.",
+        "effects": [
+          {
+            "op": "condition",
+            "id": "fever"
+          }
+        ]
+      }
+    ],
+    "stat": "know_how",
+    "skill": "medicine",
+    "requires_feature": "chemistry",
+    "tags": [
+      "knowledge",
+      "craft"
+    ]
+  }
+]

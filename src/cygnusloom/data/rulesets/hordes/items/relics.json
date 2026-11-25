@@ -1,0 +1,145 @@
+[
+  {
+    "type": "item",
+    "id": "relic",
+    "name": "Relic",
+    "description": "A saint's finger in a tin case. Once, it steadies someone who is dying. Dread +1 when attuned or used.",
+    "size": "small",
+    "uses": 0,
+    "trade_value": 7,
+    "icon": "idol",
+    "rules": [
+      "rule-relic-relic"
+    ]
+  },
+  {
+    "type": "item",
+    "id": "saint-finger",
+    "name": "Saint's Finger",
+    "description": "A preserved finger in a reliquary. Once, it stabilizes a dying character. Dread +1 when attuned or used.",
+    "size": "small",
+    "uses": 0,
+    "trade_value": 8,
+    "icon": "idol",
+    "rules": [
+      "rule-relic-saint-finger"
+    ]
+  },
+  {
+    "type": "item",
+    "id": "black-mirror",
+    "name": "Black Mirror",
+    "description": "A small mirror that shows a place you know. Something looks back. Dread +2 when attuned or used.",
+    "size": "small",
+    "uses": 0,
+    "trade_value": 7,
+    "icon": "mirror",
+    "rules": [
+      "rule-relic-black-mirror"
+    ]
+  },
+  {
+    "type": "item",
+    "id": "grimoire",
+    "name": "Grimoire",
+    "description": "A book of rites whose pages change when no one is watching. Dread +2 when attuned or used.",
+    "size": "small",
+    "uses": 0,
+    "trade_value": 8,
+    "icon": "book",
+    "rules": [
+      "rule-relic-grimoire"
+    ]
+  },
+  {
+    "type": "item",
+    "id": "mourning-mask",
+    "name": "Mourning Mask",
+    "description": "A mask that lets you speak with the dead. They remember you. Dread +2 when attuned or used.",
+    "size": "small",
+    "uses": 0,
+    "trade_value": 7,
+    "icon": "amulet",
+    "rules": [
+      "rule-relic-mourning-mask"
+    ]
+  },
+  {
+    "type": "item",
+    "id": "bone-idol",
+    "name": "Bone Idol",
+    "description": "A carved idol: +1 to one roll, once per scene. It wants offerings. Dread +2 when attuned or used.",
+    "size": "small",
+    "uses": 0,
+    "trade_value": 6,
+    "icon": "idol",
+    "rules": [
+      "rule-relic-bone-idol"
+    ]
+  },
+  {
+    "type": "item",
+    "id": "iron-bell",
+    "name": "Iron Bell",
+    "description": "A bell that drives off a horror. It is heard for miles. Dread +2 when attuned or used.",
+    "size": "small",
+    "uses": 0,
+    "trade_value": 6,
+    "icon": "bell",
+    "rules": [
+      "rule-relic-iron-bell"
+    ]
+  },
+  {
+    "type": "item",
+    "id": "grave-candle",
+    "name": "Grave Candle",
+    "description": "A candle whose light the dead avoid. It burns cold. Dread +1 when attuned or used.",
+    "size": "small",
+    "uses": 0,
+    "trade_value": 4,
+    "icon": "candle",
+    "rules": [
+      "rule-relic-grave-candle"
+    ]
+  },
+  {
+    "type": "item",
+    "id": "chained-book",
+    "name": "Chained Book",
+    "description": "Ask a question of something old. It asks one back. Dread +3 when attuned or used.",
+    "size": "small",
+    "uses": 0,
+    "trade_value": 10,
+    "icon": "book",
+    "rules": [
+      "rule-relic-chained-book"
+    ]
+  },
+  {
+    "type": "item",
+    "id": "reliquary",
+    "name": "Reliquary",
+    "description": "A heavy reliquary: +1 armor against the eldritch. Obvious and slow. Dread +2 when attuned or used.",
+    "size": "normal",
+    "uses": 0,
+    "trade_value": 8,
+    "icon": "chest",
+    "rules": [
+      "rule-relic-reliquary"
+    ]
+  },
+  {
+    "type": "item",
+    "id": "holy-book",
+    "name": "Holy Book",
+    "description": "A worn book of scripture and rites. It steadies the hand and the voice. Dread +1 when attuned or used.",
+    "size": "small",
+    "uses": 0,
+    "trade_value": 3,
+    "icon": "book",
+    "rules": [
+      "rule-relic-holy-book"
+    ]
+  }
+]

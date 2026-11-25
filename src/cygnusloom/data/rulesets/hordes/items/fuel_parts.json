@@ -1,0 +1,42 @@
+[
+  {
+    "type": "item",
+    "id": "fuel-can",
+    "name": "Fuel Can",
+    "description": "A jerry can with fuel in it. It burns, it drives, and it is heavy.",
+    "size": "normal",
+    "uses": 4,
+    "trade_value": 5,
+    "icon": "oil-flask"
+  },
+  {
+    "type": "item",
+    "id": "gas-can",
+    "name": "Gas Can",
+    "description": "A plastic can of gasoline, half full and smelling of the old world.",
+    "size": "normal",
+    "uses": 4,
+    "trade_value": 4,
+    "icon": "oil-flask"
+  },
+  {
+    "type": "item",
+    "id": "biodiesel",
+    "name": "Biodiesel",
+    "description": "A can of biodiesel, filtered and ready for a diesel engine.",
+    "size": "normal",
+    "uses": 4,
+    "trade_value": 4,
+    "icon": "oil-flask"
+  },
+  {
+    "type": "item",
+    "id": "parts",
+    "name": "Parts",
+    "description": "A crate of mechanical parts: belts, bolts, wire, and salvage.",
+    "size": "normal",
+    "uses": 6,
+    "trade_value": 3,
+    "icon": "tool"
+  }
+]

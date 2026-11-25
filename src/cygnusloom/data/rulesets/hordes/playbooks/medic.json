@@ -1,0 +1,30 @@
+[
+  {
+    "type": "template",
+    "id": "medic",
+    "kind": "playbook",
+    "icon": "herbalism-kit",
+    "name": "Medic",
+    "description": "You kept people alive before the fall and you keep them alive now. Your pack is a hospital in miniature, and everyone knows your name because they have needed it.",
+    "names": "survivor-names",
+    "stats": {
+      "know_how": 1
+    },
+    "skills": {
+      "medicine": 1,
+      "survival": 1
+    },
+    "features": [
+      "field-surgery"
+    ],
+    "items": [
+      "medkit",
+      "pistol",
+      "bandages",
+      "antibiotics",
+      "morphine",
+      "water"
+    ],
+    "order": 1
+  }
+]

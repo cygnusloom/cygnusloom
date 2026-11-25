@@ -1,0 +1,132 @@
+[
+  {
+    "type": "item",
+    "id": "cyber-eye",
+    "name": "Cyber Eye",
+    "description": "An eye implant: +1 to aimed shots and low-light vision. Rejection +1. Needs power or maintenance; a dead implant is inert.",
+    "size": "tiny",
+    "uses": 0,
+    "trade_value": 6,
+    "icon": "amulet",
+    "rules": [
+      "rule-cybernetic-cyber-eye"
+    ]
+  },
+  {
+    "type": "item",
+    "id": "targeting-link",
+    "name": "Targeting Link",
+    "description": "A military targeting link: +1 Firearms. Rejection +2. Needs power or maintenance; a dead implant is inert.",
+    "size": "tiny",
+    "uses": 0,
+    "trade_value": 8,
+    "icon": "amulet",
+    "rules": [
+      "rule-cybernetic-targeting-link"
+    ]
+  },
+  {
+    "type": "item",
+    "id": "subdermal-armor",
+    "name": "Subdermal Armor",
+    "description": "Woven armor under the skin: +1 armor, obvious to scanners. Rejection +2. Needs power or maintenance; a dead implant is inert.",
+    "size": "tiny",
+    "uses": 0,
+    "trade_value": 8,
+    "icon": "rod",
+    "rules": [
+      "rule-cybernetic-subdermal-armor"
+    ]
+  },
+  {
+    "type": "item",
+    "id": "prosthetic-arm",
+    "name": "Prosthetic Arm",
+    "description": "A powered prosthetic: +1 Grit for feats of strength. Rejection +1. Needs power or maintenance; a dead implant is inert.",
+    "size": "tiny",
+    "uses": 0,
+    "trade_value": 6,
+    "icon": "rod",
+    "rules": [
+      "rule-cybernetic-prosthetic-arm"
+    ]
+  },
+  {
+    "type": "item",
+    "id": "prosthetic-leg",
+    "name": "Prosthetic Leg",
+    "description": "A powered leg: +1 Athletics and no penalty from a ruined leg. Rejection +1. Needs power or maintenance; a dead implant is inert.",
+    "size": "tiny",
+    "uses": 0,
+    "trade_value": 6,
+    "icon": "rod",
+    "rules": [
+      "rule-cybernetic-prosthetic-leg"
+    ]
+  },
+  {
+    "type": "item",
+    "id": "neural-jack",
+    "name": "Neural Jack",
+    "description": "A skull port: +1 Computer Use and a direct interface with machines. Rejection +2. Needs power or maintenance; a dead implant is inert.",
+    "size": "tiny",
+    "uses": 0,
+    "trade_value": 7,
+    "icon": "rod",
+    "rules": [
+      "rule-cybernetic-neural-jack"
+    ]
+  },
+  {
+    "type": "item",
+    "id": "adrenal-pump",
+    "name": "Adrenal Pump",
+    "description": "An implant that once per scene adds +1 to a physical roll, and is addictive. Rejection +2. Needs power or maintenance; a dead implant is inert.",
+    "size": "tiny",
+    "uses": 0,
+    "trade_value": 7,
+    "icon": "amulet",
+    "rules": [
+      "rule-cybernetic-adrenal-pump"
+    ]
+  },
+  {
+    "type": "item",
+    "id": "data-port",
+    "name": "Data Port",
+    "description": "A visible data port: store and read drives, +1 to recall. Rejection +1. Needs power or maintenance; a dead implant is inert.",
+    "size": "tiny",
+    "uses": 0,
+    "trade_value": 5,
+    "icon": "amulet",
+    "rules": [
+      "rule-cybernetic-data-port"
+    ]
+  },
+  {
+    "type": "item",
+    "id": "built-in-tool",
+    "name": "Built-in Tool",
+    "description": "A folding tool in the forearm: a tool without hands. Rejection +1. Needs power or maintenance; a dead implant is inert.",
+    "size": "tiny",
+    "uses": 0,
+    "trade_value": 5,
+    "icon": "amulet",
+    "rules": [
+      "rule-cybernetic-built-in-tool"
+    ]
+  },
+  {
+    "type": "item",
+    "id": "black-market-heart",
+    "name": "Black-Market Heart",
+    "description": "A replacement heart that ignores one dying result. Rare and dangerous. Rejection +3. Needs power or maintenance; a dead implant is inert.",
+    "size": "tiny",
+    "uses": 0,
+    "trade_value": 10,
+    "icon": "amulet",
+    "rules": [
+      "rule-cybernetic-black-market-heart"
+    ]
+  }
+]

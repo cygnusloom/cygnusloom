@@ -1,0 +1,337 @@
+[
+  {
+    "type": "threat",
+    "id": "walker",
+    "name": "Walker",
+    "kind": "zombie",
+    "description": "Slow, relentless, and never alone. It follows noise and does not stop.",
+    "harm": 2,
+    "armor": 0,
+    "attack": 2,
+    "tags": [
+      "shambling",
+      "relentless",
+      "infection-risk"
+    ],
+    "moves": [
+      "grab",
+      "bite",
+      "moan"
+    ],
+    "magnitude": 0,
+    "icon": "undead"
+  },
+  {
+    "type": "threat",
+    "id": "runner",
+    "name": "Runner",
+    "kind": "zombie",
+    "description": "Fast, fragile, and loud. It closes distance before anyone is ready.",
+    "harm": 2,
+    "armor": 0,
+    "attack": 2,
+    "tags": [
+      "fast",
+      "fragile"
+    ],
+    "moves": [
+      "sprint",
+      "leap",
+      "drag down"
+    ],
+    "magnitude": 0,
+    "icon": "undead"
+  },
+  {
+    "type": "threat",
+    "id": "crawler",
+    "name": "Crawler",
+    "kind": "zombie",
+    "description": "Low, quiet, and easy to miss until it has an ankle.",
+    "harm": 1,
+    "armor": 0,
+    "attack": 1,
+    "tags": [
+      "low",
+      "quiet"
+    ],
+    "moves": [
+      "grab ankle",
+      "crawl"
+    ],
+    "magnitude": 0,
+    "icon": "undead"
+  },
+  {
+    "type": "threat",
+    "id": "bloater",
+    "name": "Bloater",
+    "kind": "zombie",
+    "description": "Swollen and slow, and dangerous when it bursts.",
+    "harm": 3,
+    "armor": 1,
+    "attack": 3,
+    "tags": [
+      "swollen",
+      "burst"
+    ],
+    "moves": [
+      "burst",
+      "stagger"
+    ],
+    "magnitude": 0,
+    "icon": "undead"
+  },
+  {
+    "type": "threat",
+    "id": "spitter",
+    "name": "Spitter",
+    "kind": "zombie",
+    "description": "Keeps its distance and spits something corrosive.",
+    "harm": 2,
+    "armor": 0,
+    "attack": 2,
+    "tags": [
+      "ranged",
+      "corrosive"
+    ],
+    "moves": [
+      "spit",
+      "retreat"
+    ],
+    "magnitude": 0,
+    "icon": "undead"
+  },
+  {
+    "type": "threat",
+    "id": "brute",
+    "name": "Brute",
+    "kind": "zombie",
+    "description": "Strong enough to break a door, a barricade, or a person.",
+    "harm": 4,
+    "armor": 2,
+    "attack": 3,
+    "tags": [
+      "strong",
+      "slow"
+    ],
+    "moves": [
+      "smash",
+      "throw"
+    ],
+    "magnitude": 0,
+    "icon": "undead"
+  },
+  {
+    "type": "threat",
+    "id": "screamer",
+    "name": "Screamer",
+    "kind": "zombie",
+    "description": "Loud and fragile. Its scream brings everything else.",
+    "harm": 1,
+    "armor": 0,
+    "attack": 0,
+    "tags": [
+      "loud",
+      "fragile"
+    ],
+    "moves": [
+      "scream",
+      "flee"
+    ],
+    "magnitude": 0,
+    "icon": "undead"
+  },
+  {
+    "type": "threat",
+    "id": "swarm",
+    "name": "Swarm",
+    "kind": "zombie",
+    "description": "A crawling mass of small dead things. Individually nothing; together a hazard.",
+    "harm": 2,
+    "armor": 0,
+    "attack": 2,
+    "tags": [
+      "swarm",
+      "small"
+    ],
+    "moves": [
+      "engulf",
+      "crawl"
+    ],
+    "magnitude": 0,
+    "icon": "undead"
+  },
+  {
+    "type": "threat",
+    "id": "horde",
+    "name": "Horde",
+    "kind": "horde",
+    "description": "One threat with magnitude 1-5: a knot, a street, a block, a district, or a tide. It follows noise and can split.",
+    "harm": 3,
+    "armor": 0,
+    "attack": 3,
+    "tags": [
+      "horde",
+      "relentless",
+      "loud"
+    ],
+    "moves": [
+      "surge",
+      "surround",
+      "drag down",
+      "break through",
+      "feed",
+      "call"
+    ],
+    "magnitude": 1,
+    "icon": "undead"
+  },
+  {
+    "type": "threat",
+    "id": "eldritch-entity",
+    "name": "Eldritch Entity",
+    "kind": "horror",
+    "description": "Immune to mundane harm unless its weakness is found. It causes Dread and cannot be reasoned with.",
+    "harm": 4,
+    "armor": 2,
+    "attack": 3,
+    "tags": [
+      "eldritch",
+      "incomprehensible",
+      "dread"
+    ],
+    "moves": [
+      "whisper",
+      "loom",
+      "unmake"
+    ],
+    "magnitude": 0,
+    "icon": "aberration"
+  },
+  {
+    "type": "threat",
+    "id": "strange-horror",
+    "name": "Strange Horror",
+    "kind": "horror",
+    "description": "Unique and patient. Its moves change the world, not just the fight.",
+    "harm": 3,
+    "armor": 1,
+    "attack": 2,
+    "tags": [
+      "unique",
+      "fear",
+      "dread"
+    ],
+    "moves": [
+      "stalk",
+      "warp",
+      "feast"
+    ],
+    "magnitude": 0,
+    "icon": "aberration"
+  },
+  {
+    "type": "threat",
+    "id": "raider",
+    "name": "Raider",
+    "kind": "survivor",
+    "description": "Armed, cunning, and willing to take what it needs.",
+    "harm": 2,
+    "armor": 1,
+    "attack": 2,
+    "tags": [
+      "armed",
+      "cunning"
+    ],
+    "moves": [
+      "shoot",
+      "flank",
+      "demand"
+    ],
+    "magnitude": 0,
+    "icon": "humanoid"
+  },
+  {
+    "type": "threat",
+    "id": "militia",
+    "name": "Militia",
+    "kind": "survivor",
+    "description": "Disciplined and armed, and used to being obeyed.",
+    "harm": 3,
+    "armor": 2,
+    "attack": 3,
+    "tags": [
+      "disciplined",
+      "armed"
+    ],
+    "moves": [
+      "volley",
+      "advance",
+      "hold"
+    ],
+    "magnitude": 0,
+    "icon": "humanoid"
+  },
+  {
+    "type": "threat",
+    "id": "cultist",
+    "name": "Cultist",
+    "kind": "survivor",
+    "description": "A fanatic who believes the dead are a lesson.",
+    "harm": 2,
+    "armor": 0,
+    "attack": 2,
+    "tags": [
+      "fanatic",
+      "occult"
+    ],
+    "moves": [
+      "chant",
+      "knife",
+      "summon"
+    ],
+    "magnitude": 0,
+    "icon": "humanoid"
+  },
+  {
+    "type": "threat",
+    "id": "infected-dog",
+    "name": "Infected Dog",
+    "kind": "animal",
+    "description": "Fast, pack-hunting, and wrong in the eyes.",
+    "harm": 2,
+    "armor": 0,
+    "attack": 2,
+    "tags": [
+      "fast",
+      "pack"
+    ],
+    "moves": [
+      "chase",
+      "maul"
+    ],
+    "magnitude": 0,
+    "icon": "beast"
+  },
+  {
+    "type": "threat",
+    "id": "bear",
+    "name": "Bear",
+    "kind": "animal",
+    "description": "Strong and territorial. It would rather bluff than fight, until it would not.",
+    "harm": 4,
+    "armor": 1,
+    "attack": 3,
+    "tags": [
+      "strong",
+      "territorial"
+    ],
+    "moves": [
+      "maul",
+      "charge"
+    ],
+    "magnitude": 0,
+    "icon": "beast"
+  }
+]

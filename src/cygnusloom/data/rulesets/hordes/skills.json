@@ -1,0 +1,72 @@
+[
+  {
+    "type": "skill",
+    "id": "firearms",
+    "name": "Firearms",
+    "icon": "crossbow",
+    "description": "Shooting, reloading, and caring for guns."
+  },
+  {
+    "type": "skill",
+    "id": "melee",
+    "name": "Melee",
+    "icon": "sword",
+    "description": "Hand weapons, brawling, and holding a line."
+  },
+  {
+    "type": "skill",
+    "id": "athletics",
+    "name": "Athletics",
+    "icon": "boots",
+    "description": "Climbing, running, forcing, and swimming."
+  },
+  {
+    "type": "skill",
+    "id": "stealth",
+    "name": "Stealth",
+    "icon": "footprints",
+    "description": "Sneaking, hiding, and ambushing."
+  },
+  {
+    "type": "skill",
+    "id": "scavenging",
+    "name": "Scavenging",
+    "icon": "pouch",
+    "description": "Searching sites, spotting loot, and salvage."
+  },
+  {
+    "type": "skill",
+    "id": "survival",
+    "name": "Survival",
+    "icon": "campfire",
+    "description": "Foraging, tracking, weather, and shelter."
+  },
+  {
+    "type": "skill",
+    "id": "mechanics",
+    "name": "Mechanics",
+    "icon": "tool",
+    "description": "Repairs, crafting, and vehicles."
+  },
+  {
+    "type": "skill",
+    "id": "medicine",
+    "name": "Medicine",
+    "icon": "herbalism-kit",
+    "description": "Wounds, surgery, infection, and medicine."
+  },
+  {
+    "type": "skill",
+    "id": "driving",
+    "name": "Driving",
+    "icon": "wagon",
+    "description": "Vehicles, chases, and road hazards."
+  },
+  {
+    "type": "skill",
+    "id": "persuasion",
+    "name": "Persuasion",
+    "icon": "speech",
+    "description": "Parley, trade, command, and morale."
+  }
+]

@@ -1,0 +1,14 @@
+[
+  {
+    "type": "world",
+    "id": "unwritten-apocalypse",
+    "icon": "globe",
+    "name": "The Unwritten Apocalypse",
+    "recommended_rulesets": [
+      "hordes"
+    ],
+    "blurb": "A modern world in its first winter after the dead rose. The cause is unknown, the old systems are gone, and the survivors hold a few shelters.",
+    "description": "A modern world in its first winter after the dead rose. The cause is unknown. The old systems are gone. Survivors hold a few shelters, scavenge the ruins, and listen for the horde. The GM invents the region, the shelter, the survivors, and the trouble from the setting tables: what happened, where the party is, what season it is, what shelter they hold, what settlements and powers are near, what threat is closest, and what omen came first. Nothing here is fixed. Play begins a few months after the fall, with the first winter closing in and the dead as the weather.",
+    "rule_set": "hordes"
+  }
+]

@@ -1,0 +1,122 @@
+[
+  {
+    "type": "item",
+    "id": "medkit",
+    "name": "Medkit",
+    "description": "A stocked trauma kit: dressings, antiseptic, sutures, and a little morphine.",
+    "size": "normal",
+    "uses": 5,
+    "trade_value": 6,
+    "icon": "herbalism-kit"
+  },
+  {
+    "type": "item",
+    "id": "bandages",
+    "name": "Bandages",
+    "description": "Clean dressings and tape.",
+    "size": "small",
+    "uses": 3,
+    "trade_value": 1,
+    "icon": "herbalism-kit"
+  },
+  {
+    "type": "item",
+    "id": "antibiotics",
+    "name": "Antibiotics",
+    "description": "A course of broad-spectrum antibiotics. The most valuable thing in most rooms.",
+    "size": "tiny",
+    "uses": 3,
+    "trade_value": 6,
+    "icon": "potion"
+  },
+  {
+    "type": "item",
+    "id": "morphine",
+    "name": "Morphine",
+    "description": "Two syringes of morphine. Pain relief, and a way to lose an afternoon.",
+    "size": "tiny",
+    "uses": 2,
+    "trade_value": 5,
+    "icon": "potion"
+  },
+  {
+    "type": "item",
+    "id": "first-aid-kit",
+    "name": "First Aid Kit",
+    "description": "A small kit for cuts, sprains, and burns.",
+    "size": "small",
+    "uses": 3,
+    "trade_value": 3,
+    "icon": "herbalism-kit"
+  },
+  {
+    "type": "item",
+    "id": "painkillers",
+    "name": "Painkillers",
+    "description": "A bottle of painkillers. They help, and they are easy to rely on.",
+    "size": "tiny",
+    "uses": 4,
+    "trade_value": 3,
+    "icon": "potion"
+  },
+  {
+    "type": "item",
+    "id": "adrenaline",
+    "name": "Adrenaline",
+    "description": "An auto-injector. One scene of borrowed speed, then a price.",
+    "size": "tiny",
+    "uses": 1,
+    "trade_value": 4,
+    "icon": "potion"
+  },
+  {
+    "type": "item",
+    "id": "insulin",
+    "name": "Insulin",
+    "description": "A cold pack of insulin. For someone, it is the whole world.",
+    "size": "tiny",
+    "uses": 3,
+    "trade_value": 6,
+    "icon": "potion"
+  },
+  {
+    "type": "item",
+    "id": "blood-bag",
+    "name": "Blood Bag",
+    "description": "A bag of blood and a giving set. Heavy, fragile, and sometimes the only answer.",
+    "size": "small",
+    "uses": 1,
+    "trade_value": 5,
+    "icon": "potion"
+  },
+  {
+    "type": "item",
+    "id": "antiseptic",
+    "name": "Antiseptic",
+    "description": "A bottle of antiseptic. Clean work saves more lives than brave work.",
+    "size": "small",
+    "uses": 3,
+    "trade_value": 3,
+    "icon": "potion"
+  },
+  {
+    "type": "item",
+    "id": "experimental-serum",
+    "name": "Experimental Serum",
+    "description": "A labelled syringe from a lab that was studying something worse.",
+    "size": "tiny",
+    "uses": 1,
+    "trade_value": 9,
+    "icon": "potion"
+  },
+  {
+    "type": "item",
+    "id": "field-surgery-kit",
+    "name": "Field Surgery Kit",
+    "description": "Sterile cloth, a scalpel, forceps, and a suture kit.",
+    "size": "normal",
+    "uses": 2,
+    "trade_value": 6,
+    "icon": "kit-knife"
+  }
+]
