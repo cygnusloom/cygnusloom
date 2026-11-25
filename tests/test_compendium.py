@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import re
 from collections.abc import Callable
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 
+from cygnusloom.content.library import ContentLibrary
 from cygnusloom.services.compendium import (
     Compendium,
     CompendiumSection,
@@ -14,8 +16,10 @@ from cygnusloom.services.compendium import (
 )
 from cygnusloom.services.events import is_hidden, name_key
 from cygnusloom.services.views import world_state_text
+from cygnusloom.web.rendering import link_compendium
 from tests import factories
 from tests.conftest import content_library
+from tests.support import DEFAULT_RULE_SET, DEFAULT_WORLD, content_tree, world_definitions
 from tests.test_world import NO_CAMPAIGN
 
 
@@ -126,6 +130,90 @@ def test_sheet_links_point_at_character_content():
     assert compendium.sheet_links[feature.name] in _entry_ids(compendium, "abilities")
     assert compendium.sheet_links[stat.name] in _entry_ids(compendium, "stats")
     assert compendium.sheet_links[counter.label] in _entry_ids(compendium, "advancement")
+
+
+def test_the_peoples_of_the_setting_fill_the_peoples_section():
+    library = content_library()
+    rules = library.rule_sets["worldswithoutnumber"]
+    compendium = compendium_view(library, "worldswithoutnumber", "unwritten-world")
+
+    section = _sections(compendium)["peoples"]
+    assert section.name == "Peoples"
+    assert section.tab == "world"
+    assert [entry.name for entry in section.entries] == ["Dwarf", "Elf", "Human"]
+    people = next(entry for entry in section.entries if entry.name == "Dwarf")
+    dwarf = next(entry for entry in rules.species if entry.name == "Dwarf")
+    assert people.summary == dwarf.blurb
+    assert people.text == dwarf.culture
+    assert people.source == "rules"
+    assert set(people.tags) == {"dwarves", "dwarven"}
+    assert people.id == "compendium-peoples-dwarf"
+
+    # A name, plural, or adjective finds the same entry from a statblock or sheet.
+    assert compendium.sheet_links["Dwarf"] == people.id
+    assert compendium.sheet_links["dwarves"] == people.id
+    assert compendium.sheet_links["dwarven"] == people.id
+    linked = link_compendium("People: Dwarf", compendium.sheet_links)
+    assert f'<a href="#{people.id}" data-view-link="compendium">Dwarf</a>' in linked
+
+    # A rule set that declares no peoples adds no peoples section.
+    cairn = compendium_view(library, "cairn2e", "twin-lakes")
+    assert "peoples" not in _sections(cairn)
+
+
+def test_a_worlds_peoples_replace_the_rule_sets_in_the_compendium(tmp_path: Path):
+    tree = content_tree(
+        tmp_path,
+        definitions=[
+            {
+                "type": "species",
+                "id": "dwarf",
+                "name": "Dwarf",
+                "plural": "dwarves",
+                "adjective": "dwarven",
+                "blurb": "Stone folk.",
+                "culture": "They live under the mountain.",
+            }
+        ],
+        world=[
+            *world_definitions(),
+            {
+                "type": "species",
+                "id": "deep-elf",
+                "name": "Deep Elf",
+                "plural": "deep elves",
+                "adjective": "deep-elven",
+                "blurb": "Pale folk of the under roads.",
+                "culture": "They never see the sun.",
+            },
+        ],
+    )
+    library = ContentLibrary.load(tree)
+    compendium = compendium_view(library, DEFAULT_RULE_SET, DEFAULT_WORLD)
+
+    section = _sections(compendium)["peoples"]
+    assert [entry.name for entry in section.entries] == ["Deep Elf"]
+    entry = section.entries[0]
+    assert entry.source == "world"
+    assert entry.summary == "Pale folk of the under roads."
+    assert entry.text == "They never see the sun."
+    assert set(entry.tags) == {"deep elves", "deep-elven"}
+
+
+def test_a_character_option_keeps_the_sheet_link_over_a_people_of_the_same_name():
+    """The D&D species template is the character option a sheet names, while the peoples
+    entry is the setting's lore, so the template keeps the sheet link."""
+    compendium = compendium_view(content_library(), "dnd-srd-2024", "unwritten-world")
+    people = next(
+        entry for entry in _sections(compendium)["peoples"].entries if entry.name == "Human"
+    )
+
+    assert compendium.sheet_links["Human"] in _entry_ids(compendium, "options")
+    assert compendium.sheet_links["humans"] == people.id
+    assert compendium.sheet_links["Human"] != people.id
+    option_id = compendium.sheet_links["Human"]
+    sheet = link_compendium("Species: Human", compendium.sheet_links)
+    assert f'<a href="#{option_id}"' in sheet
 
 
 def test_item_links_name_the_items_section_entries():
