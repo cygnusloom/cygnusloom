@@ -11,8 +11,7 @@ from typing import Any
 
 from sqlmodel import Session
 
-from cygnusloom.content.character import CharacterSpec
-from cygnusloom.content.character import ItemTemplate
+from cygnusloom.content.character import CharacterSpec, ItemTemplate
 from cygnusloom.content.library import (
     ALL_CONDITIONS,
     PICKED,

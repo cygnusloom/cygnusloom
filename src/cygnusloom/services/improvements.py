@@ -11,7 +11,6 @@ from cygnusloom.content.character import CharacterSpec
 from cygnusloom.content.library import ImprovementDefinition
 from cygnusloom.services.crafting import _consume  # shared input spending
 from cygnusloom.services.events import (
-    EffectNoted,
     ImprovementAdded,
     ImprovementAdvanced,
     ImprovementRemoved,

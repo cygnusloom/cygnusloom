@@ -8,7 +8,6 @@ from typing import Any
 
 from sqlmodel import Session
 
-from cygnusloom.content.character import CharacterSpec
 from cygnusloom.services import effects
 from cygnusloom.services.death import begin_dying
 from cygnusloom.services.effects import EffectContext
