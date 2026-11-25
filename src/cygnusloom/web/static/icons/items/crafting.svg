@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Crafting</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="25" cy="25" r="12" fill="#a7adb2"/>
+    <circle cx="25" cy="25" r="4" fill="#f5f0e4"/>
+    <path d="M25 9 V13 M25 37 V41 M9 25 H13 M37 25 H41 M14 14 L17 17 M33 33 L36 36 M36 14 L33 17 M17 33 L14 36" stroke-width="2"/>
+    <path d="M40 40 L54 54 M52 38 L56 42" stroke="#8b5e3c" stroke-width="5"/>
+  </g>
+</svg>

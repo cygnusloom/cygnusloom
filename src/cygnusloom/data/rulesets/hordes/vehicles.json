@@ -12,7 +12,7 @@
     "seats": 1,
     "cargo": 1,
     "noise": 0,
-    "icon": "footprints"
+    "icon": "bicycle"
   },
   {
     "type": "vehicle",
@@ -27,7 +27,7 @@
     "seats": 1,
     "cargo": 1,
     "noise": 3,
-    "icon": "wagon"
+    "icon": "motorcycle"
   },
   {
     "type": "vehicle",
@@ -42,7 +42,7 @@
     "seats": 4,
     "cargo": 2,
     "noise": 2,
-    "icon": "wagon"
+    "icon": "car"
   },
   {
     "type": "vehicle",
@@ -57,7 +57,7 @@
     "seats": 2,
     "cargo": 3,
     "noise": 2,
-    "icon": "wagon"
+    "icon": "truck"
   },
   {
     "type": "vehicle",
@@ -72,7 +72,7 @@
     "seats": 6,
     "cargo": 4,
     "noise": 2,
-    "icon": "wagon"
+    "icon": "truck"
   },
   {
     "type": "vehicle",
@@ -87,7 +87,7 @@
     "seats": 2,
     "cargo": 6,
     "noise": 3,
-    "icon": "wagon"
+    "icon": "truck"
   },
   {
     "type": "vehicle",
@@ -102,7 +102,7 @@
     "seats": 3,
     "cargo": 4,
     "noise": 3,
-    "icon": "wagon"
+    "icon": "truck"
   },
   {
     "type": "vehicle",
@@ -117,7 +117,7 @@
     "seats": 4,
     "cargo": 3,
     "noise": 2,
-    "icon": "wagon"
+    "icon": "truck"
   },
   {
     "type": "vehicle",

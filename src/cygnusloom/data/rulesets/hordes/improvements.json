@@ -18,7 +18,7 @@
     "comfort": 0,
     "storage": 0,
     "requires": [],
-    "icon": "fence"
+    "icon": "barricade"
   },
   {
     "type": "improvement",
@@ -212,7 +212,7 @@
     "comfort": 1,
     "storage": 0,
     "requires": [],
-    "icon": "crystal"
+    "icon": "solar-panel"
   },
   {
     "type": "improvement",
@@ -239,7 +239,7 @@
     "requires": [
       "solar_panel"
     ],
-    "icon": "anvil"
+    "icon": "generator"
   },
   {
     "type": "improvement",
@@ -264,7 +264,7 @@
     "comfort": 0,
     "storage": 2,
     "requires": [],
-    "icon": "smiths-tools"
+    "icon": "workshop"
   },
   {
     "type": "improvement",
@@ -320,7 +320,7 @@
     "comfort": 0,
     "storage": 0,
     "requires": [],
-    "icon": "observatory"
+    "icon": "radio"
   },
   {
     "type": "improvement",
@@ -370,7 +370,7 @@
     "comfort": 0,
     "storage": 3,
     "requires": [],
-    "icon": "wagon"
+    "icon": "garage"
   },
   {
     "type": "improvement",
@@ -391,6 +391,6 @@
     "comfort": 1,
     "storage": 3,
     "requires": [],
-    "icon": "barrel"
+    "icon": "cellar"
   }
 ]

@@ -189,7 +189,11 @@ def test_content_migrate_cli_converts_legacy_items(
 
 def test_bundled_content_loads():
     library = bundled_library()
-    assert set(library.world_templates) == {"unwritten-world", "unwritten-academy"}
+    assert set(library.world_templates) == {
+        "unwritten-world",
+        "unwritten-academy",
+        "unwritten-apocalypse",
+    }
     assert "twin-lakes" in library.modules
     assert library.setting_template("twin-lakes").name == "Trouble in Twin Lakes"
     twin_lakes = library.setting_template("twin-lakes")
@@ -198,6 +202,7 @@ def test_bundled_content_loads():
         "academia-arcana",
         "cairn2e",
         "dnd-srd-2024",
+        "hordes",
         "worldswithoutnumber",
     }
     assert library.world_content("twin-lakes", "cairn2e").monsters

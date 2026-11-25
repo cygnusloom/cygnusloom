@@ -88,7 +88,6 @@ from cygnusloom.services import threats as threats_service
 from cygnusloom.services import timers as timers_service
 from cygnusloom.services import vehicles as vehicles_service
 from cygnusloom.services import wilderness as wilderness_service
-from cygnusloom.services.effects import EffectContext, run_effects
 from cygnusloom.services.campaign_switches import survival_needs_enabled
 from cygnusloom.services.common import (
     InvalidInput,
@@ -102,6 +101,7 @@ from cygnusloom.services.dice_tables import roll_tables as roll_dice_tables
 from cygnusloom.services.dungeon import dungeon_cycle as dungeon_cycle_service
 from cygnusloom.services.dungeon import dungeon_rules
 from cygnusloom.services.dungeon import roll_reaction as roll_reaction_service
+from cygnusloom.services.effects import EffectContext, run_effects
 from cygnusloom.services.events import (
     FOES_SIDE,
     PARTY_SIDE,
@@ -138,6 +138,7 @@ from cygnusloom.services.events import (
     SkillChanged,
     Surprised,
     TotalDefenseTaken,
+    alias_key,
     current,
     decode,
     events_since,
@@ -739,7 +740,12 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 return listed
         for catalogue in (self.items, self.character.items):
             found = next(
-                (entry for entry in catalogue.values() if same_item_name(entry.name, item)),
+                (
+                    entry
+                    for entry in catalogue.values()
+                    if same_item_name(entry.name, item)
+                    or alias_key(entry.id) == alias_key(item)
+                ),
                 None,
             )
             if found is not None:

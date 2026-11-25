@@ -792,6 +792,33 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
   border: 1px solid var(--danger); border-radius: 999px; color: var(--danger);
   background: color-mix(in srgb, var(--danger) 12%, transparent);
 }
+/* Harm and other progress tracks: filled pips read at a glance, and a threshold pip is marked
+   so the player can see where wounded or dying begins. */
+.sheet-harm {
+  display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.2rem 0.75rem;
+  border: 1px solid var(--border); border-radius: 999px; background: var(--field);
+  font-variant-numeric: tabular-nums;
+}
+.sheet-harm strong { color: var(--accent); letter-spacing: 0.05em; }
+.track { display: inline-flex; align-items: center; gap: 0.18rem; }
+.track-pip {
+  width: 0.7rem; height: 0.7rem; border: 1px solid var(--border); border-radius: 50%;
+  background: transparent;
+}
+.track-pip.filled { background: var(--accent); border-color: var(--accent); }
+.track-pip.threshold { box-shadow: 0 0 0 1px var(--danger); }
+.track-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.9rem; }
+.track-list > li { padding-bottom: 0.8rem; border-bottom: 1px solid var(--border); }
+.track-list > li:last-child { padding-bottom: 0; border-bottom: none; }
+.track-list .track { margin: 0.3rem 0; }
+.track-list p { margin: 0.2rem 0 0; }
+.item-ammo { font-variant-numeric: tabular-nums; }
+.item-condition {
+  margin-left: 0.35rem; padding: 0.05rem 0.45rem; border: 1px solid var(--border);
+  border-radius: 999px; color: var(--muted); font-size: 0.75rem;
+}
+.item-condition.worn { color: var(--warning, #b8860b); border-color: currentColor; }
+.item-condition.broken { color: var(--danger); border-color: currentColor; }
 .sheet-note { margin: 0 0 0.6rem; }
 .sheet-about { margin-top: 0.35rem; color: var(--muted); }
 .sheet-about summary { cursor: pointer; }

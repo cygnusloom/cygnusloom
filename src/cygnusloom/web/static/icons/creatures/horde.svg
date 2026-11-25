@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Horde</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10 44 Q10 34 17 31 Q16 22 23 19 Q30 16 34 23 Q38 18 44 21 Q51 25 50 33 Q57 36 57 44 V54 H10 Z" fill="#e6ddc9"/>
+    <circle cx="23" cy="30" r="3" fill="#2e2620"/>
+    <circle cx="40" cy="29" r="3" fill="#2e2620"/>
+    <path d="M27 38 H35 M30 36 V41" stroke-width="2"/>
+    <path d="M14 48 H56 M18 52 V56 M28 52 V56 M38 52 V56 M48 52 V56" stroke-width="2"/>
+  </g>
+</svg>

@@ -1363,5 +1363,70 @@
     "category": "creatures",
     "path": "creatures/horse.svg",
     "label": "Horse"
+  },
+  "horde": {
+    "category": "creatures",
+    "path": "creatures/horde.svg",
+    "label": "Horde"
+  },
+  "car": {
+    "category": "objects",
+    "path": "objects/car.svg",
+    "label": "Car"
+  },
+  "truck": {
+    "category": "objects",
+    "path": "objects/truck.svg",
+    "label": "Truck"
+  },
+  "motorcycle": {
+    "category": "objects",
+    "path": "objects/motorcycle.svg",
+    "label": "Motorcycle"
+  },
+  "bicycle": {
+    "category": "objects",
+    "path": "objects/bicycle.svg",
+    "label": "Bicycle"
+  },
+  "barricade": {
+    "category": "objects",
+    "path": "objects/barricade.svg",
+    "label": "Barricade"
+  },
+  "generator": {
+    "category": "objects",
+    "path": "objects/generator.svg",
+    "label": "Generator"
+  },
+  "solar-panel": {
+    "category": "objects",
+    "path": "objects/solar-panel.svg",
+    "label": "Solar Panel"
+  },
+  "workshop": {
+    "category": "objects",
+    "path": "objects/workshop.svg",
+    "label": "Workshop"
+  },
+  "garage": {
+    "category": "objects",
+    "path": "objects/garage.svg",
+    "label": "Garage"
+  },
+  "radio": {
+    "category": "objects",
+    "path": "objects/radio.svg",
+    "label": "Radio"
+  },
+  "cellar": {
+    "category": "objects",
+    "path": "objects/cellar.svg",
+    "label": "Cellar"
+  },
+  "crafting": {
+    "category": "items",
+    "path": "items/crafting.svg",
+    "label": "Crafting"
   }
 }

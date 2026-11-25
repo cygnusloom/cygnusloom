@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Car</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M6 38 Q6 30 14 28 L21 18 H43 L51 28 Q59 30 59 38 V47 H6 Z" fill="#6b7280"/>
+    <path d="M22 22 H33 V28 H17 Z M35 22 H42 L48 28 H35 Z" fill="#d6e4ef"/>
+    <circle cx="18" cy="47" r="6" fill="#2e2620"/>
+    <circle cx="48" cy="47" r="6" fill="#2e2620"/>
+  </g>
+</svg>

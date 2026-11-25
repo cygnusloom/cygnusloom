@@ -2282,6 +2282,40 @@ SOCIAL_CAPABILITIES = (
     "periods",
 )
 COMBAT_MODES = ("encounters", "moves", "none")
+# Tools that only make sense with initiative, encounters, and turns. A moves-mode rule set keeps
+# the turn-free harm, hazard, healing, stabilization, and armor tools but loses these.
+TURN_BASED_TOOL_IDS = frozenset(
+    {
+        "add_participant",
+        "place_participant",
+        "remove_participant",
+        "adjust_encounter_order",
+        "create_encounter_map",
+        "update_encounter_map",
+        "delete_encounter_map",
+        "start_encounter",
+        "stage_encounter",
+        "end_encounter",
+        "create_monster",
+        "resolve_attacks",
+        "attack",
+        "player_attack",
+        "retreat",
+        "player_retreat",
+        "use_turn_resource",
+        "total_defense",
+        "roll_initiative",
+        "player_initiative",
+        "check_morale",
+        "surrender",
+        "grapple",
+        "break_grapple",
+        "execute",
+        "prepare_execution",
+        "surprise",
+        "resolve_group_break",
+    }
+)
 # A capability path a `requires` or `enabled_by` entry may name. A dotted path under `social`
 # asks for one social system, such as "social.conditions"; `combat.encounters` and
 # `combat.moves` separate turn-based combat from a conversation of moves.
@@ -5058,6 +5092,9 @@ def _build_rule_set(
             raise ContentError(f"{template}: duplicate tool name {call.name!r}")
         tool_names.add(call.name)
         tool_calls[call.id] = call
+    if capabilities is not None and capabilities.combat_mode == "moves":
+        for tool_id in TURN_BASED_TOOL_IDS:
+            tool_calls.pop(tool_id, None)
     _assert_consumed(definitions, RULE_SET_DEFINITION_TYPES, template)
     return RuleSet(
         id=head.id,

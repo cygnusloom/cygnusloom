@@ -31,6 +31,7 @@ from cygnusloom.content.definitions import ContentError
 from cygnusloom.content.library import (
     TABLE_GENRES,
     AdvancementOption,
+    CampaignClockDefinition,
     CheckRules,
     ConditionRules,
     ContentLibrary,
@@ -39,6 +40,7 @@ from cygnusloom.content.library import (
     EncounterObject,
     EncounterTerrain,
     Hireling,
+    ImprovementDefinition,
     InventoryRules,
     ItemKind,
     MagicRules,
@@ -47,12 +49,15 @@ from cygnusloom.content.library import (
     MoveRules,
     PeriodRules,
     ProjectDefinition,
+    RecipeDefinition,
     RelationRules,
     RestLength,
     RuleSet,
     ShopService,
     TallyRules,
+    ThreatDefinition,
     Travel,
+    VehicleDefinition,
     Wilderness,
     WorldTemplate,
     WorldTerrain,
@@ -103,6 +108,11 @@ GROUP_ORDER = {
     "Periods": 32,
     "Tallies": 33,
     "Relations": 34,
+    "Clocks": 35,
+    "Threats": 36,
+    "Vehicles": 37,
+    "Recipes": 38,
+    "Improvements": 39,
     "Rules": 40,
     "Attached Rules": 41,
     "Conditions": 42,
@@ -133,8 +143,13 @@ SECTION_ORDER = (
     ("advancement", "characters", "Advancement"),
     ("abilities", "abilities", "Abilities"),
     ("items", "items", "Items"),
+    ("vehicles", "items", "Vehicles"),
+    ("recipes", "items", "Recipes"),
     ("bestiary", "bestiary", "Bestiary"),
+    ("threats", "bestiary", "Threats"),
     ("rules", "rules", "Rules"),
+    ("clocks", "rules", "Progress Clocks"),
+    ("improvements", "rules", "Shelter Improvements"),
     ("conditions", "rules", "Conditions"),
     ("checks", "rules", "Checks"),
     ("moves", "rules", "Moves"),
@@ -617,6 +632,16 @@ def _build(
             "condition",
             (condition.id, condition.label, name_key(condition.label)),
         )
+    for clock in rule_set.campaign_clocks.values():
+        add("clocks", f"clock:{clock.id}", _campaign_clock_draft(clock))
+    for threat in rule_set.threats.values():
+        add("threats", f"threat:{threat.id}", _threat_draft(threat))
+    for vehicle in rule_set.vehicles.values():
+        add("vehicles", f"vehicle:{vehicle.id}", _vehicle_draft(vehicle))
+    for recipe in rule_set.recipes.values():
+        add("recipes", f"recipe:{recipe.id}", _recipe_draft(recipe))
+    for improvement in rule_set.improvements.values():
+        add("improvements", f"improvement:{improvement.id}", _improvement_draft(improvement))
     for check in rule_set.checks.values():
         add("checks", f"check:{check.id}", _check_draft(check))
     for move in rule_set.moves.values():
@@ -898,6 +923,152 @@ def _item_group(item: ItemTemplate) -> str:
 
 def _effect_text(values: Mapping[str, object]) -> str:
     return ", ".join(f"{key}={value}" for key, value in values.items())
+
+
+def _threshold_lines(thresholds: Mapping[int, Sequence[Mapping[str, object]]]) -> list[str]:
+    """The effects of crossing each threshold, in ascending order."""
+    lines: list[str] = []
+    for value in sorted(thresholds):
+        effects = thresholds[value]
+        text = "; ".join(_effect_text(effect) for effect in effects) or "the clock advances"
+        lines.append(f"At {value}: {text}")
+    return lines
+
+
+def _campaign_clock_draft(clock: CampaignClockDefinition) -> _Draft:
+    lines = [clock.description] if clock.description else []
+    lines.append(f"{clock.segments} segments.")
+    if clock.initial:
+        lines.append(f"Starts at {clock.initial}.")
+    lines.extend(_threshold_lines(clock.thresholds))
+    return _Draft(
+        name=clock.label,
+        summary=_first_sentence(clock.description),
+        text="\n".join(lines),
+        group="Clocks",
+        icon="clock",
+    )
+
+
+def _threat_draft(threat: ThreatDefinition) -> _Draft:
+    lines = [threat.description] if threat.description else []
+    details = [f"Kind: {threat.kind}", f"Harm capacity: {threat.harm}"]
+    if threat.armor:
+        details.append(f"Armor: {threat.armor}")
+    if threat.attack:
+        details.append(f"Harm dealt: {threat.attack}")
+    if threat.magnitude:
+        details.append(f"Magnitude: {threat.magnitude}")
+    lines.append("; ".join(details))
+    if threat.tags:
+        lines.append("Tags: " + ", ".join(threat.tags))
+    if threat.moves:
+        lines.append("Moves: " + "; ".join(threat.moves))
+    return _Draft(
+        name=threat.name,
+        summary=_first_sentence(threat.description),
+        text="\n".join(lines),
+        group="Threats",
+        icon=threat.icon or "",
+    )
+
+
+def _vehicle_draft(vehicle: VehicleDefinition) -> _Draft:
+    lines = [vehicle.description] if vehicle.description else []
+    lines.append(
+        "; ".join(
+            (
+                f"Speed: {vehicle.speed}",
+                f"Handling: {vehicle.handling}",
+                f"Armor: {vehicle.armor}",
+                f"Condition: {vehicle.condition_max}",
+                f"Fuel: {vehicle.fuel_max}",
+                f"Seats: {vehicle.seats}",
+                f"Cargo: {vehicle.cargo}",
+                f"Noise: {vehicle.noise}",
+            )
+        )
+    )
+    return _Draft(
+        name=vehicle.name,
+        summary=_first_sentence(vehicle.description),
+        text="\n".join(lines),
+        group="Vehicles",
+        icon=vehicle.icon or "",
+    )
+
+
+def _recipe_input_text(entry: Mapping[str, object]) -> str:
+    item = entry.get("item", "")
+    uses = entry.get("uses", 1)
+    return f"{uses} × {item}" if uses != 1 else str(item)
+
+
+def _recipe_draft(recipe: RecipeDefinition) -> _Draft:
+    lines = [recipe.description] if recipe.description else []
+    lines.append(
+        "; ".join(
+            (
+                f"Skill: {recipe.skill}",
+                f"Difficulty: {recipe.difficulty}",
+                f"Hours: {recipe.hours}",
+            )
+        )
+    )
+    if recipe.inputs:
+        lines.append("Inputs: " + ", ".join(_recipe_input_text(entry) for entry in recipe.inputs))
+    if recipe.tools:
+        lines.append("Tools: " + ", ".join(recipe.tools))
+    output = recipe.output
+    output_text = _recipe_input_text(output)
+    if output.get("condition"):
+        output_text += f" ({output['condition']})"
+    lines.append("Output: " + output_text)
+    if recipe.risk:
+        lines.append(f"Risk: {recipe.risk}")
+    return _Draft(
+        name=recipe.name,
+        summary=_first_sentence(recipe.description),
+        text="\n".join(lines),
+        group="Recipes",
+        icon=recipe.icon or "",
+    )
+
+
+def _improvement_draft(improvement: ImprovementDefinition) -> _Draft:
+    lines = [improvement.description] if improvement.description else []
+    lines.append(
+        "; ".join(
+            (
+                f"Skill: {improvement.skill}",
+                f"Difficulty: {improvement.difficulty}",
+                f"Hours: {improvement.hours}",
+            )
+        )
+    )
+    if improvement.cost:
+        lines.append("Cost: " + ", ".join(_recipe_input_text(entry) for entry in improvement.cost))
+    bonuses = [
+        f"{label} +{value}"
+        for label, value in (
+            ("Defense", improvement.defense),
+            ("Security", improvement.security),
+            ("Comfort", improvement.comfort),
+            ("Storage", improvement.storage),
+        )
+        if value
+    ]
+    if bonuses:
+        lines.append("Grants: " + ", ".join(bonuses))
+    if improvement.requires:
+        lines.append("Requires: " + ", ".join(improvement.requires))
+    return _Draft(
+        name=improvement.name,
+        summary=_first_sentence(improvement.description),
+        text="\n".join(lines),
+        group="Improvements",
+        icon=improvement.icon or "",
+    )
 
 
 def _feature_text(

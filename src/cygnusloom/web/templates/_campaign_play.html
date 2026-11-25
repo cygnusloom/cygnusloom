@@ -217,6 +217,9 @@
               {% if factions %}<button type="button" class="tab" role="tab" id="tab-factions" aria-controls="panel-factions" aria-selected="false" tabindex="-1">Factions</button>{% endif %}
               {% if projects %}<button type="button" class="tab" role="tab" id="tab-projects" aria-controls="panel-projects" aria-selected="false" tabindex="-1">Projects</button>{% endif %}
               <button type="button" class="tab" role="tab" id="tab-inventory" aria-controls="panel-inventory" aria-selected="false" tabindex="-1">Inventory</button>
+              {% if scene.clocks %}<button type="button" class="tab" role="tab" id="tab-clocks" aria-controls="panel-clocks" aria-selected="false" tabindex="-1">Clocks</button>{% endif %}
+              {% if scene.threats %}<button type="button" class="tab" role="tab" id="tab-threats" aria-controls="panel-threats" aria-selected="false" tabindex="-1">Threats</button>{% endif %}
+              {% if scene.improvements or scene.vehicles %}<button type="button" class="tab" role="tab" id="tab-shelter" aria-controls="panel-shelter" aria-selected="false" tabindex="-1">Shelter</button>{% endif %}
               {% if not single_player %}<button type="button" class="tab" role="tab" id="tab-players" aria-controls="panel-players" aria-selected="false" tabindex="-1">Players</button>{% endif %}
               {% if debug_panel %}<button type="button" class="tab" role="tab" id="tab-debug" aria-controls="panel-debug" aria-selected="false" tabindex="-1">Debug</button>{% endif %}
             </div>
@@ -342,6 +345,67 @@
               </div>
               {% endfor %}
             </div>
+            {% if scene.clocks %}
+            <div class="tab-panel" role="tabpanel" id="panel-clocks" aria-labelledby="tab-clocks" hidden>
+              <ul class="track-list">
+                {% for clock in scene.clocks %}
+                <li>
+                  <strong>{{ clock.name }}</strong> <span class="muted">{{ clock.filled }} / {{ clock.segments }}</span>
+                  <span class="track" role="img" aria-label="{{ clock.name }} {{ clock.filled }} of {{ clock.segments }}">
+                    {% for pip in range(clock.segments) %}<span class="track-pip{% if pip < clock.filled %} filled{% endif %}"></span>{% endfor %}
+                  </span>
+                  {% if clock.description %}<p class="muted">{{ clock.description }}</p>{% endif %}
+                </li>
+                {% endfor %}
+              </ul>
+            </div>
+            {% endif %}
+            {% if scene.threats %}
+            <div class="tab-panel" role="tabpanel" id="panel-threats" aria-labelledby="tab-threats" hidden>
+              <ul class="track-list">
+                {% for threat in scene.threats %}
+                <li>
+                  <strong>{{ threat.name }}</strong> <span class="muted">{{ threat.kind }}{% if threat.broken %} · broken{% endif %}</span>
+                  <span class="track" role="img" aria-label="{{ threat.name }} harm {{ threat.harm }} of {{ threat.harm_max }}">
+                    {% for pip in range(threat.harm_max) %}<span class="track-pip{% if pip < threat.harm %} filled{% endif %}"></span>{% endfor %}
+                  </span>
+                  <p class="muted">Harm {{ threat.harm }} / {{ threat.harm_max }}{% if threat.armor %} · Armor {{ threat.armor }}{% endif %}{% if threat.magnitude %} · Magnitude {{ threat.magnitude }}{% endif %}</p>
+                  {% if threat.tags %}<p class="sheet-chips">{% for tag in threat.tags %}<span class="sheet-chip">{{ tag }}</span>{% endfor %}</p>{% endif %}
+                  {% if threat.moves %}<p class="muted">{{ threat.moves|join("; ") }}</p>{% endif %}
+                </li>
+                {% endfor %}
+              </ul>
+            </div>
+            {% endif %}
+            {% if scene.improvements or scene.vehicles %}
+            <div class="tab-panel" role="tabpanel" id="panel-shelter" aria-labelledby="tab-shelter" hidden>
+              {% if scene.improvements %}
+              <h3>Shelter improvements</h3>
+              <ul class="track-list">
+                {% for improvement in scene.improvements %}
+                <li>
+                  <strong>{{ improvement.name }}</strong> <span class="muted">{{ improvement.site }}{% if improvement.completed %} · complete{% endif %}</span>
+                  <span class="track" role="img" aria-label="{{ improvement.name }} {{ improvement.progress }} of {{ improvement.target }}">
+                    {% for pip in range(improvement.target) %}<span class="track-pip{% if pip < improvement.progress %} filled{% endif %}"></span>{% endfor %}
+                  </span>
+                  <p class="muted">{{ improvement.progress }} / {{ improvement.target }} · condition {{ improvement.condition }}</p>
+                </li>
+                {% endfor %}
+              </ul>
+              {% endif %}
+              {% if scene.vehicles %}
+              <h3>Vehicles</h3>
+              <ul class="track-list">
+                {% for vehicle in scene.vehicles %}
+                <li>
+                  <strong>{{ vehicle.name }}</strong> <span class="muted">{{ vehicle.speed }}{% if vehicle.location %} · {{ vehicle.location }}{% endif %}</span>
+                  <p class="muted">Condition {{ vehicle.condition }} / {{ vehicle.condition_max }} · Fuel {{ vehicle.fuel }} / {{ vehicle.fuel_max }} · Seats {{ vehicle.seats }}</p>
+                </li>
+                {% endfor %}
+              </ul>
+              {% endif %}
+            </div>
+            {% endif %}
             {% if not single_player %}
             <div class="tab-panel" role="tabpanel" id="panel-players" aria-labelledby="tab-players" hidden>
               {% include "_players_panel.html" %}

@@ -20,6 +20,17 @@
     <strong>AC</strong> {{ sheet_view.defense }}
   </div>
   {% endif %}
+  {% if sheet_view.harm is not none %}
+  <div class="sheet-harm" aria-label="Harm {{ sheet_view.harm }} of {{ sheet_view.harm_max or 6 }}">
+    <strong>Harm</strong>
+    <span class="track" aria-hidden="true">
+      {% for pip in range(sheet_view.harm_max or 6) %}
+      <span class="track-pip{% if pip < sheet_view.harm %} filled{% endif %}{% if pip + 1 in sheet_view.harm_thresholds %} threshold{% endif %}"></span>
+      {% endfor %}
+    </span>
+    <span class="muted">{{ sheet_view.harm }} / {{ sheet_view.harm_max or 6 }}</span>
+  </div>
+  {% endif %}
 </div>
 
 {% if sheet_view.identity %}

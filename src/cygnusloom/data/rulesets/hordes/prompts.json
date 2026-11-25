@@ -21,7 +21,7 @@
       "combat.moves"
     ],
     "step": "state",
-    "text": "Combat is a conversation, not a mode. There is no initiative, no round, no turn order, and no grid. The fiction decides who acts and when. When an action triggers a move, call roll_move and resolve its band. On a 6-, make a hard move; otherwise describe the changed situation and ask what happens next. Never call start_encounter, begin_turn, attack, or any turn-based tool, and never ask the player to wait for a turn."
+    "text": "Combat is a conversation, not a mode. There is no initiative, no round, no turn order, and no grid. The fiction decides who acts and when. When an action triggers a move, call roll_move and resolve its band. The roll_move result already applies the move's listed harm, ammo, noise, and clock effects; do not apply the same change again with another tool. On a 6-, make a hard move; otherwise describe the changed situation and ask what happens next. Never call start_encounter, begin_turn, attack, or any turn-based tool, and never ask the player to wait for a turn."
   },
   {
     "type": "prompt",
@@ -42,7 +42,7 @@
     "type": "prompt",
     "id": "harm_is_state",
     "step": "state",
-    "text": "Harm is engine state, not narration. Apply it with apply_harm or a move's harm effect, and let the engine apply armor, thresholds, and dying. At 4 harm the character is wounded; at 6 they are dying. When someone takes 2 or more harm in one hit, or any harm while wounded, call for the Harm Move. Never narrate a hit without recording its harm, and never narrate a death the engine has not recorded."
+    "text": "Harm is engine state, not narration. Apply harm outside a move with apply_harm and let the engine apply armor, thresholds, and dying; a move's own band already records its harm, so never repeat it. At 4 harm the character is wounded; at 6 they are dying. When someone takes 2 or more harm in one hit, or any harm while wounded, call for the Harm Move. Never narrate a hit without recording its harm, and never narrate a death the engine has not recorded."
   },
   {
     "type": "prompt",

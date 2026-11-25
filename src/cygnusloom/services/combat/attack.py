@@ -1915,6 +1915,8 @@ def _require_attack(
     per turn works without engine changes. `force` is the story override the GM may use when
     the player insists. An extra attack is checked against its own once-per-turn rule instead
     of the attack-action budget."""
+    if combat.mode == "moves":
+        return
     _require_turn(state, actor, force)
     if force or extra:
         return

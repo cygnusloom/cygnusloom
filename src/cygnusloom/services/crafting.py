@@ -48,8 +48,8 @@ def _template(spec: CharacterSpec, key: str) -> ItemTemplate:
 
 def _held(character: Any, spec: CharacterSpec, key: str) -> Item | None:
     template = _template(spec, key)
-    wanted = name_key(template.name)
-    return next((item for item in character.items if name_key(item.name) == wanted), None)
+    wanted = alias_key(template.name)
+    return next((item for item in character.items if alias_key(item.name) == wanted), None)
 
 
 def _has_tool(character: Any, spec: CharacterSpec, key: str) -> bool:

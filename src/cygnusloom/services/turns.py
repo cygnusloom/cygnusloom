@@ -3015,7 +3015,8 @@ async def stream_message(
             raise InvalidInput("that campaign's rule set is no longer available")
         current = _state(engine, campaign.id)
         _character_to_play(current, owner_id)
-        _check_encounter_turn(current, owner_id)
+        if rule_set.combat is None or rule_set.combat.mode != "moves":
+            _check_encounter_turn(current, owner_id)
         if advancement_due_for_player(current, rule_set, owner_id):
             raise InvalidInput("level up or choose your Advancement before sending another message")
 

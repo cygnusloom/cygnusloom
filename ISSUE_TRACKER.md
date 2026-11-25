@@ -16,10 +16,3 @@ Order below is the work order. Each entry lists the decisions made in triage.
 4. Better storytelling. Blocked on the user's research. Symptoms to keep in mind: generic, safe prose; samey NPCs and plots; weak pacing and consequences. The research decides which to target; no code work starts until it lands.
 5. Human-written SPEC and README. The owner writes or rewrites `SPEC.md` and `README.md` themselves. Decided: agents do not author or rewrite their prose; they may only correct factual drift and keep the instructions accurate.
 6. Human review of the UI wording. A person reads the visible UI copy and edits it directly to remove AI-heavy language: buttons, labels, headings, help text, flash messages, and dialogs. Decided: the owner makes the wording changes directly. Out of scope: GM prompts and tool descriptions, bundled content prose, and code comments.
-7. Hordes: a zombie-apocalypse ruleset and the `unwritten-apocalypse` world. Design spec in `src/cygnusloom/data/rulesets/hordes/SPEC.md`.
-   * PbtA: 2d6 + stat + skill, 10+/7–9/6–; no initiative, rounds, grid turns, or monster attack rolls.
-   * Five stats; six playbooks; shared moves; playbook kits and knowledge moves; practice-based skills; gear progression; no XP.
-   * 0–6 harm track and conditions; rare infection; Rejection for cybernetics; Dread for occult relics.
-   * Hordes are magnitude 1–5 threats drawn by a noise clock and split into individual zombies; eldritch entities and strange horrors are threats.
-   * All eight crunch systems are in scope; NPCs are AI-GM-first with clocks, followers, and factions; the world is a short description with setting tables.
-   * Content is original; Cataclysm-derived content needs a CC BY-SA 3.0 notice; confirm the "Hordes" name. Next: Phase 0 implementation.

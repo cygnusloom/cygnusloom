@@ -297,6 +297,10 @@ def carry_item(
             rules=list(item.rules),
             flags=list(item.flags),
             ready=ready,
+            loaded=item.loaded,
+            capacity=item.capacity,
+            caliber=item.caliber,
+            condition=item.condition,
             cause=cause,
         ),
     )
@@ -381,6 +385,10 @@ def give_item(
         uses=uses,
         max_uses=uses,
         flags=flags,
+        loaded=listed.capacity if listed is not None else 0,
+        capacity=listed.capacity if listed is not None else 0,
+        caliber=listed.caliber if listed is not None else "",
+        condition=listed.condition if listed is not None else "serviceable",
     )
     result = carry_item(db, campaign_id, rules, name, given, cause="")
     db.commit()
@@ -417,6 +425,10 @@ def carry_listed(
         uses=listed.uses,
         max_uses=listed.uses,
         flags=flags,
+        loaded=listed.capacity,
+        capacity=listed.capacity,
+        caliber=listed.caliber,
+        condition=listed.condition,
     )
     return carry_item(db, campaign_id, rules, name, item, cause=cause, overflow=overflow)
 
