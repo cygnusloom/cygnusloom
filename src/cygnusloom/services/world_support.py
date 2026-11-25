@@ -34,6 +34,7 @@ from cygnusloom.content.icons import icon_ids
 from cygnusloom.content.library import (
     MAP_AMBIENTS,
     TERRAIN_PATTERNS,
+    WORLD_MAP_CHARTS,
     ClockRules,
     CombatRules,
     EncounterObject,
@@ -42,8 +43,10 @@ from cygnusloom.content.library import (
     InventoryRules,
     LevelUpRules,
     MagicRules,
+    MapStyle,
     Marketplace,
     MonsterTemplate,
+    RoadKind,
     Travel,
     Wilderness,
     WorldTemplate,
@@ -103,6 +106,8 @@ from cygnusloom.services.events import (
     Place,
     RegionAdded,
     RegionUpdated,
+    RoadAdded,
+    RoadUpdated,
     SeasonSet,
     SettingRecorded,
     StartingItemsTransferred,
@@ -228,6 +233,17 @@ def seed_campaign(
                 pattern=region.pattern,
                 ink=region.ink,
                 label=region.label,
+            ),
+        )
+    for road in world.roads:
+        record(
+            db,
+            campaign_id,
+            RoadAdded(
+                name=road.name,
+                road_kind=road.kind,
+                points=[[x, y] for x, y in road.points],
+                discovered=road.discovered,
             ),
         )
     for npc in world.npcs:
@@ -1098,11 +1114,13 @@ def update_world_map(
     line_color: str | None = None,
     show_clouds: bool | None = None,
     show_contours: bool | None = None,
+    chart: str | None = None,
 ) -> dict[str, Any]:
     """Change the player's world map look. Left out, each field stays as it is; an empty colour
     goes back to the palette's own colour."""
     state = load_state(db, campaign_id)
     current = state.world_map_style
+    chosen_chart = current.chart if chart is None else _choice(chart, WORLD_MAP_CHARTS, "chart")
     chosen_palette = (
         current.palette if palette is None else _choice(palette, WORLD_MAP_PALETTES, "palette")
     )
@@ -1127,6 +1145,7 @@ def update_world_map(
         db,
         campaign_id,
         WorldMapStyleChanged(
+            chart=chosen_chart,
             palette=chosen_palette,
             ambient=chosen_ambient,
             background_color=chosen_background,
@@ -1138,6 +1157,7 @@ def update_world_map(
     db.commit()
     return {
         "updated": "world map",
+        "chart": chosen_chart,
         "palette": chosen_palette,
         "ambient": chosen_ambient,
         "background_color": chosen_background,
@@ -1145,6 +1165,134 @@ def update_world_map(
         "show_clouds": chosen_clouds,
         "show_contours": chosen_contours,
     }
+
+
+def set_world_map_style(
+    db: Session,
+    campaign_id: int,
+    style: MapStyle,
+) -> None:
+    """Record the look a rule set gives the campaign's maps, so a new campaign opens on the world
+    chart its setting calls for. Nothing is recorded when the style is the core one."""
+    if style == MapStyle():
+        return
+    record(
+        db,
+        campaign_id,
+        WorldMapStyleChanged(
+            chart=style.chart,
+            palette=style.palette,
+            ambient=style.ambient,
+            show_clouds=style.clouds,
+            show_contours=style.contours,
+        ),
+    )
+
+
+def create_road(
+    db: Session,
+    campaign_id: int,
+    kinds: Mapping[str, RoadKind],
+    name: str,
+    road_kind: str,
+    points: Sequence[Sequence[float]],
+    discovered: bool = False,
+) -> dict[str, Any]:
+    """Lay a road on the world map. Its points are kilometers from the map's center, in order
+    along the road, and its kind comes from the rule set's roads."""
+    state = load_state(db, campaign_id)
+    name = bounded_text(name, "name", MAX_NAME)
+    existing = state.roads.get(name_key(name))
+    if existing is not None:
+        raise InvalidInput(
+            f"there is already a road named {name!r}. Use update_road to change it, or choose "
+            "another name"
+        )
+    if road_kind not in kinds:
+        choices = ", ".join(sorted(kinds)) or "none"
+        raise InvalidInput(
+            f"{road_kind!r} is not a road kind. The road kinds are: {choices}."
+        )
+    if not isinstance(discovered, bool):
+        raise InvalidInput("discovered must be true or false")
+    corners = _road_points(points)
+    record(
+        db,
+        campaign_id,
+        RoadAdded(
+            name=name,
+            road_kind=road_kind,
+            points=[[x, y] for x, y in corners],
+            discovered=discovered,
+        ),
+    )
+    db.commit()
+    return {
+        "created": "road",
+        "name": name,
+        "kind": road_kind,
+        "discovered": discovered,
+    }
+
+
+def update_road(
+    db: Session,
+    campaign_id: int,
+    kinds: Mapping[str, RoadKind],
+    name: str,
+    road_kind: str | None = None,
+    points: Sequence[Sequence[float]] | None = None,
+    discovered: bool | None = None,
+) -> dict[str, Any]:
+    """Change a road on the world map. Left out, its kind, path, and discovery stay as they are."""
+    state = load_state(db, campaign_id)
+    where = state.roads.get(name_key(name))
+    if where is None:
+        raise InvalidInput(f"there is no road named {name!r}")
+    chosen_kind = where.kind if road_kind is None else road_kind
+    if chosen_kind not in kinds:
+        choices = ", ".join(sorted(kinds)) or "none"
+        raise InvalidInput(
+            f"{chosen_kind!r} is not a road kind. The road kinds are: {choices}."
+        )
+    corners = (
+        [tuple(point) for point in where.points] if points is None else _road_points(points)
+    )
+    if discovered is not None and not isinstance(discovered, bool):
+        raise InvalidInput("discovered must be true or false")
+    chosen_discovered = where.discovered if discovered is None else discovered
+    record(
+        db,
+        campaign_id,
+        RoadUpdated(
+            name=where.name,
+            road_kind=chosen_kind,
+            points=[[x, y] for x, y in corners],
+            discovered=chosen_discovered,
+        ),
+    )
+    db.commit()
+    return {"updated": "road", "name": where.name}
+
+
+def _road_points(points: Sequence[Sequence[float]]) -> list[tuple[float, float]]:
+    """A road's points: at least two [x, y] pairs of numbers, in order along the road."""
+    try:
+        corners = [(float(point[0]), float(point[1])) for point in points]
+    except (TypeError, ValueError, IndexError):
+        raise InvalidInput(
+            "points must be at least two [x, y] pairs of numbers, in kilometers from the map's "
+            "center"
+        ) from None
+    if len(corners) < 2:
+        raise InvalidInput(
+            "a road needs at least two points, in order along it, in kilometers from the map's "
+            "center"
+        )
+    for index, corner in enumerate(corners[1:], start=1):
+        if corner == corners[index - 1]:
+            raise InvalidInput("a road must not repeat the same point twice in a row")
+    return corners
 
 
 _HEX_COLOR = re.compile(r"#[0-9a-fA-F]{6}")

@@ -404,6 +404,8 @@ def tools_for(
         journey=rules.journey,
         wilderness=rules.wilderness,
         world_terrain=rules.world_terrain,
+        roads=rules.roads,
+        map_style=rules.map_style,
         housekeeping=rules.housekeeping,
     )
 

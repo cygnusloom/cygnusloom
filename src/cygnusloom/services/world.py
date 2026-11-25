@@ -43,6 +43,7 @@ from cygnusloom.content.library import (
     JourneyRules,
     LevelUpRules,
     MagicRules,
+    MapStyle,
     Marketplace,
     ModuleTemplate,
     MonsterTemplate,
@@ -52,6 +53,7 @@ from cygnusloom.content.library import (
     RecipeDefinition,
     RelationRules,
     RestLength,
+    RoadKind,
     SiteTypeDefinition,
     Species,
     TallyRules,
@@ -346,6 +348,10 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
     wilderness: Wilderness | None = None
     # The kinds of ground a world map's regions can be, by id.
     world_terrain: Mapping[str, WorldTerrain] = field(default_factory=dict)
+    # The kinds of road a world map's lines can be, by id.
+    roads: Mapping[str, RoadKind] = field(default_factory=dict)
+    # The looks the rule set gives a campaign's maps until the GM changes them.
+    map_style: MapStyle = field(default_factory=MapStyle)
     # What the GM should tidy at a place earlier scenes left behind, or None for none.
     housekeeping: HousekeepingRules | None = None
     # The peoples the GM may give to NPCs and places, from the world or else the rule set.

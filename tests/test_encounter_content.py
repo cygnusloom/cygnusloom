@@ -299,10 +299,14 @@ def test_corridor_pillar_near_middle(library: ContentLibrary) -> None:
 
 def test_all_rule_sets_see_the_same_encounter_content(library: ContentLibrary) -> None:
     assert "cairn2e" in library.rule_sets
+    # A rule set may add local map content of its own, such as Hordes' modern streets and
+    # interiors, but it never loses core's.
     for name, rule_set in library.rule_sets.items():
-        assert rule_set.terrain == library.core.terrain, name
-        assert rule_set.encounter_objects == library.core.encounter_objects, name
-        assert rule_set.encounter_templates == library.core.encounter_templates, name
+        assert library.core.terrain.items() <= rule_set.terrain.items(), name
+        assert library.core.encounter_objects.items() <= rule_set.encounter_objects.items(), name
+        assert (
+            library.core.encounter_templates.items() <= rule_set.encounter_templates.items()
+        ), name
 
 
 def test_terrain_patterns_are_valid_and_inked_when_present(library: ContentLibrary) -> None:

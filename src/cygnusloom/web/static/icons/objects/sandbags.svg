@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Sandbags</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M6 30 Q10 22 18 22 Q28 22 30 30 Q28 38 18 38 Q10 38 6 30 Z" fill="#b39a6a"/>
+    <path d="M34 30 Q38 22 46 22 Q56 22 58 30 Q56 38 46 38 Q38 38 34 30 Z" fill="#b39a6a"/>
+    <path d="M18 50 Q22 42 30 42 Q40 42 42 50 Q40 58 30 58 Q22 58 18 50 Z" fill="#a08a5e"/>
+    <path d="M20 22 V38 M44 22 V38 M28 42 V58" stroke-opacity="0.5"/>
+  </g>
+</svg>

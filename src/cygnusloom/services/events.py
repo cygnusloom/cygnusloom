@@ -58,6 +58,7 @@ from cygnusloom.services.state import (  # noqa: F401
     Project,
     Region,
     RestRecord,
+    Road,
     SiteImprovement,
     Storyline,
     Threat,
@@ -681,9 +682,59 @@ class RegionUpdated(GameEvent):
 
 
 @dataclass(frozen=True)
+class RoadAdded(GameEvent):
+    """A road on the world map. The GM lays one when the story establishes a highway, street, or
+    track between places; it is drawn once it is discovered or a discovered place stands on it."""
+
+    kind: ClassVar[str] = "road.added"
+    hidden: ClassVar[bool] = True
+
+    name: str
+    road_kind: str
+    points: list[list[float]]
+    discovered: bool = False
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.roads[name_key(self.name)] = Road(
+            self.name,
+            self.road_kind,
+            tuple((x, y) for x, y in self.points),
+            discovered=self.discovered,
+        )
+
+    def render(self) -> str:
+        return f"New road: {self.name}."
+
+
+@dataclass(frozen=True)
+class RoadUpdated(GameEvent):
+    """A road's kind, path, or discovery after an update. The service resolves every field, so
+    apply replaces them all."""
+
+    kind: ClassVar[str] = "road.updated"
+    hidden: ClassVar[bool] = True
+
+    name: str
+    road_kind: str
+    points: list[list[float]]
+    discovered: bool
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        state.roads[name_key(self.name)] = Road(
+            self.name,
+            self.road_kind,
+            tuple((x, y) for x, y in self.points),
+            discovered=self.discovered,
+        )
+
+    def render(self) -> str:
+        return f"Road updated: {self.name}."
+
+
+@dataclass(frozen=True)
 class WorldMapStyleChanged(GameEvent):
-    """The player's world map changes palette, ambient light, colours, or detail. The service
-    resolves every field, so apply sets them all rather than merging them."""
+    """The player's world map changes chart, palette, ambient light, colours, or detail. The
+    service resolves every field, so apply sets them all rather than merging them."""
 
     kind: ClassVar[str] = "map.world_style_changed"
     hidden: ClassVar[bool] = True
@@ -694,9 +745,12 @@ class WorldMapStyleChanged(GameEvent):
     line_color: str = ""
     show_clouds: bool = True
     show_contours: bool = True
+    # The chart style: "chart", "atlas", or "blueprint". Older events lack it.
+    chart: str = "chart"
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         state.world_map_style = WorldMapStyle(
+            chart=self.chart,
             palette=self.palette,
             ambient=self.ambient,
             background_color=self.background_color,
@@ -2220,6 +2274,8 @@ class MapCreated(GameEvent):
     ambient: str = ""
     background_color: str = ""
     grid_color: str = ""
+    # The board's style: "board", "plan", or "blueprint". Older events lack it.
+    style: str = ""
     # Each item is {"column", "row", "terrain", "object", "color", "pattern", "icon", "label"}.
     marks: list[dict[str, Any]] = field(default_factory=list)
 
@@ -2237,6 +2293,7 @@ class MapCreated(GameEvent):
             ambient=self.ambient,
             background_color=self.background_color,
             grid_color=self.grid_color,
+            style=self.style,
         )
 
     def render(self) -> str:
@@ -2292,6 +2349,7 @@ class MapUpdated(GameEvent):
             ambient=before.ambient,
             background_color=before.background_color,
             grid_color=before.grid_color,
+            style=before.style,
         )
         encounter = state.encounter
         if encounter is not None and name_key(encounter.map) == key:
@@ -2306,8 +2364,8 @@ class MapUpdated(GameEvent):
 
 @dataclass(frozen=True)
 class MapStyleChanged(GameEvent):
-    """A map's look changes: its background terrain, palette, ambient, and board colours. The
-    service resolves every field, so apply sets them all rather than merging them."""
+    """A map's look changes: its style, background terrain, palette, ambient, and board colours.
+    The service resolves every field, so apply sets them all rather than merging them."""
 
     kind: ClassVar[str] = "map.style_changed"
     hidden: ClassVar[bool] = True
@@ -2318,6 +2376,8 @@ class MapStyleChanged(GameEvent):
     grid_color: str = ""
     palette: str = ""
     ambient: str = ""
+    # The board's style: "board", "plan", or "blueprint". Older events lack it.
+    style: str = ""
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         key = name_key(self.name)
@@ -2331,6 +2391,7 @@ class MapStyleChanged(GameEvent):
             grid_color=self.grid_color,
             palette=self.palette,
             ambient=self.ambient,
+            style=self.style,
         )
 
     def render(self) -> str:

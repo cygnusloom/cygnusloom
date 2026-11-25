@@ -28,6 +28,10 @@
         "text": "the route across the city, the street event, and what the City Alert clock did"
       },
       {
+        "id": "map",
+        "text": "the ground this scene crosses, the roads between its places, and the local map's layout matching what is there"
+      },
+      {
         "id": "threats",
         "text": "the threats present, their harm, and the moves they make"
       },

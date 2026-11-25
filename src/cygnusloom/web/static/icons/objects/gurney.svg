@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Gurney</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8 26 H56 V34 H8 Z" fill="#d8dde2"/>
+    <path d="M12 26 V20 H26 V26" fill="#eef2f5"/>
+    <path d="M14 34 V50 M50 34 V50"/>
+    <path d="M10 50 H18 M46 50 H54"/>
+    <circle cx="14" cy="52" r="3" fill="#2e2620"/>
+    <circle cx="50" cy="52" r="3" fill="#2e2620"/>
+  </g>
+</svg>

@@ -68,6 +68,22 @@ class CoreWorld(Protocol):
         label: str | None = None,
     ) -> dict[str, Any]: ...
 
+    def create_road(
+        self,
+        name: str,
+        kind: str,
+        points: Sequence[Sequence[float]],
+        discovered: bool = False,
+    ) -> dict[str, Any]: ...
+
+    def update_road(
+        self,
+        name: str,
+        kind: str | None = None,
+        points: Sequence[Sequence[float]] | None = None,
+        discovered: bool | None = None,
+    ) -> dict[str, Any]: ...
+
     def create_npc(
         self,
         name: str,

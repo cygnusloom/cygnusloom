@@ -748,6 +748,8 @@ def _tool_context(
         journey=rule_set.journey,
         wilderness=rule_set.wilderness,
         world_terrain=rule_set.world_terrain,
+        roads=rule_set.roads,
+        map_style=rule_set.map_style,
         housekeeping=rule_set.housekeeping,
     )
 

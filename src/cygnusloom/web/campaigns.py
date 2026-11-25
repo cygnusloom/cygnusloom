@@ -1212,7 +1212,12 @@ def map_fragment(request: Request, campaign_id: int) -> Response:
     return render(
         request,
         "campaign_map.html",
-        world_map=map_view(world.state, rule_set.world_terrain if rule_set else None, pc=viewer_pc),
+        world_map=map_view(
+            world.state,
+            rule_set.world_terrain if rule_set else None,
+            pc=viewer_pc,
+            roads=rule_set.roads if rule_set else None,
+        ),
         time=time_view(world.state, rule_set.clock if rule_set else None),
         encounter=encounter,
         encounter_rows=_encounter_rows(encounter) if encounter is not None else [],
@@ -2291,7 +2296,12 @@ def _campaign_page(
         ),
     )
     viewer_pc = world.state.player_character(user.id)
-    world_map = map_view(world.state, rule_set.world_terrain if rule_set else None, pc=viewer_pc)
+    world_map = map_view(
+        world.state,
+        rule_set.world_terrain if rule_set else None,
+        pc=viewer_pc,
+        roads=rule_set.roads if rule_set else None,
+    )
     options_pending, character_pending = _creation_pending(world.state, rule_set, user.id)
     # The starting level follows the campaign owner's character while the campaign says so, and
     # otherwise stands at the level the owner chose. An error re-render keeps what was sent.

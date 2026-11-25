@@ -69,6 +69,19 @@
     "recommended_worlds": [
       "unwritten-apocalypse"
     ],
+    "map_style": {
+      "world": {
+        "chart": "atlas",
+        "palette": "roadmap",
+        "ambient": "day",
+        "clouds": false,
+        "contours": false
+      },
+      "local": {
+        "style": "plan",
+        "palette": "concrete"
+      }
+    },
     "capabilities": {
       "magic": "none",
       "travel": "narrative",

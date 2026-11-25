@@ -6,6 +6,7 @@ opens a session, or changes the state. The world tools import these functions to
 
 from __future__ import annotations
 
+import itertools
 import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field, replace
@@ -34,6 +35,7 @@ from cygnusloom.content.library import (
     InventoryRules,
     MonsterTemplate,
     RelationRules,
+    RoadKind,
     Species,
     TallyRules,
     WorldTerrain,
@@ -50,6 +52,7 @@ from cygnusloom.services.events import (
     Character,
     Place,
     Region,
+    Road,
     WorldMapStyle,
     WorldObject,
     current,
@@ -72,6 +75,9 @@ from cygnusloom.services.state import (
 # The map always shows at least this many kilometers from its center, and leaves a margin.
 MIN_MAP_RADIUS_KM = 1.0
 MAP_MARGIN = 1.1
+# A road is on the player's map once a discovered place stands this close to it, so a road the
+# party has heard about appears with the places along it.
+ROAD_KNOWN_KM = 0.5
 
 
 @dataclass(frozen=True)
@@ -398,6 +404,22 @@ class MapPattern:
 
 
 @dataclass(frozen=True)
+class MapRoad:
+    """A road on the world map, as the player sees it. Its points are percentages of the map's
+    width and height. `width` is the line's width in the map's own units, and `label_left` and
+    `label_top` place its name at the middle of its length."""
+
+    name: str
+    text: str
+    color: str
+    points: tuple[tuple[float, float], ...]
+    width: float = 0.6
+    dashed: bool = False
+    label_left: float | None = None
+    label_top: float | None = None
+
+
+@dataclass(frozen=True)
 class TimeView:
     """The campaign day, the part of that day, and the hour within the part, shown beside the
     map."""
@@ -423,6 +445,7 @@ class MapView:
     where: dict[str, str] = field(default_factory=dict)
     origin: tuple[float, float] | None = None
     regions: list[MapRegion] = field(default_factory=list)
+    roads: list[MapRoad] = field(default_factory=list)
     patterns: list[MapPattern] = field(default_factory=list)
     style: WorldMapStyle = field(default_factory=WorldMapStyle)
 
@@ -721,13 +744,14 @@ def map_view(
     terrain: Mapping[str, WorldTerrain] | None = None,
     *,
     pc: Character | None = None,
+    roads: Mapping[str, RoadKind] | None = None,
 ) -> MapView:
     """The player's map. Only discovered places appear on it. Every region is drawn, but only known
     regions are named, and only they set the map's reach. Each marker is placed on a square centered
-    on the player character's place, sized to fit the farthest discovered place or known region
-    corner plus a margin. The player's place is marked as theirs, or, when it is inside another
-    place, the nearest place above it that has a position. `terrain` gives the colour and texture of
-    each region's kind."""
+    on the player character's place, sized to fit the farthest discovered place, known region
+    corner, or known road plus a margin. The player's place is marked as theirs, or, when it is
+    inside another place, the nearest place above it that has a position. `terrain` gives the
+    colour and texture of each region's kind, and `roads` the colour and width of each road kind."""
     places = sorted(
         (place for place in state.places.values() if place.discovered),
         key=lambda place: name_key(place.name),
@@ -740,7 +764,9 @@ def map_view(
     cx, cy = (center.x, center.y) if center is not None else (0.0, 0.0)
     placed = [(place, place.position) for place in places if place.position is not None]
     known = [region for region in state.regions.values() if _region_known(state, region)]
+    travelled = [road for road in state.roads.values() if _road_known(state, road)]
     corners = [point for region in known for point in region.points]
+    corners += [point for road in travelled for point in road.points]
     reach = max(
         [MIN_MAP_RADIUS_KM]
         + [max(abs(pos.x - cx), abs(pos.y - cy)) for _, pos in placed]
@@ -823,6 +849,8 @@ def map_view(
         if pattern_id is not None and pattern_id not in patterns:
             shape, ink = _region_pattern_style(region, kind)
             patterns[pattern_id] = MapPattern(id=pattern_id, shape=shape, ink=ink)
+    kinds_of_road = roads or {}
+    drawn_roads = [_map_road(road, kinds_of_road, cx, cy, radius) for road in travelled]
     return MapView(
         radius_km=round(radius, 2),
         markers=markers,
@@ -830,9 +858,91 @@ def map_view(
         where=where,
         origin=(origin_left, origin_top) if on_board else None,
         regions=regions,
+        roads=drawn_roads,
         patterns=list(patterns.values()),
         style=state.world_map_style,
     )
+
+
+def _road_known(state: CampaignState, road: Road) -> bool:
+    """A road is known once it is discovered, or once a discovered place with a map point stands
+    on it or beside it."""
+    if road.discovered or not road.points:
+        return True
+    return any(
+        place.discovered
+        and place.position is not None
+        and _path_distance((place.position.x, place.position.y), road.points) <= ROAD_KNOWN_KM
+        for place in state.places.values()
+    )
+
+
+def _map_road(
+    road: Road,
+    kinds: Mapping[str, RoadKind],
+    cx: float,
+    cy: float,
+    radius: float,
+) -> MapRoad:
+    """One road, projected onto the board, with its name at the middle of its length."""
+    kind = kinds.get(road.kind)
+    points = tuple(
+        (round(50 + (x - cx) / radius * 50, 2), round(50 - (y - cy) / radius * 50, 2))
+        for x, y in road.points
+    )
+    middle = _path_middle(road.points)
+    label_left = round(50 + (middle[0] - cx) / radius * 50, 2)
+    label_top = round(50 - (middle[1] - cy) / radius * 50, 2)
+    name = kind.name if kind is not None else road.kind
+    text = f"{road.name} ({name})." if kind is None or not kind.rule else (
+        f"{road.name} ({kind.name}). {kind.rule}"
+    )
+    on_board = 0 <= label_left <= 100 and 0 <= label_top <= 100
+    return MapRoad(
+        name=road.name,
+        text=text,
+        color=kind.color if kind is not None else "#8a8a8a",
+        points=points,
+        width=kind.width if kind is not None else 0.6,
+        dashed=kind.dashed if kind is not None else False,
+        label_left=label_left if on_board else None,
+        label_top=label_top if on_board else None,
+    )
+
+
+def _path_middle(points: Sequence[tuple[float, float]]) -> tuple[float, float]:
+    """The point halfway along a road by its length, so a long bend is named in its middle."""
+    lengths = [math.dist(start, end) for start, end in itertools.pairwise(points)]
+    total = sum(lengths)
+    if total <= 0:
+        return points[0]
+    halfway = total / 2
+    for index, length in enumerate(lengths):
+        if halfway <= length:
+            start, end = points[index], points[index + 1]
+            part = halfway / length if length else 0
+            return (
+                start[0] + (end[0] - start[0]) * part,
+                start[1] + (end[1] - start[1]) * part,
+            )
+        halfway -= length
+    return points[-1]
+
+
+def _path_distance(point: tuple[float, float], points: Sequence[tuple[float, float]]) -> float:
+    """How far a point is from the nearest stretch of a road, in kilometers."""
+    best = math.inf
+    for start, end in itertools.pairwise(points):
+        dx, dy = end[0] - start[0], end[1] - start[1]
+        length = dx * dx + dy * dy
+        if length <= 0:
+            best = min(best, math.dist(point, start))
+            continue
+        part = ((point[0] - start[0]) * dx + (point[1] - start[1]) * dy) / length
+        part = max(0.0, min(1.0, part))
+        nearest = (start[0] + dx * part, start[1] + dy * part)
+        best = min(best, math.dist(point, nearest))
+    return best
 
 
 def _region_known(state: CampaignState, region: Region) -> bool:
@@ -1136,6 +1246,12 @@ def world_state_text(
             "another people. Use lookup_species to read a people's customs when a scene turns "
             "on them."
         )
+    if state.roads:
+        named = sorted(state.roads.values(), key=lambda road: name_key(road.name))
+        shown = ", ".join(f"{road.name} ({road.kind})" for road in named[:20])
+        if len(named) > 20:
+            shown += f", and {len(named) - 20} more"
+        lines.append(f"Roads on the world map: {shown}.")
     if unwritten_world and not state.world_description:
         lines.append(
             "Player-facing world overview: not written yet. Write two or three sentences with "

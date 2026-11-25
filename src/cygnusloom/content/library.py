@@ -471,6 +471,9 @@ class WorldTemplate:
     # Areas of ground on the world map. They do not overlap, and are checked against the rule set's
     # world terrain in WorldContent.
     regions: tuple[RegionTemplate, ...] = ()
+    # Roads drawn between the world map's places. Their kinds are checked against the rule set's
+    # roads in WorldContent.
+    roads: tuple[RoadTemplate, ...] = ()
     # The peoples of this world. When empty, the rule set's peoples apply.
     species: tuple[Species, ...] = ()
 
@@ -874,8 +877,8 @@ TERRAIN_PATTERNS = (
     "runes",
 )
 
-# The looks a local map may choose. The CSS colours each palette, and each ambient adds an
-# overlay, so a map's mood is data rather than a rule-set special case.
+# The looks a local map may choose. "board" is the painted miniatures board; "plan" is a flat
+# floor plan; "blueprint" is a technical drawing on dark paper.
 MAP_PALETTES = (
     "parchment",
     "stone",
@@ -885,6 +888,9 @@ MAP_PALETTES = (
     "frost",
     "shadow",
     "royal",
+    "concrete",
+    "asphalt",
+    "blueprint",
 )
 MAP_AMBIENTS = (
     "day",
@@ -894,6 +900,26 @@ MAP_AMBIENTS = (
     "foggy",
     "underwater",
     "magical",
+)
+MAP_STYLES = ("board", "plan", "blueprint")
+
+# The looks the player's world map may be drawn in. "chart" is the hand-drawn land chart with
+# clouds and contours; "atlas" is a road atlas with a block grid; "blueprint" is a technical
+# drawing on dark paper.
+WORLD_MAP_CHARTS = ("chart", "atlas", "blueprint")
+# The looks the player's world map may choose. The CSS colours each palette, so a campaign's
+# world can shift from a warm parchment chart to a cold midnight atlas without new art.
+WORLD_MAP_PALETTES = (
+    "parchment",
+    "atlas",
+    "verdant",
+    "ember",
+    "frost",
+    "midnight",
+    "ivory",
+    "obsidian",
+    "roadmap",
+    "blueprint",
 )
 
 
@@ -909,6 +935,33 @@ class WorldTerrain:
     # An optional texture from TERRAIN_PATTERNS, drawn over the colour in the ink colour.
     pattern: str | None = None
     ink: str | None = None
+
+
+@dataclass(frozen=True)
+class RoadKind:
+    """A kind of road on the world map, drawn as a line between the map's places. `width` is the
+    line's width in map units (0-100 across the board), so a highway reads wider than a track."""
+
+    id: str
+    name: str
+    color: str
+    # The rule effect of this road, as the rule set words it. Shown when the road is hovered.
+    rule: str = ""
+    width: float = 0.6
+    # True for a route drawn as a broken line, such as a rail line or an overgrown track.
+    dashed: bool = False
+
+
+@dataclass(frozen=True)
+class RoadTemplate:
+    """A road on the world map, authored by a world. Its points are in kilometers from the map's
+    center, in order along the road."""
+
+    id: str
+    name: str
+    kind: str
+    points: tuple[tuple[float, float], ...]
+    discovered: bool = True
 
 
 @dataclass(frozen=True)
@@ -2130,6 +2183,8 @@ class RuleContent:
     encounter_objects: Mapping[str, EncounterObject] = field(default_factory=dict)
     encounter_templates: Mapping[str, EncounterTemplate] = field(default_factory=dict)
     world_terrain: Mapping[str, WorldTerrain] = field(default_factory=dict)
+    # Kinds of road a world map's lines can be, by id.
+    roads: Mapping[str, RoadKind] = field(default_factory=dict)
     optional_templates: tuple[str, ...] = ()
     # What the GM should tidy at a place that earlier scenes left behind, or None when the rule
     # set does not ask for scene housekeeping.
@@ -2461,6 +2516,22 @@ class DefaultCampaign:
 
 
 @dataclass(frozen=True)
+class MapStyle:
+    """The looks a rule set gives the campaign's maps until the GM changes them: the world
+    chart, and the style a new local map starts in."""
+
+    chart: str = "chart"
+    palette: str = "parchment"
+    ambient: str = "day"
+    clouds: bool = True
+    contours: bool = True
+    # The style, palette, and ambient a local map starts with, empty for the board's own.
+    local_style: str = ""
+    local_palette: str = ""
+    local_ambient: str = ""
+
+
+@dataclass(frozen=True)
 class RuleSet:
     """One loaded rule set. The shared systems are grouped into capability objects; the read-only
     aliases below keep older consumers working without flattening the model back into a union."""
@@ -2532,6 +2603,8 @@ class RuleSet:
     capabilities: Capabilities = field(default_factory=Capabilities)
     # The peoples the GM may give to NPCs and places. A world may declare its own instead.
     species: tuple[Species, ...] = ()
+    # The looks this rule set gives the campaign's maps until the GM changes them.
+    map_style: MapStyle = field(default_factory=MapStyle)
 
     @property
     def rules(self) -> Mapping[str, str]:
@@ -2598,6 +2671,10 @@ class RuleSet:
     @property
     def world_terrain(self) -> Mapping[str, WorldTerrain]:
         return self.content.world_terrain
+
+    @property
+    def roads(self) -> Mapping[str, RoadKind]:
+        return self.content.roads
 
     @property
     def optional_templates(self) -> tuple[str, ...]:
@@ -2999,7 +3076,7 @@ WORLD_TYPES = ("monster", "table", "dice_table", "creative_table", "feature", "i
 # Every definition type a world loader consumes. A rule-set-only definition in a world directory
 # is a content error instead of being silently dropped.
 WORLD_DEFINITION_TYPES = frozenset(
-    {"world", "location", "npc", "region", "route", "species", *WORLD_TYPES}
+    {"world", "location", "npc", "region", "map_road", "route", "species", *WORLD_TYPES}
 )
 # A module is one manifest plus optional world-like definitions. A campaign module's setting is
 # built from those definitions; a mini module is prose only. Modules are data only; no module may
@@ -3058,6 +3135,7 @@ RULE_SET_DEFINITION_TYPES = frozenset(
         "encounter_object",
         "encounter_template",
         "world_terrain",
+        "road",
         "project",
         "faction_asset",
         "campaign_clock",
@@ -3366,6 +3444,7 @@ def _build_world_template(template: str, definitions: list[Definition]) -> World
     _check_routes(locations, template)
     _check_unique_names([*locations, *npcs], template)
     regions = _load_regions(definitions, template)
+    roads = _load_world_roads(definitions, template)
     return WorldTemplate(
         id=world.id,
         name=required_text(world.data, "name", label),
@@ -3380,6 +3459,7 @@ def _build_world_template(template: str, definitions: list[Definition]) -> World
         definitions=(*own, *statblocks),
         start=_load_world_start(world.data, label, location_ids),
         regions=regions,
+        roads=roads,
         species=_load_species_definitions(definitions, template),
     )
 
@@ -3477,6 +3557,57 @@ def _load_regions(definitions: list[Definition], template: str) -> tuple[RegionT
                     f"{template}: region {region.name!r} overlaps region {other.name!r}"
                 )
     return tuple(regions)
+
+
+def _load_world_roads(definitions: list[Definition], template: str) -> tuple[RoadTemplate, ...]:
+    roads: list[RoadTemplate] = []
+    for d in definitions:
+        if d.type != "map_road":
+            continue
+        label = f"{template}: road {d.id}"
+        check_keys(d.data, {"type", "id", "name", "kind", "points", "discovered"}, label)
+        points = _road_corners(d.data.get("points"), label)
+        roads.append(
+            RoadTemplate(
+                id=d.id,
+                name=required_text(d.data, "name", label),
+                kind=required_text(d.data, "kind", label),
+                points=points,
+                discovered=_optional_flag(d.data, "discovered", label, True),
+            )
+        )
+    seen: set[str] = set()
+    for road in roads:
+        key = road.name.casefold()
+        if key in seen:
+            raise ContentError(f"{template}: duplicate road name {road.name!r}")
+        seen.add(key)
+    return tuple(roads)
+
+
+def _road_corners(raw: object, label: str) -> tuple[tuple[float, float], ...]:
+    """A road's points: at least two [x, y] pairs, in order along the road."""
+    if (
+        not isinstance(raw, list)
+        or len(raw) < 2
+        or not all(
+            isinstance(point, list)
+            and len(point) == 2
+            and all(
+                not isinstance(value, bool) and isinstance(value, int | float) for value in point
+            )
+            for point in raw
+        )
+    ):
+        raise ContentError(
+            f"{label}: points must be at least two [x, y] pairs of numbers, in kilometers from "
+            "the map's center, in order along the road"
+        )
+    points = tuple((float(x), float(y)) for x, y in raw)
+    for index, point in enumerate(points[1:], start=1):
+        if point == points[index - 1]:
+            raise ContentError(f"{label}: points must not repeat the same corner twice in a row")
+    return points
 
 
 def _load_world_start(
@@ -3683,6 +3814,12 @@ def _build_world_content(template: WorldTemplate, rule_set: RuleSet) -> WorldCon
         if region.terrain not in rule_set.world_terrain:
             raise ContentError(
                 f"{name}: region {region.name!r} has terrain {region.terrain!r}, which the "
+                f"{rule_set.id!r} rule set does not define"
+            )
+    for road in template.roads:
+        if road.kind not in rule_set.roads:
+            raise ContentError(
+                f"{name}: road {road.name!r} has kind {road.kind!r}, which the "
                 f"{rule_set.id!r} rule set does not define"
             )
     for spot in template.locations:
@@ -4818,6 +4955,35 @@ def _load_default_campaign(data: Mapping[str, Any], label: str) -> DefaultCampai
     )
 
 
+def _load_map_style(data: Mapping[str, Any], label: str) -> MapStyle:
+    """The optional `map_style` block on a rule set's head: the world chart and the local map
+    style the campaign's maps start in. Left out, the campaign keeps the core look."""
+    if "map_style" not in data:
+        return MapStyle()
+    block_label = f"{label}: map_style"
+    block = check_object_keys(data["map_style"], {"world", "local"}, block_label)
+    world_label = f"{block_label}: world"
+    world = check_object_keys(
+        block.get("world", {}),
+        {"chart", "palette", "ambient", "clouds", "contours"},
+        world_label,
+    )
+    local_label = f"{block_label}: local"
+    local = check_object_keys(
+        block.get("local", {}), {"style", "palette", "ambient"}, local_label
+    )
+    return MapStyle(
+        chart=_style_choice(world, "chart", WORLD_MAP_CHARTS, world_label) or "chart",
+        palette=_style_choice(world, "palette", WORLD_MAP_PALETTES, world_label) or "parchment",
+        ambient=_style_choice(world, "ambient", MAP_AMBIENTS, world_label) or "day",
+        clouds=_optional_flag(world, "clouds", world_label, True),
+        contours=_optional_flag(world, "contours", world_label, True),
+        local_style=_style_choice(local, "style", MAP_STYLES, local_label),
+        local_palette=_style_choice(local, "palette", MAP_PALETTES, local_label),
+        local_ambient=_style_choice(local, "ambient", MAP_AMBIENTS, local_label),
+    )
+
+
 def _load_rule_set(
     directory: Path,
     core_definitions: list[Definition],
@@ -4916,6 +5082,7 @@ def _build_rule_set(
             "capabilities",
             "default_campaign",
             "recommended_worlds",
+            "map_style",
             "icon",
         },
         label,
@@ -5101,6 +5268,7 @@ def _build_rule_set(
     vehicles = _load_vehicles(definitions, character, template)
     recipes = _load_recipes(definitions, character, template)
     improvements = _load_improvements(definitions, character, template)
+    roads = _load_roads(definitions, template)
     enum_sources = {
         "moves": sorted(moves),
         "stats": sorted(character.stats),
@@ -5113,6 +5281,9 @@ def _build_rule_set(
         "threats": sorted(threats),
         "site_types": sorted(site_types),
         "site_categories": sorted({site.category for site in site_types.values()}),
+        "roads": sorted(roads),
+        "map_styles": list(MAP_STYLES),
+        "world_charts": list(WORLD_MAP_CHARTS),
         "vehicles": sorted(vehicles),
         "recipes": sorted(recipes),
         "improvements": sorted(improvements),
@@ -5182,6 +5353,7 @@ def _build_rule_set(
             encounter_objects=encounter_objects,
             encounter_templates=encounter_templates,
             world_terrain=world_terrain,
+            roads=roads,
             optional_templates=optional_templates,
             housekeeping=housekeeping,
         ),
@@ -5191,6 +5363,7 @@ def _build_rule_set(
         campaign=campaign,
         default_campaign=_load_default_campaign(head.data, label),
         recommended_worlds=_optional_text_list(head.data, "recommended_worlds", label),
+        map_style=_load_map_style(head.data, label),
         grid=grid,
         combat=combat,
         conditions=conditions,
@@ -6738,6 +6911,33 @@ def _load_world_terrain(definitions: list[Definition], template: str) -> dict[st
             ink=ink,
         )
     return terrain
+
+
+def _load_roads(definitions: list[Definition], template: str) -> dict[str, RoadKind]:
+    roads: dict[str, RoadKind] = {}
+    for d in definitions:
+        if d.type != "road":
+            continue
+        if d.id in roads:
+            raise ContentError(f"{template}: duplicate road kind {d.id!r}")
+        label = f"{template}: road {d.id}"
+        check_keys(d.data, {"type", "id", "name", "color", "rule", "width", "dashed"}, label)
+        width = d.data.get("width", 0.6)
+        if (
+            not isinstance(width, (int, float))
+            or isinstance(width, bool)
+            or not 0.15 <= float(width) <= 2.0
+        ):
+            raise ContentError(f"{label}: 'width' must be a number from 0.15 to 2")
+        roads[d.id] = RoadKind(
+            id=d.id,
+            name=required_text(d.data, "name", label),
+            color=_color(d.data, label),
+            rule=_optional_text(d.data, "rule", label) or "",
+            width=float(width),
+            dashed=_flag(d.data, "dashed", label),
+        )
+    return roads
 
 
 def _load_encounter_objects(
@@ -10279,6 +10479,16 @@ def _plus_mode(data: Mapping[str, Any], label: str) -> str:
 
 def _flag(data: Mapping[str, Any], key: str, label: str) -> bool:
     flag = data.get(key, False)
+    if not isinstance(flag, bool):
+        raise ContentError(f"{label}: {key!r} must be true or false")
+    return flag
+
+
+def _optional_flag(data: Mapping[str, Any], key: str, label: str, default: bool) -> bool:
+    """A true/false field that follows `default` when it is left out."""
+    if key not in data:
+        return default
+    flag = data[key]
     if not isinstance(flag, bool):
         raise ContentError(f"{label}: {key!r} must be true or false")
     return flag

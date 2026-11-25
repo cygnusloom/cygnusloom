@@ -112,6 +112,8 @@ TOOL_GROUPS: dict[str, frozenset[str]] = {
             "delete_encounter_map",
             "create_region",
             "update_region",
+            "create_road",
+            "update_road",
             "update_world_map",
             "travel",
             "wilderness_action",

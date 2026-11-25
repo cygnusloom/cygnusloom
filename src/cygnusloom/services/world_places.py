@@ -6,7 +6,13 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 from cygnusloom.content.icons import icon_registry
-from cygnusloom.content.library import MAP_AMBIENTS, MAP_PALETTES, TERRAIN_PATTERNS
+from cygnusloom.content.library import (
+    MAP_AMBIENTS,
+    MAP_PALETTES,
+    MAP_STYLES,
+    TERRAIN_PATTERNS,
+    WORLD_MAP_CHARTS,
+)
 from cygnusloom.services import encounters
 from cygnusloom.services import sites as sites_service
 from cygnusloom.services.common import (
@@ -86,6 +92,7 @@ class PlacesMixin:
         line_color: str | None = None,
         show_clouds: bool | None = None,
         show_contours: bool | None = None,
+        chart: str | None = None,
     ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return update_world_map(
@@ -97,6 +104,45 @@ class PlacesMixin:
                 line_color=line_color,
                 show_clouds=show_clouds,
                 show_contours=show_contours,
+                chart=chart,
+            )
+
+    def create_road(
+        self,
+        name: str,
+        kind: str,
+        points: Sequence[Sequence[float]],
+        discovered: bool = False,
+    ) -> dict[str, Any]:
+        """Lay a road on the world map, such as a highway or a street the party can follow. The
+        points run in order along the road, in kilometers from the map's center."""
+        with session_scope(self.engine) as db:
+            return create_road(
+                db,
+                self.campaign_id,
+                self.roads,
+                name,
+                kind,
+                points,
+                discovered=discovered,
+            )
+
+    def update_road(
+        self,
+        name: str,
+        kind: str | None = None,
+        points: Sequence[Sequence[float]] | None = None,
+        discovered: bool | None = None,
+    ) -> dict[str, Any]:
+        with session_scope(self.engine) as db:
+            return update_road(
+                db,
+                self.campaign_id,
+                self.roads,
+                name,
+                road_kind=kind,
+                points=points,
+                discovered=discovered,
             )
 
     def create_location(
@@ -271,6 +317,7 @@ class PlacesMixin:
         ambient: str = "",
         background_color: str = "",
         grid_color: str = "",
+        style: str = "",
     ) -> dict[str, Any]:
         """Make a map at a location. The map is not necessarily an encounter: outside one it is a
         local map that can hold the player character, NPCs, and props. A template may supply the
@@ -287,10 +334,11 @@ class PlacesMixin:
                 description,
                 template,
                 self.encounter_templates,
-                palette=palette,
-                ambient=ambient,
+                palette=palette or self.map_style.local_palette,
+                ambient=ambient or self.map_style.local_ambient,
                 background_color=background_color,
                 grid_color=grid_color,
+                style=style or self.map_style.local_style,
             )
 
     def create_local_map(
@@ -305,6 +353,7 @@ class PlacesMixin:
         ambient: str = "",
         background_color: str = "",
         grid_color: str = "",
+        style: str = "",
         regions: Sequence[Mapping[str, Any]] | None = None,
         tokens: Sequence[Mapping[str, Any]] | None = None,
     ) -> dict[str, Any]:
@@ -333,10 +382,11 @@ class PlacesMixin:
                 description,
                 template,
                 self.encounter_templates,
-                palette=palette,
-                ambient=ambient,
+                palette=palette or self.map_style.local_palette,
+                ambient=ambient or self.map_style.local_ambient,
                 background_color=background_color,
                 grid_color=grid_color,
+                style=style or self.map_style.local_style,
             )
             cells_changed = 0
             for region in regions or []:
@@ -527,6 +577,7 @@ class PlacesMixin:
         grid_color: str | None = None,
         palette: str | None = None,
         ambient: str | None = None,
+        style: str | None = None,
     ) -> dict[str, Any]:
         """Rename, resize, restyle, or extend a local map. Extending left or up shifts every
         token and mark, so the scene is kept."""
@@ -545,6 +596,7 @@ class PlacesMixin:
                 background=background,
                 background_color=background_color,
                 grid_color=grid_color,
+                style=style,
                 extend_left=extend_left,
                 extend_right=extend_right,
                 extend_up=extend_up,
@@ -575,6 +627,18 @@ class PlacesMixin:
                     }
                     for terrain in sorted(self.world_terrain.values(), key=lambda entry: entry.id)
                 ],
+                "roads": [
+                    {
+                        "id": road.id,
+                        "name": road.name,
+                        "color": road.color,
+                        "width": road.width,
+                        "dashed": road.dashed,
+                        "rule": road.rule,
+                    }
+                    for road in sorted(self.roads.values(), key=lambda entry: entry.id)
+                ],
+                "charts": list(WORLD_MAP_CHARTS),
                 "palettes": list(WORLD_MAP_PALETTES),
                 "ambients": list(MAP_AMBIENTS),
                 "place_icons": place_icons,
@@ -618,6 +682,7 @@ class PlacesMixin:
             ],
             "palettes": list(MAP_PALETTES),
             "ambients": list(MAP_AMBIENTS),
+            "styles": list(MAP_STYLES),
             "patterns": list(TERRAIN_PATTERNS),
         }
 

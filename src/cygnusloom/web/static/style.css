@@ -423,6 +423,44 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 .world-map.palette-midnight { --world-bg: #1f2b45; --world-line: #6f8bb0; --world-ink: #d9e4f5; }
 .world-map.palette-ivory { --world-bg: #f0eadb; --world-line: #9a8a72; --world-ink: #332f28; }
 .world-map.palette-obsidian { --world-bg: #2b2b30; --world-line: #8c8c9c; --world-ink: #e8e8f0; }
+.world-map.palette-roadmap { --world-bg: #ece7da; --world-line: #7d7666; --world-ink: #23201a; }
+.world-map.palette-blueprint { --world-bg: #10243b; --world-line: #4f9cc2; --world-ink: #d7ecf7; }
+
+/* Chart styles. A land chart is drawn as parchment with contours; a street chart is a flat
+   road atlas; a blueprint is a technical drawing. The SVG layers follow the same choice. */
+.world-map.chart-atlas::after {
+  box-shadow: inset 0 0 1.2rem rgba(24, 28, 32, 0.18);
+  background: radial-gradient(ellipse at center, transparent 68%, rgba(24, 28, 32, 0.1) 100%);
+}
+.world-map.chart-atlas .map-marker, .world-map.chart-blueprint .map-marker { border-radius: 0.3rem; }
+.world-map.chart-atlas .map-region-label, .world-map.chart-blueprint .map-region-label {
+  letter-spacing: 0.02em; text-transform: none;
+}
+.world-map.chart-blueprint::after {
+  box-shadow: inset 0 0 1.6rem rgba(0, 0, 0, 0.45);
+  background: radial-gradient(ellipse at center, transparent 62%, rgba(0, 0, 0, 0.25) 100%);
+}
+/* A road line sits on a dark casing so it reads over any ground, like an atlas road. */
+.map-roads {
+  position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible;
+  z-index: 2; pointer-events: none;
+}
+.map-roads polyline { pointer-events: stroke; cursor: help; }
+.map-road-casing {
+  fill: none; stroke: var(--world-line); stroke-opacity: 0.8;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+.map-road { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.map-road-label {
+  position: absolute; transform: translate(-50%, -50%) scale(calc(1 / var(--zoom, 1)));
+  z-index: 3; padding: 0.02rem 0.3rem; border-radius: 0.3rem;
+  font-size: clamp(0.5rem, 1.6cqmin, 0.58rem); font-weight: 600; letter-spacing: 0.02em;
+  line-height: 1.15; white-space: nowrap;
+  color: var(--world-ink); background: color-mix(in srgb, var(--world-bg) 82%, transparent);
+  border: 1px solid color-mix(in srgb, var(--world-line) 45%, transparent);
+  pointer-events: none;
+}
+.map-road-label[hidden] { display: none; }
 
 /* Ambient light over the chart. The markers and labels sit above it, so they stay readable. */
 .map-weather {
@@ -1469,6 +1507,58 @@ main > .card + .card, main > .card + .admin-grid, main > .admin-grid + .card { m
   --map-bg: #d9d4c8; --map-grid: rgba(120, 90, 40, 0.3);
   --map-frame: #8a6a3a; --map-accent: #6b4a8a;
 }
+.encounter-board.palette-concrete {
+  --map-bg: #b9b7b0; --map-grid: rgba(60, 60, 58, 0.32);
+  --map-frame: #6b6a64; --map-accent: #47474a;
+}
+.encounter-board.palette-asphalt {
+  --map-bg: #4b4e52; --map-grid: rgba(230, 230, 235, 0.2);
+  --map-frame: #2c2e31; --map-accent: #c8ccd2;
+}
+.encounter-board.palette-blueprint {
+  --map-bg: #12293f; --map-grid: rgba(120, 190, 230, 0.32);
+  --map-frame: #3f7fa6; --map-accent: #7fd4ff;
+}
+
+/* Board styles. "board" is the painted miniatures board. "plan" is a flat floor plan with
+   square tokens. "blueprint" is a technical drawing on dark paper. */
+.encounter-board.style-plan {
+  box-shadow: none;
+  background-color: var(--map-bg);
+}
+.encounter-board.style-plan::after { opacity: 0.5; }
+.encounter-board.style-plan .encounter-cell {
+  border-color: color-mix(in srgb, var(--map-frame) 24%, transparent);
+}
+.encounter-board.style-plan .map-token {
+  border-radius: 0.3rem; border: 1px solid color-mix(in srgb, black 25%, transparent);
+  color: #fff; text-shadow: 0 1px 1px rgba(0, 0, 0, 0.45);
+  background: var(--token-side, var(--map-accent)); box-shadow: 0 1px 2px rgba(16, 12, 8, 0.35);
+}
+.encounter-board.style-plan .map-token[data-side] { background: var(--token-side); }
+.encounter-board.style-plan .encounter-cell.blocked,
+.encounter-board.style-plan .encounter-cell.difficult {
+  box-shadow: inset 0 0 0 1px rgba(150, 60, 45, 0.45);
+}
+.encounter-board.style-plan .cell-object { opacity: 0.92; }
+.encounter-board.style-blueprint {
+  --map-bg: #12293f; --map-grid: rgba(120, 190, 230, 0.35);
+  --map-frame: #3f7fa6; --map-accent: #7fd4ff;
+  box-shadow: none;
+}
+.encounter-board.style-blueprint::after { opacity: 0.55; }
+.encounter-board.style-blueprint .encounter-cell {
+  border-color: rgba(120, 190, 230, 0.22);
+}
+.encounter-board.style-blueprint .map-token {
+  border-radius: 0; border: 1px solid var(--map-accent);
+  color: var(--map-accent); background: rgba(10, 30, 48, 0.7);
+  box-shadow: none; text-shadow: none; font-weight: 600;
+}
+.encounter-board.style-blueprint .map-token[data-side] {
+  border-color: var(--token-side); color: var(--token-side); background: rgba(10, 30, 48, 0.7);
+}
+.encounter-board.style-blueprint .cell-object { filter: invert(0.85) sepia(0.2) hue-rotate(160deg); }
 
 /* Ambient overlays: no animation and no external images. */
 .encounter-board.ambient-day::before {

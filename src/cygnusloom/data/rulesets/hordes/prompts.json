@@ -106,6 +106,12 @@
   },
   {
     "type": "prompt",
+    "id": "streets_and_ground",
+    "step": "state",
+    "text": "The world map is the country around the shelter: draw the ground before the roads run through it. When the story establishes the district, the highway out of town, a lake, a rail yard, or a burned block, draw that ground with create_region, and when a new place needs ground around it, draw the ground first. Then lay the roads the party actually uses with create_road: give a highway, street, track, or rail line the same corners the places along it were given, so it reaches them, and bend it where the story says the road bends. A road the party has heard about but never seen is laid with discovered false until people know it. When the party enters a place the layout matters for, build its local map from the modern templates, such as city_block, street_corner, store_aisle, warehouse, clinic, lab, tunnel, storm_drain, apartment_floor, or checkpoint, and paint the street, rail bed, and interiors with set_map_cells. A modern map is a floor plan or a street plan, not a dungeon: rooms have doors, windows, cars, and furniture, and the layout matches what the narration says is there."
+  },
+  {
+    "type": "prompt",
     "id": "zombie_cyborgs",
     "step": "state",
     "text": "A cybernetics lab, clinic, or military site may hold zombie-cyborgs, lab zombies, or security walkers. A zombie cyborg is a dead body with working hardware: its armor is machinery, its servo-lunge is fast and wrong, its scan finds movement, and its spark can hurt anyone touching it. Show the hardware before the fight, let a character with Cybernetics Configuration disable it or cut its power, and use the site's suggested threats with create_threat. Do not describe a cyborg as an ordinary walker; its tags and moves are the difference."

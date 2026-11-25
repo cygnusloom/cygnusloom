@@ -1419,6 +1419,26 @@
     "path": "objects/radio.svg",
     "label": "Radio"
   },
+  "dumpster": {
+    "category": "objects",
+    "path": "objects/dumpster.svg",
+    "label": "Dumpster"
+  },
+  "sandbags": {
+    "category": "objects",
+    "path": "objects/sandbags.svg",
+    "label": "Sandbags"
+  },
+  "streetlight": {
+    "category": "objects",
+    "path": "objects/streetlight.svg",
+    "label": "Street light"
+  },
+  "gurney": {
+    "category": "objects",
+    "path": "objects/gurney.svg",
+    "label": "Gurney"
+  },
   "cellar": {
     "category": "objects",
     "path": "objects/cellar.svg",

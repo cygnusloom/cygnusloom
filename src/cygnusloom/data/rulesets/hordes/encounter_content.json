@@ -1,0 +1,465 @@
+[
+  {
+    "type": "encounter_terrain",
+    "id": "asphalt",
+    "name": "Asphalt",
+    "color": "#4e5155",
+    "pattern": "crags",
+    "ink": "#2b2d2f",
+    "category": "street",
+    "rule": "Cracked road surface. Normal footing, and it carries noise a long way."
+  },
+  {
+    "type": "encounter_terrain",
+    "id": "sidewalk",
+    "name": "Sidewalk",
+    "color": "#9c9a94",
+    "pattern": "tiles",
+    "ink": "#6e6c67",
+    "category": "street",
+    "rule": "A concrete walk. Clear going, with a curb to duck behind."
+  },
+  {
+    "type": "encounter_terrain",
+    "id": "concrete",
+    "name": "Concrete floor",
+    "color": "#8f8d88",
+    "category": "interior",
+    "rule": "A bare concrete floor, swept or dusty."
+  },
+  {
+    "type": "encounter_terrain",
+    "id": "tile",
+    "name": "Tile floor",
+    "color": "#cfd3d6",
+    "pattern": "tiles",
+    "ink": "#8b9195",
+    "category": "interior",
+    "rule": "A tiled floor, easy to clean and loud underfoot."
+  },
+  {
+    "type": "encounter_terrain",
+    "id": "rails",
+    "name": "Rail bed",
+    "color": "#6a6156",
+    "pattern": "wood",
+    "ink": "#4a433a",
+    "move_cost": 2,
+    "category": "street",
+    "rule": "Ballast, sleepers, and steel. Watch the rails; it costs time to cross."
+  },
+  {
+    "type": "encounter_terrain",
+    "id": "metal",
+    "name": "Metal floor",
+    "color": "#6f767c",
+    "pattern": "hexes",
+    "ink": "#3f464b",
+    "category": "interior",
+    "rule": "A steel floor or catwalk. Every step rings."
+  },
+  {
+    "type": "encounter_object",
+    "id": "car",
+    "name": "Car",
+    "icon": "car",
+    "color": "#6b7280",
+    "blocks": true,
+    "category": "street",
+    "description": "A dead car, left where it stopped: cover, or a place to search."
+  },
+  {
+    "type": "encounter_object",
+    "id": "truck",
+    "name": "Truck",
+    "icon": "truck",
+    "color": "#59606b",
+    "blocks": true,
+    "category": "street",
+    "description": "A truck or van, loaded or stripped, blocking the way through."
+  },
+  {
+    "type": "encounter_object",
+    "id": "motorcycle",
+    "name": "Motorcycle",
+    "icon": "motorcycle",
+    "color": "#7a6a5a",
+    "category": "street",
+    "description": "A fallen motorcycle. Worth fuel and parts if it still runs."
+  },
+  {
+    "type": "encounter_object",
+    "id": "bicycle",
+    "name": "Bicycle",
+    "icon": "bicycle",
+    "color": "#6b7280",
+    "category": "street",
+    "description": "A bicycle. Quiet, and it needs no fuel."
+  },
+  {
+    "type": "encounter_object",
+    "id": "dumpster",
+    "name": "Dumpster",
+    "icon": "dumpster",
+    "color": "#3f5c44",
+    "blocks": true,
+    "category": "street",
+    "description": "A steel dumpster, lid ajar. Cover, and sometimes something worth taking."
+  },
+  {
+    "type": "encounter_object",
+    "id": "sandbags",
+    "name": "Sandbags",
+    "icon": "sandbags",
+    "color": "#b39a6a",
+    "category": "street",
+    "description": "A low wall of sandbags, stacked by someone who meant to hold this ground."
+  },
+  {
+    "type": "encounter_object",
+    "id": "streetlight",
+    "name": "Street light",
+    "icon": "streetlight",
+    "color": "#f2e3a8",
+    "category": "street",
+    "description": "A street light, dead or stuttering. It marks the way and lights what walks under it."
+  },
+  {
+    "type": "encounter_object",
+    "id": "barricade",
+    "name": "Barricade",
+    "icon": "barricade",
+    "color": "#b0501f",
+    "blocks": true,
+    "category": "street",
+    "description": "A barrier thrown across the way, with a hand-painted warning."
+  },
+  {
+    "type": "encounter_object",
+    "id": "generator",
+    "name": "Generator",
+    "icon": "generator",
+    "color": "#6b6f74",
+    "blocks": true,
+    "category": "interior",
+    "description": "A generator or a heavy machine. It can run something, and it is loud."
+  },
+  {
+    "type": "encounter_object",
+    "id": "gurney",
+    "name": "Gurney",
+    "icon": "gurney",
+    "color": "#d8dde2",
+    "category": "interior",
+    "description": "A hospital gurney, straps hanging loose."
+  },
+  {
+    "type": "encounter_object",
+    "id": "hatch",
+    "name": "Hatch",
+    "icon": "hatch",
+    "color": "#5d666d",
+    "category": "interior",
+    "description": "A steel hatch or grate, the way into the drains or the tunnels below."
+  },
+  {
+    "type": "encounter_template",
+    "id": "city_block",
+    "name": "City block",
+    "description": "A corner of a city street: two storefronts, an apartment entrance, and a parking lot.",
+    "columns": 18,
+    "rows": 12,
+    "background": "asphalt",
+    "fills": [
+      {"from": [0, 0], "to": [8, 5], "terrain": "sidewalk"},
+      {"from": [1, 1], "to": [7, 4], "terrain": "concrete"},
+      {"from": [1, 1], "to": [7, 1], "object": "wall"},
+      {"from": [1, 4], "to": [7, 4], "object": "wall"},
+      {"from": [1, 1], "to": [1, 4], "object": "wall"},
+      {"from": [7, 1], "to": [7, 4], "object": "wall"},
+      {"from": [10, 0], "to": [17, 4], "terrain": "sidewalk"},
+      {"from": [11, 1], "to": [16, 3], "terrain": "concrete"},
+      {"from": [11, 1], "to": [16, 1], "object": "wall"},
+      {"from": [11, 3], "to": [16, 3], "object": "wall"},
+      {"from": [11, 1], "to": [11, 3], "object": "wall"},
+      {"from": [16, 1], "to": [16, 3], "object": "wall"},
+      {"from": [0, 7], "to": [7, 11], "terrain": "sidewalk"},
+      {"from": [1, 8], "to": [6, 11], "terrain": "concrete"},
+      {"from": [1, 8], "to": [6, 8], "object": "wall"},
+      {"from": [1, 11], "to": [6, 11], "object": "wall"},
+      {"from": [1, 8], "to": [1, 11], "object": "wall"},
+      {"from": [6, 8], "to": [6, 11], "object": "wall"}
+    ],
+    "cells": [
+      {"column": 4, "row": 4, "object": "door"},
+      {"column": 13, "row": 3, "object": "door"},
+      {"column": 3, "row": 8, "object": "door"},
+      {"column": 13, "row": 8, "object": "car"},
+      {"column": 15, "row": 9, "object": "car"},
+      {"column": 9, "row": 6, "object": "dumpster"},
+      {"column": 9, "row": 5, "object": "streetlight"},
+      {"column": 8, "row": 10, "object": "streetlight"},
+      {"column": 2, "row": 10, "object": "crate"},
+      {"column": 16, "row": 6, "object": "bicycle"}
+    ]
+  },
+  {
+    "type": "encounter_template",
+    "id": "street_corner",
+    "name": "Street corner",
+    "description": "A crossing with a shop on one corner, a boarded house on the other, and a barricade in the road.",
+    "columns": 14,
+    "rows": 10,
+    "background": "asphalt",
+    "fills": [
+      {"from": [0, 0], "to": [13, 0], "terrain": "sidewalk"},
+      {"from": [0, 9], "to": [13, 9], "terrain": "sidewalk"},
+      {"from": [0, 1], "to": [0, 8], "terrain": "sidewalk"},
+      {"from": [13, 1], "to": [13, 8], "terrain": "sidewalk"},
+      {"from": [1, 1], "to": [5, 4], "terrain": "concrete"},
+      {"from": [1, 1], "to": [5, 1], "object": "wall"},
+      {"from": [1, 4], "to": [5, 4], "object": "wall"},
+      {"from": [1, 1], "to": [1, 4], "object": "wall"},
+      {"from": [5, 1], "to": [5, 4], "object": "wall"},
+      {"from": [9, 1], "to": [12, 4], "terrain": "wood"},
+      {"from": [9, 1], "to": [12, 1], "object": "wall"},
+      {"from": [9, 4], "to": [12, 4], "object": "wall"},
+      {"from": [9, 1], "to": [9, 4], "object": "wall"},
+      {"from": [12, 1], "to": [12, 4], "object": "wall"}
+    ],
+    "cells": [
+      {"column": 3, "row": 4, "object": "door"},
+      {"column": 10, "row": 4, "object": "door"},
+      {"column": 8, "row": 6, "object": "car"},
+      {"column": 1, "row": 7, "object": "dumpster"},
+      {"column": 6, "row": 1, "object": "streetlight"},
+      {"column": 6, "row": 7, "object": "barricade"},
+      {"column": 11, "row": 6, "object": "bicycle"},
+      {"column": 2, "row": 8, "object": "crate"}
+    ]
+  },
+  {
+    "type": "encounter_template",
+    "id": "store_aisle",
+    "name": "Store aisle",
+    "description": "Picked-over shelving, a checkout counter, and a back room behind the shop.",
+    "columns": 12,
+    "rows": 8,
+    "background": "tile",
+    "fills": [
+      {"from": [0, 0], "to": [11, 0], "object": "wall"},
+      {"from": [0, 7], "to": [11, 7], "object": "wall"},
+      {"from": [0, 1], "to": [0, 6], "object": "wall"},
+      {"from": [11, 1], "to": [11, 6], "object": "wall"},
+      {"from": [2, 2], "to": [2, 5], "object": "shelf"},
+      {"from": [4, 2], "to": [4, 5], "object": "shelf"},
+      {"from": [6, 2], "to": [6, 5], "object": "shelf"},
+      {"from": [8, 2], "to": [8, 5], "object": "shelf"},
+      {"from": [2, 6], "to": [5, 6], "object": "counter"}
+    ],
+    "cells": [
+      {"column": 6, "row": 7, "object": "door"},
+      {"column": 9, "row": 6, "object": "crate"},
+      {"column": 10, "row": 2, "object": "crate"},
+      {"column": 1, "row": 1, "object": "streetlight"}
+    ]
+  },
+  {
+    "type": "encounter_template",
+    "id": "warehouse",
+    "name": "Warehouse",
+    "description": "A loading floor of shelving and pallets with a glassed office at one end.",
+    "columns": 16,
+    "rows": 12,
+    "background": "concrete",
+    "fills": [
+      {"from": [0, 0], "to": [15, 0], "object": "wall"},
+      {"from": [0, 11], "to": [15, 11], "object": "wall"},
+      {"from": [0, 1], "to": [0, 10], "object": "wall"},
+      {"from": [15, 1], "to": [15, 10], "object": "wall"},
+      {"from": [12, 1], "to": [15, 4], "terrain": "carpet"},
+      {"from": [12, 1], "to": [15, 1], "object": "wall"},
+      {"from": [12, 4], "to": [15, 4], "object": "wall"},
+      {"from": [12, 1], "to": [12, 4], "object": "wall"},
+      {"from": [1, 2], "to": [6, 2], "object": "shelf"},
+      {"from": [1, 4], "to": [6, 4], "object": "shelf"},
+      {"from": [1, 6], "to": [6, 6], "object": "shelf"}
+    ],
+    "cells": [
+      {"column": 12, "row": 3, "object": "door"},
+      {"column": 12, "row": 11, "object": "gate"},
+      {"column": 8, "row": 9, "object": "truck"},
+      {"column": 1, "row": 10, "object": "generator"},
+      {"column": 8, "row": 2, "object": "crate"},
+      {"column": 9, "row": 2, "object": "crate"},
+      {"column": 8, "row": 6, "object": "crate"},
+      {"column": 13, "row": 2, "object": "desk"},
+      {"column": 10, "row": 5, "object": "streetlight"}
+    ]
+  },
+  {
+    "type": "encounter_template",
+    "id": "clinic",
+    "name": "Clinic",
+    "description": "A waiting room, a row of beds, and a treatment room behind a swing door.",
+    "columns": 12,
+    "rows": 10,
+    "background": "tile",
+    "fills": [
+      {"from": [0, 0], "to": [11, 0], "object": "wall"},
+      {"from": [0, 9], "to": [11, 9], "object": "wall"},
+      {"from": [0, 1], "to": [0, 8], "object": "wall"},
+      {"from": [11, 1], "to": [11, 8], "object": "wall"},
+      {"from": [0, 4], "to": [11, 4], "object": "wall"}
+    ],
+    "cells": [
+      {"column": 6, "row": 4, "object": "door"},
+      {"column": 6, "row": 9, "object": "door"},
+      {"column": 2, "row": 1, "object": "bed"},
+      {"column": 4, "row": 1, "object": "bed"},
+      {"column": 8, "row": 1, "object": "bed"},
+      {"column": 10, "row": 1, "object": "bed"},
+      {"column": 6, "row": 2, "object": "gurney"},
+      {"column": 2, "row": 7, "object": "desk"},
+      {"column": 10, "row": 7, "object": "cabinet"},
+      {"column": 4, "row": 7, "object": "shelf"},
+      {"column": 9, "row": 5, "object": "gurney"}
+    ]
+  },
+  {
+    "type": "encounter_template",
+    "id": "lab",
+    "name": "Lab",
+    "description": "A benched workroom with a surgical chair and a server rack still humming.",
+    "columns": 12,
+    "rows": 10,
+    "background": "metal",
+    "fills": [
+      {"from": [0, 0], "to": [11, 0], "object": "wall"},
+      {"from": [0, 9], "to": [11, 9], "object": "wall"},
+      {"from": [0, 1], "to": [0, 8], "object": "wall"},
+      {"from": [11, 1], "to": [11, 8], "object": "wall"},
+      {"from": [0, 5], "to": [11, 5], "object": "wall"}
+    ],
+    "cells": [
+      {"column": 6, "row": 5, "object": "door"},
+      {"column": 2, "row": 2, "object": "desk"},
+      {"column": 4, "row": 2, "object": "desk"},
+      {"column": 10, "row": 2, "object": "cabinet"},
+      {"column": 6, "row": 3, "object": "gurney"},
+      {"column": 2, "row": 8, "object": "desk"},
+      {"column": 10, "row": 8, "object": "generator"},
+      {"column": 9, "row": 8, "object": "hatch"},
+      {"column": 6, "row": 9, "object": "door"}
+    ]
+  },
+  {
+    "type": "encounter_template",
+    "id": "tunnel",
+    "name": "Tunnel",
+    "description": "A road tunnel: two rail lines, narrow walkways, and supports along the walls.",
+    "columns": 18,
+    "rows": 6,
+    "background": "concrete",
+    "fills": [
+      {"from": [0, 0], "to": [17, 0], "object": "wall"},
+      {"from": [0, 5], "to": [17, 5], "object": "wall"},
+      {"from": [0, 1], "to": [17, 1], "terrain": "sidewalk"},
+      {"from": [0, 4], "to": [17, 4], "terrain": "sidewalk"},
+      {"from": [0, 2], "to": [17, 3], "terrain": "rails"}
+    ],
+    "cells": [
+      {"column": 3, "row": 1, "object": "pillar"},
+      {"column": 7, "row": 1, "object": "pillar"},
+      {"column": 11, "row": 1, "object": "pillar"},
+      {"column": 15, "row": 1, "object": "pillar"},
+      {"column": 3, "row": 4, "object": "pillar"},
+      {"column": 7, "row": 4, "object": "pillar"},
+      {"column": 11, "row": 4, "object": "pillar"},
+      {"column": 15, "row": 4, "object": "pillar"},
+      {"column": 5, "row": 1, "object": "streetlight"},
+      {"column": 13, "row": 1, "object": "streetlight"},
+      {"column": 9, "row": 4, "object": "hatch"}
+    ]
+  },
+  {
+    "type": "encounter_template",
+    "id": "storm_drain",
+    "name": "Storm drain",
+    "description": "A concrete drain with a shallow channel running down its middle and a ladder up to the street.",
+    "columns": 14,
+    "rows": 6,
+    "background": "concrete",
+    "fills": [
+      {"from": [0, 0], "to": [13, 0], "object": "wall"},
+      {"from": [0, 5], "to": [13, 5], "object": "wall"},
+      {"from": [0, 1], "to": [13, 1], "terrain": "sidewalk"},
+      {"from": [0, 4], "to": [13, 4], "terrain": "sidewalk"},
+      {"from": [0, 2], "to": [13, 3], "terrain": "shallow-water"}
+    ],
+    "cells": [
+      {"column": 2, "row": 1, "object": "ladder"},
+      {"column": 5, "row": 4, "object": "pillar"},
+      {"column": 9, "row": 1, "object": "pillar"},
+      {"column": 12, "row": 4, "object": "hatch"}
+    ]
+  },
+  {
+    "type": "encounter_template",
+    "id": "apartment_floor",
+    "name": "Apartment floor",
+    "description": "A landing and three flats off one hallway, doors hanging open.",
+    "columns": 14,
+    "rows": 10,
+    "background": "carpet",
+    "fills": [
+      {"from": [0, 0], "to": [13, 0], "object": "wall"},
+      {"from": [0, 9], "to": [13, 9], "object": "wall"},
+      {"from": [0, 1], "to": [0, 8], "object": "wall"},
+      {"from": [13, 1], "to": [13, 8], "object": "wall"},
+      {"from": [0, 5], "to": [13, 5], "object": "wall"},
+      {"from": [7, 0], "to": [7, 5], "object": "wall"}
+    ],
+    "cells": [
+      {"column": 3, "row": 5, "object": "door"},
+      {"column": 10, "row": 5, "object": "door"},
+      {"column": 7, "row": 2, "object": "door"},
+      {"column": 6, "row": 9, "object": "door"},
+      {"column": 2, "row": 1, "object": "bed"},
+      {"column": 5, "row": 1, "object": "bed"},
+      {"column": 11, "row": 1, "object": "bed"},
+      {"column": 3, "row": 3, "object": "table"},
+      {"column": 4, "row": 3, "object": "bench"},
+      {"column": 10, "row": 3, "object": "desk"},
+      {"column": 12, "row": 1, "object": "cabinet"},
+      {"column": 2, "row": 8, "object": "crate"},
+      {"column": 10, "row": 8, "object": "shelf"},
+      {"column": 12, "row": 8, "object": "bicycle"}
+    ]
+  },
+  {
+    "type": "encounter_template",
+    "id": "checkpoint",
+    "name": "Checkpoint",
+    "description": "A wire fence and a gate across the road, held with sandbags and a truck.",
+    "columns": 14,
+    "rows": 8,
+    "background": "asphalt",
+    "fills": [
+      {"from": [0, 2], "to": [13, 2], "terrain": "sidewalk"},
+      {"from": [11, 1], "to": [11, 6], "object": "fence"}
+    ],
+    "cells": [
+      {"column": 4, "row": 4, "object": "sandbags"},
+      {"column": 5, "row": 4, "object": "sandbags"},
+      {"column": 6, "row": 4, "object": "sandbags"},
+      {"column": 7, "row": 5, "object": "sandbags"},
+      {"column": 9, "row": 4, "object": "barricade"},
+      {"column": 2, "row": 4, "object": "truck"},
+      {"column": 11, "row": 4, "object": "gate"},
+      {"column": 1, "row": 1, "object": "streetlight"},
+      {"column": 12, "row": 6, "object": "generator"},
+      {"column": 3, "row": 6, "object": "crate"}
+    ]
+  }
+]

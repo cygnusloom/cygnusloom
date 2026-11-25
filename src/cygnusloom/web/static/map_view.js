@@ -86,8 +86,9 @@
     const names = markers
       .map((marker) => marker.querySelector(".map-marker-name"))
       .filter(Boolean);
+    const roads = [...board.querySelectorAll(".map-road-label")];
     const regions = [...board.querySelectorAll(".map-region-label")];
-    if (!names.length && !regions.length) return;
+    if (!names.length && !roads.length && !regions.length) return;
     const frameRect = frame.getBoundingClientRect();
     if (!frameRect.width || !frameRect.height) return;
     const frameBox = {
@@ -96,6 +97,7 @@
     };
     // Measure every label visible. This runs before the browser paints, so the reveal is unseen.
     names.forEach((name) => { name.hidden = false; });
+    roads.forEach((label) => { label.hidden = false; });
     regions.forEach((label) => { label.hidden = false; });
     const pills = markers
       .map((marker) => ({ marker, box: boxOf(marker) }))
@@ -156,6 +158,30 @@
       }
       if (shown) kept.push(padded(shown));
       else name.hidden = true;
+    }
+    // A road's name sits at the middle of its length, moved to whichever side of the road is
+    // free, so a street between two close places keeps its name.
+    const ROAD_OFFSETS = [[0, 0], [0, -4], [0, 4], [-7, 0], [7, 0], [-6, -6], [6, 6], [-6, 6], [6, -6]];
+    for (const label of roads) {
+      const left = Number(label.dataset.left);
+      const top = Number(label.dataset.top);
+      let shown = false;
+      for (const [dx, dy] of ROAD_OFFSETS) {
+        label.style.left = `${left + dx}%`;
+        label.style.top = `${top + dy}%`;
+        label.hidden = false;
+        const box = boxOf(label);
+        if (fits(box, null)) {
+          kept.push(padded(box));
+          shown = true;
+          break;
+        }
+      }
+      if (!shown) {
+        label.style.left = `${left}%`;
+        label.style.top = `${top}%`;
+        label.hidden = true;
+      }
     }
     for (const label of regions) {
       const box = boxOf(label);

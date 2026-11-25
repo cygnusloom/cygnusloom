@@ -21,6 +21,7 @@ from cygnusloom.content.icons import check_icon
 from cygnusloom.content.library import (
     MAP_AMBIENTS,
     MAP_PALETTES,
+    MAP_STYLES,
     TERRAIN_PATTERNS,
     CombatRules,
     EncounterGrid,
@@ -361,6 +362,7 @@ def create_map(
     ambient: str = "",
     background_color: str = "",
     grid_color: str = "",
+    style: str = "",
     *,
     state: CampaignState | None = None,
 ) -> dict[str, Any]:
@@ -389,6 +391,7 @@ def create_map(
         raise InvalidInput(f"there is no location named {location!r}")
     chosen_palette = _style_id(palette, MAP_PALETTES, "palette")
     chosen_ambient = _style_id(ambient, MAP_AMBIENTS, "ambient")
+    chosen_style = _style_id(style, MAP_STYLES, "style")
     chosen_background = _hex_color(background_color, "background_color")
     chosen_grid = _hex_color(grid_color, "grid_color")
     background = ""
@@ -429,6 +432,7 @@ def create_map(
         ambient=chosen_ambient,
         background_color=chosen_background,
         grid_color=chosen_grid,
+        style=chosen_style,
         marks=_mark_dicts(marks),
     )
     event.apply(state, record(db, campaign_id, event))
@@ -443,6 +447,7 @@ def create_map(
         "ambient": chosen_ambient,
         "background_color": chosen_background,
         "grid_color": chosen_grid,
+        "style": chosen_style,
     }
     if template:
         result["template"] = template
@@ -473,6 +478,7 @@ def update_map(
     background: str | None = None,
     background_color: str | None = None,
     grid_color: str | None = None,
+    style: str | None = None,
     extend_left: int = 0,
     extend_right: int = 0,
     extend_up: int = 0,
@@ -515,6 +521,7 @@ def update_map(
     )
     new_palette = entry.palette if palette is None else _style_id(palette, MAP_PALETTES, "palette")
     new_ambient = entry.ambient if ambient is None else _style_id(ambient, MAP_AMBIENTS, "ambient")
+    new_style = entry.style if style is None else _style_id(style, MAP_STYLES, "style")
     new_background_color = (
         entry.background_color
         if background_color is None
@@ -561,12 +568,14 @@ def update_map(
         new_ambient,
         new_background_color,
         new_grid_color,
+        new_style,
     ) != (
         entry.background,
         entry.palette,
         entry.ambient,
         entry.background_color,
         entry.grid_color,
+        entry.style,
     )
     if styled:
         record(
@@ -579,6 +588,7 @@ def update_map(
                 grid_color=new_grid_color,
                 palette=new_palette,
                 ambient=new_ambient,
+                style=new_style,
             ),
         )
     resized = (new_columns, new_rows) != (entry.columns, entry.rows)
@@ -1837,6 +1847,7 @@ def encounter_view(
         "ambient": entry.ambient,
         "background_color": entry.background_color,
         "grid_color": entry.grid_color,
+        "style": entry.style,
         "round": encounter.round,
         "acting": encounter.acting,
         "has_acted": encounter.attacked > 0 or encounter.moved > 0,
@@ -1983,6 +1994,7 @@ def local_map_view(
         "ambient": entry.ambient,
         "background_color": entry.background_color,
         "grid_color": entry.grid_color,
+        "style": entry.style,
         "participants": participants,
     }
 

@@ -718,6 +718,33 @@ At City Alert 3 a patrol or runner pack is out; at 4 roads close; at 5 a horde
 is drawn; at 6 the district sweeps. Every crossing is time, noise, and exposure,
 and the trip home with loot is a scene.
 
+### Maps
+
+Hordes reads as a road atlas rather than a parchment chart. The rule set gives
+the campaign a **map style**: the world map is drawn as an **atlas** chart on
+the `roadmap` palette, with a block grid and no clouds or contours, and every
+local map starts as a **plan** on the `concrete` palette. The GM may still
+change the chart, palette, and board style in play with `update_world_map` and
+`update_local_map`.
+
+The world map is ground plus the roads across it. Ground is drawn with
+`create_region` from the rule set's world terrain (city, suburbs, industrial,
+ruins, farmland, forest, hills, water, highway). Roads are their own feature:
+`create_road` lays a highway, street, track, or rail line over the ground,
+along the same corners as the places it reaches, and `update_road` moves or
+reveals one. A road appears on the player's map once it is discovered or a
+discovered place stands on it, and its name sits at the middle of its length.
+The atlas look means a district reads as blocks and the ways between them.
+
+Local maps use the modern templates: `city_block`, `street_corner`,
+`store_aisle`, `warehouse`, `clinic`, `lab`, `tunnel`, `storm_drain`,
+`apartment_floor`, and `checkpoint`, painted with the add-on terrain (asphalt,
+sidewalk, concrete, tile, rail bed, metal) and objects (cars, trucks, a
+dumpster, sandbags, street lights, gurneys, barricades, generators, hatches).
+Core's room, house, temple, cellar, and cave templates remain for the older
+buildings the city still has. Hordes does not run encounters, so a local map is
+a shared picture of where everyone stands; it never gates movement.
+
 ### Site tiers
 
 | Tier | Examples | Danger | Loot |
@@ -971,6 +998,8 @@ Table genre: add `apocalypse` to `TABLE_GENRES`; Hordes uses
 | `counters.json` | harm, infection, Rejection, Dread, practice ticks, follower morale |
 | `items/` | weapons, ammo, armor, gear, medical, food, water, fuel, parts, granular loot |
 | `site_types.json` | twenty generated place kinds with zones, loot, threats, and find levels |
+| `roads.json` | highway, street, track, and rail line kinds for the world atlas |
+| `encounter_content.json` | modern street and interior terrain, objects, and the city-block, tunnel, and other local map templates |
 | `threats.json` | horde, zombie variants (including zombie cyborgs), horrors, survivors, animals |
 | `vehicles.json` | vehicle templates |
 | `recipes.json` | crafting, reloading, medicine, fuel, repairs |

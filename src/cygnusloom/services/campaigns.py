@@ -97,7 +97,7 @@ from cygnusloom.services.world import (
     seed_campaign,
     set_campaign_options,
 )
-from cygnusloom.services.world_support import _check_sheet_text
+from cygnusloom.services.world_support import _check_sheet_text, set_world_map_style
 
 logger = logging.getLogger(__name__)
 
@@ -251,6 +251,8 @@ def create_campaign(
             wilderness=library.rule_sets[rule_set].wilderness,
         )
         _seed_local_maps(db, campaign.id, template, library.rule_sets[rule_set])
+        set_world_map_style(db, campaign.id, library.rule_sets[rule_set].map_style)
+        db.commit()
         db.refresh(campaign)
         return campaign
 
@@ -274,6 +276,9 @@ def _seed_local_maps(db: Any, campaign_id: int, template: Any, rule_set: RuleSet
             description=f"A local map of {spot.name}.",
             template=spot.map,
             templates=rule_set.encounter_templates,
+            palette=rule_set.map_style.local_palette,
+            ambient=rule_set.map_style.local_ambient,
+            style=rule_set.map_style.local_style,
             state=state,
         )
     for spot in template.locations:

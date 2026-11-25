@@ -1,0 +1,36 @@
+[
+  {
+    "type": "road",
+    "id": "highway",
+    "name": "Highway",
+    "color": "#edb457",
+    "width": 1.0,
+    "rule": "A paved highway. The fastest way between towns, and the most exposed."
+  },
+  {
+    "type": "road",
+    "id": "street",
+    "name": "Street",
+    "color": "#fbf8ee",
+    "width": 0.6,
+    "rule": "A city or town street. It reaches the places along it and carries noise."
+  },
+  {
+    "type": "road",
+    "id": "track",
+    "name": "Track",
+    "color": "#b9a37c",
+    "width": 0.4,
+    "dashed": true,
+    "rule": "A dirt track, fire road, or overgrown lane. Slower going, but quiet."
+  },
+  {
+    "type": "road",
+    "id": "rail",
+    "name": "Rail line",
+    "color": "#7c7b78",
+    "width": 0.45,
+    "dashed": true,
+    "rule": "A railway line. The rails still run somewhere, and the line is often the only clear way through."
+  }
+]

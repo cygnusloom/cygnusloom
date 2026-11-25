@@ -170,10 +170,88 @@
   },
   {
     "type": "tool_call",
-    "id": "update_world_map",
-    "description": "Change the look of the player's world map. Choose a palette and ambient light from map_options, or give custom background and line colours. Clouds and contour lines can be turned off when the chart should be plain. Leave a field out to keep it.",
+    "id": "create_road",
+    "description": "Lay a road on the world map, drawn as a line between places. Use it when the story establishes a road, street, rail line, or trail the party can follow, and give the same corners the places along it were given so the road connects them. A place on a road needs the road's ground as a region first; create the region with create_region, then draw the road over it. The road kind comes from map_options' roads; a rule set with no roads has no road tools. A road stays hidden from the player until it is discovered or a discovered place stands on it.",
     "parameters": {
       "properties": {
+        "name": {
+          "type": "string",
+          "description": "The road's name, such as 'Route 9' or 'Mill Street'. Names must be unique among roads."
+        },
+        "kind": {
+          "type": "string",
+          "description": "The road kind id from map_options, such as highway, street, or track."
+        },
+        "points": {
+          "type": "array",
+          "description": "The road's corners in order along it, each [x, y] in kilometers from the map's center, x positive east and y positive north. Two or more, and bend it where the story says the road bends.",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2
+          }
+        },
+        "discovered": {
+          "type": "boolean",
+          "description": "Set true when the player already knows the road. Without it, the road appears once a discovered place stands on it."
+        }
+      },
+      "required": [
+        "name",
+        "kind",
+        "points"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "update_road",
+    "description": "Change a road on the world map: its kind, its path, or whether the player knows it. Give only what changes. Use it when the story reroutes or reveals a road rather than laying a new one.",
+    "parameters": {
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The road's name."
+        },
+        "kind": {
+          "type": "string",
+          "description": "A new road kind id from map_options. Leave it out to keep the current kind."
+        },
+        "points": {
+          "type": "array",
+          "description": "A new path of two or more [x, y] corners, in order along the road, in kilometers from the map's center. Leave it out to keep the current path.",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2
+          }
+        },
+        "discovered": {
+          "type": "boolean",
+          "description": "True to show the road to the player, false to hide it. Leave it out to keep it as it is."
+        }
+      },
+      "required": [
+        "name"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "update_world_map",
+    "description": "Change the look of the player's world map. Choose a chart, palette, and ambient light from map_options, or give custom background and line colours. A land chart has clouds and contour lines; an atlas is a flat road map with a block grid; a blueprint is a technical drawing. Clouds and contour lines can be turned off when the chart should be plain. Leave a field out to keep it.",
+    "parameters": {
+      "properties": {
+        "chart": {
+          "type": "string",
+          "description": "A chart style from map_options: chart, atlas, or blueprint."
+        },
         "palette": {
           "type": "string",
           "description": "A world map palette id from map_options."
@@ -1642,7 +1720,7 @@
   {
     "type": "tool_call",
     "id": "create_local_map",
-    "description": "Create a local map for an indoor or small-scale place, such as a room, tavern, house, temple, crypt, cave, watchtower, market, camp, ship, hall, library, or cellar. A local map is used outside an encounter to show where the player character, NPCs, and props stand; when a fight starts on it, start_encounter on the same map and the tokens already placed carry into the fight. The template supplies the layout, size, and starting terrain. Use map_options to see the templates, and give a palette, ambient, or board colours when the place's mood matters; without them the template's own look is copied. Give regions to paint broad terrain areas and tokens to place the cast in this same call.",
+    "description": "Create a local map for an indoor or small-scale place, such as a room, tavern, house, temple, crypt, cave, watchtower, market, camp, ship, hall, library, cellar, city block, street corner, warehouse, clinic, lab, or tunnel. A local map is used outside an encounter to show where the player character, NPCs, and props stand; when a fight starts on it, start_encounter on the same map and the tokens already placed carry into the fight. The template supplies the layout, size, and starting terrain. Use map_options to see the templates, and give a style, palette, ambient, or board colours when the place's mood matters; without them the rule set's own look is copied. Give regions to paint broad terrain areas and tokens to place the cast in this same call.",
     "parameters": {
       "properties": {
         "name": {
@@ -1671,11 +1749,15 @@
         },
         "palette": {
           "type": "string",
-          "description": "A palette id from map_options, such as parchment, stone, forest, sea, ember, frost, shadow, or royal. Leave it out to use the template's palette."
+          "description": "A palette id from map_options, such as parchment, stone, forest, sea, ember, frost, shadow, royal, concrete, asphalt, or blueprint. Leave it out to use the template's palette."
         },
         "ambient": {
           "type": "string",
           "description": "An ambient id from map_options, such as day, dusk, night, torchlit, foggy, underwater, or magical. Leave it out to use the template's ambient."
+        },
+        "style": {
+          "type": "string",
+          "description": "A board style from map_options: board (a painted miniatures board), plan (a flat floor plan with square tokens), or blueprint (a technical drawing on dark paper). Leave it out to use the rule set's own style."
         },
         "background_color": {
           "type": "string",
@@ -2041,6 +2123,10 @@
         "ambient": {
           "type": "string",
           "description": "An ambient id from map_options. Empty clears it."
+        },
+        "style": {
+          "type": "string",
+          "description": "A board style from map_options: board, plan, or blueprint. Empty clears it."
         }
       },
       "required": [

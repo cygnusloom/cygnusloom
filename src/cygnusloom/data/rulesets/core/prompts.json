@@ -32,6 +32,12 @@
   },
   {
     "type": "prompt",
+    "id": "world_map",
+    "step": "state",
+    "text": "The world map is ground and the roads across it. When the story establishes a stretch of country, a lake, a district, or another kind of ground the map does not show, draw it with create_region, and when a new place needs ground around it, draw that ground first. When the story establishes a road, street, rail line, or trail between places, lay it with create_road along the same corners those places were given, so a road actually reaches them. Roads follow the ground the story has already set: a road runs through country that is on the map, not through a gap. Use the road kinds map_options lists, name a road as the fiction names it, and set discovered only when people know it. Do not redraw ground or a road the map already shows; update_region or update_road changes it."
+  },
+  {
+    "type": "prompt",
     "id": "local_maps",
     "step": "state",
     "text": "Create a local map when the layout matters for the action: an encounter, a room the player explores carefully, or a place with tactical positions. A simple conversation or arrival does not need one. Use map_options only for an id the world state does not already give, and make a fitting map with create_local_map. Give regions for broad terrain and tokens for the player character, every NPC present, and notable props in that same call; use place_map_token or set_map_cells only for changes after the map exists. Whenever the player's message walks them toward a person or thing, across the room, or to a door, move their token in the same state step and before the narration, onto a free cell beside what they approach; a message that also speaks or acts still moves them. Move an NPC's token the same way when the scene moves them, and remove it when someone leaves. When a fight starts on an existing map, use stage_encounter with the whole roster (or start_encounter for a single arrival), and do not build a second map or replace the tokens already placed."

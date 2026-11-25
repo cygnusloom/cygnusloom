@@ -12,6 +12,10 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any
 
+from cygnusloom.content.library import (  # noqa: F401  re-exported with the state that uses them
+    WORLD_MAP_CHARTS,
+    WORLD_MAP_PALETTES,
+)
 from cygnusloom.llm.base import ToolRequest
 from cygnusloom.services.tools import Ask
 
@@ -97,18 +101,21 @@ class Place:
     searched_zones: tuple[str, ...] = ()
 
 
-# The looks the player's world map may choose. The CSS colours each palette, so a campaign's
-# world can shift from a warm parchment chart to a cold midnight atlas without new art.
-WORLD_MAP_PALETTES = (
-    "parchment",
-    "atlas",
-    "verdant",
-    "ember",
-    "frost",
-    "midnight",
-    "ivory",
-    "obsidian",
-)
+# The looks the player's world map may choose live in the content library, so a rule set's
+# `map_style` block validates against the same list. `WORLD_MAP_PALETTES` and `WORLD_MAP_CHARTS`
+# are imported above and re-exported from this module for the state that uses them.
+
+
+@dataclass(frozen=True)
+class Road:
+    """A road on the world map, drawn as a line between its points. Its points are kilometers
+    from the map's center, in order along the road. It is shown once it is discovered, or once a
+    discovered place stands on it."""
+
+    name: str
+    kind: str
+    points: tuple[tuple[float, float], ...]
+    discovered: bool = False
 
 
 @dataclass(frozen=True)
@@ -130,9 +137,10 @@ class Region:
 
 @dataclass(frozen=True)
 class WorldMapStyle:
-    """The look of the player's world map: its palette, ambient light, custom ground and line
-    colours, and whether the chart draws clouds and contour lines."""
+    """The look of the player's world map: the chart it is drawn as, its palette, ambient light,
+    custom ground and line colours, and whether the chart draws clouds and contour lines."""
 
+    chart: str = "chart"
     palette: str = "parchment"
     ambient: str = "day"
     background_color: str = ""
@@ -711,12 +719,13 @@ class EncounterMap:
     tokens: dict[str, tuple[int, int]] = field(default_factory=dict)
     # The id of the map.created event, so the newest map at a place is known on replay.
     created: int = 0
-    # The map's look: a palette and ambient from the rule set, and colour overrides for the
-    # board's ground and grid. Each is "" for the board's default.
+    # The map's look: a style, palette, and ambient from the rule set, and colour overrides for
+    # the board's ground and grid. Each is "" for the board's default.
     palette: str = ""
     ambient: str = ""
     background_color: str = ""
     grid_color: str = ""
+    style: str = ""
 
 
 @dataclass
@@ -889,6 +898,8 @@ class CampaignState:
     opened: bool = False
     # Regions of the world map by name without case.
     regions: dict[str, Region] = field(default_factory=dict)
+    # Roads of the world map by name without case.
+    roads: dict[str, Road] = field(default_factory=dict)
     # The world map's palette, ambient light, and custom colours.
     world_map_style: WorldMapStyle = field(default_factory=WorldMapStyle)
     # Encounter maps by name without case, and the encounter in progress, if any.
