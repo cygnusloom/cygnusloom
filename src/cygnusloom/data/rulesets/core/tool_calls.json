@@ -1394,7 +1394,7 @@
     "type": "tool_call",
     "id": "roll_creative",
     "lookup": true,
-    "description": "Roll on the creative tables for a new idea: use list_dice_tables to see their roles, then pass role 'setting' for a world, faction, conflict, or mystery, and use the oracle tables before inventing a scene, place, or complication that the world, module, and active storylines do not already supply. A no-argument roll uses the oracle tables. Also roll when a scene stalls or the player is unsure what to do next. Each result is a suggestion, not a fact: work it into the scene in a way that fits what has already happened, and drop any result that clashes with the established story. Do not roll the same full oracle set on consecutive turns just to keep a scene moving; use a specific table when you need a specific kind of detail. Do not roll merely to fill a scene when the player has a clear goal, and never roll in the middle of an encounter.",
+    "description": "Roll on the creative tables for a new idea: use list_dice_tables to see their roles, then pass role 'setting' for a world, faction, conflict, or mystery, 'site' to make a generated place unique, and use the oracle tables before inventing a scene, place, or complication that the world, module, and active storylines do not already supply. A no-argument roll uses the oracle tables. Also roll when a scene stalls or the player is unsure what to do next. Each result is a suggestion, not a fact: work it into the scene in a way that fits what has already happened, and drop any result that clashes with the established story. Do not roll the same full oracle set on consecutive turns just to keep a scene moving; use a specific table when you need a specific kind of detail. Do not roll merely to fill a scene when the player has a clear goal, and never roll in the middle of an encounter.",
     "parameters": {
       "properties": {
         "tables": {
@@ -1409,9 +1409,10 @@
           "enum": [
             "oracle",
             "setting",
+            "site",
             "module"
           ],
-          "description": "The kind of creative table to roll when 'tables' is left out: oracle for a stalled scene, setting for world generation, or module for a story module's own tables. Defaults to oracle."
+          "description": "The kind of creative table to roll when 'tables' is left out: oracle for a stalled scene, setting for world generation, site to make one generated place unique, or module for a story module's own tables. Defaults to oracle."
         }
       }
     }
@@ -1835,7 +1836,7 @@
     "type": "tool_call",
     "id": "list_dice_tables",
     "lookup": true,
-    "description": "List the dice and creative tables this campaign offers after its genre selection; use it before inventing a new element, or before roll_tables when you need the table ids, to see what kind of idea tables the setting supports. A creative table shows its role (oracle, setting, or module) and genres."
+    "description": "List the dice and creative tables this campaign offers after its genre selection; use it before inventing a new element, or before roll_tables when you need the table ids, to see what kind of idea tables the setting supports. A creative table shows its role (oracle, setting, site, or module) and genres."
   },
   {
     "type": "tool_call",

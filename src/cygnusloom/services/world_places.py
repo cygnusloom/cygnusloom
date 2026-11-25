@@ -8,6 +8,7 @@ from typing import Any
 from cygnusloom.content.icons import icon_registry
 from cygnusloom.content.library import MAP_AMBIENTS, MAP_PALETTES, TERRAIN_PATTERNS
 from cygnusloom.services import encounters
+from cygnusloom.services import sites as sites_service
 from cygnusloom.services.common import (
     InvalidInput,
     session_scope,
@@ -110,10 +111,20 @@ class PlacesMixin:
         icon: str | None = None,
         summary: str | None = None,
         majority_species: str | None = None,
+        site_type: str | None = None,
     ) -> dict[str, Any]:
         majority = (
             None if majority_species is None else place_majority(self.species, majority_species)
         )
+        chosen_site = None
+        if site_type is not None and site_type.strip():
+            found = sites_service.resolve_site_type(self.site_types, site_type)
+            if found is None:
+                raise InvalidInput(
+                    f"there is no site type named {site_type!r}; the site types are "
+                    f"{', '.join(sorted(self.site_types)) or 'none'}"
+                )
+            chosen_site = found.id
         with session_scope(self.engine) as db:
             return create_location(
                 db,
@@ -128,7 +139,75 @@ class PlacesMixin:
                 icon,
                 summary,
                 majority_species=majority,
+                site_type=chosen_site,
             )
+
+    def list_site_types(
+        self, find: str = "", category: str = "", tier: int | None = None
+    ) -> dict[str, Any]:
+        """The kinds of place this rule set can generate, with their zones and find level."""
+        find_text, category_text, tier_value = sites_service.filters(find, category, tier)
+        cards = [
+            sites_service.site_type_card(site_type)
+            for site_type in sorted(
+                self.site_types.values(), key=lambda item: (item.tier, item.name)
+            )
+            if (not find_text or site_type.find == find_text)
+            and (not category_text or site_type.category == category_text)
+            and (tier_value is None or site_type.tier == tier_value)
+        ]
+        result: dict[str, Any] = {"site_types": cards, "count": len(cards)}
+        if not cards:
+            result["note"] = "No site type matches those filters; relax one of them."
+        return result
+
+    def lookup_site_type(self, site_type: str) -> dict[str, Any]:
+        """A site type's seed description, find hint, zones, loot, and threats."""
+        found = sites_service.resolve_site_type(self.site_types, site_type)
+        if found is None:
+            names = ", ".join(sorted(self.site_types)) or "none"
+            raise InvalidInput(
+                f"there is no site type named {site_type!r}; the site types are {names}"
+            )
+        return sites_service.site_type_view(found, self._listed, self.threats)
+
+    def search_site(
+        self,
+        site: str,
+        character: str,
+        zone: str = "",
+        total: int = 8,
+        take: bool = True,
+        condition: str = "",
+    ) -> dict[str, Any]:
+        """Search one zone of a typed site, carrying the loot its profile gives."""
+        with session_scope(self.engine) as db:
+            result = sites_service.search_site(
+                db,
+                self.campaign_id,
+                self.site_types,
+                character,
+                site,
+                zone,
+                total,
+                self.rng,
+                listed=self._listed,
+                inventory=self.inventory,
+                item_sizes=self.item_sizes,
+                take=take,
+                condition=condition,
+            )
+        if result["zone_noise"]:
+            result["noise"] = self.advance_noise(
+                result["zone_noise"], f"searching {result['zone_name']} at {result['site']}"
+            )
+        if "site_danger" in self.campaign_clocks:
+            result["clock"] = self.advance_clock(
+                "site_danger",
+                set_to=result["danger"],
+                reason=f"searching {result['zone_name']} at {result['site']}",
+            )
+        return result
 
     def discover_location(self, name: str, summary: str | None = None) -> dict[str, Any]:
         with session_scope(self.engine) as db:

@@ -158,5 +158,105 @@
       "A door that was locked is open",
       "The night is too quiet, and it has a direction"
     ]
+  },
+  {
+    "type": "creative_table",
+    "role": "site",
+    "id": "site-detail",
+    "name": "Site Detail",
+    "genres": [
+      "apocalypse"
+    ],
+    "source": "Original content written for Cygnus Loom.",
+    "entries": [
+      "A hand-painted sign that has outlasted the business",
+      "A smell that does not belong to the room",
+      "A sound that stops when someone listens",
+      "A barricade built by someone who knew what they were doing",
+      "A path worn through the dust that is newer than the dust",
+      "A single working light",
+      "A wall of photographs with one face scratched out",
+      "A door that opens onto a wall",
+      "A child's drawing of the place, accurate and wrong",
+      "A calendar with every day crossed out until one",
+      "A pet bowl, a leash, and no animal",
+      "A radio left on a dead frequency",
+      "A vehicle parked where no vehicle should fit",
+      "A pile of shoes by the door",
+      "A meal set for more people than are here",
+      "A name repeated on every surface"
+    ]
+  },
+  {
+    "type": "creative_table",
+    "role": "site",
+    "id": "site-secret",
+    "name": "Site Secret",
+    "genres": [
+      "apocalypse"
+    ],
+    "source": "Original content written for Cygnus Loom.",
+    "entries": [
+      "The place was already searched by someone careful",
+      "A survivor is hiding here and has watched the party arrive",
+      "The back room is sealed from the inside",
+      "There is a second way out that the owner never advertised",
+      "The place was used for something other than its sign says",
+      "A cache is hidden under the floor or behind a wall",
+      "The last person here left a warning",
+      "The thing the party came for has been moved",
+      "A body here is not dead",
+      "The place is a trap built by people, not the dead",
+      "A radio or phone still connects somewhere",
+      "The building is on the edge of coming down"
+    ]
+  },
+  {
+    "type": "creative_table",
+    "role": "site",
+    "id": "site-occupant",
+    "name": "Site Occupant",
+    "genres": [
+      "apocalypse"
+    ],
+    "source": "Original content written for Cygnus Loom.",
+    "entries": [
+      "The dead, and they have been here long enough to settle",
+      "The dead, recently arrived and still moving with purpose",
+      "A survivor who does not want to be found",
+      "A survivor who wants to be rescued and cannot say so",
+      "A rival scavenger crew, one room ahead",
+      "A group that has made the place a home",
+      "An animal that has claimed the warmest corner",
+      "Someone who came to die here and did not",
+      "Someone who came to die here and did",
+      "A thing that is not a person and does not move like one",
+      "No one now, but someone left in a hurry",
+      "The place itself: a machine, a fire, or a collapse waiting"
+    ]
+  },
+  {
+    "type": "creative_table",
+    "role": "site",
+    "id": "site-sign",
+    "name": "Site Sign",
+    "genres": [
+      "apocalypse"
+    ],
+    "source": "Original content written for Cygnus Loom.",
+    "entries": [
+      "A chalk mark on the door that means safe",
+      "A chalk mark on the door that means stay out",
+      "A trail of blood that starts and stops",
+      "A note in a stranger's handwriting",
+      "A fresh grave with no marker",
+      "A window opened from the inside",
+      "A vehicle with the keys still in it",
+      "A pile of belongings sorted into keep and leave",
+      "A map with this place circled",
+      "A tally of days counted on the wall",
+      "A warning written in three languages",
+      "A doorbell that still works"
+    ]
   }
 ]

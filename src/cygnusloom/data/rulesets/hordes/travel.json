@@ -1,0 +1,24 @@
+[
+  {
+    "type": "travel",
+    "id": "hordes",
+    "modes": {
+      "walk": {
+        "km_per_hour": 4,
+        "note": "A careful walk, with stops to listen."
+      },
+      "bike": {
+        "km_per_hour": 14,
+        "note": "Fast and quiet, until something catches a wheel."
+      },
+      "car": {
+        "km_per_hour": 30,
+        "note": "Fast, loud, and limited by wrecks and fuel."
+      }
+    },
+    "default_leg": {
+      "minutes": 20,
+      "note": "A few streets on foot, through cover and around wrecks."
+    }
+  }
+]

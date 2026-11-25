@@ -1,0 +1,2581 @@
+[
+  {
+    "type": "site_type",
+    "id": "house",
+    "name": "House",
+    "category": "home",
+    "tier": 1,
+    "find": "common",
+    "icon": "bed",
+    "description": "A family home with the life still arranged around the absence. The front door may be locked, broken, or barricaded from the inside, and the ordinary rooms hold ordinary things that have become supplies.",
+    "find_hint": "Any residential street has a dozen. The hard part is choosing one that has not already been opened.",
+    "tags": [
+      "food",
+      "shelter",
+      "clothes",
+      "personal"
+    ],
+    "details": [
+      "The porch light is still on",
+      "A car sits in the garage with the driver's door open",
+      "The curtains are drawn from the inside",
+      "Toys are scattered across the front walk",
+      "A suitcase waits by the door, packed and never taken",
+      "The mailbox is stuffed with mail from the first week",
+      "The house smells of gas, clean laundry, or wet plaster",
+      "One window is boarded over from the inside",
+      "A dog bowl is full of frozen water",
+      "A radio upstairs is still tuned to static"
+    ],
+    "secrets": [
+      "The cellar is barricaded from the inside",
+      "A neighbour is hiding in the attic",
+      "Another crew has marked the door with chalk",
+      "A working generator sits in the shed",
+      "The family left a cache under the floorboards",
+      "The body in the freezer is not the family dog"
+    ],
+    "zones": [
+      {
+        "id": "entry-hall",
+        "name": "Entry hall",
+        "description": "Coats, shoes, keys, and the first sign of how the family left.",
+        "loot": [
+          "home-keys",
+          "flashlight",
+          "work-boots",
+          "family-photo",
+          "winter-coat"
+        ],
+        "noise": 0
+      },
+      {
+        "id": "kitchen",
+        "name": "Kitchen",
+        "description": "Cupboards, a cold stove, and food that keeps.",
+        "loot": [
+          "canned-soup",
+          "canned-beans",
+          "peanut-butter",
+          "cook-pot",
+          "lighter",
+          "salt",
+          "instant-coffee"
+        ],
+        "noise": 1
+      },
+      {
+        "id": "living-room",
+        "name": "Living room",
+        "description": "The ordinary room where the family waited for news.",
+        "loot": [
+          "board-game",
+          "deck-of-cards",
+          "batteries",
+          "sewing-kit",
+          "photo-album",
+          "candles"
+        ],
+        "noise": 0
+      },
+      {
+        "id": "bedrooms",
+        "name": "Bedrooms",
+        "description": "Beds, drawers, and the things people keep close.",
+        "loot": [
+          "jewelry-box",
+          "wedding-ring",
+          "pocket-watch",
+          "reading-glasses",
+          "sleeping-pills",
+          "winter-coat",
+          "teddy-bear"
+        ],
+        "noise": 0
+      },
+      {
+        "id": "bathroom",
+        "name": "Bathroom",
+        "description": "A medicine cabinet and the first aid the family owned.",
+        "loot": [
+          "first-aid-kit",
+          "cold-medicine",
+          "hand-sanitizer",
+          "medical-tape",
+          "thermometer"
+        ],
+        "noise": 0
+      },
+      {
+        "id": "garage",
+        "name": "Garage",
+        "description": "Tools, paint, and whatever the car left behind.",
+        "loot": [
+          "toolkit",
+          "fuel-can",
+          "rope",
+          "duct-tape",
+          "car-battery",
+          "pry-bar",
+          "hand-saw"
+        ],
+        "noise": 2
+      },
+      {
+        "id": "basement",
+        "name": "Basement",
+        "description": "Dark, damp, and the place where a family kept its real stores.",
+        "loot": [
+          "canned-food",
+          "bottled-water",
+          "water-filter",
+          "generator-parts",
+          "padlock",
+          "chain"
+        ],
+        "noise": 1
+      }
+    ],
+    "loot": [
+      "lighter",
+      "candles",
+      "canned-food",
+      "bottled-water",
+      "batteries",
+      "duct-tape",
+      "bandages"
+    ],
+    "threats": [
+      "walker",
+      "crawler",
+      "infected-dog"
+    ],
+    "complications": [
+      "A door is barred from the inside.",
+      "Something falls over upstairs.",
+      "A dog starts barking two yards away.",
+      "A car alarm chirps when the garage is opened.",
+      "Fresh mud crosses the kitchen floor.",
+      "Someone is breathing in the next room."
+    ]
+  },
+  {
+    "type": "site_type",
+    "id": "apartment-block",
+    "name": "Apartment Block",
+    "category": "home",
+    "tier": 1,
+    "find": "common",
+    "icon": "bed",
+    "description": "A stairwell of doors and lives stacked on top of each other. The lower floors are stripped, the upper floors are quiet, and every closed door could be an empty room or a sealed one.",
+    "find_hint": "Every city has entire streets of them. Pick a block with a fire escape, a working front door, or a light in one window.",
+    "tags": [
+      "home",
+      "shelter",
+      "many",
+      "vertical"
+    ],
+    "details": [
+      "Every door has been marked by a previous crew",
+      "The lift is stuck between floors",
+      "A corridor smells of cooking",
+      "One flat has a padlock on the outside",
+      "Christmas lights still hang in a window",
+      "The stairwell is dark below the third floor",
+      "A mattress blocks the roof door",
+      "Water runs down the inside walls",
+      "A list of names is taped inside the lobby",
+      "Someone has painted an arrow pointing up"
+    ],
+    "secrets": [
+      "One flat is sealed from the inside",
+      "A survivor holds the top floor",
+      "The roof connects to the next building",
+      "The landlord's master key is in the boiler room",
+      "A flat has been used by a crew as a lookout",
+      "The basement holds a shared generator and a body"
+    ],
+    "zones": [
+      {
+        "id": "lobby",
+        "name": "Lobby",
+        "description": "Mailboxes, a buzzer, and a front door that could still be locked.",
+        "loot": [
+          "home-keys",
+          "flashlight",
+          "candles",
+          "family-photo",
+          "deck-of-cards"
+        ],
+        "noise": 0
+      },
+      {
+        "id": "stairwell",
+        "name": "Stairwell",
+        "description": "The vertical spine of the block, and the place every sound comes from.",
+        "loot": [
+          "crowbar-short",
+          "duct-tape",
+          "batteries",
+          "flashlight",
+          "fire-extinguisher"
+        ],
+        "noise": 2
+      },
+      {
+        "id": "flats",
+        "name": "Flats",
+        "description": "A handful of apartments: kitchens, bedrooms, and doors left open or shut.",
+        "loot": [
+          "canned-food",
+          "bottled-water",
+          "winter-coat",
+          "jewelry-box",
+          "sleeping-pills",
+          "board-game",
+          "home-keys"
+        ],
+        "noise": 1
+      },
+      {
+        "id": "laundry",
+        "name": "Laundry room",
+        "description": "Washers, dryers, clean cloth, and chemicals under the sink.",
+        "loot": [
+          "clean-cloth",
+          "hand-sanitizer",
+          "medical-tape",
+          "sewing-kit",
+          "clean-cloth"
+        ],
+        "noise": 2
+      },
+      {
+        "id": "roof",
+        "name": "Roof",
+        "description": "The cold, clear top of the block, with a view of the whole district.",
+        "loot": [
+          "rope",
+          "binoculars",
+          "solar-panel",
+          "water-filter"
+        ],
+        "noise": 0
+      },
+      {
+        "id": "basement",
+        "name": "Basement",
+        "description": "Boilers, fuse boxes, and the building's shared secrets.",
+        "loot": [
+          "generator-parts",
+          "fuel-can",
+          "toolkit",
+          "wire-spool",
+          "padlock",
+          "canned-food"
+        ],
+        "noise": 1
+      }
+    ],
+    "loot": [
+      "canned-food",
+      "bottled-water",
+      "batteries",
+      "candles",
+      "bandages",
+      "home-keys",
+      "family-photo"
+    ],
+    "threats": [
+      "walker",
+      "crawler",
+      "runner"
+    ],
+    "complications": [
+      "A door opens at the end of the corridor.",
+      "The lift motor starts for one floor and stops.",
+      "A speaker crackles in a flat.",
+      "Something falls down the stairwell.",
+      "A child's toy starts playing in an empty room.",
+      "A dead bolt locks behind the searcher."
+    ]
+  },
+  {
+    "type": "site_type",
+    "id": "convenience-store",
+    "name": "Convenience Store",
+    "category": "shop",
+    "tier": 1,
+    "find": "common",
+    "icon": "market",
+    "description": "A small corner shop with its shelves half stripped and its sign still lit by a weak solar battery. The cooler is warm, the cash register is open, and the stockroom is where the owner kept the things worth taking.",
+    "find_hint": "They sit on corners and at the end of residential streets. A working sign or a bicycle outside marks one that has not been emptied.",
+    "tags": [
+      "food",
+      "drink",
+      "supplies",
+      "quick"
+    ],
+    "details": [
+      "The sign still flickers on solar power",
+      "One aisle has been swept clean",
+      "The register drawer hangs open",
+      "A bicycle is chained outside",
+      "The front glass is starred but not broken",
+      "A queue of shopping baskets sits at the door",
+      "The cooler hums, then stops",
+      "A ceiling tile is pushed aside",
+      "The floor is sticky with spilled soda",
+      "Someone has written a date on the wall"
+    ],
+    "secrets": [
+      "The safe under the counter is still locked",
+      "The stockroom has a cot and a week of food",
+      "A cellar under the floor holds the real stock",
+      "A camera still records to the back office",
+      "A survivor is living in the walk-in cooler",
+      "The owner's shotgun is behind the counter"
+    ],
+    "zones": [
+      {
+        "id": "shop-floor",
+        "name": "Shop floor",
+        "description": "Aisles of snacks, batteries, and the last useful small things.",
+        "loot": [
+          "bag-of-chips",
+          "candy-bar",
+          "soda-can",
+          "energy-drink",
+          "batteries",
+          "cigarette-pack",
+          "lighter"
+        ],
+        "noise": 0
+      },
+      {
+        "id": "cooler",
+        "name": "Cooler",
+        "description": "A wall of glass doors and warm drinks, with a cold room behind.",
+        "loot": [
+          "bottled-water",
+          "energy-drink",
+          "soda-can",
+          "powdered-milk",
+          "frozen-food"
+        ],
+        "noise": 1
+      },
+      {
+        "id": "stockroom",
+        "name": "Stockroom",
+        "description": "Cardboard, shelves, and the boxes that never made it out front.",
+        "loot": [
+          "canned-food",
+          "canned-beans",
+          "bottled-water",
+          "instant-coffee",
+          "cooking-oil",
+          "batteries",
+          "duct-tape"
+        ],
+        "noise": 1
+      },
+      {
+        "id": "back-office",
+        "name": "Back office",
+        "description": "A desk, a safe, and a chair facing the door.",
+        "loot": [
+          "lockpicks",
+          "lottery-ticket",
+          "map-of-the-city",
+          "camera",
+          "home-keys"
+        ],
+        "noise": 1
+      },
+      {
+        "id": "restroom",
+        "name": "Restroom",
+        "description": "A small, tiled room with a first-aid box on the wall.",
+        "loot": [
+          "first-aid-kit",
+          "hand-sanitizer",
+          "medical-tape"
+        ],
+        "noise": 0
+      }
+    ],
+    "loot": [
+      "candy-bar",
+      "soda-can",
+      "bottled-water",
+      "batteries",
+      "lighter",
+      "canned-food"
+    ],
+    "threats": [
+      "walker",
+      "runner"
+    ],
+    "complications": [
+      "The door chime rings.",
+      "A shelf collapses in the next aisle.",
+      "A dead body is propped behind the counter.",
+      "The cooler fan starts with a rattle.",
+      "A child's voice asks for help from the stockroom.",
+      "Someone has already been here and left a warning."
+    ]
+  },
+  {
+    "type": "site_type",
+    "id": "fast-food-restaurant",
+    "name": "Fast Food Restaurant",
+    "category": "food",
+    "tier": 1,
+    "find": "common",
+    "icon": "oven",
+    "description": "A bright dining room gone dim, its menu still promising food that no longer exists. The kitchen holds oil, pans, and knives, the walk-in freezer is the coldest place on the street, and the office safe is worth the noise.",
+    "find_hint": "They line the main roads and retail strips. A drive-thru sign or an intact play structure marks one big enough to have a walk-in freezer.",
+    "tags": [
+      "food",
+      "cooking",
+      "shelter",
+      "cold"
+    ],
+    "details": [
+      "The menu board still lists a discontinued item",
+      "Trays sit stacked by the bins",
+      "The play structure is half collapsed",
+      "A car idles in the drive-thru, doors open",
+      "The floor is greasy underfoot",
+      "The fryer oil is still liquid",
+      "A birthday banner hangs over one table",
+      "The ice machine is running",
+      "A staff schedule is pinned by the till",
+      "The freezer door is padlocked from the outside"
+    ],
+    "secrets": [
+      "The freezer is still cold from a generator",
+      "The manager's safe holds the week's take",
+      "A body is wedged in the grease trap",
+      "Someone has camped in the walk-in freezer",
+      "The kitchen has a hidden cellar hatch",
+      "The play structure hides a child's cache"
+    ],
+    "zones": [
+      {
+        "id": "dining-room",
+        "name": "Dining room",
+        "description": "Tables, trays, and the small things people leave behind.",
+        "loot": [
+          "candy-bar",
+          "deck-of-cards",
+          "comic-book",
+          "teddy-bear",
+          "soda-can"
+        ],
+        "noise": 1
+      },
+      {
+        "id": "counter",
+        "name": "Counter",
+        "description": "The till, the condiment station, and the register drawer.",
+        "loot": [
+          "lighter",
+          "lottery-ticket",
+          "home-keys",
+          "cigarette-pack"
+        ],
+        "noise": 0
+      },
+      {
+        "id": "kitchen",
+        "name": "Kitchen",
+        "description": "Steel counters, fryers, and every knife that was used to make lunch.",
+        "loot": [
+          "knife",
+          "cook-pot",
+          "cooking-oil",
+          "canned-soup",
+          "lighter",
+          "fire-extinguisher"
+        ],
+        "noise": 2
+      },
+      {
+        "id": "walk-in-freezer",
+        "name": "Walk-in freezer",
+        "description": "A heavy door, frozen shelves, and a cold that carries.",
+        "loot": [
+          "frozen-food",
+          "meat",
+          "cooking-oil",
+          "powdered-milk",
+          "bottled-water"
+        ],
+        "noise": 2
+      },
+      {
+        "id": "managers-office",
+        "name": "Manager's office",
+        "description": "A desk, a safe, and the staff schedule with every name crossed out.",
+        "loot": [
+          "map-of-the-city",
+          "home-keys",
+          "cookbook",
+          "camera",
+          "padlock"
+        ],
+        "noise": 1
+      },
+      {
+        "id": "dumpster",
+        "name": "Dumpster",
+        "description": "The back lot, the bins, and whatever people threw away before it mattered.",
+        "loot": [
+          "canned-food",
+          "cooking-oil",
+          "wire-spool",
+          "duct-tape",
+          "bag-of-chips"
+        ],
+        "noise": 1
+      }
+    ],
+    "loot": [
+      "candy-bar",
+      "soda-can",
+      "cooking-oil",
+      "canned-food",
+      "lighter"
+    ],
+    "threats": [
+      "walker",
+      "runner",
+      "bloater"
+    ],
+    "complications": [
+      "The drive-thru speaker crackles.",
+      "The ice machine dumps a load of ice.",
+      "A tray hits the floor in the dining room.",
+      "The freezer door swings shut behind the searcher.",
+      "A car horn starts in the lot.",
+      "Something moves in the play structure."
+    ]
+  },
+  {
+    "type": "site_type",
+    "id": "pharmacy",
+    "name": "Pharmacy",
+    "category": "medical",
+    "tier": 2,
+    "find": "uncommon",
+    "icon": "potion-shelf",
+    "description": "A chain pharmacy with a half-drawn security shutter and a dispensary that still smells of alcohol. The shelves are mostly picked over, but the locked cabinet and the cold case are where the medicine that matters survived.",
+    "find_hint": "A neighbourhood pharmacy, a clinic counter, or a supermarket with a pharmacy sign. A delivery van outside means the stock may not have been put away.",
+    "tags": [
+      "medicine",
+      "drugs",
+      "locked",
+      "clean"
+    ],
+    "details": [
+      "The shutter is half down and stuck",
+      "A queue of empty carts blocks the aisle",
+      "The dispensary counter is raised",
+      "A prescription bag sits in the collection bin",
+      "The cold case light is still on",
+      "A doctor's coat hangs behind the door",
+      "The security camera points at the floor",
+      "A list of names is taped to the register",
+      "The floor is clean except for one smear",
+      "The back door has been forced once"
+    ],
+    "secrets": [
+      "The antibiotic cabinet is still locked",
+      "A survivor is sleeping in the back office",
+      "A cold case runs on a hidden battery",
+      "The pharmacist's private cache is under the counter",
+      "A back room was used for an illegal clinic",
+      "The safe holds a list of patients and a gun"
+    ],
+    "zones": [
+      {
+        "id": "counter",
+        "name": "Counter",
+        "description": "The front counter, the till, and the things people asked for.",
+        "loot": [
+          "painkillers",
+          "cold-medicine",
+          "antihistamines",
+          "medical-tape",
+          "reading-glasses"
+        ],
+        "noise": 0
+      },
+      {
+        "id": "dispensary",
+        "name": "Dispensary",
+        "description": "The raised counter where the medicine was counted and handed over.",
+        "loot": [
+          "antibiotics",
+          "painkillers",
+          "syringes",
+          "prescription-pad",
+          "vitamins"
+        ],
+        "noise": 1
+      },
+      {
+        "id": "cold-case",
+        "name": "Cold case",
+        "description": "A refrigerated cabinet of insulin, vaccines, and things that must stay cold.",
+        "loot": [
+          "insulin",
+          "epinephrine-pen",
+          "blood-bag",
+          "experimental-serum"
+        ],
+        "noise": 1
+      },
+      {
+        "id": "stockroom",
+        "name": "Stockroom",
+        "description": "Boxes, shelves, and the bulk medical supplies the front never showed.",
+        "loot": [
+          "bandages",
+          "antiseptic",
+          "first-aid-kit",
+          "clean-cloth",
+          "hand-sanitizer",
+          "medical-tape",
+          "surgical-mask"
+        ],
+        "noise": 1
+      },
+      {
+        "id": "office",
+        "name": "Office",
+        "description": "A desk, a safe, and a wall of patient files.",
+        "loot": [
+          "lab-notes",
+          "map-of-the-city",
+          "camera",
+          "data-drive",
+          "keycard"
+        ],
+        "noise": 1
+      }
+    ],
+    "loot": [
+      "bandages",
+      "painkillers",
+      "antiseptic",
+      "cold-medicine",
+      "medical-tape"
+    ],
+    "threats": [
+      "walker",
+      "runner",
+      "security-walker"
+    ],
+    "complications": [
+      "The shutter falls another foot.",
+      "A phone rings behind the counter.",
+      "The cold case alarm begins to beep.",
+      "A locked cabinet rattles from the inside.",
+      "Someone has left a warning on the register.",
+      "The back door opens and closes in the wind."
+    ]
+  },
+  {
+    "type": "site_type",
+    "id": "cybernetics-lab",
+    "name": "Cybernetics Lab",
+    "category": "tech",
+    "tier": 4,
+    "find": "hidden",
+    "icon": "rod",
+    "description": "An unmarked clinic behind a normal door: a reception desk, a surgical chair, and a server rack still blinking in the dark. The people who worked here were installing hardware into bodies, and some of those bodies are still here, moving.",
+    "find_hint": "Not on any map. A dead technician's notebook, a police evidence log, a keycard with no building, or a survivor who paid for an implant and knows where it happened.",
+    "tags": [
+      "cybernetics",
+      "surgery",
+      "power",
+      "zombie-cyborg"
+    ],
+    "details": [
+      "The door is unmarked except for a keycard reader",
+      "A surgery light stutters overhead",
+      "Red standby lights blink along a rack",
+      "A chair with restraints sits in the middle of the room",
+      "The floor has a drain and a stain",
+      "Patient files are pinned to the wall",
+      "A cooler hums in the corner",
+      "The air smells of ozone and antiseptic",
+      "A handprint is pressed into the inside of a window",
+      "The server rack has one cable pulled loose"
+    ],
+    "secrets": [
+      "A still-powered server holds a voice recording",
+      "The implant rack has one unit missing",
+      "A vat in the back holds something that moves",
+      "The staff sealed themselves in a back room",
+      "A black-market heart is in the safe",
+      "The lab's power comes from a buried cable"
+    ],
+    "zones": [
+      {
+        "id": "reception",
+        "name": "Reception",
+        "description": "A desk, a sign-in sheet, and a door that needed the right card.",
+        "loot": [
+          "keycard",
+          "computer",
+          "camera",
+          "guest-ledger"
+        ],
+        "noise": 0
+      },
+      {
+        "id": "clinic-floor",
+        "name": "Clinic floor",
+        "description": "Chairs, IV stands, and the ordinary machinery of a clinic that was not ordinary.",
+        "loot": [
+          "cyber-eye",
+          "prosthetic-arm",
+          "prosthetic-leg",
+          "implant-battery",
+          "syringes"
+        ],
+        "noise": 1
+      },
+      {
+        "id": "operating-room",
+        "name": "Operating room",
+        "description": "A surgical chair under a dying light, with trays still laid out.",
+        "loot": [
+          "surgical-tray",
+          "sterile-drape",
+          "field-surgery-kit",
+          "targeting-link",
+          "neural-jack",
+          "subdermal-armor"
+        ],
+        "noise": 2
+      },
+      {
+        "id": "server-room",
+        "name": "Server room",
+        "description": "A hot, humming cabinet of data and the cables that feed it.",
+        "loot": [
+          "data-drive",
+          "computer",
+          "neural-cable",
+          "circuit-board",
+          "coolant-canister"
+        ],
+        "noise": 2
+      },
+      {
+        "id": "lab",
+        "name": "Lab",
+        "description": "Benches, sealed samples, and a whiteboard of things that should not be possible.",
+        "loot": [
+          "lab-notes",
+          "experimental-serum",
+          "circuit-board",
+          "servo-motor",
+          "coolant-canister",
+          "implant-battery"
+        ],
+        "noise": 1
+      },
+      {
+        "id": "holding-room",
+        "name": "Holding room",
+        "description": "Restraints, a drain, and a door that only opens from outside.",
+        "loot": [
+          "handcuffs",
+          "sleeping-pills",
+          "adrenaline",
+          "lab-notes"
+        ],
+        "noise": 1
+      }
+    ],
+    "loot": [
+      "implant-battery",
+      "circuit-board",
+      "servo-motor",
+      "neural-cable",
+      "coolant-canister",
+      "cyber-eye"
+    ],
+    "threats": [
+      "zombie-cyborg",
+      "lab-zombie",
+      "security-walker"
+    ],
+    "complications": [
+      "A surgery light snaps on.",
+      "The server rack pings a name.",
+      "Something in the holding room tests the door.",
+      "An implant on the rack whines and goes dark.",
+      "The keycard reader turns green for a second.",
+      "A zombie cyborg's head comes up and scans the room."
+    ]
+  },
+  {
+    "type": "site_type",
+    "id": "church",
+    "name": "Church",
+    "category": "faith",
+    "tier": 2,
+    "find": "uncommon",
+    "icon": "temple",
+    "description": "A church with a heavy door, a high ceiling, and rows of pews that have been pushed aside or arranged for something else. Candles have been burned recently; whether by the faithful or by people who wanted the dark to move, the smell does not say.",
+    "find_hint": "A steeple above the roofs, a sign at the end of a street, or a bell that someone still rings.",
+    "tags": [
+      "faith",
+      "refuge",
+      "occult",
+      "candles"
+    ],
+    "details": [
+      "The door is barred from the inside",
+      "The pews are arranged in a circle",
+      "Candles have been burned down to stubs",
+      "A sign board lists services for a day that has passed",
+      "The bell rope is cut halfway",
+      "A smell of incense and old stone",
+      "The dead have been laid out in rows",
+      "A collection plate is nailed to the wall",
+      "The stained glass is intact except for one pane",
+      "Someone has written a prayer on the door"
+    ],
+    "secrets": [
+      "A relic is hidden in the altar",
+      "The crypt has been opened",
+      "A survivor is living in the bell tower",
+      "A hidden chapel is behind the vestry",
+      "The cellar holds a food store and a locked door",
+      "A cult has used the nave and left a mark"
+    ],
+    "zones": [
+      {
+        "id": "nave",
+        "name": "Nave",
+        "description": "The long room of pews, candles, and a silence that expects something.",
+        "loot": [
+          "candles",
+          "hymnal",
+          "collection-plate",
+          "holy-book"
+        ],
+        "noise": 1
+      },
+      {
+        "id": "vestry",
+        "name": "Vestry",
+        "description": "Robes, wine, and the small room where the service was prepared.",
+        "loot": [
+          "vestments",
+          "communion-wine",
+          "holy-book",
+          "incense",
+          "candles"
+        ],
+        "noise": 0
+      },
+      {
+        "id": "kitchen",
+        "name": "Kitchen",
+        "description": "A church kitchen with pots, tins, and a stove that has seen better decades.",
+        "loot": [
+          "canned-food",
+          "bottled-water",
+          "cook-pot",
+          "salt",
+          "clean-cloth"
+        ],
+        "noise": 1
+      },
+      {
+        "id": "basement",
+        "name": "Basement",
+        "description": "A low cellar under the church, colder than the nave and much quieter.",
+        "loot": [
+          "candles",
+          "salt",
+          "chalk",
+          "reliquary",
+          "saint-finger",
+          "canned-food"
+        ],
+        "noise": 1
+      },
+      {
+        "id": "bell-tower",
+        "name": "Bell tower",
+        "description": "A ladder, a bell, and a view over the whole district.",
+        "loot": [
+          "rope",
+          "binoculars",
+          "radio",
+          "map-of-the-city"
+        ],
+        "noise": 2
+      }
+    ],
+    "loot": [
+      "candles",
+      "salt",
+      "holy-book",
+      "clean-cloth",
+      "canned-food",
+      "bottled-water"
+    ],
+    "threats": [
+      "walker",
+      "cultist",
+      "cult-dead"
+    ],
+    "complications": [
+      "The bell rings once.",
+      "A candle falls and gutter out.",
+      "A door in the vestry is locked from inside.",
+      "Someone is praying in the crypt.",
+      "The dead in the pews begin to move.",
+      "A voice from the bell tower asks who is there."
+    ]
+  },
+  {
+    "type": "site_type",
+    "id": "cult-basement",
+    "name": "Cult Basement",
+    "category": "occult",
+    "tier": 3,
+    "find": "secret",
+    "icon": "cellar",
+    "description": "A hatch under a rug, a stair that goes down too far, and a basement arranged for a purpose. The walls are marked, the air is thick, and the people who used this place left something behind that does not want to be moved.",
+    "find_hint": "Never found by chance. A neighbour's rumour, a symbol painted on a door, a list of names in a dead cultist's pocket, or a survivor who escaped and can describe the stairs.",
+    "tags": [
+      "occult",
+      "ritual",
+      "hidden",
+      "dread"
+    ],
+    "details": [
+      "The hatch is under a rug or a bed",
+      "The stairs are wet and the walls are scratched",
+      "A symbol is painted on the door at eye height",
+      "The air smells of copper and candles",
+      "The dead are arranged, not fallen",
+      "A chant is written on the wall in a careful hand",
+      "The room is colder than the house above",
+      "A circle of chalk is scuffed but intact",
+      "The door only locks from the outside",
+      "Somebody has counted the days in marks"
+    ],
+    "secrets": [
+      "A prisoner is chained in the back room",
+      "A tunnel leads to the next house",
+      "The ritual book is still on the altar",
+      "A bound horror is waking up",
+      "The cult kept a list of names, and one is a survivor",
+      "A relic in the offering bowl should not be touched"
+    ],
+    "zones": [
+      {
+        "id": "stairs",
+        "name": "Stairs",
+        "description": "A narrow descent with a door at the bottom and no light.",
+        "loot": [
+          "flashlight",
+          "candles",
+          "rope"
+        ],
+        "noise": 1
+      },
+      {
+        "id": "antechamber",
+        "name": "Antechamber",
+        "description": "Robes, chalk, and the ordinary equipment of an extraordinary purpose.",
+        "loot": [
+          "chalk",
+          "incense",
+          "candles",
+          "vestments",
+          "guest-ledger",
+          "hand-sanitizer"
+        ],
+        "noise": 0
+      },
+      {
+        "id": "ritual-room",
+        "name": "Ritual room",
+        "description": "A circle, an altar, and an arrangement of objects that has not been disturbed.",
+        "loot": [
+          "ritual-knife",
+          "offering-bowl",
+          "bone-idol",
+          "black-mirror",
+          "grimoire",
+          "grave-candle"
+        ],
+        "noise": 1
+      },
+      {
+        "id": "cells",
+        "name": "Cells",
+        "description": "Small rooms with strong doors, a drain, and the remains of people who were kept.",
+        "loot": [
+          "handcuffs",
+          "blood-bag",
+          "medical-tape",
+          "family-photo",
+          "first-aid-kit"
+        ],
+        "noise": 1
+      },
+      {
+        "id": "storage",
+        "name": "Storage",
+        "description": "The practical side of a cult: food, fuel, and the things needed to keep a basement running.",
+        "loot": [
+          "canned-food",
+          "bottled-water",
+          "fuel-can",
+          "candles",
+          "salt",
+          "camp-stove"
+        ],
+        "noise": 1
+      }
+    ],
+    "loot": [
+      "candles",
+      "chalk",
+      "salt",
+      "incense",
+      "bone-idol",
+      "grimoire"
+    ],
+    "threats": [
+      "cultist",
+      "cult-dead",
+      "strange-horror"
+    ],
+    "complications": [
+      "The door at the top of the stairs closes.",
+      "The chanting stops.",
+      "A candle relights itself.",
+      "Something in the cells pulls its chain.",
+      "The chalk circle is warm underfoot.",
+      "A voice from the ritual room welcomes the searcher by name."
+    ]
+  },
+  {
+    "type": "site_type",
+    "id": "occult-bar",
+    "name": "Occult Bar",
+    "category": "occult",
+    "tier": 2,
+    "find": "hidden",
+    "icon": "keg",
+    "description": "A bar with black paint, red light, and a back room that was never on the menu. The glasses are still on the shelves, the jukebox is silent, and the cellar smells of wine, candles, and something older than either.",
+    "find_hint": "A sign with no letters, a queue of regulars who no longer exist, or a survivor who drank there and remembers a door behind the bar.",
+    "tags": [
+      "occult",
+      "drink",
+      "social",
+      "hidden"
+    ],
+    "details": [
+      "The sign is a symbol, not a name",
+      "A red bulb still burns in the window",
+      "The jukebox is open and empty",
+      "A table is reserved with a card",
+      "The bar is stocked with things no one drinks",
+      "A chalk circle is drawn in the back room",
+      "The cellar door is behind the bar",
+      "A guest ledger lies open",
+      "The mirrors are covered with cloth",
+      "Someone has left a tip and a warning"
+    ],
+    "secrets": [
+      "A door behind the bar leads to a private room",
+      "The cellar was used for ceremonies",
+      "The owner is still upstairs",
+      "A grimoire is under the register",
+      "The guest ledger lists people who should be dead",
+      "A patron's coat still holds a key to something"
+    ],
+    "zones": [
+      {
+        "id": "bar",
+        "name": "Bar",
+        "description": "Bottles, glasses, and the long counter where people talked too much.",
+        "loot": [
+          "absinthe",
+          "cigarette-pack",
+          "candles",
+          "lighter",
+          "painkillers"
+        ],
+        "noise": 0
+      },
+      {
+        "id": "back-room",
+        "name": "Back room",
+        "description": "A low room with a table, a circle, and a door that was not on the plan.",
+        "loot": [
+          "tarot-deck",
+          "candles",
+          "guest-ledger",
+          "black-mirror",
+          "chalk"
+        ],
+        "noise": 1
+      },
+      {
+        "id": "cellar",
+        "name": "Cellar",
+        "description": "Wine racks, a sump, and a cold corner that was used for more than storage.",
+        "loot": [
+          "absinthe",
+          "communion-wine",
+          "ritual-knife",
+          "grimoire",
+          "offering-bowl",
+          "candles"
+        ],
+        "noise": 1
+      },
+      {
+        "id": "office",
+        "name": "Office",
+        "description": "A small room above the bar with a safe, a ledger, and a view of the door.",
+        "loot": [
+          "jewelry-box",
+          "map-of-the-city",
+          "camera",
+          "home-keys",
+          "painkillers"
+        ],
+        "noise": 1
+      }
+    ],
+    "loot": [
+      "absinthe",
+      "candles",
+      "tarot-deck",
+      "cigarette-pack",
+      "chalk"
+    ],
+    "threats": [
+      "cultist",
+      "walker",
+      "cult-dead"
+    ],
+    "complications": [
+      "The jukebox clicks and stops.",
+      "A glass slides off the bar.",
+      "The red bulb goes out.",
+      "Someone laughs in the back room.",
+      "The cellar door is locked from below.",
+      "A regular's name is spoken from the dark."
+    ]
+  },
+  {
+    "type": "site_type",
+    "id": "supermarket",
+    "name": "Supermarket",
+    "category": "shop",
+    "tier": 3,
+    "find": "uncommon",
+    "icon": "shop",
+    "description": "A full supermarket with its aisles stripped in waves and its stockroom still holding pallets. The meat counter smells wrong, the pharmacy cage is a separate fortress, and the manager's office overlooks it all.",
+    "find_hint": "A big sign off a main road, a car park full of abandoned carts, or a delivery truck still at the loading bay.",
+    "tags": [
+      "food",
+      "bulk",
+      "pharmacy",
+      "loud"
+    ],
+    "details": [
+      "The automatic doors are stuck half open",
+      "Carts block the entrance",
+      "One aisle has been stripped to the shelves",
+      "The meat counter is dark and warm",
+      "The pharmacy cage has a separate shutter",
+      "A delivery truck is backed into the loading bay",
+      "The floor is tracked with old blood",
+      "The lights flicker in the frozen aisle",
+      "A tannoy crackles occasionally",
+      "The manager's office has a window over the floor"
+    ],
+    "secrets": [
+      "The stockroom holds unopened pallets",
+      "The pharmacy cage is unlocked but trapped",
+      "A survivor has built a camp in the staff room",
+      "The loading bay has a working forklift",
+      "A back corridor connects to the pharmacy next door",
+      "The freezer is being used as a cold store by someone"
+    ],
+    "zones": [
+      {
+        "id": "aisles",
+        "name": "Aisles",
+        "description": "Long rows of shelves with just enough left to make noise.",
+        "loot": [
+          "canned-food",
+          "canned-beans",
+          "bag-of-chips",
+          "soda-can",
+          "cooking-oil",
+          "dog-food",
+          "candy-bar"
+        ],
+        "noise": 2
+      },
+      {
+        "id": "produce",
+        "name": "Produce",
+        "description": "Rotten fruit, seed packets, and a cold room that still works.",
+        "loot": [
+          "seeds",
+          "fertilizer",
+          "bottled-water",
+          "frozen-food"
+        ],
+        "noise": 1
+      },
+      {
+        "id": "meat-counter",
+        "name": "Meat counter",
+        "description": "A long glass case, a band saw, and a smell that carries.",
+        "loot": [
+          "meat",
+          "knife",
+          "cooking-oil",
+          "hand-sanitizer"
+        ],
+        "noise": 1
+      },
+      {
+        "id": "stockroom",
+        "name": "Stockroom",
+        "description": "Pallets, cages, and the food that never reached the shelves.",
+        "loot": [
+          "canned-food",
+          "bottled-water",
+          "rations",
+          "cooking-oil",
+          "baby-formula",
+          "dog-food"
+        ],
+        "noise": 2
+      },
+      {
+        "id": "pharmacy-counter",
+        "name": "Pharmacy counter",
+        "description": "A caged counter at the back of the store, with its own locks.",
+        "loot": [
+          "antibiotics",
+          "painkillers",
+          "bandages",
+          "insulin",
+          "medical-tape"
+        ],
+        "noise": 2
+      },
+      {
+        "id": "managers-office",
+        "name": "Manager's office",
+        "description": "A glass box above the floor, with a safe and a view of every aisle.",
+        "loot": [
+          "map-of-the-city",
+          "camera",
+          "home-keys",
+          "lockpicks",
+          "cookbook"
+        ],
+        "noise": 1
+      }
+    ],
+    "loot": [
+      "canned-food",
+      "bottled-water",
+      "cooking-oil",
+      "bandages",
+      "batteries",
+      "dog-food"
+    ],
+    "threats": [
+      "walker",
+      "runner",
+      "bloater",
+      "security-walker"
+    ],
+    "complications": [
+      "A tannoy announces a closing time.",
+      "A pallet collapses in the stockroom.",
+      "The automatic door opens behind the searcher.",
+      "The meat counter band saw starts.",
+      "A cart rolls down an aisle.",
+      "The pharmacy cage shutter begins to close."
+    ]
+  },
+  {
+    "type": "site_type",
+    "id": "hardware-store",
+    "name": "Hardware Store",
+    "category": "shop",
+    "tier": 2,
+    "find": "common",
+    "icon": "tinkers-tools",
+    "description": "A hardware store with bins of nails, racks of tools, and a lumber yard out back. The shelves are heavy and the back room is quiet, which means the place has not been stripped by people in a hurry.",
+    "find_hint": "A big box on an industrial road, a local store with a hand-painted sign, or a yard full of timber and fencing.",
+    "tags": [
+      "tools",
+      "parts",
+      "building",
+      "heavy"
+    ],
+    "details": [
+      "The front window is intact",
+      "A forklift sits in the lumber yard",
+      "The bins are sorted by size",
+      "A project is half finished on the counter",
+      "The back room is dark",
+      "A radio plays static in the office",
+      "The yard gate is chained",
+      "Sawdust covers the floor",
+      "The paint aisle has been ransacked",
+      "A hand-written sign says no credit"
+    ],
+    "secrets": [
+      "The yard has a working generator",
+      "The office safe holds the owner's gun",
+      "A still is hidden in the back room",
+      "The lumber yard has a truck with fuel",
+      "A survivor is sleeping in the greenhouse",
+      "The fuse box still has power"
+    ],
+    "zones": [
+      {
+        "id": "floor",
+        "name": "Shop floor",
+        "description": "Aisles of tools, nails, and the small parts that hold a shelter together.",
+        "loot": [
+          "nails",
+          "screwdriver",
+          "hand-saw",
+          "pry-bar",
+          "wire-spool",
+          "duct-tape",
+          "padlock"
+        ],
+        "noise": 1
+      },
+      {
+        "id": "lumber-yard",
+        "name": "Lumber yard",
+        "description": "Timber, fencing, and the heavy things that make a barricade.",
+        "loot": [
+          "barricade",
+          "chain",
+          "rope",
+          "nails",
+          "crowbar-short",
+          "fuel-can"
+        ],
+        "noise": 2
+      },
+      {
+        "id": "stockroom",
+        "name": "Stockroom",
+        "description": "Overflow stock, boxes, and the parts that never made it to the shelf.",
+        "loot": [
+          "toolkit",
+          "generator-parts",
+          "propane-tank",
+          "rope",
+          "duct-tape",
+          "car-battery"
+        ],
+        "noise": 1
+      },
+      {
+        "id": "office",
+        "name": "Office",
+        "description": "A small office with a desk, a safe, and a calendar from the old world.",
+        "loot": [
+          "map-of-the-city",
+          "camera",
+          "home-keys",
+          "lockpicks",
+          "cookbook"
+        ],
+        "noise": 1
+      }
+    ],
+    "loot": [
+      "nails",
+      "duct-tape",
+      "rope",
+      "toolkit",
+      "batteries",
+      "padlock"
+    ],
+    "threats": [
+      "walker",
+      "infected-dog"
+    ],
+    "complications": [
+      "A stack of timber slides.",
+      "The yard gate chain rattles.",
+      "A nail gun fires once.",
+      "The office radio finds a voice.",
+      "A shelf bracket gives way.",
+      "Someone has left a warning on the door."
+    ]
+  },
+  {
+    "type": "site_type",
+    "id": "gun-shop",
+    "name": "Gun Shop",
+    "category": "shop",
+    "tier": 3,
+    "find": "hidden",
+    "icon": "weapon",
+    "description": "A gun shop with a security door, empty display hooks, and a vault that somebody has already tried to open. The glass is thick, the alarm is dead, and the owner's private stock is behind a second lock.",
+    "find_hint": "A small storefront with bars on the windows, a sign that says sporting goods, or a survivor who knows where the county's guns went.",
+    "tags": [
+      "weapons",
+      "ammo",
+      "armor",
+      "locked"
+    ],
+    "details": [
+      "The display hooks are empty",
+      "A security door stands half open",
+      "The glass counter is starred",
+      "A vault door is scratched around the lock",
+      "The alarm box is dead",
+      "A case of cleaning kits is untouched",
+      "The back wall is a steel plate",
+      "A target hangs behind the counter",
+      "The floor is covered in broken glass",
+      "A hand-written sign says cash only"
+    ],
+    "secrets": [
+      "The vault still holds a rifle",
+      "The owner's cache is under the floor",
+      "A hidden pistol is taped behind the counter",
+      "The shop has a tunnel to the alley",
+      "A survivor is waiting in the back room",
+      "A booby trap is wired to the vault"
+    ],
+    "zones": [
+      {
+        "id": "display",
+        "name": "Display",
+        "description": "Glass cases and empty hooks where the guns used to be.",
+        "loot": [
+          "knife",
+          "lockpicks",
+          "flashlight",
+          "cigarette-pack"
+        ],
+        "noise": 0
+      },
+      {
+        "id": "counter",
+        "name": "Counter",
+        "description": "The sales counter, a cash drawer, and the paperwork of lawful ownership.",
+        "loot": [
+          "pistol",
+          "revolver",
+          "9mm-rounds",
+          "toolkit",
+          "repair-manual"
+        ],
+        "noise": 1
+      },
+      {
+        "id": "vault",
+        "name": "Vault",
+        "description": "A steel room behind the shop, built to keep the good stock.",
+        "loot": [
+          "rifle",
+          "shotgun",
+          "308-rounds",
+          "12ga-shells",
+          "ballistic-vest",
+          "plate-carrier"
+        ],
+        "noise": 2
+      },
+      {
+        "id": "workshop",
+        "name": "Workshop",
+        "description": "A bench, tools, and the smell of gun oil.",
+        "loot": [
+          "toolkit",
+          "repair-manual",
+          "parts",
+          "screwdriver",
+          "lockpicks"
+        ],
+        "noise": 1
+      }
+    ],
+    "loot": [
+      "9mm-rounds",
+      "knife",
+      "lockpicks",
+      "toolkit",
+      "ballistic-vest"
+    ],
+    "threats": [
+      "walker",
+      "security-walker"
+    ],
+    "complications": [
+      "The security door clicks locked.",
+      "A display case falls over.",
+      "The vault lock turns one click.",
+      "A trap wire pulls taut.",
+      "Someone coughs in the workshop.",
+      "The alarm box sparks."
+    ]
+  },
+  {
+    "type": "site_type",
+    "id": "police-station",
+    "name": "Police Station",
+    "category": "civic",
+    "tier": 3,
+    "find": "uncommon",
+    "icon": "shield",
+    "description": "A police station with a lobby full of notice boards, a dispatch desk, and an armory that may still be locked. The cells are in the back, the evidence room is sealed, and the radio has been silent for months.",
+    "find_hint": "A civic building with a flagpole or a blue sign, usually near the centre of a town or the edge of a city district.",
+    "tags": [
+      "weapons",
+      "armor",
+      "records",
+      "radio"
+    ],
+    "details": [
+      "The front desk is abandoned",
+      "A wanted board is still pinned",
+      "The dispatch microphone is off its hook",
+      "Evidence seals are unbroken",
+      "The cells are closed but not locked",
+      "A patrol car sits in the garage",
+      "The flag is still up",
+      "Bullet holes stitch the wall by the door",
+      "The radio room is dark",
+      "Someone has written a duty roster that never ended"
+    ],
+    "secrets": [
+      "The armory is still locked",
+      "A prisoner is alive in the cells",
+      "The evidence room holds a case that matters",
+      "The dispatch radio has a working battery",
+      "A cache of confiscated weapons is in the basement",
+      "The station connects to the courthouse by a tunnel"
+    ],
+    "zones": [
+      {
+        "id": "lobby",
+        "name": "Lobby",
+        "description": "A public room of benches, notices, and a desk that once controlled the building.",
+        "loot": [
+          "map-of-the-city",
+          "flashlight",
+          "first-aid-kit",
+          "radio"
+        ],
+        "noise": 0
+      },
+      {
+        "id": "dispatch",
+        "name": "Dispatch",
+        "description": "A radio desk, a map wall, and the last calls nobody answered.",
+        "loot": [
+          "radio-parts",
+          "computer",
+          "data-drive",
+          "map-of-the-city",
+          "camera"
+        ],
+        "noise": 1
+      },
+      {
+        "id": "armory",
+        "name": "Armory",
+        "description": "A locked room of racks, cases, and the weapons the town kept for emergencies.",
+        "loot": [
+          "pistol",
+          "shotgun",
+          "12ga-shells",
+          "9mm-rounds",
+          "ballistic-vest",
+          "riot-gear",
+          "helmet",
+          "baton"
+        ],
+        "noise": 2
+      },
+      {
+        "id": "evidence-room",
+        "name": "Evidence room",
+        "description": "Shelves of sealed bags, numbered boxes, and things taken from people.",
+        "loot": [
+          "evidence-bag",
+          "knife",
+          "handcuffs",
+          "pistol",
+          "keycard",
+          "lab-notes"
+        ],
+        "noise": 1
+      },
+      {
+        "id": "cells",
+        "name": "Cells",
+        "description": "A row of small rooms with benches, drains, and doors that lock from outside.",
+        "loot": [
+          "handcuffs",
+          "bandages",
+          "family-photo",
+          "painkillers"
+        ],
+        "noise": 1
+      },
+      {
+        "id": "garage",
+        "name": "Garage",
+        "description": "A concrete bay with a patrol car, tools, and a diesel smell.",
+        "loot": [
+          "toolkit",
+          "fuel-can",
+          "car-battery",
+          "generator-parts",
+          "crowbar-short"
+        ],
+        "noise": 2
+      }
+    ],
+    "loot": [
+      "9mm-rounds",
+      "flashlight",
+      "handcuffs",
+      "radio-parts",
+      "bandages",
+      "ballistic-vest"
+    ],
+    "threats": [
+      "security-walker",
+      "walker",
+      "runner",
+      "militia"
+    ],
+    "complications": [
+      "The dispatch radio crackles a call sign.",
+      "A cell door swings shut.",
+      "The armory lock clicks.",
+      "A patrol car alarm chirps.",
+      "Someone is knocking from inside a cell.",
+      "The evidence room light comes on."
+    ]
+  },
+  {
+    "type": "site_type",
+    "id": "hospital",
+    "name": "Hospital",
+    "category": "medical",
+    "tier": 4,
+    "find": "uncommon",
+    "icon": "herbalism-kit",
+    "description": "A hospital with a dark emergency entrance, wards of beds, and a pharmacy that was emptied by people who knew what they were doing. The surgery is still stocked, the records room holds names, and the morgue is colder than the rest.",
+    "find_hint": "A tall building with an emergency sign, a helipad, or a convoy of ambulances that never left.",
+    "tags": [
+      "medicine",
+      "surgery",
+      "records",
+      "large"
+    ],
+    "details": [
+      "The emergency doors are jammed open",
+      "A triage board lists names and colours",
+      "Beds line the corridors",
+      "The pharmacy shutter is down",
+      "A surgery light is dark",
+      "The records room is sealed",
+      "A generator hums somewhere below",
+      "The morgue door is cold",
+      "A wheelchair blocks the stairwell",
+      "Someone has painted a red cross on the wall"
+    ],
+    "secrets": [
+      "A ward is sealed from the inside",
+      "A survivor doctor is holding the pharmacy",
+      "The basement generator still runs",
+      "The morgue holds a body that is not dead",
+      "The records room has a list of the first infected",
+      "A lab in the basement was studying the dead"
+    ],
+    "zones": [
+      {
+        "id": "emergency",
+        "name": "Emergency",
+        "description": "The front door of the hospital, with triage, stretchers, and the first bad decisions.",
+        "loot": [
+          "first-aid-kit",
+          "bandages",
+          "flashlight",
+          "medical-tape",
+          "surgical-mask"
+        ],
+        "noise": 1
+      },
+      {
+        "id": "wards",
+        "name": "Wards",
+        "description": "Rows of beds, curtains, and the things patients kept beside them.",
+        "loot": [
+          "painkillers",
+          "vitamins",
+          "reading-glasses",
+          "family-photo",
+          "clean-cloth",
+          "sleeping-pills"
+        ],
+        "noise": 1
+      },
+      {
+        "id": "pharmacy",
+        "name": "Pharmacy",
+        "description": "A hospital pharmacy behind a shutter, with the good drugs and the records of who got them.",
+        "loot": [
+          "antibiotics",
+          "morphine",
+          "insulin",
+          "blood-bag",
+          "syringes",
+          "epinephrine-pen"
+        ],
+        "noise": 2
+      },
+      {
+        "id": "surgery",
+        "name": "Surgery",
+        "description": "An operating theatre with a table, lights, and trays still laid out.",
+        "loot": [
+          "surgical-tray",
+          "field-surgery-kit",
+          "sterile-drape",
+          "surgical-mask",
+          "medkit"
+        ],
+        "noise": 2
+      },
+      {
+        "id": "records",
+        "name": "Records",
+        "description": "A room of filing cabinets, computers, and the first names of the outbreak.",
+        "loot": [
+          "computer",
+          "data-drive",
+          "lab-notes",
+          "map-of-the-city",
+          "camera"
+        ],
+        "noise": 1
+      },
+      {
+        "id": "morgue",
+        "name": "Morgue",
+        "description": "Steel drawers, a drain, and a cold that makes the air feel solid.",
+        "loot": [
+          "blood-bag",
+          "lab-notes",
+          "surgical-tray",
+          "hand-sanitizer"
+        ],
+        "noise": 1
+      }
+    ],
+    "loot": [
+      "bandages",
+      "painkillers",
+      "antibiotics",
+      "medical-tape",
+      "surgical-mask",
+      "medkit"
+    ],
+    "threats": [
+      "walker",
+      "runner",
+      "bloater",
+      "lab-zombie"
+    ],
+    "complications": [
+      "The emergency door closes behind the searcher.",
+      "A monitor beeps from an empty room.",
+      "The pharmacy shutter rises a foot.",
+      "A bed rolls down the corridor.",
+      "The morgue drawer opens.",
+      "A voice asks for a doctor."
+    ]
+  },
+  {
+    "type": "site_type",
+    "id": "school",
+    "name": "School",
+    "category": "civic",
+    "tier": 2,
+    "find": "uncommon",
+    "icon": "book",
+    "description": "A school with a locked front office, a gym full of cots, and classrooms that were barricaded one by one. The cafeteria still has tins, the nurse's office has supplies, and the boiler room is the only way to the basement.",
+    "find_hint": "A fenced campus, a sports field, or a bus parked across the road with the doors open.",
+    "tags": [
+      "shelter",
+      "food",
+      "children",
+      "large"
+    ],
+    "details": [
+      "The front office is locked",
+      "The gym holds rows of cots",
+      "One classroom door is barricaded from inside",
+      "The cafeteria trays are stacked",
+      "A mascot costume hangs in the hall",
+      "The PA system crackles",
+      "Children's drawings cover a wall",
+      "The boiler room door is ajar",
+      "A school bus blocks the side road",
+      "The nurse's office has a first-aid chart"
+    ],
+    "secrets": [
+      "A classroom full of survivors is sealed inside",
+      "The basement was used as a shelter",
+      "The principal's office has a gun and a safe",
+      "The gym equipment room holds a cache",
+      "The bus outside still has fuel",
+      "A child's drawing shows a way through the boiler room"
+    ],
+    "zones": [
+      {
+        "id": "gym",
+        "name": "Gym",
+        "description": "A big room of cots, mats, and the echo of every sound.",
+        "loot": [
+          "sleeping-bag",
+          "first-aid-kit",
+          "bottled-water",
+          "canned-food",
+          "rope"
+        ],
+        "noise": 2
+      },
+      {
+        "id": "classrooms",
+        "name": "Classrooms",
+        "description": "Desks, books, and the small personal things of children.",
+        "loot": [
+          "book",
+          "childrens-toy",
+          "teddy-bear",
+          "comic-book",
+          "reading-glasses",
+          "sewing-kit"
+        ],
+        "noise": 1
+      },
+      {
+        "id": "cafeteria",
+        "name": "Cafeteria",
+        "description": "A kitchen and a lunch room with trays, tins, and a walk-in pantry.",
+        "loot": [
+          "canned-food",
+          "canned-beans",
+          "cook-pot",
+          "bottled-water",
+          "dog-food"
+        ],
+        "noise": 2
+      },
+      {
+        "id": "nurses-office",
+        "name": "Nurse's office",
+        "description": "A small room with a cot, a cabinet, and a poster of symptoms.",
+        "loot": [
+          "first-aid-kit",
+          "bandages",
+          "cold-medicine",
+          "medical-tape",
+          "thermometer"
+        ],
+        "noise": 0
+      },
+      {
+        "id": "principals-office",
+        "name": "Principal's office",
+        "description": "A desk, a safe, and a wall of awards for a school that no longer exists.",
+        "loot": [
+          "map-of-the-city",
+          "camera",
+          "home-keys",
+          "pistol",
+          "cookbook"
+        ],
+        "noise": 1
+      },
+      {
+        "id": "boiler-room",
+        "name": "Boiler room",
+        "description": "Pipes, a furnace, and a door to the basement that someone wanted hidden.",
+        "loot": [
+          "generator-parts",
+          "fuel-can",
+          "toolkit",
+          "wire-spool",
+          "padlock"
+        ],
+        "noise": 2
+      }
+    ],
+    "loot": [
+      "canned-food",
+      "bottled-water",
+      "bandages",
+      "book",
+      "childrens-toy",
+      "flashlight"
+    ],
+    "threats": [
+      "walker",
+      "crawler",
+      "runner"
+    ],
+    "complications": [
+      "The PA system makes an announcement.",
+      "A classroom door rattles from inside.",
+      "The school bell rings once.",
+      "A cot collapses in the gym.",
+      "A child's voice says hello.",
+      "The boiler starts with a roar."
+    ]
+  },
+  {
+    "type": "site_type",
+    "id": "gas-station",
+    "name": "Gas Station",
+    "category": "shop",
+    "tier": 2,
+    "find": "common",
+    "icon": "oil-flask",
+    "description": "A gas station at a crossroads with a shop, a repair bay, and pumps that may still have fuel in the ground. The price sign is a joke now, the shop is picked over, and the garage is where the useful parts are.",
+    "find_hint": "A canopy and a price sign at a junction, or a tow truck parked at the roadside.",
+    "tags": [
+      "fuel",
+      "parts",
+      "food",
+      "road"
+    ],
+    "details": [
+      "The price sign still shows the last day",
+      "One pump is torn off its base",
+      "The shop door is open",
+      "A tow truck is hooked to a wreck",
+      "Oil stains the concrete",
+      "The garage bay is half closed",
+      "A tyre stack hides the back door",
+      "The canopy lights are dead",
+      "A body lies under the register",
+      "The air pump is still running"
+    ],
+    "secrets": [
+      "The underground tank still has fuel",
+      "The mechanic's cache is under the lift",
+      "A car in the garage has a full tank",
+      "The shop has a cellar",
+      "A survivor is camping in the office",
+      "The tow truck keys are in the office"
+    ],
+    "zones": [
+      {
+        "id": "forecourt",
+        "name": "Forecourt",
+        "description": "Pumps, a canopy, and the open road on both sides.",
+        "loot": [
+          "fuel-can",
+          "gas-can",
+          "flare",
+          "crowbar-short"
+        ],
+        "noise": 2
+      },
+      {
+        "id": "shop",
+        "name": "Shop",
+        "description": "A small store of snacks, drinks, and car supplies.",
+        "loot": [
+          "candy-bar",
+          "soda-can",
+          "bag-of-chips",
+          "bottled-water",
+          "lighter",
+          "map-of-the-city",
+          "batteries"
+        ],
+        "noise": 0
+      },
+      {
+        "id": "garage",
+        "name": "Garage",
+        "description": "A repair bay with a lift, tools, and a car that might still run.",
+        "loot": [
+          "toolkit",
+          "parts",
+          "car-battery",
+          "generator-parts",
+          "pry-bar",
+          "repair-manual"
+        ],
+        "noise": 2
+      },
+      {
+        "id": "office",
+        "name": "Office",
+        "description": "A small office with a safe, a schedule, and a wall of keys.",
+        "loot": [
+          "home-keys",
+          "map-of-the-city",
+          "camera",
+          "cigarette-pack",
+          "lockpicks"
+        ],
+        "noise": 1
+      }
+    ],
+    "loot": [
+      "fuel-can",
+      "candy-bar",
+      "soda-can",
+      "bottled-water",
+      "parts",
+      "lighter"
+    ],
+    "threats": [
+      "walker",
+      "runner",
+      "infected-dog"
+    ],
+    "complications": [
+      "The air pump starts.",
+      "A pump handle clatters to the ground.",
+      "The tow truck horn honks.",
+      "A dog growls under the wreck.",
+      "The garage lift lowers by itself.",
+      "The price sign flickers back to life."
+    ]
+  },
+  {
+    "type": "site_type",
+    "id": "radio-station",
+    "name": "Radio Station",
+    "category": "civic",
+    "tier": 3,
+    "find": "hidden",
+    "icon": "radio",
+    "description": "A small radio station on a hill or a high floor, with a studio, a transmitter room, and an antenna that still points at the sky. The station was on the air when the world ended, and something about it is still broadcasting.",
+    "find_hint": "A tower on the skyline, a signal that resolves into a loop, or a survivor who knows the frequency and the road.",
+    "tags": [
+      "radio",
+      "power",
+      "records",
+      "signal"
+    ],
+    "details": [
+      "The ON AIR sign is dark",
+      "A microphone waits on the desk",
+      "The transmitter room is warm",
+      "A loop of tape runs and rewinds",
+      "The antenna cable is patched with wire",
+      "A cot is set up in the office",
+      "The record library is untouched",
+      "A list of frequencies is pinned to the wall",
+      "The door has a keycard reader",
+      "A voice repeats a call sign"
+    ],
+    "secrets": [
+      "The transmitter still works",
+      "A survivor is living in the studio",
+      "The loop is a message, not a recording",
+      "The station has a working generator",
+      "The records room holds a map of other stations",
+      "Someone is listening on the other end"
+    ],
+    "zones": [
+      {
+        "id": "lobby",
+        "name": "Lobby",
+        "description": "A small reception with a desk, a visitor log, and a locked inner door.",
+        "loot": [
+          "guest-ledger",
+          "radio",
+          "map-of-the-city",
+          "keycard"
+        ],
+        "noise": 0
+      },
+      {
+        "id": "studio",
+        "name": "Studio",
+        "description": "A soundproof room with a microphone, a mixing desk, and a view of the door.",
+        "loot": [
+          "radio-parts",
+          "computer",
+          "data-drive",
+          "camera",
+          "cigarette-pack"
+        ],
+        "noise": 1
+      },
+      {
+        "id": "transmitter-room",
+        "name": "Transmitter room",
+        "description": "A hot, humming room of valves, cables, and the machine that carries a voice.",
+        "loot": [
+          "radio-parts",
+          "generator-parts",
+          "circuit-board",
+          "wire-spool",
+          "coolant-canister"
+        ],
+        "noise": 2
+      },
+      {
+        "id": "office",
+        "name": "Office",
+        "description": "A room of schedules, tapes, and the practical work of staying on air.",
+        "loot": [
+          "lab-notes",
+          "map-of-the-city",
+          "canned-food",
+          "instant-coffee",
+          "batteries"
+        ],
+        "noise": 1
+      },
+      {
+        "id": "roof",
+        "name": "Roof",
+        "description": "The antenna, the wind, and a view of every road into the district.",
+        "loot": [
+          "solar-panel",
+          "rope",
+          "binoculars",
+          "camera"
+        ],
+        "noise": 1
+      }
+    ],
+    "loot": [
+      "radio-parts",
+      "batteries",
+      "computer",
+      "data-drive",
+      "map-of-the-city"
+    ],
+    "threats": [
+      "walker",
+      "runner",
+      "security-walker"
+    ],
+    "complications": [
+      "The transmitter hums to life.",
+      "A voice repeats a call sign.",
+      "The ON AIR sign lights up.",
+      "The studio door locks from inside.",
+      "A tape rewinds itself.",
+      "Someone answers on the frequency."
+    ]
+  },
+  {
+    "type": "site_type",
+    "id": "military-checkpoint",
+    "name": "Military Checkpoint",
+    "category": "military",
+    "tier": 5,
+    "find": "secret",
+    "icon": "banner",
+    "description": "A hardened checkpoint of sandbags, razor wire, and a concrete bunker, with a motor pool and an armory behind it. The soldiers are gone or dead, the quarantine order is still nailed to the gate, and the good gear is behind a lock that was meant to hold.",
+    "find_hint": "Never on a civilian map. A soldier's map, a radio call, a convoy route, or a survivor who was turned away at the wire and remembers where it was.",
+    "tags": [
+      "weapons",
+      "armor",
+      "fuel",
+      "quarantine"
+    ],
+    "details": [
+      "The gate is chained and watched from a tower",
+      "Sandbags are stacked in a killing zone",
+      "A quarantine order is nailed to the wire",
+      "The bunker door is steel and shut",
+      "A motor pool holds covered vehicles",
+      "The armory has a separate lock",
+      "A loudspeaker points at the road",
+      "A flag hangs limp over the gate",
+      "The radio tent is full of dead frequencies",
+      "The wire is cut in one place, from the inside"
+    ],
+    "secrets": [
+      "The bunker is sealed with people inside",
+      "The armory is still locked and stocked",
+      "A working radio watches an emergency channel",
+      "The motor pool has a fuelled truck",
+      "The quarantine order names someone the party knows",
+      "A zombie cyborg was a soldier here"
+    ],
+    "zones": [
+      {
+        "id": "gate",
+        "name": "Gate",
+        "description": "A choke point of concrete, wire, and a guard post that still watches the road.",
+        "loot": [
+          "binoculars",
+          "flashlight",
+          "radio",
+          "map-of-the-city"
+        ],
+        "noise": 1
+      },
+      {
+        "id": "bunker",
+        "name": "Bunker",
+        "description": "A concrete room under the checkpoint, built to be the last place to fall.",
+        "loot": [
+          "rations",
+          "bottled-water",
+          "medkit",
+          "radio-parts",
+          "9mm-rounds"
+        ],
+        "noise": 2
+      },
+      {
+        "id": "armory",
+        "name": "Armory",
+        "description": "A locked room of rifles, plates, and the ammunition that goes with them.",
+        "loot": [
+          "assault-rifle",
+          "rifle",
+          "pistol",
+          "556-rounds",
+          "308-rounds",
+          "grenade",
+          "plate-carrier",
+          "helmet"
+        ],
+        "noise": 2
+      },
+      {
+        "id": "radio-tent",
+        "name": "Radio tent",
+        "description": "A canvas tent of radios, maps, and a log of calls that stopped.",
+        "loot": [
+          "radio",
+          "radio-parts",
+          "map-of-the-city",
+          "lab-notes",
+          "computer"
+        ],
+        "noise": 1
+      },
+      {
+        "id": "motor-pool",
+        "name": "Motor pool",
+        "description": "Covered trucks, fuel drums, and tools for machines that were meant to keep moving.",
+        "loot": [
+          "fuel-can",
+          "toolkit",
+          "car-battery",
+          "generator-parts",
+          "parts",
+          "gas-can"
+        ],
+        "noise": 2
+      }
+    ],
+    "loot": [
+      "rations",
+      "9mm-rounds",
+      "556-rounds",
+      "fuel-can",
+      "medkit",
+      "ballistic-vest"
+    ],
+    "threats": [
+      "militia",
+      "security-walker",
+      "zombie-cyborg"
+    ],
+    "complications": [
+      "The loudspeaker crackles a warning.",
+      "A trip flare burns white.",
+      "The bunker door unlocks from inside.",
+      "A covered truck starts.",
+      "The radio receives an order.",
+      "A zombie cyborg steps out of the guard post."
+    ]
+  },
+  {
+    "type": "site_type",
+    "id": "pawn-shop",
+    "name": "Pawn Shop",
+    "category": "shop",
+    "tier": 2,
+    "find": "uncommon",
+    "icon": "gem",
+    "description": "A pawn shop with a barred window, a buzzer, and a back room full of things people gave up. The cases are mostly empty, but the safe and the pawn tickets remember what was worth keeping.",
+    "find_hint": "A small storefront with three brass balls or a hand-painted sign on a commercial street.",
+    "tags": [
+      "trade",
+      "jewelry",
+      "tools",
+      "small"
+    ],
+    "details": [
+      "The window is barred and the buzzer is dead",
+      "A cage separates the counter from the back",
+      "Pawn tickets are filed in a box",
+      "The display cases are mostly empty",
+      "A guitar hangs on the wall",
+      "The safe is behind the counter",
+      "A sign says no refunds",
+      "A camera points at the door",
+      "Something moves behind the cage",
+      "A wedding dress hangs in the back"
+    ],
+    "secrets": [
+      "The safe holds a gun and a ring",
+      "A stolen relic is in the back room",
+      "The pawn ledger names half the district",
+      "A survivor is hiding behind the cage",
+      "The back room has a tunnel to the alley",
+      "The owner left a journal under the counter"
+    ],
+    "zones": [
+      {
+        "id": "counter",
+        "name": "Counter",
+        "description": "A long counter, a cash drawer, and a buzzer that no longer works.",
+        "loot": [
+          "pocket-watch",
+          "wedding-ring",
+          "jewelry-box",
+          "lockpicks",
+          "cigarette-pack"
+        ],
+        "noise": 0
+      },
+      {
+        "id": "display-cases",
+        "name": "Display cases",
+        "description": "Glass cases of small valuables and the tags that priced them.",
+        "loot": [
+          "camera",
+          "radio",
+          "deck-of-cards",
+          "comic-book",
+          "tarot-deck",
+          "board-game"
+        ],
+        "noise": 0
+      },
+      {
+        "id": "back-room",
+        "name": "Back room",
+        "description": "A crowded room of unredeemed things and a cage for the good stuff.",
+        "loot": [
+          "toolkit",
+          "knife",
+          "handcuffs",
+          "cookbook",
+          "wedding-dress",
+          "teddy-bear"
+        ],
+        "noise": 1
+      },
+      {
+        "id": "safe",
+        "name": "Safe",
+        "description": "A heavy safe behind the counter, locked and worth the noise.",
+        "loot": [
+          "pistol",
+          "9mm-rounds",
+          "jewelry-box",
+          "wedding-ring",
+          "map-of-the-city"
+        ],
+        "noise": 2
+      }
+    ],
+    "loot": [
+      "pocket-watch",
+      "wedding-ring",
+      "camera",
+      "cigarette-pack",
+      "lockpicks"
+    ],
+    "threats": [
+      "walker",
+      "runner",
+      "security-walker"
+    ],
+    "complications": [
+      "The buzzer sounds.",
+      "A case cracks underfoot.",
+      "The cage door swings open.",
+      "A music box starts playing.",
+      "Someone coughs in the back.",
+      "The safe handle turns by itself."
+    ]
+  },
+  {
+    "type": "site_type",
+    "id": "warehouse",
+    "name": "Warehouse",
+    "category": "industrial",
+    "tier": 2,
+    "find": "uncommon",
+    "icon": "workshop",
+    "description": "A warehouse of steel racks, a loading bay, and a mezzanine office that sees the whole floor. The pallets are heavy, the trailer in the bay may still be sealed, and the only way out is the way in.",
+    "find_hint": "An industrial road, a rail spur, or a cluster of loading docks with one shutter still open.",
+    "tags": [
+      "bulk",
+      "parts",
+      "fuel",
+      "large"
+    ],
+    "details": [
+      "The loading shutter is half open",
+      "A trailer is backed into the bay",
+      "Racks of pallets fill the floor",
+      "A forklift is parked at an angle",
+      "The mezzanine office has a window over the floor",
+      "Birds nest in the roof",
+      "The floor is swept in one clean path",
+      "A manifest is pinned by the door",
+      "The lights are dead above the racks",
+      "A body lies under a collapsed pallet"
+    ],
+    "secrets": [
+      "The trailer is sealed and full",
+      "The office safe holds a shipping manifest",
+      "A generator runs in a back room",
+      "The mezzanine holds a camp",
+      "A smuggling compartment is under the floor",
+      "The forklift still has fuel and a key"
+    ],
+    "zones": [
+      {
+        "id": "loading-bay",
+        "name": "Loading bay",
+        "description": "A concrete lip, a trailer, and the machinery that moved the world's goods.",
+        "loot": [
+          "parts",
+          "fuel-can",
+          "car-battery",
+          "generator-parts",
+          "chain",
+          "pry-bar"
+        ],
+        "noise": 2
+      },
+      {
+        "id": "floor",
+        "name": "Floor",
+        "description": "Long racks of pallets and the narrow aisles between them.",
+        "loot": [
+          "canned-food",
+          "bottled-water",
+          "duct-tape",
+          "wire-spool",
+          "batteries",
+          "cooking-oil"
+        ],
+        "noise": 2
+      },
+      {
+        "id": "office",
+        "name": "Office",
+        "description": "A glass room above the floor with a desk, a safe, and a view.",
+        "loot": [
+          "map-of-the-city",
+          "camera",
+          "computer",
+          "data-drive",
+          "home-keys"
+        ],
+        "noise": 1
+      },
+      {
+        "id": "mezzanine",
+        "name": "Mezzanine",
+        "description": "A metal walkway over the floor, with a camp and a perspective.",
+        "loot": [
+          "sleeping-bag",
+          "binoculars",
+          "radio",
+          "canned-food",
+          "rope"
+        ],
+        "noise": 1
+      },
+      {
+        "id": "cold-storage",
+        "name": "Cold storage",
+        "description": "An insulated room that still holds the cold and whatever was left in it.",
+        "loot": [
+          "frozen-food",
+          "meat",
+          "blood-bag",
+          "insulin",
+          "powdered-milk"
+        ],
+        "noise": 2
+      }
+    ],
+    "loot": [
+      "parts",
+      "duct-tape",
+      "canned-food",
+      "bottled-water",
+      "batteries",
+      "rope"
+    ],
+    "threats": [
+      "walker",
+      "runner",
+      "swarm",
+      "infected-dog"
+    ],
+    "complications": [
+      "A pallet shifts overhead.",
+      "The trailer door bangs.",
+      "A forklift horn sounds.",
+      "Birds burst from the roof.",
+      "The shutter begins to close.",
+      "Something moves between the racks."
+    ]
+  }
+]

@@ -717,6 +717,7 @@ def _tool_context(
         faction_assets=rule_set.faction_assets,
         campaign_clocks=rule_set.campaign_clocks,
         threats=rule_set.threats,
+        site_types=rule_set.site_types,
         vehicles=rule_set.vehicles,
         recipes=rule_set.recipes,
         improvements=rule_set.improvements,

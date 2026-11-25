@@ -559,6 +559,8 @@ class LocationAdded(GameEvent):
     location_id: str | None = None
     # The people most of this place's folk belong to, or "mixed", or None when not recorded.
     majority_species: str | None = None
+    # The site type this place was generated from, or None for an ordinary place.
+    site_type: str | None = None
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         state.places[name_key(self.name)] = Place(
@@ -573,10 +575,42 @@ class LocationAdded(GameEvent):
             routes={key: dict(route) for key, route in self.routes.items()},
             location_id=self.location_id,
             majority_species=self.majority_species,
+            site_type=self.site_type,
         )
 
     def render(self) -> str:
         return f"New location: {self.name}."
+
+
+@dataclass(frozen=True)
+class SiteSearched(GameEvent):
+    """A zone of a typed site searched, with the loot the search produced and the site's danger
+    after it. It is hidden; the move and the item events are the visible record."""
+
+    kind: ClassVar[str] = "site.searched"
+    hidden: ClassVar[bool] = True
+
+    site: str
+    zone: str
+    character: str
+    total: int
+    danger: int
+    searched_zones: list[str] = field(default_factory=list)
+    found: list[dict[str, Any]] = field(default_factory=list)
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        key = name_key(self.site)
+        place = state.places.get(key)
+        if place is None:
+            return
+        state.places[key] = replace(
+            place,
+            site_danger=self.danger,
+            searched_zones=tuple(self.searched_zones),
+        )
+
+    def render(self) -> str:
+        return f"{self.character} searches the {self.zone} at {self.site}."
 
 
 @dataclass(frozen=True)

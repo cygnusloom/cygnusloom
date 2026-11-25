@@ -333,5 +333,94 @@
     ],
     "magnitude": 0,
     "icon": "beast"
+  },
+  {
+    "type": "threat",
+    "id": "zombie-cyborg",
+    "name": "Zombie Cyborg",
+    "kind": "zombie",
+    "description": "A dead body with clinic hardware still running. One arm moves wrong and fast, and a red light blinks where an eye was. Its armor is machinery, not flesh; cut the power or break the hardware to slow it.",
+    "harm": 3,
+    "armor": 2,
+    "attack": 3,
+    "tags": [
+      "cybernetic",
+      "armored",
+      "relentless",
+      "infection-risk"
+    ],
+    "moves": [
+      "servo-lunge",
+      "scan",
+      "spark"
+    ],
+    "magnitude": 0,
+    "icon": "undead"
+  },
+  {
+    "type": "threat",
+    "id": "lab-zombie",
+    "name": "Lab Zombie",
+    "kind": "zombie",
+    "description": "A specimen in a torn gown, chemical burns down one side and a smell that catches in the throat.",
+    "harm": 2,
+    "armor": 0,
+    "attack": 2,
+    "tags": [
+      "chemical",
+      "unstable",
+      "infection-risk"
+    ],
+    "moves": [
+      "lunge",
+      "retch",
+      "spasm"
+    ],
+    "magnitude": 0,
+    "icon": "undead"
+  },
+  {
+    "type": "threat",
+    "id": "security-walker",
+    "name": "Security Walker",
+    "kind": "zombie",
+    "description": "A dead guard still wearing the vest, the radio, and the keys. It moves toward the sound of a door.",
+    "harm": 2,
+    "armor": 2,
+    "attack": 2,
+    "tags": [
+      "armored",
+      "slow",
+      "guard"
+    ],
+    "moves": [
+      "guard",
+      "grab",
+      "radio"
+    ],
+    "magnitude": 0,
+    "icon": "undead"
+  },
+  {
+    "type": "threat",
+    "id": "cult-dead",
+    "name": "Cult Dead",
+    "kind": "zombie",
+    "description": "A body marked with ash and a symbol cut into the forehead. It does not wander; it waits, and it listens.",
+    "harm": 2,
+    "armor": 1,
+    "attack": 2,
+    "tags": [
+      "occult",
+      "marked",
+      "quiet"
+    ],
+    "moves": [
+      "chant",
+      "grasp",
+      "rise"
+    ],
+    "magnitude": 0,
+    "icon": "undead"
   }
 ]

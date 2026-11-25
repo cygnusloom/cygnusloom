@@ -90,7 +90,25 @@
     "type": "prompt",
     "id": "scavenging_sites",
     "step": "state",
-    "text": "A site has a danger clock, a loot profile, and a tier. Each Scavenge or Salvage roll advances time and noise; at 3 and 5 on the site danger clock a complication, omen, or threat arrives. Roll the site tables and the loot tables with roll_tables or roll_creative before inventing loot. Loot has rarity and condition, and getting it home is part of the score."
+    "text": "A site has a type, a danger of its own, and zones. Each zone is a separate search: name the room, call for Scavenge or Salvage when it is risky, then call search_site with the rolled total and the zone. search_site marks the zone searched, raises the site's danger, and returns granular loot; a 10+ finds two items, a 7-9 one, and a 6- none. If the player's 7-9 cost was that the loot is in poor condition, pass condition worn. A picked-over zone has nothing left, so choose another room or leave. At danger 3, 5, and 6 the site answers with a complication; use it, add the site's suggested threats, or make a hard move. Extraction is a scene: loot is heavy, visible, and slow. Never call roll_loot for a typed site's room and never hand out its loot with give_item; search_site is the procedure, and its real item names make the box of rounds, the bottle of antibiotics, and the pocket watch different finds."
+  },
+  {
+    "type": "prompt",
+    "id": "site_generation",
+    "step": "state",
+    "text": "Before inventing a searchable place, choose a site type with list_site_types and read it with lookup_site_type. The type's description is the baseline, not the place. Make each one unique: roll site-detail and site-secret with roll_creative (role \"site\"), add a telling detail of your own, give it a name, and write a description that uses the type without copying it. Create it with create_location and site_type set, and use the type's zones when the party searches. Common sites sit on any street; uncommon ones need a lead; hidden and secret ones must be earned through a rumour, a map, a survivor, a sign, a radio call, or a named contact. Never place a secret site where the party can simply stumble on it. A city block should have several houses, one or two shops, and one rarer site worth the trip; create the ordinary houses even if the party never opens every door."
+  },
+  {
+    "type": "prompt",
+    "id": "city_navigation",
+    "step": "state",
+    "text": "A city is not a blank map between two locations. Build blocks from site types, and make every crossing a decision. Use navigate_city to move the party between city places: it moves them, rolls a street event, and raises the visible City Alert clock by the route cost. Do not use move_actor to move a player character between places; move_actor is for NPCs and threats. Call for a Navigate move first when the party carries loot, is wounded, crosses at night, City Alert is 3 or higher, or a patrol is known to be out. Main streets are fast and watched; side streets are ordinary; alleys, rooftops, building cut-throughs, and storm drains are quiet but have their own price. At City Alert 3 a patrol is out, at 5 a horde is drawn, and at 6 the district sweeps. Never let the party cross a dangerous city for free."
+  },
+  {
+    "type": "prompt",
+    "id": "zombie_cyborgs",
+    "step": "state",
+    "text": "A cybernetics lab, clinic, or military site may hold zombie-cyborgs, lab zombies, or security walkers. A zombie cyborg is a dead body with working hardware: its armor is machinery, its servo-lunge is fast and wrong, its scan finds movement, and its spark can hurt anyone touching it. Show the hardware before the fight, let a character with Cybernetics Configuration disable it or cut its power, and use the site's suggested threats with create_threat. Do not describe a cyborg as an ordinary walker; its tags and moves are the difference."
   },
   {
     "type": "prompt",

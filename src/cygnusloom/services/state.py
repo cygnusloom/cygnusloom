@@ -89,6 +89,12 @@ class Place:
     # The people most of this place's folk belong to, in the plural as in "dwarves", or
     # "mixed" for a place with no single majority. None when it was never recorded.
     majority_species: str | None = None
+    # The id of the site type this place was generated from, or None for an ordinary place.
+    site_type: str | None = None
+    # How much trouble the party's searching has drawn here, from 0 to 6.
+    site_danger: int = 0
+    # The ids of the zones already searched at this site, in the order they were searched.
+    searched_zones: tuple[str, ...] = ()
 
 
 # The looks the player's world map may choose. The CSS colours each palette, so a campaign's

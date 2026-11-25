@@ -934,7 +934,7 @@
   {
     "type": "tool_call",
     "id": "roll_loot",
-    "description": "Roll on a loot, site, weather, road, trade, base, rumour, job, zombie, horde, horror, or NPC table.",
+    "description": "Roll a generic dice table for weather, a road, a trade, the base, a rumour, a job, a threat, or an NPC. Do not use it for a typed site's room; search_site is the site's loot procedure and its zones, danger, and granular items are the point. The table id must be one this rule set defines, such as weather, road-event, trade-good, base-trouble, rumour, job, zombie-variant, horde-behavior, horror-sign, or name.",
     "parameters": {
       "properties": {
         "table": {
@@ -948,6 +948,194 @@
       },
       "required": [
         "table"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "move_actor",
+    "extends": "core:tool_call/move_actor",
+    "patch": {
+      "description": "Move an NPC, a threat, or a character already in the scene; a player character crossing between settlement places uses navigate_city instead. Give the name and the destination; leave location out to send an NPC into the wind. Moving a player character to another place is a crossing, not a bookkeeping step, so use navigate_city and let the street, route, and City Alert matter. A place inside another takes the inner place's name."
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "create_site",
+    "python_module": "hordes",
+    "function": "create_site",
+    "description": "Add a searchable site to the campaign from a site type. Read the kind with lookup_site_type and make this one unique with site-detail, site-secret, and your own detail before writing the description. A city site usually takes a parent, such as the street or block it sits on, and a small site inside a building takes the building's name. Give site_type so the party can search its zones with search_site. Set discovered only when the player already knows the place; a hidden or secret site must first be earned through a rumour, a map, a survivor, a sign, a radio call, or a named contact.",
+    "parameters": {
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The place's name, unique among locations and NPCs."
+        },
+        "description": {
+          "type": "string",
+          "description": "What this place looks, sounds, and smells like, in a sentence or two, made unique by its own details."
+        },
+        "site_type": {
+          "type": "string",
+          "enum_from": "site_types",
+          "description": "The kind of site this place is."
+        },
+        "parent": {
+          "type": "string",
+          "description": "The street, block, or building this place is inside, if any. A place with a parent has no map point of its own."
+        },
+        "discovered": {
+          "type": "boolean",
+          "description": "True only when the player already knows the place."
+        },
+        "summary": {
+          "type": "string",
+          "description": "What the player sees in the compendium, with no GM-only secrets."
+        },
+        "icon": {
+          "type": "string",
+          "description": "An icon id from map_options' place_icons."
+        }
+      },
+      "required": [
+        "name",
+        "description",
+        "site_type"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "list_site_types",
+    "world_method": "list_site_types",
+    "lookup": true,
+    "description": "List the kinds of place this city can generate, filtered by find difficulty, category, or tier. Common sites are on any street; uncommon ones need a lead; hidden ones need a specific rumour, map, or contact; secret ones must be uncovered through play and are never placed where the party can simply find them. Use a mix when building a block: several houses, a convenience store or fast-food place, and one or two rarer sites worth a trip.",
+    "parameters": {
+      "properties": {
+        "find": {
+          "type": "string",
+          "enum": [
+            "common",
+            "uncommon",
+            "hidden",
+            "secret"
+          ],
+          "description": "Only site types this hard to find."
+        },
+        "category": {
+          "type": "string",
+          "enum_from": "site_categories",
+          "description": "Only site types of this category, such as home, shop, food, medical, tech, faith, occult, civic, or military."
+        },
+        "tier": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5,
+          "description": "Only site types of this tier, from 1 for a house to 5 for a bunker or research site."
+        }
+      }
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "lookup_site_type",
+    "world_method": "lookup_site_type",
+    "lookup": true,
+    "description": "Read a site type's seed description, find hint, zones, loot profiles, and suggested threats before creating a place of that kind. The description is the ruleset's baseline, not the place: make each one unique with site-detail, site-secret, and your own telling detail. Its zones are the rooms a scavenging loop searches, and each zone's loot is a granular list, not a bundle.",
+    "parameters": {
+      "properties": {
+        "site_type": {
+          "type": "string",
+          "enum_from": "site_types",
+          "description": "The site type to read."
+        }
+      },
+      "required": [
+        "site_type"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "search_site",
+    "world_method": "search_site",
+    "description": "Search one zone of a typed site after the player's Scavenge or Salvage roll. Use this instead of roll_loot or give_item for a typed site; it marks the zone searched, raises the site's danger, and gives the character the granular loot the roll earns. A 10+ finds two items, a 7-9 finds one, and a 6- finds none. At site danger 3, 5, and 6 the site answers with a complication; use it, a threat, or the streets. A zone has nothing left after it is searched, so choose a different room or leave. Pass take false only when the player is looking without picking anything up.",
+    "parameters": {
+      "properties": {
+        "site": {
+          "type": "string",
+          "description": "The name of the typed location being searched."
+        },
+        "character": {
+          "type": "string",
+          "description": "The character doing the searching. They must be at the site."
+        },
+        "zone": {
+          "type": "string",
+          "description": "The zone, room, or aisle to search, by id or name. Leave it out to search the next unsearched zone."
+        },
+        "total": {
+          "type": "integer",
+          "description": "The Scavenge or Salvage total the player rolled. Defaults to 8 when no roll was made."
+        },
+        "take": {
+          "type": "boolean",
+          "description": "Whether the character carries what is found. Defaults to true; a full pack leaves items behind."
+        },
+        "condition": {
+          "type": "string",
+          "enum": [
+            "fine",
+            "serviceable",
+            "worn",
+            "broken"
+          ],
+          "description": "The condition of everything found. Leave it out for the band's own condition, or pass worn when the player's 7-9 Scavenge cost was that the loot is in poor condition."
+        }
+      },
+      "required": [
+        "site",
+        "character"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "navigate_city",
+    "python_module": "hordes",
+    "function": "navigate_city",
+    "description": "Move the party from one settlement place to another by a chosen route, raise City Alert by the route's cost, and roll a street event. This is the player character's movement tool between locations; do not use move_actor for that crossing. Use it for every crossing that matters: a main street is fast and watched, a side street is ordinary, and an alley, rooftop, building cut-through, or storm drain is quiet but has its own price. A street event is a beat, not a command; make it fit the fiction. When the party is carrying loot, wounded, moving at night, or City Alert is 3 or higher, call for a Navigate move before this tool.",
+    "parameters": {
+      "properties": {
+        "character": {
+          "type": "string",
+          "description": "The player character leading the crossing."
+        },
+        "destination": {
+          "type": "string",
+          "description": "The place the party is crossing to."
+        },
+        "route": {
+          "type": "string",
+          "enum": [
+            "main-street",
+            "side-street",
+            "alley",
+            "rooftops",
+            "through-buildings",
+            "storm-drain"
+          ],
+          "description": "How the party crosses: main street raises City Alert 2, side street 1, and the other routes raise none but carry their own danger. Through buildings also makes noise."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Why the party is crossing, such as hauling medicine home before dark."
+        }
+      },
+      "required": [
+        "character",
+        "destination",
+        "route"
       ]
     }
   }

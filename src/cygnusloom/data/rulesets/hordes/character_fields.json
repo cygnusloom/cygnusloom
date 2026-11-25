@@ -52,6 +52,7 @@
     "id": "personal_item",
     "name": "Personal Item",
     "flavor": true,
-    "description": "One thing that is yours alone."
+    "description": "One thing that is yours alone.",
+    "table": "personal_item"
   }
 ]

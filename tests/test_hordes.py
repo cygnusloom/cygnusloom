@@ -31,7 +31,7 @@ FIELDS = {
     "field-look-freeform": "Mud on the boots and a sheriff's badge in the pocket.",
     "field-background-freeform": "County sheriff before the fall.",
     "field-shelter_duty-freeform": "Watch the gate.",
-    "field-personal_item": "A sheriff's badge.",
+    "field-personal_item-freeform": "A sheriff's badge.",
 }
 
 
@@ -70,13 +70,16 @@ def test_hordes_loads_and_hides_turn_based_tools():
 def test_hordes_compendium_has_its_new_sections():
     compendium = compendium_view(bundled_library(), RULE_SET, WORLD)
     sections = {section.id: section for section in compendium.sections}
-    assert len(sections["clocks"].entries) == 6
-    assert len(sections["threats"].entries) == 16
+    assert len(sections["clocks"].entries) == 7
+    assert len(sections["threats"].entries) == 20
     assert len(sections["vehicles"].entries) == 9
     assert len(sections["recipes"].entries) == 15
     assert len(sections["improvements"].entries) == 16
+    assert len(sections["sites"].entries) == 20
     threat = next(entry for entry in sections["threats"].entries if entry.name == "Horde")
     assert "Harm capacity: 3" in threat.text
+    site = next(entry for entry in sections["sites"].entries if entry.name == "Cybernetics Lab")
+    assert "Find: hidden" in site.text
 
 
 def test_a_hordes_character_gets_a_playbook_kit_and_loaded_firearm(client_factory):

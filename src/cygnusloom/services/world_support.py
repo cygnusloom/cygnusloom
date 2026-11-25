@@ -870,6 +870,7 @@ def create_location(
     icon: str | None = None,
     summary: str | None = None,
     majority_species: str | None = None,
+    site_type: str | None = None,
 ) -> dict[str, Any]:
     state = load_state(db, campaign_id)
     name = bounded_text(name, "name", MAX_NAME)
@@ -901,6 +902,7 @@ def create_location(
             icon=icon_id,
             summary=summary_text,
             majority_species=majority_species,
+            site_type=site_type or None,
         ),
     )
     db.commit()
@@ -911,6 +913,8 @@ def create_location(
     }
     if majority_species is not None:
         result["majority_species"] = majority_species
+    if site_type is not None:
+        result["site_type"] = site_type
     return result
 
 

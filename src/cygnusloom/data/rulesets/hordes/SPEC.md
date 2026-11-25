@@ -7,7 +7,7 @@ ruleset supplies the procedures, the tables, and the engine-backed crunch.
 
 - **Ruleset id:** `hordes`
 - **World id:** `unwritten-apocalypse`
-- **Status:** design locked 2026-11-24; implementation not started.
+- **Status:** implemented 2026-11-24; generated site types, zone scavenging, and city navigation added 2026-11-25.
 - **Design rule:** anything reusable belongs in the generic engine and is
   parameterized here. Only zombie-survival policy lives in the Hordes module.
 
@@ -678,24 +678,55 @@ sedan (4 seats), pickup (2 seats + cargo), van (6 seats + cargo), box truck
 
 ### Site procedure
 
-1. **Rumour:** hear about a site, its danger, and what might be there.
+A searchable place is created from a **site type**: the ruleset's baseline
+rooms, loot, threats, and find difficulty. The AI GM makes each one unique with
+the `site-detail` and `site-secret` tables and its own telling detail. Common
+sites sit anywhere; uncommon ones need a lead; hidden and secret ones must be
+earned through a rumour, map, survivor, sign, radio call, or named contact.
+
+1. **Rumour or discovery:** learn that the place exists and roughly what it is.
 2. **Plan:** choose approach, gear, vehicle, and who stays home.
-3. **Approach:** `Sneak`, `Drive`, or `Assess`; noise starts.
-4. **Explore:** the site has a danger clock 0–6 and a loot profile. Each
-   `Scavenge` or `Salvage` roll advances time and noise.
-5. **Complication:** at 3 and 5 on the danger clock, a complication, omen, or
-   threat arrives.
+3. **Approach:** `Sneak`, `Drive`, `Assess`, or `Navigate`; noise starts.
+4. **Explore a zone:** name the room, call for `Scavenge` or `Salvage` when it is
+   risky, then call `search_site` with the total and the zone. Each search marks
+   that zone picked over, raises the site's danger by 1, and returns granular
+   items: two on a 10+, one on a 7–9, none on a 6–. A full pack leaves loot
+   behind. When a 7–9 cost is that the loot is in poor condition, pass
+   `condition worn` so the found item is worn rather than serviceable.
+5. **Complication:** at site danger 3 and 5 a complication, omen, or threat
+   arrives; at 6 the site turns on the party.
 6. **Extract:** carry the loot out; the trip home is part of the score.
+
+### City navigation
+
+A city is a network of blocks, not a blank map. The AI GM builds blocks from
+site types: several houses, a corner store or fast-food place, and one rarer
+site worth the trip. Crossing between places is a **Navigate** move when it
+matters and then `navigate_city`, which moves the party, rolls a street event,
+and raises the visible **City Alert** clock by the route's cost.
+
+| Route | City Alert | Character |
+|-------|-----------|-----------|
+| Main street | +2 | Fast, open, watched |
+| Side street | +1 | Ordinary cover |
+| Alley | 0 | Slow, cramped, dangerous |
+| Rooftops | 0 | High, exposed to falls and gaps |
+| Through buildings | 0, noise +1 | Slow, loud, out of sight |
+| Storm drain | 0 | Dark, wet, narrow |
+
+At City Alert 3 a patrol or runner pack is out; at 4 roads close; at 5 a horde
+is drawn; at 6 the district sweeps. Every crossing is time, noise, and exposure,
+and the trip home with loot is a scene.
 
 ### Site tiers
 
 | Tier | Examples | Danger | Loot |
 |------|----------|--------|------|
-| 1 | houses, corner stores, sheds | low | food, tools, clothes, batteries |
-| 2 | pharmacy, school, hardware store, gas station | moderate | medicine, fuel, parts, ammo |
-| 3 | hospital, gun shop, police station, supermarket | high | antibiotics, firearms, armor, radios |
-| 4 | lab, university, military checkpoint, cyber clinic | severe | scientific items, cybernetics, data |
-| 5 | bunker, research facility, occult site, quarantine zone | extreme | unique relics, prototypes, cures |
+| 1 | houses, apartment blocks, convenience stores, fast food | low | food, tools, clothes, batteries |
+| 2 | pharmacy, school, hardware store, gas station, church | moderate | medicine, fuel, parts, ammo |
+| 3 | hospital, gun shop, police station, supermarket, cult basement | high | antibiotics, firearms, armor, radios, occult relics |
+| 4 | cybernetics lab, lab, university, large hospital | severe | scientific items, cybernetics, data, zombie cyborgs |
+| 5 | military checkpoint, bunker, research facility, quarantine zone | extreme | unique relics, prototypes, cures |
 
 ### Rarity and condition
 
@@ -908,9 +939,11 @@ Tables:
 
 - Setting: `apocalypse-cause`, `region`, `season`, `shelter`, `settlement`,
   `faction`, `threat`, `omen`.
-- Sites: `site-type`, `site-loot`, `site-complication`, `site-omen`.
+- Sites: `site-type`, `city-block`, `site-detail`, `site-secret`,
+  `site-occupant`, `site-sign`, `site-complication`, `site-omen`.
 - Loot: `loot-scientific`, `loot-cybernetic`, `loot-occult`, `loot-knowledge`,
   `loot-condition`.
+- City: `street-event`, `street-hazard`.
 - Threats: `horde-behavior`, `horror-sign`, `zombie-variant`, `survivor-crew`,
   `animal`.
 - People: `npc-drive`, `npc-burden`, `npc-quirk`, `name`.
@@ -936,17 +969,18 @@ Table genre: add `apocalypse` to `TABLE_GENRES`; Hordes uses
 | `combat.json` | moves mode, harm track, armor, morale, ranges, death |
 | `conditions.json` | ~20 conditions |
 | `counters.json` | harm, infection, Rejection, Dread, practice ticks, follower morale |
-| `items/` | weapons, ammo, armor, gear, medical, food, water, fuel, parts, loot |
-| `threats.json` | horde, zombie variants, horrors, survivors, animals |
+| `items/` | weapons, ammo, armor, gear, medical, food, water, fuel, parts, granular loot |
+| `site_types.json` | twenty generated place kinds with zones, loot, threats, and find levels |
+| `threats.json` | horde, zombie variants (including zombie cyborgs), horrors, survivors, animals |
 | `vehicles.json` | vehicle templates |
 | `recipes.json` | crafting, reloading, medicine, fuel, repairs |
 | `improvements.json` | base improvements |
 | `tables.json` / `creative.json` | setting, site, loot, threat, people, oracle tables |
 | `worldgen_tables.json` | opening setting rolls |
-| `prompts.json` | PbtA combat, harm, noise, survival, exploration, NPCs, base, etc. |
+| `travel.json` | walking, biking, and driving speeds for city legs, plus overland travel and weather |
+| `prompts.json` | PbtA combat, harm, noise, survival, exploration, sites, city navigation, NPCs, base, etc. |
 | `tool_calls.json` | Hordes tools built on generic services |
 | `rest.json` | rest lengths, recovery, shelter requirement |
-| `travel.json` / `journey.json` | overland travel, vehicles, weather |
 | `hooks.json` | Hordes policy hooks |
 | `../worlds/unwritten-apocalypse/world.json` | description-only world |
 

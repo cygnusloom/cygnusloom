@@ -1557,5 +1557,87 @@
       "knowledge",
       "craft"
     ]
+  },
+  {
+    "type": "move",
+    "id": "navigate",
+    "label": "Navigate",
+    "description": "When you cross a city street, a district, or a danger zone, roll +Wits or +Reflexes with Survival, Stealth, or Athletics.",
+    "dice": "2d6",
+    "bands": [
+      {
+        "label": "10+",
+        "min": 10,
+        "text": "You pick the way through and get there unseen. Ask one true thing about the route."
+      },
+      {
+        "label": "7-9",
+        "min": 7,
+        "text": "You get there, but choose one: lose time, make noise, or draw attention.",
+        "choices": [
+          {
+            "id": "time",
+            "label": "Lose time",
+            "text": "The way is longer than it looked.",
+            "effects": [
+              {
+                "op": "note",
+                "text": "The crossing takes longer than expected; the day moves on."
+              }
+            ]
+          },
+          {
+            "id": "noise",
+            "label": "Make noise",
+            "text": "Something underfoot gives the party away.",
+            "effects": [
+              {
+                "op": "noise",
+                "delta": 1
+              }
+            ]
+          },
+          {
+            "id": "attention",
+            "label": "Draw attention",
+            "text": "Someone watches the party cross.",
+            "effects": [
+              {
+                "op": "clock",
+                "id": "city_alert",
+                "delta": 1
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "label": "6-",
+        "text": "You are cut off, seen, or cornered. The GM makes a hard move.",
+        "effects": [
+          {
+            "op": "clock",
+            "id": "city_alert",
+            "delta": 1
+          },
+          {
+            "op": "noise",
+            "delta": 1
+          }
+        ]
+      }
+    ],
+    "stat_choice": [
+      "wits",
+      "reflexes"
+    ],
+    "skill_choice": [
+      "survival",
+      "stealth",
+      "athletics"
+    ],
+    "tags": [
+      "exploration"
+    ]
   }
 ]

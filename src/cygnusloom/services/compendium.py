@@ -54,6 +54,7 @@ from cygnusloom.content.library import (
     RestLength,
     RuleSet,
     ShopService,
+    SiteTypeDefinition,
     Species,
     TallyRules,
     ThreatDefinition,
@@ -111,7 +112,8 @@ GROUP_ORDER = {
     "Relations": 34,
     "Clocks": 35,
     "Threats": 36,
-    "Vehicles": 37,
+    "Sites": 37,
+    "Vehicles": 38,
     "Recipes": 38,
     "Improvements": 39,
     "Rules": 40,
@@ -136,6 +138,7 @@ SECTION_ORDER = (
     ("world", "world", "The World"),
     ("peoples", "world", "Peoples"),
     ("places", "world", "Places"),
+    ("sites", "world", "Sites"),
     ("factions", "world", "Factions"),
     ("terrain", "world", "Terrain"),
     ("options", "characters", "Character Options"),
@@ -650,6 +653,8 @@ def _build(
         add("clocks", f"clock:{clock.id}", _campaign_clock_draft(clock))
     for threat in rule_set.threats.values():
         add("threats", f"threat:{threat.id}", _threat_draft(threat))
+    for site_type in rule_set.site_types.values():
+        add("sites", f"site:{site_type.id}", _site_type_draft(site_type))
     for vehicle in rule_set.vehicles.values():
         add("vehicles", f"vehicle:{vehicle.id}", _vehicle_draft(vehicle))
     for recipe in rule_set.recipes.values():
@@ -1017,6 +1022,33 @@ def _threat_draft(threat: ThreatDefinition) -> _Draft:
         text="\n".join(lines),
         group="Threats",
         icon=threat.icon or "",
+    )
+
+
+def _site_type_draft(site_type: SiteTypeDefinition) -> _Draft:
+    lines = [site_type.description]
+    lines.append(
+        " · ".join(
+            (
+                f"Tier {site_type.tier}",
+                site_type.category.replace("_", " ").title(),
+                f"Find: {site_type.find}",
+            )
+        )
+    )
+    if site_type.find_hint:
+        lines.append(f"How to find one: {site_type.find_hint}")
+    if site_type.tags:
+        lines.append("Tags: " + ", ".join(site_type.tags))
+    if site_type.details:
+        lines.append("What makes each one different: " + "; ".join(site_type.details))
+    return _Draft(
+        name=site_type.name,
+        summary=_first_sentence(site_type.description),
+        text="\n".join(lines),
+        group="Sites",
+        icon=site_type.icon or "",
+        tags=(f"Tier {site_type.tier}", site_type.find, site_type.category),
     )
 
 

@@ -52,6 +52,7 @@ from cygnusloom.content.library import (
     RecipeDefinition,
     RelationRules,
     RestLength,
+    SiteTypeDefinition,
     Species,
     TallyRules,
     ThreatDefinition,
@@ -299,9 +300,11 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
     projects: Mapping[str, ProjectDefinition] = field(default_factory=dict)
     # The rule set's faction assets by id, such as Infantry or Smugglers.
     faction_assets: Mapping[str, FactionAssetDefinition] = field(default_factory=dict)
-    # The rule set's campaign clocks, threats, vehicles, recipes, and improvements by id.
+    # The rule set's campaign clocks, threats, site types, vehicles, recipes, and improvements
+    # by id.
     campaign_clocks: Mapping[str, CampaignClockDefinition] = field(default_factory=dict)
     threats: Mapping[str, ThreatDefinition] = field(default_factory=dict)
+    site_types: Mapping[str, SiteTypeDefinition] = field(default_factory=dict)
     vehicles: Mapping[str, VehicleDefinition] = field(default_factory=dict)
     recipes: Mapping[str, RecipeDefinition] = field(default_factory=dict)
     improvements: Mapping[str, ImprovementDefinition] = field(default_factory=dict)

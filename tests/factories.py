@@ -376,6 +376,7 @@ def tools_for(
         faction_assets=rules.faction_assets,
         campaign_clocks=rules.campaign_clocks,
         threats=rules.threats,
+        site_types=rules.site_types,
         vehicles=rules.vehicles,
         recipes=rules.recipes,
         improvements=rules.improvements,

@@ -108,5 +108,20 @@
     "type": "rule",
     "id": "rule-ward",
     "text": "A ward of salt, candle, and rite keeps a horror at bay for a scene. It is not a wall: it holds only while the rite and the threshold hold."
+  },
+  {
+    "type": "rule",
+    "id": "rule-site-search",
+    "text": "Site search: a typed site is made of zones. Searching one zone marks it searched, raises the site's danger by 1, and returns granular loot based on the Scavenge or Salvage total: 10+ gives two items, 7-9 gives one, and 6- gives none. At danger 3 a complication or threat arrives, at 5 the site is fully alert, and at 6 it turns on the party. A zone has nothing left after it is searched. Loot is carried only if the pack has room; a full pack leaves items behind."
+  },
+  {
+    "type": "rule",
+    "id": "rule-city-alert",
+    "text": "City Alert: the street's attention. A player character's crossing uses navigate_city, not move_actor, and raises City Alert by route: main street 2, side street 1, quiet routes 0 unless the fiction says otherwise. At 3 a patrol or runner pack is out, at 4 roads close, at 5 a horde is drawn, and at 6 the district sweeps. Quiet time, distance, and hiding can lower it; loud work and visible loot keep it high."
+  },
+  {
+    "type": "rule",
+    "id": "rule-zombie-cyborg",
+    "text": "Zombie Cyborg: harm 3, armor 2, attack 3. Its armor is machinery; piercing does not ignore it, but cutting power, removing the hardware, or using Cybernetics Configuration can disable it. Its moves are servo-lunge, scan, and spark. It is not an ordinary walker and does not shamble unless the fiction says the hardware is failing."
   }
 ]

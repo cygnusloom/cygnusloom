@@ -1,0 +1,893 @@
+[
+  {
+    "type": "item",
+    "id": "bag-of-chips",
+    "name": "Bag of Chips",
+    "description": "A crinkled bag of chips, mostly air. Salt is a luxury now.",
+    "size": "small",
+    "uses": 1,
+    "trade_value": 1,
+    "icon": "food"
+  },
+  {
+    "type": "item",
+    "id": "candy-bar",
+    "name": "Candy Bar",
+    "description": "A chocolate bar gone pale with cold. Somebody will trade for it.",
+    "size": "tiny",
+    "uses": 1,
+    "trade_value": 1,
+    "icon": "food"
+  },
+  {
+    "type": "item",
+    "id": "soda-can",
+    "name": "Soda Can",
+    "description": "A warm can of soda with the sugar still in it.",
+    "size": "small",
+    "uses": 1,
+    "trade_value": 1,
+    "icon": "food"
+  },
+  {
+    "type": "item",
+    "id": "energy-drink",
+    "name": "Energy Drink",
+    "description": "A bright can of something that promises wakefulness. It delivers.",
+    "size": "small",
+    "uses": 1,
+    "trade_value": 2,
+    "icon": "potion"
+  },
+  {
+    "type": "item",
+    "id": "bottled-water",
+    "name": "Bottled Water",
+    "description": "Two sealed bottles of clean water, still clear.",
+    "size": "normal",
+    "uses": 2,
+    "trade_value": 1,
+    "icon": "waterskin"
+  },
+  {
+    "type": "item",
+    "id": "instant-coffee",
+    "name": "Instant Coffee",
+    "description": "A jar of instant coffee. Hot water is the hard part.",
+    "size": "tiny",
+    "uses": 3,
+    "trade_value": 2,
+    "icon": "jar"
+  },
+  {
+    "type": "item",
+    "id": "canned-soup",
+    "name": "Canned Soup",
+    "description": "One dented can of soup with the label missing.",
+    "size": "small",
+    "uses": 1,
+    "trade_value": 1,
+    "icon": "food"
+  },
+  {
+    "type": "item",
+    "id": "canned-beans",
+    "name": "Canned Beans",
+    "description": "A heavy can of beans. It keeps, and it fills a stomach.",
+    "size": "small",
+    "uses": 1,
+    "trade_value": 1,
+    "icon": "food"
+  },
+  {
+    "type": "item",
+    "id": "peanut-butter",
+    "name": "Peanut Butter",
+    "description": "A jar of peanut butter, half full and rich enough to matter.",
+    "size": "small",
+    "uses": 2,
+    "trade_value": 2,
+    "icon": "jar"
+  },
+  {
+    "type": "item",
+    "id": "dog-food",
+    "name": "Dog Food",
+    "description": "A can of dog food. The label does not make it less edible.",
+    "size": "normal",
+    "uses": 2,
+    "trade_value": 1,
+    "icon": "food"
+  },
+  {
+    "type": "item",
+    "id": "baby-formula",
+    "name": "Baby Formula",
+    "description": "A sealed tin of formula. In the right hands, it is worth more than a gun.",
+    "size": "small",
+    "uses": 3,
+    "trade_value": 3,
+    "icon": "jar"
+  },
+  {
+    "type": "item",
+    "id": "frozen-food",
+    "name": "Frozen Food",
+    "description": "A frozen dinner, thawing and refreezing with the weather.",
+    "size": "normal",
+    "uses": 1,
+    "trade_value": 1,
+    "condition": "worn",
+    "icon": "food"
+  },
+  {
+    "type": "item",
+    "id": "cooking-oil",
+    "name": "Cooking Oil",
+    "description": "A jug of cooking oil. It fries food, lights a fire, and burns.",
+    "size": "normal",
+    "uses": 3,
+    "trade_value": 2,
+    "icon": "oil-flask"
+  },
+  {
+    "type": "item",
+    "id": "coffee-beans",
+    "name": "Coffee Beans",
+    "description": "A bag of whole coffee beans, still smelling of the old world.",
+    "size": "small",
+    "uses": 4,
+    "trade_value": 2,
+    "icon": "sack"
+  },
+  {
+    "type": "item",
+    "id": "hot-sauce",
+    "name": "Hot Sauce",
+    "description": "A bottle of hot sauce. It makes bland food and bad memories easier.",
+    "size": "tiny",
+    "uses": 2,
+    "trade_value": 1,
+    "icon": "potion"
+  },
+  {
+    "type": "item",
+    "id": "dried-sausage",
+    "name": "Dried Sausage",
+    "description": "A hard, salted sausage wrapped in paper.",
+    "size": "small",
+    "uses": 2,
+    "trade_value": 2,
+    "icon": "food"
+  },
+  {
+    "type": "item",
+    "id": "powdered-milk",
+    "name": "Powdered Milk",
+    "description": "A tin of powdered milk. It needs water and patience.",
+    "size": "small",
+    "uses": 3,
+    "trade_value": 2,
+    "icon": "jar"
+  },
+  {
+    "type": "item",
+    "id": "book",
+    "name": "Book",
+    "description": "A hardback book, swollen with damp, still readable in the middle.",
+    "size": "small",
+    "uses": 0,
+    "trade_value": 1,
+    "icon": "book"
+  },
+  {
+    "type": "item",
+    "id": "family-photo",
+    "name": "Family Photo",
+    "description": "A photograph of people who are probably dead, smiling at something outside the frame.",
+    "size": "tiny",
+    "uses": 0,
+    "trade_value": 1,
+    "icon": "scroll"
+  },
+  {
+    "type": "item",
+    "id": "photo-album",
+    "name": "Photo Album",
+    "description": "A thick photo album, its pages stuck together with damp.",
+    "size": "normal",
+    "uses": 0,
+    "trade_value": 2,
+    "icon": "book"
+  },
+  {
+    "type": "item",
+    "id": "wedding-ring",
+    "name": "Wedding Ring",
+    "description": "A plain gold ring, still on a string in a bedside drawer.",
+    "size": "tiny",
+    "uses": 0,
+    "trade_value": 4,
+    "icon": "ring"
+  },
+  {
+    "type": "item",
+    "id": "pocket-watch",
+    "name": "Pocket Watch",
+    "description": "A pocket watch that stopped at a different hour than every clock in the house.",
+    "size": "tiny",
+    "uses": 0,
+    "trade_value": 3,
+    "icon": "clock"
+  },
+  {
+    "type": "item",
+    "id": "sewing-kit",
+    "name": "Sewing Kit",
+    "description": "Needles, thread, and a thimble. Clothes and wounds both need mending.",
+    "size": "small",
+    "uses": 3,
+    "trade_value": 2,
+    "icon": "thieves-tools"
+  },
+  {
+    "type": "item",
+    "id": "board-game",
+    "name": "Board Game",
+    "description": "A boxed board game with most of the pieces. A night's entertainment.",
+    "size": "normal",
+    "uses": 0,
+    "trade_value": 1,
+    "icon": "chest"
+  },
+  {
+    "type": "item",
+    "id": "childrens-toy",
+    "name": "Child's Toy",
+    "description": "A plastic toy, bright and undamaged. It is hard to look at.",
+    "size": "small",
+    "uses": 0,
+    "trade_value": 1,
+    "icon": "gem"
+  },
+  {
+    "type": "item",
+    "id": "winter-coat",
+    "name": "Winter Coat",
+    "description": "A heavy winter coat, patched at the elbows and warm.",
+    "size": "normal",
+    "uses": 0,
+    "trade_value": 3,
+    "icon": "cloak"
+  },
+  {
+    "type": "item",
+    "id": "work-boots",
+    "name": "Work Boots",
+    "description": "Steel-toed work boots in a size that might fit.",
+    "size": "normal",
+    "uses": 0,
+    "trade_value": 2,
+    "icon": "boots"
+  },
+  {
+    "type": "item",
+    "id": "sleeping-bag",
+    "name": "Sleeping Bag",
+    "description": "A sleeping bag rated for a cold night, still zipped.",
+    "size": "bulky",
+    "uses": 0,
+    "trade_value": 3,
+    "icon": "bedroll"
+  },
+  {
+    "type": "item",
+    "id": "camp-stove",
+    "name": "Camp Stove",
+    "description": "A two-burner camp stove with a little fuel left in the bottle.",
+    "size": "normal",
+    "uses": 4,
+    "trade_value": 4,
+    "icon": "campfire"
+  },
+  {
+    "type": "item",
+    "id": "propane-tank",
+    "name": "Propane Tank",
+    "description": "A blue propane tank, still heavy. Heat, cooking, and a loud bang.",
+    "size": "bulky",
+    "uses": 4,
+    "trade_value": 4,
+    "icon": "oil-flask"
+  },
+  {
+    "type": "item",
+    "id": "jewelry-box",
+    "name": "Jewelry Box",
+    "description": "A small wooden box of rings, earrings, and one watch that still runs.",
+    "size": "small",
+    "uses": 0,
+    "trade_value": 4,
+    "icon": "gem"
+  },
+  {
+    "type": "item",
+    "id": "home-keys",
+    "name": "Home Keys",
+    "description": "A key ring with a house key, a car key, and a tiny brass key that fits nothing here.",
+    "size": "tiny",
+    "uses": 0,
+    "trade_value": 1,
+    "icon": "key"
+  },
+  {
+    "type": "item",
+    "id": "cookbook",
+    "name": "Cookbook",
+    "description": "A cookbook with handwritten notes in the margins. Most recipes need things nobody has.",
+    "size": "small",
+    "uses": 0,
+    "trade_value": 1,
+    "icon": "book"
+  },
+  {
+    "type": "item",
+    "id": "cold-medicine",
+    "name": "Cold Medicine",
+    "description": "A box of cold medicine, half used. It does not cure anything, but it helps.",
+    "size": "tiny",
+    "uses": 3,
+    "trade_value": 2,
+    "icon": "potion"
+  },
+  {
+    "type": "item",
+    "id": "antihistamines",
+    "name": "Antihistamines",
+    "description": "A blister pack of allergy pills. Dust and mold are everywhere now.",
+    "size": "tiny",
+    "uses": 4,
+    "trade_value": 2,
+    "icon": "potion"
+  },
+  {
+    "type": "item",
+    "id": "asthma-inhaler",
+    "name": "Asthma Inhaler",
+    "description": "An inhaler with a dose counter still in the green. To one survivor, it is a lifeline.",
+    "size": "tiny",
+    "uses": 3,
+    "trade_value": 4,
+    "icon": "potion"
+  },
+  {
+    "type": "item",
+    "id": "epinephrine-pen",
+    "name": "Epinephrine Pen",
+    "description": "An auto-injector for an allergic reaction, or one hard minute of borrowed speed.",
+    "size": "tiny",
+    "uses": 1,
+    "trade_value": 5,
+    "icon": "potion"
+  },
+  {
+    "type": "item",
+    "id": "syringes",
+    "name": "Syringes",
+    "description": "A sealed pack of syringes, still sterile inside.",
+    "size": "small",
+    "uses": 3,
+    "trade_value": 3,
+    "icon": "herbalism-kit"
+  },
+  {
+    "type": "item",
+    "id": "vitamins",
+    "name": "Vitamins",
+    "description": "A bottle of multivitamins. Not medicine, but something to hold on to.",
+    "size": "tiny",
+    "uses": 6,
+    "trade_value": 1,
+    "icon": "potion"
+  },
+  {
+    "type": "item",
+    "id": "sleeping-pills",
+    "name": "Sleeping Pills",
+    "description": "A bottle of sleeping pills. Sleep is a risk and a mercy.",
+    "size": "tiny",
+    "uses": 3,
+    "trade_value": 2,
+    "icon": "potion"
+  },
+  {
+    "type": "item",
+    "id": "medical-tape",
+    "name": "Medical Tape",
+    "description": "A roll of surgical tape. It holds bandages, splints, and labels.",
+    "size": "small",
+    "uses": 4,
+    "trade_value": 1,
+    "icon": "herbalism-kit"
+  },
+  {
+    "type": "item",
+    "id": "prescription-pad",
+    "name": "Prescription Pad",
+    "description": "A doctor's prescription pad, half filled. In some places it is a kind of key.",
+    "size": "tiny",
+    "uses": 1,
+    "trade_value": 2,
+    "icon": "scroll"
+  },
+  {
+    "type": "item",
+    "id": "thermometer",
+    "name": "Thermometer",
+    "description": "A digital thermometer. The battery is low, but it works.",
+    "size": "tiny",
+    "uses": 0,
+    "trade_value": 1,
+    "icon": "potion"
+  },
+  {
+    "type": "item",
+    "id": "reading-glasses",
+    "name": "Reading Glasses",
+    "description": "A pair of reading glasses, scratched but intact.",
+    "size": "tiny",
+    "uses": 0,
+    "trade_value": 1,
+    "icon": "eye"
+  },
+  {
+    "type": "item",
+    "id": "nails",
+    "name": "Nails",
+    "description": "A coffee can of assorted nails, most of them straight.",
+    "size": "tiny",
+    "uses": 5,
+    "trade_value": 1,
+    "icon": "tool"
+  },
+  {
+    "type": "item",
+    "id": "screwdriver",
+    "name": "Screwdriver",
+    "description": "A flat-head screwdriver with an insulated handle.",
+    "size": "small",
+    "uses": 0,
+    "trade_value": 2,
+    "icon": "tool"
+  },
+  {
+    "type": "item",
+    "id": "hand-saw",
+    "name": "Hand Saw",
+    "description": "A hand saw with a rusted but serviceable blade.",
+    "size": "normal",
+    "uses": 0,
+    "trade_value": 3,
+    "icon": "tool"
+  },
+  {
+    "type": "item",
+    "id": "pry-bar",
+    "name": "Pry Bar",
+    "description": "A short pry bar. It opens doors, crates, and arguments.",
+    "size": "normal",
+    "uses": 0,
+    "trade_value": 3,
+    "icon": "crowbar"
+  },
+  {
+    "type": "item",
+    "id": "wire-spool",
+    "name": "Wire Spool",
+    "description": "A spool of copper wire, most of it still clean.",
+    "size": "small",
+    "uses": 4,
+    "trade_value": 2,
+    "icon": "component-pouch"
+  },
+  {
+    "type": "item",
+    "id": "car-battery",
+    "name": "Car Battery",
+    "description": "A car battery, heavy and maybe holding a charge.",
+    "size": "bulky",
+    "uses": 0,
+    "trade_value": 4,
+    "icon": "generator"
+  },
+  {
+    "type": "item",
+    "id": "generator-parts",
+    "name": "Generator Parts",
+    "description": "A starter motor, a fuel line, and a coil, wrapped in a rag.",
+    "size": "normal",
+    "uses": 3,
+    "trade_value": 4,
+    "icon": "generator"
+  },
+  {
+    "type": "item",
+    "id": "padlock",
+    "name": "Padlock",
+    "description": "A brass padlock with the key taped to the shackle. Somebody meant to come back.",
+    "size": "tiny",
+    "uses": 1,
+    "trade_value": 2,
+    "icon": "key"
+  },
+  {
+    "type": "item",
+    "id": "chain",
+    "name": "Chain",
+    "description": "Six feet of heavy chain. It secures a gate, a door, or a person.",
+    "size": "normal",
+    "uses": 0,
+    "trade_value": 3,
+    "icon": "chain"
+  },
+  {
+    "type": "item",
+    "id": "circuit-board",
+    "name": "Circuit Board",
+    "description": "A circuit board pulled from something that used to matter.",
+    "size": "tiny",
+    "uses": 2,
+    "trade_value": 3,
+    "icon": "component-pouch"
+  },
+  {
+    "type": "item",
+    "id": "servo-motor",
+    "name": "Servo Motor",
+    "description": "A small servo motor, still turning freely by hand.",
+    "size": "small",
+    "uses": 2,
+    "trade_value": 4,
+    "icon": "tool"
+  },
+  {
+    "type": "item",
+    "id": "neural-cable",
+    "name": "Neural Cable",
+    "description": "A braided cable with a connector that fits nothing anyone still owns.",
+    "size": "small",
+    "uses": 2,
+    "trade_value": 4,
+    "icon": "component-pouch"
+  },
+  {
+    "type": "item",
+    "id": "coolant-canister",
+    "name": "Coolant Canister",
+    "description": "A sealed canister of coolant for implants and machines that run hot.",
+    "size": "normal",
+    "uses": 3,
+    "trade_value": 3,
+    "icon": "oil-flask"
+  },
+  {
+    "type": "item",
+    "id": "implant-battery",
+    "name": "Implant Battery",
+    "description": "A small, sealed battery for a cybernetic implant. It still holds a charge.",
+    "size": "tiny",
+    "uses": 3,
+    "trade_value": 5,
+    "icon": "generator"
+  },
+  {
+    "type": "item",
+    "id": "surgical-tray",
+    "name": "Surgical Tray",
+    "description": "A wrapped surgical tray: scalpel, forceps, retractors, and a needle holder.",
+    "size": "normal",
+    "uses": 2,
+    "trade_value": 4,
+    "icon": "kit-knife"
+  },
+  {
+    "type": "item",
+    "id": "sterile-drape",
+    "name": "Sterile Drape",
+    "description": "A sealed sterile drape. Clean work is rare enough to be worth carrying.",
+    "size": "small",
+    "uses": 3,
+    "trade_value": 2,
+    "icon": "cloak"
+  },
+  {
+    "type": "item",
+    "id": "lab-notes",
+    "name": "Lab Notes",
+    "description": "A binder of lab notes in two hands, one of them increasingly unsteady.",
+    "size": "tiny",
+    "uses": 0,
+    "trade_value": 3,
+    "icon": "book"
+  },
+  {
+    "type": "item",
+    "id": "keycard",
+    "name": "Keycard",
+    "description": "A plastic keycard with a photo worn blank and a magnetic strip still intact.",
+    "size": "tiny",
+    "uses": 1,
+    "trade_value": 2,
+    "icon": "key"
+  },
+  {
+    "type": "item",
+    "id": "communion-wine",
+    "name": "Communion Wine",
+    "description": "A bottle of communion wine, dark and strong and not for drinking lightly.",
+    "size": "small",
+    "uses": 3,
+    "trade_value": 2,
+    "icon": "potion"
+  },
+  {
+    "type": "item",
+    "id": "hymnal",
+    "name": "Hymnal",
+    "description": "A worn hymnal with a name written inside the cover.",
+    "size": "small",
+    "uses": 0,
+    "trade_value": 1,
+    "icon": "book"
+  },
+  {
+    "type": "item",
+    "id": "vestments",
+    "name": "Vestments",
+    "description": "Folded vestments, still smelling of incense and old stone.",
+    "size": "normal",
+    "uses": 0,
+    "trade_value": 2,
+    "icon": "cloak"
+  },
+  {
+    "type": "item",
+    "id": "incense",
+    "name": "Incense",
+    "description": "A bundle of incense sticks. The smoke covers other smells.",
+    "size": "tiny",
+    "uses": 4,
+    "trade_value": 1,
+    "icon": "candle"
+  },
+  {
+    "type": "item",
+    "id": "chalk",
+    "name": "Chalk",
+    "description": "A box of thick chalk, some pieces worn to stubs.",
+    "size": "tiny",
+    "uses": 4,
+    "trade_value": 1,
+    "icon": "component-pouch"
+  },
+  {
+    "type": "item",
+    "id": "ritual-knife",
+    "name": "Ritual Knife",
+    "description": "A black-handled knife with a dull edge and a careful pattern on the blade.",
+    "size": "tiny",
+    "uses": 0,
+    "trade_value": 3,
+    "icon": "dagger"
+  },
+  {
+    "type": "item",
+    "id": "offering-bowl",
+    "name": "Offering Bowl",
+    "description": "A shallow bowl with something dark dried in the bottom.",
+    "size": "small",
+    "uses": 0,
+    "trade_value": 2,
+    "icon": "jar"
+  },
+  {
+    "type": "item",
+    "id": "tarot-deck",
+    "name": "Tarot Deck",
+    "description": "A tarot deck with three cards missing and one card that does not belong.",
+    "size": "tiny",
+    "uses": 0,
+    "trade_value": 2,
+    "icon": "scroll"
+  },
+  {
+    "type": "item",
+    "id": "absinthe",
+    "name": "Absinthe",
+    "description": "A bottle of absinthe, green as a bad thought.",
+    "size": "small",
+    "uses": 3,
+    "trade_value": 3,
+    "icon": "potion"
+  },
+  {
+    "type": "item",
+    "id": "guest-ledger",
+    "name": "Guest Ledger",
+    "description": "A bar's guest book, with the same names appearing more than they should.",
+    "size": "small",
+    "uses": 0,
+    "trade_value": 2,
+    "icon": "book"
+  },
+  {
+    "type": "item",
+    "id": "collection-plate",
+    "name": "Collection Plate",
+    "description": "A brass collection plate, empty except for a folded note.",
+    "size": "small",
+    "uses": 0,
+    "trade_value": 1,
+    "icon": "coin"
+  },
+  {
+    "type": "item",
+    "id": "armory-key",
+    "name": "Armory Key",
+    "description": "A steel key on a labelled ring. Somewhere there is a door it opens.",
+    "size": "tiny",
+    "uses": 0,
+    "trade_value": 3,
+    "icon": "key"
+  },
+  {
+    "type": "item",
+    "id": "evidence-bag",
+    "name": "Evidence Bag",
+    "description": "A sealed evidence bag with a case number and a name.",
+    "size": "small",
+    "uses": 2,
+    "trade_value": 1,
+    "icon": "pouch"
+  },
+  {
+    "type": "item",
+    "id": "flare",
+    "name": "Flare",
+    "description": "A road flare. It burns bright, hot, and loud in every sense.",
+    "size": "tiny",
+    "uses": 1,
+    "trade_value": 3,
+    "icon": "torch-item"
+  },
+  {
+    "type": "item",
+    "id": "teddy-bear",
+    "name": "Teddy Bear",
+    "description": "A teddy bear with one button eye missing.",
+    "size": "small",
+    "uses": 0,
+    "trade_value": 1,
+    "icon": "gem"
+  },
+  {
+    "type": "item",
+    "id": "deck-of-cards",
+    "name": "Deck of Cards",
+    "description": "A deck of cards, worn soft by handling. There are still four aces.",
+    "size": "tiny",
+    "uses": 0,
+    "trade_value": 1,
+    "icon": "scroll"
+  },
+  {
+    "type": "item",
+    "id": "cigarette-pack",
+    "name": "Cigarette Pack",
+    "description": "A half-full pack of cigarettes, stale but dry.",
+    "size": "tiny",
+    "uses": 6,
+    "trade_value": 2,
+    "icon": "pouch"
+  },
+  {
+    "type": "item",
+    "id": "comic-book",
+    "name": "Comic Book",
+    "description": "A comic book with a bright cover and a story about people who win.",
+    "size": "tiny",
+    "uses": 0,
+    "trade_value": 1,
+    "icon": "book"
+  },
+  {
+    "type": "item",
+    "id": "lottery-ticket",
+    "name": "Lottery Ticket",
+    "description": "An unscratched lottery ticket. The jackpot is a joke now, but someone will scratch it.",
+    "size": "tiny",
+    "uses": 1,
+    "trade_value": 1,
+    "icon": "scroll"
+  },
+  {
+    "type": "item",
+    "id": "camera",
+    "name": "Camera",
+    "description": "A digital camera with a half-charged battery and a full memory card.",
+    "size": "small",
+    "uses": 3,
+    "trade_value": 3,
+    "icon": "wondrous-item"
+  },
+  {
+    "type": "item",
+    "id": "wedding-dress",
+    "name": "Wedding Dress",
+    "description": "A wedding dress in a clear bag. It survived the end of the world, somehow.",
+    "size": "bulky",
+    "uses": 0,
+    "trade_value": 2,
+    "icon": "cloak"
+  },
+  {
+    "type": "item",
+    "id": "surgical-mask",
+    "name": "Surgical Mask",
+    "description": "A box of surgical masks. Dust, blood, and bad air are easier to face with one.",
+    "size": "small",
+    "uses": 5,
+    "trade_value": 1,
+    "icon": "cloak"
+  },
+  {
+    "type": "item",
+    "id": "hand-sanitizer",
+    "name": "Hand Sanitizer",
+    "description": "A bottle of hand sanitizer. Clean hands save lives more often than clean wounds.",
+    "size": "tiny",
+    "uses": 4,
+    "trade_value": 2,
+    "icon": "potion"
+  },
+  {
+    "type": "item",
+    "id": "fire-extinguisher",
+    "name": "Fire Extinguisher",
+    "description": "A small fire extinguisher with the gauge in the green.",
+    "size": "normal",
+    "uses": 2,
+    "trade_value": 2,
+    "icon": "tool"
+  },
+  {
+    "type": "item",
+    "id": "crowbar-short",
+    "name": "Short Crowbar",
+    "description": "A short crowbar that fits under a coat and opens most old locks.",
+    "size": "small",
+    "uses": 0,
+    "trade_value": 3,
+    "icon": "crowbar"
+  },
+  {
+    "type": "item",
+    "id": "binoculars",
+    "name": "Binoculars",
+    "description": "A pair of binoculars, one lens cracked but usable.",
+    "size": "small",
+    "uses": 0,
+    "trade_value": 3,
+    "icon": "spyglass"
+  },
+  {
+    "type": "item",
+    "id": "map-of-the-city",
+    "name": "Map of the City",
+    "description": "A folded city map with three streets circled and one building crossed out.",
+    "size": "tiny",
+    "uses": 0,
+    "trade_value": 2,
+    "icon": "scroll"
+  }
+]

@@ -65,9 +65,9 @@
     "type": "campaign_clock",
     "id": "site_danger",
     "label": "Site Danger",
-    "description": "How much trouble a site has noticed the party. At 3 and 5 a complication arrives; at 6 the site turns on them.",
+    "description": "How much trouble the current site has noticed the party. At 3 and 5 a complication arrives; at 6 the site turns on them.",
     "segments": 6,
-    "visible": false,
+    "visible": true,
     "thresholds": {
       "3": [
         {
@@ -85,6 +85,46 @@
         {
           "op": "note",
           "text": "The site turns on the party: a hard move, a collapse, or a swarm."
+        }
+      ]
+    }
+  },
+  {
+    "type": "campaign_clock",
+    "id": "city_alert",
+    "label": "City Alert",
+    "description": "How much the streets are watching. Crossings and loud work raise it. At 3 a patrol is out; at 5 a horde is drawn; at 6 the district sweeps.",
+    "segments": 6,
+    "visible": true,
+    "thresholds": {
+      "1": [
+        {
+          "op": "note",
+          "text": "A lookout on the next corner has seen the party move."
+        }
+      ],
+      "3": [
+        {
+          "op": "note",
+          "text": "A patrol or runner pack is out on the street; crossing in the open now costs."
+        }
+      ],
+      "4": [
+        {
+          "op": "note",
+          "text": "Roads close. Checkpoints, locked gates, and people who ask questions."
+        }
+      ],
+      "5": [
+        {
+          "op": "note",
+          "text": "A horde is drawn toward the district; the next loud move brings it."
+        }
+      ],
+      "6": [
+        {
+          "op": "note",
+          "text": "The district sweeps: a horde or an armed patrol fills the street. Get off it or go through."
         }
       ]
     }

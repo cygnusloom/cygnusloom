@@ -133,10 +133,29 @@ LOCATION_DENSITY_HELP = {
     "dense": "A connected area with many locations to explore.",
 }
 # What a creative table is for: `oracle` tables give a fresh idea during play, `setting` tables
-# invent the world at the opening, and `module` tables belong to an active story module. The
-# role keeps a worldgen table from being mixed into a scene and the other way around.
-CREATIVE_TABLE_ROLES = ("oracle", "setting", "module")
+# invent the world at the opening, `site` tables make one generated place unique, and `module`
+# tables belong to an active story module. The role keeps a worldgen table from being mixed into a
+# scene and the other way around.
+CREATIVE_TABLE_ROLES = ("oracle", "setting", "site", "module")
 DEFAULT_CREATIVE_ROLE = "oracle"
+# How hard a generated place is to find. A site's find level tells the GM whether the party can
+# walk up to it or must earn the entrance through a rumour, a map, or a named contact.
+SITE_FINDS = ("common", "uncommon", "hidden", "secret")
+# What kind of place a site type is, used to filter the site list when a city block is built.
+SITE_CATEGORIES = (
+    "home",
+    "shop",
+    "food",
+    "medical",
+    "tech",
+    "faith",
+    "occult",
+    "civic",
+    "industrial",
+    "military",
+    "research",
+    "street",
+)
 
 
 def check_keys(data: Mapping[str, Any], allowed: Iterable[str], label: str) -> None:
@@ -2215,6 +2234,41 @@ class ThreatDefinition:
 
 
 @dataclass(frozen=True)
+class SiteZone:
+    """One room, aisle, or floor of a site type. A search happens in one zone and takes what that
+    zone holds; its noise is what searching there adds to the scene."""
+
+    id: str
+    name: str
+    description: str
+    loot: tuple[Mapping[str, Any], ...] = ()
+    noise: int = 0
+
+
+@dataclass(frozen=True)
+class SiteTypeDefinition:
+    """A kind of place the AI GM can generate, such as a convenience store, a pharmacy, or a
+    cybernetics lab. The description is the ruleset's seed; the GM makes each one unique. `find`
+    says how hard the place is to locate, and `zones` are the rooms a scavenging loop searches."""
+
+    id: str
+    name: str
+    category: str
+    tier: int
+    find: str
+    description: str
+    find_hint: str = ""
+    tags: tuple[str, ...] = ()
+    details: tuple[str, ...] = ()
+    secrets: tuple[str, ...] = ()
+    zones: tuple[SiteZone, ...] = ()
+    loot: tuple[Mapping[str, Any], ...] = ()
+    threats: tuple[str, ...] = ()
+    complications: tuple[str, ...] = ()
+    icon: str | None = None
+
+
+@dataclass(frozen=True)
 class VehicleDefinition:
     """A party vehicle's starting stats."""
 
@@ -2443,6 +2497,8 @@ class RuleSet:
     campaign_clocks: Mapping[str, CampaignClockDefinition] = field(default_factory=dict)
     # Non-character dangers, by id.
     threats: Mapping[str, ThreatDefinition] = field(default_factory=dict)
+    # Kinds of generated places, by id, with their zones, loot, threats, and find difficulty.
+    site_types: Mapping[str, SiteTypeDefinition] = field(default_factory=dict)
     # Party vehicles, by id.
     vehicles: Mapping[str, VehicleDefinition] = field(default_factory=dict)
     # Crafting, repair, and salvage recipes, by id.
@@ -3006,6 +3062,7 @@ RULE_SET_DEFINITION_TYPES = frozenset(
         "faction_asset",
         "campaign_clock",
         "threat",
+        "site_type",
         "vehicle",
         "recipe",
         "improvement",
@@ -5040,6 +5097,7 @@ def _build_rule_set(
         definitions, character, stored_conditions, frozenset(counters), template
     )
     threats = _load_threats(definitions, character, template)
+    site_types = _load_site_types(definitions, character, threats, template)
     vehicles = _load_vehicles(definitions, character, template)
     recipes = _load_recipes(definitions, character, template)
     improvements = _load_improvements(definitions, character, template)
@@ -5053,6 +5111,8 @@ def _build_rule_set(
         ),
         "clocks": sorted(campaign_clocks),
         "threats": sorted(threats),
+        "site_types": sorted(site_types),
+        "site_categories": sorted({site.category for site in site_types.values()}),
         "vehicles": sorted(vehicles),
         "recipes": sorted(recipes),
         "improvements": sorted(improvements),
@@ -5139,6 +5199,7 @@ def _build_rule_set(
         faction_assets=faction_assets,
         campaign_clocks=campaign_clocks,
         threats=threats,
+        site_types=site_types,
         vehicles=vehicles,
         recipes=recipes,
         improvements=improvements,
@@ -8004,6 +8065,131 @@ def _load_threats(
             icon=_definition_icon(d.data, label, "skull"),
         )
     return threats
+
+
+def _site_loot(
+    value: object,
+    label: str,
+    items: Mapping[str, Any],
+) -> tuple[Mapping[str, Any], ...]:
+    """A site's loot list. An entry is an item id or an object naming an item and, optionally, how
+    many uses are found; a missing uses value keeps every use the catalogue item has."""
+    if value is None:
+        return ()
+    if not isinstance(value, list):
+        raise ContentError(f"{label}: 'loot' must be a list")
+    found: list[Mapping[str, Any]] = []
+    for entry in value:
+        if isinstance(entry, str):
+            item_id = entry.strip()
+            uses = None
+        elif isinstance(entry, Mapping):
+            check_keys(entry, {"item", "uses"}, label)
+            item_id = required_text(entry, "item", label)
+            uses = _whole(entry, "uses", label, 1) if "uses" in entry else None
+        else:
+            raise ContentError(f"{label}: each loot entry must be an item id or an object")
+        if item_id not in items:
+            raise ContentError(f"{label}: loot names no item ({item_id!r})")
+        found.append({"item": item_id, "uses": uses})
+    return tuple(found)
+
+
+def _load_site_types(
+    definitions: list[Definition],
+    character: CharacterSpec,
+    threats: Mapping[str, ThreatDefinition],
+    template: str,
+) -> dict[str, SiteTypeDefinition]:
+    """Kinds of places the GM can generate, by id, with their zones, loot, threats, and find level."""
+    site_types: dict[str, SiteTypeDefinition] = {}
+    for d in definitions:
+        if d.type != "site_type":
+            continue
+        label = f"{template}: site type {d.id}"
+        if d.id in site_types:
+            raise ContentError(f"{template}: duplicate site type {d.id!r}")
+        check_keys(
+            d.data,
+            {
+                "type",
+                "id",
+                "name",
+                "category",
+                "tier",
+                "find",
+                "description",
+                "find_hint",
+                "tags",
+                "details",
+                "secrets",
+                "zones",
+                "loot",
+                "threats",
+                "complications",
+                "icon",
+            },
+            label,
+        )
+        category = required_text(d.data, "category", label)
+        if category not in SITE_CATEGORIES:
+            raise ContentError(f"{label}: 'category' must be one of {', '.join(SITE_CATEGORIES)}")
+        find = required_text(d.data, "find", label)
+        if find not in SITE_FINDS:
+            raise ContentError(f"{label}: 'find' must be one of {', '.join(SITE_FINDS)}")
+        tier = _whole(d.data, "tier", label, 1) if "tier" in d.data else 1
+        if tier > 5:
+            raise ContentError(f"{label}: 'tier' must be at most 5")
+        zone_data = d.data.get("zones")
+        if not isinstance(zone_data, list) or not zone_data:
+            raise ContentError(f"{label}: 'zones' must be a non-empty list")
+        zones: list[SiteZone] = []
+        seen_zones: set[str] = set()
+        for entry in zone_data:
+            if not isinstance(entry, Mapping):
+                raise ContentError(f"{label}: each zone must be an object")
+            zone_label = f"{label}: zone"
+            check_keys(entry, {"id", "name", "description", "loot", "noise"}, zone_label)
+            zone_id = required_text(entry, "id", zone_label)
+            if zone_id in seen_zones:
+                raise ContentError(f"{label}: duplicate zone {zone_id!r}")
+            seen_zones.add(zone_id)
+            noise = _whole(entry, "noise", zone_label, 0) if "noise" in entry else 0
+            if noise > 3:
+                raise ContentError(f"{zone_label} {zone_id!r}: 'noise' must be at most 3")
+            zones.append(
+                SiteZone(
+                    id=zone_id,
+                    name=required_text(entry, "name", zone_label),
+                    description=_optional_text(entry, "description", zone_label) or "",
+                    loot=_site_loot(
+                        entry.get("loot"), f"{zone_label} {zone_id!r}", character.items
+                    ),
+                    noise=noise,
+                )
+            )
+        threat_ids = _names(d.data, "threats", label)
+        for threat_id in threat_ids:
+            if threat_id not in threats:
+                raise ContentError(f"{label}: 'threats' names no threat ({threat_id!r})")
+        site_types[d.id] = SiteTypeDefinition(
+            id=d.id,
+            name=required_text(d.data, "name", label),
+            category=category,
+            tier=tier,
+            find=find,
+            description=required_text(d.data, "description", label),
+            find_hint=_optional_text(d.data, "find_hint", label) or "",
+            tags=_names(d.data, "tags", label),
+            details=_text_list(d.data.get("details", []), f"{label}: details"),
+            secrets=_text_list(d.data.get("secrets", []), f"{label}: secrets"),
+            zones=tuple(zones),
+            loot=_site_loot(d.data.get("loot"), label, character.items),
+            threats=threat_ids,
+            complications=_text_list(d.data.get("complications", []), f"{label}: complications"),
+            icon=_definition_icon(d.data, label, "town"),
+        )
+    return site_types
 
 
 def _load_vehicles(

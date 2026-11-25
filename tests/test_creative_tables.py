@@ -89,12 +89,17 @@ def test_core_offers_the_roll_creative_tool():
     tool = tools["roll_creative"]
     assert tool.description.startswith(
         "Roll on the creative tables for a new idea: use list_dice_tables to see their roles, "
-        "then pass role 'setting' for a world, faction, conflict, or mystery, and use the oracle "
-        "tables before inventing a scene, place, or complication that the world, module, and "
-        "active storylines do not already supply."
+        "then pass role 'setting' for a world, faction, conflict, or mystery, 'site' to make a "
+        "generated place unique, and use the oracle tables before inventing a scene, place, or "
+        "complication that the world, module, and active storylines do not already supply."
     )
     assert "same full oracle set" in tool.description
-    assert tool.parameters["properties"]["role"]["enum"] == ["oracle", "setting", "module"]
+    assert tool.parameters["properties"]["role"]["enum"] == [
+        "oracle",
+        "setting",
+        "site",
+        "module",
+    ]
 
 
 def test_creation_tools_state_the_creative_source_rule_in_their_first_sentence():

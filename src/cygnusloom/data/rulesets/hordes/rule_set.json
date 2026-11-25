@@ -71,7 +71,7 @@
     ],
     "capabilities": {
       "magic": "none",
-      "travel": "none",
+      "travel": "narrative",
       "wilderness": false,
       "dungeon": false,
       "combat": true,

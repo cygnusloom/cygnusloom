@@ -79,6 +79,23 @@
   },
   {
     "type": "table",
+    "id": "personal_item",
+    "name": "Personal Item",
+    "options": [
+      "A photograph folded to fit a pocket",
+      "A wedding ring on a cord",
+      "A library card from a library that burned",
+      "A child's drawing, kept dry",
+      "A medal from a war that no longer matters",
+      "A pocket knife worn smooth",
+      "A diary with the last pages blank",
+      "A set of keys to a house that is gone",
+      "A saint's medal with the face rubbed away",
+      "A cassette tape with one song left on it"
+    ]
+  },
+  {
+    "type": "table",
     "id": "survivor-names",
     "name": "Survivor Names",
     "options": [
@@ -991,6 +1008,111 @@
       {
         "roll": "6",
         "result": "They are falling apart, and taking the area with them"
+      }
+    ]
+  },
+  {
+    "type": "dice_table",
+    "id": "city-block",
+    "name": "City Block",
+    "genres": [
+      "apocalypse"
+    ],
+    "dice": "1d6",
+    "rows": [
+      {
+        "roll": "1",
+        "result": "A residential street of houses, with a corner convenience store and a church at the end"
+      },
+      {
+        "roll": "2",
+        "result": "A commercial strip of fast food, a pharmacy, and a pawn shop, with flats above"
+      },
+      {
+        "roll": "3",
+        "result": "A medical row of a clinic, a pharmacy, and an unmarked cybernetics lab behind one door"
+      },
+      {
+        "roll": "4",
+        "result": "An industrial block of a hardware store, a warehouse, and a garage with a locked yard"
+      },
+      {
+        "roll": "5",
+        "result": "A civic block of a school, a police station, and a radio station on the hill"
+      },
+      {
+        "roll": "6",
+        "result": "A mixed block of apartment buildings, an occult bar, and a basement that is not on any plan"
+      }
+    ]
+  },
+  {
+    "type": "dice_table",
+    "id": "street-event",
+    "name": "Street Event",
+    "genres": [
+      "apocalypse"
+    ],
+    "dice": "1d6",
+    "rows": [
+      {
+        "roll": "1",
+        "result": "The street is clear; the only sound is boots and wind in a dead sign"
+      },
+      {
+        "roll": "2",
+        "result": "A dog watches from under a car and does not move"
+      },
+      {
+        "roll": "3",
+        "result": "A fresh blood trail crosses the street and ends at a door that is ajar"
+      },
+      {
+        "roll": "4",
+        "result": "A patrol of armed survivors sees the party at the same moment; no weapons are raised yet"
+      },
+      {
+        "roll": "5",
+        "result": "A knot of walkers drifts between the party and the next block, moving with the wind"
+      },
+      {
+        "roll": "6",
+        "result": "Glass breaks somewhere close, and the whole street goes quiet"
+      }
+    ]
+  },
+  {
+    "type": "dice_table",
+    "id": "street-hazard",
+    "name": "Street Hazard",
+    "genres": [
+      "apocalypse"
+    ],
+    "dice": "1d6",
+    "rows": [
+      {
+        "roll": "1",
+        "result": "A wreck blocks the road; the only way past is through the buildings"
+      },
+      {
+        "roll": "2",
+        "result": "A horde is crossing ahead, not yet aware"
+      },
+      {
+        "roll": "3",
+        "result": "A militia checkpoint has stopped a family at gunpoint"
+      },
+      {
+        "roll": "4",
+        "result": "A fire has gutted one side of the street and is still moving"
+      },
+      {
+        "roll": "5",
+        "result": "A bridge or underpass is flooded, with something moving in the water"
+      },
+      {
+        "roll": "6",
+        "result": "A building comes down across the street, and the dust carries noise"
       }
     ]
   }

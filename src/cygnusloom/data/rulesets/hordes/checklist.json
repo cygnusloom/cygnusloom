@@ -17,7 +17,15 @@
       },
       {
         "id": "clocks",
-        "text": "noise, horde pressure, site danger, chases, faction fronts, and base defense"
+        "text": "noise, horde pressure, site danger, City Alert, chases, faction fronts, and base defense"
+      },
+      {
+        "id": "sites",
+        "text": "the site's type and zones searched, loot found or left behind, and whether it is picked clean"
+      },
+      {
+        "id": "navigation",
+        "text": "the route across the city, the street event, and what the City Alert clock did"
       },
       {
         "id": "threats",

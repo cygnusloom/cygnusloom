@@ -52,6 +52,7 @@ class CoreWorld(Protocol):
         icon: str | None = None,
         summary: str | None = None,
         majority_species: str | None = None,
+        site_type: str | None = None,
     ) -> dict[str, Any]: ...
 
     def create_region(
@@ -398,6 +399,36 @@ class World(CoreWorld, Protocol):
     def roll_creative(
         self, tables: list[str] | None = None, role: str | None = None
     ) -> dict[str, Any]: ...
+
+    def list_site_types(
+        self, find: str = "", category: str = "", tier: int | None = None
+    ) -> dict[str, Any]:
+        """List the generated place kinds this rule set offers, filtered by find, category, or
+        tier."""
+
+    def lookup_site_type(self, site_type: str) -> dict[str, Any]:
+        """Read a site type's seed description, find hint, zones, loot, and threats."""
+
+    def search_site(
+        self,
+        site: str,
+        character: str,
+        zone: str = "",
+        total: int = 8,
+        take: bool = True,
+        condition: str = "",
+    ) -> dict[str, Any]:
+        """Search one zone of a typed site and carry out the loot its profile gives."""
+
+    def advance_clock(
+        self,
+        name: str,
+        amount: int = 1,
+        reason: str = "",
+        set_to: int | None = None,
+    ) -> dict[str, Any]: ...
+
+    def advance_noise(self, amount: int = 1, reason: str = "") -> dict[str, Any]: ...
 
     def dungeon_cycle(self, triggers: list[str], reason: str) -> dict[str, Any]: ...
 
