@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import pytest
+
+from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.compendium import compendium_view
 from cygnusloom.services.events import MoveMade, decode, events_since, name_key
 from tests.conftest import bundled_library
@@ -186,6 +189,13 @@ def test_crafting_and_shelter_improvements(client_factory):
         improvement["improvement"] == "barricade"
         for improvement in tools.list_improvements("The Shelter")["improvements"]
     )
+
+
+def test_an_improvement_with_missing_parts_is_invalid_input(client_factory):
+    _client, _campaign_id, tools = _campaign(client_factory)
+
+    with pytest.raises(InvalidInput, match="lacks 'parts'"):
+        tools.improve_site("The Shelter", "barricade", "Ada", 8)
 
 
 def test_a_safe_night_rest_clears_one_harm(client_factory):
