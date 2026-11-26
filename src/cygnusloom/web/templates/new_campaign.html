@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros.html" import pick_control, world_option %}
+{% from "macros.html" import optional_panel, pick_control, world_option %}
 {% block title %}New campaign{% endblock %}
 {% block content %}
   <section class="card narrow">
@@ -44,16 +44,16 @@
         Label
         <input type="text" name="label" value="{{ campaign_label }}" maxlength="120">
       </label>
-      <label>
-        Adventure source (optional)
-        <input type="file" name="file" accept=".pdf,.md,.markdown,.txt,text/plain,text/markdown,application/pdf">
-      </label>
-      <p class="muted">
-        Upload a published adventure to play it: a PDF, Markdown, or plain-text file. Cygnus reads
-        it as this campaign's source and follows its places, people, and events.{% if not single_player %}
-        Adding one costs 1 credit per 100,000 characters of extracted text, at least 1 credit,
-        and is free for credit-exempt accounts.{% endif %}
-      </p>
+      {# The source is optional, so it stays folded away until someone wants it. #}
+      {% call optional_panel("source-panel", "Adventure source (optional)", open_source) %}
+        <input type="file" name="file" accept=".pdf,.md,.markdown,.txt,text/plain,text/markdown,application/pdf" aria-labelledby="source-panel">
+        <p class="muted">
+          Upload a published adventure to play it: a PDF, Markdown, or plain-text file. Cygnus reads
+          it as this campaign's source and follows its places, people, and events.{% if not single_player %}
+          Adding one costs 1 credit per 100,000 characters of extracted text, at least 1 credit,
+          and is free for credit-exempt accounts.{% endif %}
+        </p>
+      {% endcall %}
       {# The model is optional, so it stays folded away until someone wants it. #}
       {% if models %}
       <details class="advanced-options"{% if selected_model %} open{% endif %}>

@@ -270,6 +270,7 @@ async def create(request: Request) -> Response:
                 world_template=world_template,
                 rule_set=rule_set,
                 model=model,
+                open_source=True,
             )
     try:
         campaign = create_campaign(
@@ -316,6 +317,7 @@ async def create(request: Request) -> Response:
                 world_template=world_template,
                 rule_set=rule_set,
                 model=model,
+                open_source=True,
             )
         noun = "credit" if charged == 1 else "credits"
         cost = f", {charged} {noun}" if charged else ""
@@ -2188,6 +2190,7 @@ def _new_form(
     world_template: str = "",
     rule_set: str = "",
     model: str = "",
+    open_source: bool = False,
 ) -> Response:
     library = request.app.state.content
     # The rule set comes first and decides which worlds are offered, so start from a rule set
@@ -2261,6 +2264,7 @@ def _new_form(
             (chosen_module.third_party if chosen_module is not None else False)
             or (chosen_world.third_party if chosen_world is not None else False)
         ),
+        open_source=open_source,
     )
 
 

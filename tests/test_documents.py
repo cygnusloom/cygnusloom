@@ -261,6 +261,25 @@ def test_an_upload_that_costs_more_than_the_balance_is_refused(
     assert _account(app).credit_balance == 2
 
 
+def test_the_adventure_source_panel_starts_folded_away(
+    client_factory: Callable[[], TestClient],
+):
+    client = signed_in_client(client_factory)
+    page = client.get("/campaigns/new").text
+    assert page.index("Adventure source (optional)") < page.index('name="file"')
+    assert '<details class="optional-options">' in page
+    assert '<details class="optional-options" open>' not in page
+
+
+def test_a_refused_source_reopens_its_panel(
+    client_factory: Callable[[], TestClient],
+):
+    client = signed_in_client(client_factory)
+    response = _new_campaign(client, text="Not enough text here.")
+    assert response.status_code == 400
+    assert '<details class="optional-options" open>' in response.text
+
+
 def test_an_exempt_account_uploads_for_free(client_factory: Callable[[], TestClient], app: FastAPI):
     client = signed_in_client(client_factory)
     _set_price(app, "fake/scripted", 1)
