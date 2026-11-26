@@ -584,8 +584,9 @@ Threats are not NPCs. They have harm capacity, armor, tags, and moves, and the
 GM runs them with moves, not turns. Named survivors remain NPCs with full
 sheets. A single-monster threat is shown and opened like any other monster: it
 appears in the place's list and its statblock gives the harm capacity, armor,
-tags, and moves. A threat that is a scale of its own, like a horde, is kept as a
-brief line under the map with its name and where it is.
+tags, and moves. A threat that is a scale of its own, like a horde, stands on the
+world map as a token at the place it holds, so the player can see it coming;
+hovering or tapping it gives its kind, magnitude, and distance.
 
 | Threat | Harm capacity | Armor | Tags | Moves |
 |--------|---------------|-------|------|-------|
@@ -1045,7 +1046,7 @@ consumer, not a special case.
 | Site improvements | `improvement` content plus site state; projects, defense, comfort, security, stores, upkeep, attack clocks | the base | projects/locations/factions |
 | NPC agendas and fronts | agenda/goal fields on NPCs; `set_npc_agenda`; faction fronts over clocks; off-screen advancement on time jumps | named NPCs, rival crews, settlements | NPC summary/knowledge, factions, projects |
 | Table genre | add `apocalypse` to `TABLE_GENRES` | all Hordes tables | closed genre tuple |
-| UI and prompts | clock panel, harm track, ammo/condition badges, vehicle sheet, base panel, single threats as statblocks, a scale threat's line under the map, no encounter panel; PbtA and survival prompts | the whole game | existing campaign UI |
+| UI and prompts | clock panel, harm track, ammo/condition badges, vehicle sheet, base panel, single threats as statblocks, a scale threat's token on the world map, no encounter panel; PbtA and survival prompts | the whole game | existing campaign UI |
 
 ### Implementation notes
 

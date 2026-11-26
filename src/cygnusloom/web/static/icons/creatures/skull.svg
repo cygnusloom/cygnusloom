@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Threat</title>
+  <g fill="none" stroke="#2e2620" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14 30 Q14 12 32 12 Q50 12 50 30 Q50 39 44 43 V50 H39 V44 H36 V50 H28 V44 H25 V50 H20 V43 Q14 39 14 30 Z" fill="#e6ddc9"/>
+    <circle cx="24" cy="30" r="4.5" fill="#2e2620"/>
+    <circle cx="40" cy="30" r="4.5" fill="#2e2620"/>
+    <path d="M32 34 L28 39 H36 Z" fill="#2e2620"/>
+    <path d="M22 54 H42"/>
+  </g>
+</svg>

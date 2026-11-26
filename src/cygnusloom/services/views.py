@@ -38,6 +38,7 @@ from cygnusloom.content.library import (
     RoadKind,
     Species,
     TallyRules,
+    ThreatDefinition,
     WorldTerrain,
 )
 from cygnusloom.services import custom_features, encounters
@@ -287,7 +288,7 @@ class SceneView:
     # campaign has them. Hidden entries stay out of the player's view.
     clocks: tuple[CampaignClock, ...] = ()
     # Visible single monsters at the player's place, shown and opened like any other monster.
-    # A threat big enough to be a scale of its own is the line under the map instead.
+    # A threat big enough to be a scale of its own is a token on the world map instead.
     threats_here: tuple[Threat, ...] = ()
     vehicles: tuple[Vehicle, ...] = ()
     improvements: tuple[SiteImprovement, ...] = ()
@@ -422,12 +423,17 @@ class MapRoad:
 
 
 @dataclass(frozen=True)
-class ThreatWatch:
-    """A threat too big to be a single monster, such as a horde, kept in view under the map.
-    `where` is where it is from the player, such as "2.4 km east" or "here"."""
+class MapThreat:
+    """A threat drawn on the world map at the place it occupies. `left` and `top` are percentages
+    of the map's width and height, like a marker's, and `tip` is what hovering it says: its kind,
+    its magnitude when it is a scale, and where it is from the player."""
 
     name: str
-    where: str = ""
+    left: float
+    top: float
+    icon: str | None = None
+    magnitude: int = 0
+    tip: str = ""
 
 
 @dataclass(frozen=True)
@@ -459,8 +465,9 @@ class MapView:
     roads: list[MapRoad] = field(default_factory=list)
     patterns: list[MapPattern] = field(default_factory=list)
     style: WorldMapStyle = field(default_factory=WorldMapStyle)
-    # Large-scale threats, nearest first, kept in view under the map.
-    watches: list[ThreatWatch] = field(default_factory=list)
+    # Threats big enough to be a scale of their own, such as a horde, drawn at the place they
+    # hold, farthest first so the nearest draws on top.
+    threats: list[MapThreat] = field(default_factory=list)
 
 
 def get_statblock(
@@ -710,6 +717,21 @@ def speaker_profile(state: CampaignState, name: str, spec: CharacterSpec) -> str
     return "\n".join(lines)
 
 
+def _place_point(state: CampaignState, name: str | None) -> tuple[float, float] | None:
+    """Where a place stands on the world map: its own position, or, when it has none, the nearest
+    place above it that has one. None when the name is no place or nothing above it is placed."""
+    seen: set[str] = set()
+    while name is not None and name_key(name) not in seen:
+        seen.add(name_key(name))
+        place = state.named(name)
+        if not isinstance(place, Place):
+            return None
+        if place.position is not None:
+            return (place.position.x, place.position.y)
+        name = place.parent
+    return None
+
+
 def _map_place(state: CampaignState, pc: Character | None = None) -> Place | None:
     """The place the map marks as the player's: the player character's own place, or the nearest
     place above it that has a position. None when there is no player character or no placed place
@@ -758,13 +780,15 @@ def map_view(
     *,
     pc: Character | None = None,
     roads: Mapping[str, RoadKind] | None = None,
+    threats: Mapping[str, ThreatDefinition] | None = None,
 ) -> MapView:
     """The player's map. Only discovered places appear on it. Every region is drawn, but only known
     regions are named, and only they set the map's reach. Each marker is placed on a square centered
     on the player character's place, sized to fit the farthest discovered place, known region
-    corner, or known road plus a margin. The player's place is marked as theirs, or, when it is
-    inside another place, the nearest place above it that has a position. `terrain` gives the
-    colour and texture of each region's kind, and `roads` the colour and width of each road kind."""
+    corner, known road, or visible threat plus a margin. The player's place is marked as theirs, or,
+    when it is inside another place, the nearest place above it that has a position. `terrain` gives
+    the colour and texture of each region's kind, `roads` the colour and width of each road kind,
+    and `threats` the icon of each threat definition."""
     places = sorted(
         (place for place in state.places.values() if place.discovered),
         key=lambda place: name_key(place.name),
@@ -775,18 +799,27 @@ def map_view(
     marked_name = marked.name if marked is not None else None
     center = None if marked is None or marked.position is None else marked.position
     cx, cy = (center.x, center.y) if center is not None else (0.0, 0.0)
+    at = viewer.location if viewer is not None else None
     placed = [(place, place.position) for place in places if place.position is not None]
     known = [region for region in state.regions.values() if _region_known(state, region)]
     travelled = [road for road in state.roads.values() if _road_known(state, road)]
+    # A threat holds a place rather than a point, so a horde in a room sits on the building.
+    held = [
+        (threat, point)
+        for threat in state.threats.values()
+        if threat.visible and threat.magnitude >= 1
+        for point in [_place_point(state, threat.location)]
+        if point is not None
+    ]
     corners = [point for region in known for point in region.points]
     corners += [point for road in travelled for point in road.points]
     reach = max(
         [MIN_MAP_RADIUS_KM]
         + [max(abs(pos.x - cx), abs(pos.y - cy)) for _, pos in placed]
         + [max(abs(x - cx), abs(y - cy)) for x, y in corners]
+        + [max(abs(x - cx), abs(y - cy)) for _, (x, y) in held]
     )
     radius = reach * MAP_MARGIN
-    at = viewer.location if viewer is not None else None
     markers = [
         MapMarker(
             name=place.name,
@@ -874,42 +907,52 @@ def map_view(
         roads=drawn_roads,
         patterns=list(patterns.values()),
         style=state.world_map_style,
-        watches=_threat_watches(state, at, cx, cy, center is not None),
+        threats=_map_threats(threats or {}, at, cx, cy, radius, held),
     )
 
 
-def _threat_watches(
-    state: CampaignState,
+def _map_threats(
+    definitions: Mapping[str, ThreatDefinition],
     player_place: str | None,
     cx: float,
     cy: float,
-    centered: bool,
-) -> list[ThreatWatch]:
-    """The threats too big for a single monster, such as a horde, with where each is from the
-    player. A threat that is not visible, or that is a single monster, is left to the scene."""
-    found: list[tuple[float, str, ThreatWatch]] = []
-    for threat in state.threats.values():
-        if not threat.visible or threat.magnitude < 1:
-            continue
-        where = ""
-        distance = math.inf
-        if threat.location:
-            place = state.places.get(name_key(threat.location))
-            if place is None:
-                where = threat.location
-            elif player_place is not None and name_key(place.name) == name_key(player_place):
-                where = "here"
-                distance = 0.0
-            elif centered and place.position is not None:
-                dx = place.position.x - cx
-                dy = place.position.y - cy
-                where = _offset_text(dx, dy)
-                distance = max(abs(dx), abs(dy))
-            else:
-                where = place.name
-        found.append((distance, threat.name.casefold(), ThreatWatch(threat.name, where)))
+    radius: float,
+    held: Sequence[tuple[Threat, tuple[float, float]]],
+) -> list[MapThreat]:
+    """The threats on the map, farthest from the player first, so the nearest draws on top. A threat
+    that is not visible, that is a single monster, or that holds no placed place is left out: the
+    first two belong to the scene, and an unplaced threat has nowhere to stand on the map."""
+    found: list[tuple[float, str, MapThreat]] = []
+    for threat, (x, y) in held:
+        dx = x - cx
+        dy = y - cy
+        here = (
+            bool(threat.location)
+            and player_place is not None
+            and name_key(threat.location) == name_key(player_place)
+        )
+        where = "here" if here else _offset_text(dx, dy)
+        parts = [threat.kind] if threat.kind else []
+        if threat.magnitude > 1:
+            parts.append(f"magnitude {threat.magnitude}")
+        parts.append(where)
+        definition = definitions.get(threat.definition)
+        found.append(
+            (
+                -max(abs(dx), abs(dy)),
+                threat.name.casefold(),
+                MapThreat(
+                    name=threat.name,
+                    left=round(50 + dx / radius * 50, 2),
+                    top=round(50 - dy / radius * 50, 2),
+                    icon=definition.icon if definition is not None else None,
+                    magnitude=threat.magnitude,
+                    tip=f"{threat.name} ({', '.join(parts)})",
+                ),
+            )
+        )
     found.sort(key=lambda entry: (entry[0], entry[1]))
-    return [watch for _, _, watch in found]
+    return [threat for _, _, threat in found]
 
 
 def _road_known(state: CampaignState, road: Road) -> bool:
