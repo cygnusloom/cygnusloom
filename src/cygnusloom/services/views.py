@@ -1528,12 +1528,23 @@ def _storyline_lines(state: CampaignState) -> list[str]:
     ordered = ([focused] if focused is not None else []) + [
         storyline for storyline in active if focused is None or storyline.id != focused.id
     ]
-    lines = ["Storylines (the focused one is the main plot; the others are secondary):"]
+    lines = [
+        (
+            "Situations (storylines; the focused one is what the player is engaging now, "
+            "the others are secondary):"
+        )
+    ]
     for storyline in ordered:
         role = "focused" if focused is not None and storyline.id == focused.id else "secondary"
         lines.append(f"- [{storyline.id}] {storyline.name} ({role}): {storyline.summary}")
+        if storyline.question:
+            lines.append(f"  Question: {storyline.question}")
         if storyline.plot:
-            lines.append(f"  Plot: {storyline.plot}")
+            lines.append(f"  Situation: {storyline.plot}")
+        if storyline.forces:
+            lines.append(f"  Forces: {'; '.join(storyline.forces)}")
+        if storyline.pressure:
+            lines.append(f"  Pressure: {storyline.pressure}")
         if storyline.characters:
             lines.append(f"  Characters: {', '.join(storyline.characters)}")
         if storyline.locations:

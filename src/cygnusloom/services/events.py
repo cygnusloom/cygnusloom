@@ -1688,8 +1688,9 @@ class NoteRemoved(GameEvent):
 
 @dataclass(frozen=True)
 class StorylineCreated(GameEvent):
-    """A plot thread begins. Its name and summary are player-facing; the rest is the GM's own
-    record and may hold secrets. A storyline's id is the id of this event."""
+    """A live situation begins, recorded as a storyline. Its name and summary are player-facing;
+    the rest is the GM's own record and may hold secrets. A storyline's id is the id of this
+    event."""
 
     kind: ClassVar[str] = "storyline.created"
     hidden: ClassVar[bool] = True
@@ -1703,6 +1704,12 @@ class StorylineCreated(GameEvent):
     notes: str = ""
     # Focus the new storyline even when another one already has the focus.
     focus: bool = False
+    # The dramatic question the situation asks, the forces at work, and what happens if no one
+    # interferes.
+    # BACKWARDS-COMPATIBILITY: 5 — optional so older records still replay.
+    question: str = ""
+    forces: list[str] = field(default_factory=list)
+    pressure: str = ""
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         first_active = not state.active_storylines()
@@ -1715,6 +1722,9 @@ class StorylineCreated(GameEvent):
             locations=tuple(self.locations),
             objects=tuple(self.objects),
             notes=self.notes,
+            question=self.question,
+            forces=tuple(self.forces),
+            pressure=self.pressure,
         )
         if self.focus or first_active:
             state.focus_storyline_id = event_id
@@ -1741,6 +1751,11 @@ class StorylineUpdated(GameEvent):
     objects: list[str]
     notes: str
     active: bool
+    # The resolved situation fields.
+    # BACKWARDS-COMPATIBILITY: 5 — optional so older records still replay.
+    question: str = ""
+    forces: list[str] = field(default_factory=list)
+    pressure: str = ""
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         old = state.storylines.get(self.storyline_id)
@@ -1756,6 +1771,9 @@ class StorylineUpdated(GameEvent):
             objects=tuple(self.objects),
             notes=self.notes,
             active=self.active,
+            question=self.question,
+            forces=tuple(self.forces),
+            pressure=self.pressure,
         )
         if not self.active and state.focus_storyline_id == self.storyline_id:
             state.focus_storyline_id = None

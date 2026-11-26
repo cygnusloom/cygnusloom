@@ -584,8 +584,9 @@ class Note:
 
 @dataclass(frozen=True)
 class Storyline:
-    """A plot thread the GM tracks. Its name and summary are player-facing; the plot, cast, places,
-    objects, and notes are the GM's own record and may hold secrets."""
+    """A live situation the GM tracks, not a scripted plot. Its name and summary are
+    player-facing; the question, forces, pressure, situation, cast, places, objects, and notes
+    are the GM's own record and may hold secrets."""
 
     id: int
     name: str
@@ -596,11 +597,17 @@ class Storyline:
     objects: tuple[str, ...] = ()
     notes: str = ""
     active: bool = True
-    # A resolved storyline's plot has concluded. It leaves the active and focused lists, but its
-    # record and resolution stay searchable so a later storyline can grow from it.
+    # A resolved storyline's question has been answered. It leaves the active and focused
+    # lists, but its record and resolution stay searchable so a later situation can grow from it.
     resolved: bool = False
     # The short player-facing note on how a resolved storyline ended. Empty until resolved.
     resolution: str = ""
+    # The dramatic question the situation asks, in one sentence.
+    question: str = ""
+    # The people and powers in the situation, each with what it wants and what it does next.
+    forces: tuple[str, ...] = ()
+    # What happens if no one interferes, and the next visible sign of it.
+    pressure: str = ""
 
 
 @dataclass(frozen=True)

@@ -217,15 +217,41 @@ def test_the_state_and_narration_share_the_player_agency_rule():
     assert "clearly implies" in told
 
 
-def test_state_prompt_keeps_the_active_storylines_current():
+def test_state_prompt_keeps_the_active_situations_current():
     text = state_instruction(rules_for())
-    assert "Keep the active storylines current" in text
+    assert "Keep the active situations current" in text
     assert "update_storyline" in text
     assert "player-facing summary" in text
-    assert "make it the focus with focus_storyline" in text
+    assert "next visible sign of pressure" in text
+    assert "decide what its forces did" in text
+    assert "make it the " in text
+    assert "focus with focus_storyline" in text
     assert "not the one that mattered last turn" in text
     assert "resolve it with resolve_storyline" in text
     assert "search_storylines still finds it" in text
+
+
+def test_the_state_prompt_teaches_scene_craft_and_the_three_clue_rule():
+    text = state_instruction(CAIRN)
+    assert "Every turn is a scene with a dramatic question" in text
+    assert "at least two meaningful ways to act on it" in text
+    assert "An answer is not a beat by itself" in text
+    assert "Show the first sign of a force's next move" in text
+    assert "move every active situation, not only the focused one" in text
+    assert "at least three clues" in text
+    assert "nodes in a web" in text
+    assert "the story changes direction; it does not stop" in text
+    assert "Never pre-script an outcome" in text
+    assert "End the beat on a choice or a fresh complication" in text
+
+
+def test_the_state_prompt_teaches_encounter_craft_where_fighting_is_offered():
+    text = state_instruction(CAIRN)
+    assert "An encounter is a scene with a dramatic question" in text
+    assert "how it can end besides one side dying" in text
+    assert "Give the fight a turn at a natural midpoint" in text
+    assert "Foes act on what they want" in text
+    assert "end it once its question is answered" in text
 
 
 def test_state_prompt_keeps_character_summaries_current():
@@ -292,7 +318,9 @@ def test_turn_checklist_covers_core_areas_and_the_rule_sets_optional_groups():
     assert "encounter" in keys
     assert "market" in keys
     assert "magic" not in keys
-    assert "player-facing summary says what this action changed" in text
+    assert "what its forces want and did" in text
+    assert "the pressure sign the player saw or missed" in text
+    assert "anything resolved or deactivated" in text
     assert "where each one can be found again" in text
     assert "finish_state_step" in text
     for key in keys:
@@ -343,25 +371,31 @@ def test_housekeeping_is_a_suggestion_not_a_command():
     assert "Treat it as fact, not suggestion" not in text
 
 
-def test_core_storyline_rule_explains_focus_the_active_limit_and_splitting():
+def test_core_storyline_rule_explains_situations_focus_the_limit_and_splitting():
     text = content_library().core.rules["storylines"]
-    assert "player-facing name and running summary" in text
+    assert "Storylines record live situations, not plots" in text
+    assert "The question is the one sentence" in text
+    assert "The forces are the people and powers" in text
+    assert "The pressure is what happens if no one interferes" in text
+    assert "never a fixed sequence of scenes" in text
     assert "Keep exactly one storyline focused" in text
-    assert "at most three active storylines" in text
+    assert "at most three active" in text
     assert "deactivate_storyline" in text
     assert "resolve_storyline" in text
     assert "search_storylines" in text
-    assert "never hold a secret" in text
-    assert "split it" in text
+    assert "splits into two distinct threads" in text
     assert "update the original" in text
 
 
-def test_the_opening_creates_storylines_for_each_distinct_thread():
+def test_the_opening_records_situations_for_each_distinct_thread():
     text = OPENING_PROMPT
-    assert "one for each distinct thread" in text
+    assert "one for each distinct" in text
+    assert "the question the situation asks" in text
+    assert "the forces at" in text
+    assert "what happens if no one interferes" in text
     assert "split it" in text
     assert "creating the other with create_storyline" in text
-    assert "focus the one the opening starts with" in text
+    assert "Focus the one the opening" in text
 
 
 def test_narration_does_not_invent_dialogue_when_none_is_queued():

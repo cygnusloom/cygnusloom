@@ -496,20 +496,35 @@
   {
     "type": "tool_call",
     "id": "create_storyline",
-    "description": "Begin a storyline: a structured plot thread that keeps the campaign's stories coherent. The name and summary are player-facing and must carry no secrets; the plot, characters, locations, objects, and notes are your own record and may hold them. At most three storylines may be active at once. The first active storyline becomes the focused one; pass focus true to make this one the main plot now. The result includes the storyline's id.",
+    "description": "Record a live situation as a storyline: a set of circumstances and forces, not a script. The name and summary are player-facing and must carry no secrets. The question is the dramatic question the situation asks; the forces are the people and powers in it, each with what it wants and what it does next; the pressure is what happens if no one interferes, and the next visible sign of it. The plot is the situation as it stands and what is at stake; characters, locations, and objects are the people, nodes, and clues in play. At most three storylines may be active. The first active storyline becomes focused; pass focus true to make this the situation the player is engaging now. The result includes the storyline's id.",
     "parameters": {
       "properties": {
         "name": {
           "type": "string",
-          "description": "A short, player-friendly name for the storyline, such as 'The Missing Heir'."
+          "description": "A short, player-friendly name for the situation, such as 'The Missing Heir'."
         },
         "summary": {
           "type": "string",
-          "description": "A brief player-facing summary of the storyline so far, with no secrets. Keep it current with update_storyline as the story moves."
+          "description": "A brief player-facing summary of the situation so far, with no secrets. Keep it current with update_storyline as the story moves."
+        },
+        "question": {
+          "type": "string",
+          "description": "The one-sentence dramatic question this situation asks, such as 'Who took the miller's son?'. This is your private record and may hold secrets."
+        },
+        "forces": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The people, groups, and powers in the situation. Each entry says who it is, what it wants, and what it does next, such as 'The bog witch — wants the old bargain kept — will send bogles if the mill cellar is opened'."
+        },
+        "pressure": {
+          "type": "string",
+          "description": "What happens if no one interferes, and the next visible sign of it, such as 'In three days the reeve seizes the mill; first, the reeve's clerk begins asking about the missing tithe'. Keep it current with update_storyline."
         },
         "plot": {
           "type": "string",
-          "description": "Optional. What is happening in this storyline, where it is going, and what the stakes are. This is your private record and may hold secrets."
+          "description": "Optional. The situation as it stands, where its forces are moving, and what is at stake. This is your private record and may hold secrets."
         },
         "characters": {
           "type": "array",
@@ -523,34 +538,37 @@
           "items": {
             "type": "string"
           },
-          "description": "Optional. The places involved, by name or short description."
+          "description": "Optional. The places involved as nodes of the situation, by name."
         },
         "objects": {
           "type": "array",
           "items": {
             "type": "string"
           },
-          "description": "Optional. The objects, clues, or treasures involved."
+          "description": "Optional. The objects and clues involved."
         },
         "notes": {
           "type": "string",
-          "description": "Optional. Anything else you need to remember about this storyline."
+          "description": "Optional. Anything else you need to remember about this situation."
         },
         "focus": {
           "type": "boolean",
-          "description": "Set true to make this the focused storyline, the main plot of the moment. Without it, the first active storyline is focused automatically."
+          "description": "Set true to make this the situation the player is engaging now. Without it, the first active storyline is focused automatically."
         }
       },
       "required": [
         "name",
-        "summary"
+        "summary",
+        "question",
+        "forces",
+        "pressure"
       ]
     }
   },
   {
     "type": "tool_call",
     "id": "update_storyline",
-    "description": "Change a storyline as the story moves. Leave a field out to keep it as it is, pass an empty string or list to clear it, or give a new value. Use the storyline's name or its id. Set active false to deactivate it, or active true to bring a deactivated storyline back; at most three may be active. A resolved storyline cannot be reactivated. Keep its player-facing summary current whenever the plot advances.",
+    "description": "Change a situation as the story moves. Leave a field out to keep it as it is, pass an empty string or list to clear it, or give a new value. Use the storyline's name or its id. Keep the summary, question, forces, and pressure current whenever the player acts or time passes: what changed, what the player now knows, and what each force does next. Set active false to deactivate it, or active true to bring a deactivated storyline back; at most three may be active. A resolved storyline cannot be reactivated.",
     "parameters": {
       "properties": {
         "storyline": {
@@ -565,9 +583,24 @@
           "type": "string",
           "description": "Optional. The new player-facing summary, with no secrets."
         },
+        "question": {
+          "type": "string",
+          "description": "Optional. The new dramatic question, when the situation changes what it is about."
+        },
+        "forces": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Optional. The new forces in the situation, each with what it wants and what it does next."
+        },
+        "pressure": {
+          "type": "string",
+          "description": "Optional. The new pressure: what happens if no one interferes, and the next visible sign of it."
+        },
         "plot": {
           "type": "string",
-          "description": "Optional. The new private plot and stakes."
+          "description": "Optional. The new private situation and stakes."
         },
         "characters": {
           "type": "array",
@@ -588,11 +621,11 @@
           "items": {
             "type": "string"
           },
-          "description": "Optional. The objects, clues, or treasures involved."
+          "description": "Optional. The objects and clues involved."
         },
         "notes": {
           "type": "string",
-          "description": "Optional. Anything else you need to remember about this storyline."
+          "description": "Optional. Anything else you need to remember about this situation."
         },
         "active": {
           "type": "boolean",
@@ -607,7 +640,7 @@
   {
     "type": "tool_call",
     "id": "focus_storyline",
-    "description": "Make one active storyline the focused one: the main plot of the moment and the thread the player is most interested in. The previously focused storyline stays active as a secondary thread. A deactivated storyline must be made active with update_storyline before it can be focused, and a resolved storyline cannot be focused.",
+    "description": "Make one active storyline the focused one: the situation the player is engaging now. The previously focused situation stays active as a secondary thread. A deactivated storyline must be made active with update_storyline before it can be focused, and a resolved storyline cannot be focused.",
     "parameters": {
       "properties": {
         "storyline": {
@@ -623,7 +656,7 @@
   {
     "type": "tool_call",
     "id": "deactivate_storyline",
-    "description": "Take a storyline out of play when it only pauses or no longer matters. It leaves the active list and the turn context, and the Story page shows it as deactivated. search_storylines still finds it, update_storyline can make it active again, and it cannot be focused until it is active. If it was focused, the oldest remaining active storyline takes over the focus. Use resolve_storyline instead when the plot has concluded.",
+    "description": "Take a situation out of play when it only pauses or no longer matters. It leaves the active list and the turn context, and the Story page shows it as deactivated. search_storylines still finds it, update_storyline can make it active again, and it cannot be focused until it is active. If it was focused, the oldest remaining active storyline takes over the focus. Use resolve_storyline instead when its question has been answered.",
     "parameters": {
       "properties": {
         "storyline": {
@@ -639,7 +672,7 @@
   {
     "type": "tool_call",
     "id": "resolve_storyline",
-    "description": "Mark a storyline resolved when its plot concludes. It leaves the focused and active lists and the GM's turn context, and the Story page shows it as resolved with its closing note. search_storylines still finds it, so a later storyline can grow from what happened. A resolved storyline cannot be reactivated or focused. Use deactivate_storyline for a thread that only pauses.",
+    "description": "Mark a situation resolved when its question has been answered. It leaves the focused and active lists and the GM's turn context, and the Story page shows it as resolved with its closing note. search_storylines still finds it, so a later situation can grow from what happened. A resolved storyline cannot be reactivated or focused. Use deactivate_storyline for a thread that only pauses.",
     "parameters": {
       "properties": {
         "storyline": {
@@ -661,7 +694,7 @@
     "type": "tool_call",
     "id": "search_storylines",
     "lookup": true,
-    "description": "Find storylines by words in their name, summary, plot, characters, locations, objects, notes, or resolution. Deactivated and resolved storylines are included even though the turn context leaves them out. Use it to recall a dormant or finished thread, or to check whether a storyline already exists before creating one when the world state does not already list it. Each result includes the id, the active, resolved, and focused flags, and every field.",
+    "description": "Find storylines by words in their name, summary, question, forces, pressure, plot, characters, locations, objects, notes, or resolution. Deactivated and resolved storylines are included even though the turn context leaves them out. Use it to recall a dormant or finished thread, or to check whether a storyline already exists before creating one when the world state does not already list it. Each result includes the id, the active, resolved, and focused flags, and every field.",
     "parameters": {
       "properties": {
         "query": {
