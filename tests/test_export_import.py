@@ -4,6 +4,7 @@ import json
 from collections.abc import Callable
 from dataclasses import replace
 
+import zstandard
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
@@ -131,6 +132,50 @@ def test_a_broken_compressed_file_is_refused(
     assert "Could not import the campaign" in page.text
     with Session(target_app.state.engine) as session:
         assert session.execute(select(Campaign)).scalars().first() is None
+
+
+def test_a_truncated_compressed_file_is_refused(
+    tmp_path, settings: Settings, client_factory: Callable[[], TestClient]
+):
+    client, campaign_id = campaign_ready_fast(client_factory)
+    payload = _export(client, campaign_id).content
+    target_app = _target_app(tmp_path, settings)
+    target_client = _target_client(target_app)
+    response = _import(target_client, payload[: len(payload) // 2], "half.json.zst")
+    assert response.status_code == 303
+    page = target_client.get("/campaigns")
+    assert "truncated zstandard file" in page.text
+    with Session(target_app.state.engine) as session:
+        assert session.execute(select(Campaign)).scalars().first() is None
+
+
+def test_a_compressed_file_with_trailing_data_is_refused(
+    tmp_path, settings: Settings, client_factory: Callable[[], TestClient]
+):
+    client, campaign_id = campaign_ready_fast(client_factory)
+    payload = _export(client, campaign_id).content
+    target_app = _target_app(tmp_path, settings)
+    target_client = _target_client(target_app)
+    response = _import(target_client, payload + b"junk", "trailing.json.zst")
+    assert response.status_code == 303
+    page = target_client.get("/campaigns")
+    assert "data after its zstandard frame" in page.text
+    with Session(target_app.state.engine) as session:
+        assert session.execute(select(Campaign)).scalars().first() is None
+
+
+def test_a_zstd_frame_without_a_content_size_imports(
+    tmp_path, settings: Settings, client_factory: Callable[[], TestClient]
+):
+    """The frame header may omit the decompressed size, as a streaming encoder writes it."""
+    client, campaign_id = campaign_ready_fast(client_factory)
+    document = _document(_export(client, campaign_id))
+    payload = zstandard.ZstdCompressor(write_content_size=False).compress(
+        json.dumps(document).encode("utf-8")
+    )
+    target_app = _target_app(tmp_path, settings)
+    new_id = _imported_id(_import(_target_client(target_app), payload, "streamed.json.zst"))
+    assert open_campaign(target_app, new_id).characters
 
 
 def test_another_major_imports_but_cannot_be_played(client_factory, tmp_path, settings):
