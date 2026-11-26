@@ -2705,6 +2705,17 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin, DocumentToolsMixin):
                 extra_from=extra_from,
             )
 
+    def gm_plays(self, character: str) -> bool:
+        """Whether the GM plays this character for its rolls: any NPC, or a hireling whose
+        turns the campaign gives to the GM. A player-input tool for such a character rolls the
+        dice itself instead of asking the player."""
+        with session_scope(self.engine) as db:
+            return encounters.gm_plays(
+                load_state(db, self.campaign_id),
+                character,
+                gm_plays_hirelings(db, self.campaign_id),
+            )
+
     def hireling_attack(
         self,
         character: str,

@@ -1573,6 +1573,28 @@ def _initiative_window(encounter: Encounter) -> bool:
     )
 
 
+def gm_plays(state: CampaignState, name: str, hireling_turns: bool) -> bool:
+    """Whether the GM plays this character for its rolls: any NPC, or a hireling whose turns
+    the campaign gives to the GM. A hireling the GM is playing right now also counts, even when
+    the setting is turned off in the middle of its turn. A tool that would ask the player to
+    roll for such a character has the engine roll instead."""
+    character = state.characters.get(name_key(name))
+    if character is None:
+        return False
+    if character.kind == NPC_KIND:
+        return True
+    if not character.hireling:
+        return False
+    if hireling_turns:
+        return True
+    encounter = state.encounter
+    return bool(
+        encounter is not None
+        and encounter.gm_played
+        and name_key(encounter.acting or "") == name_key(character.name)
+    )
+
+
 def awaiting_initiative(state: CampaignState) -> list[str]:
     """The display names of the player characters who must still roll for initiative."""
     encounter = state.encounter
@@ -1674,8 +1696,8 @@ def begin_turn(db: Session, campaign_id: int, name: str, *, gm_only: bool = Fals
             f"It is {character.name}'s turn in the encounter, and you play this hireling's turn. "
             "This is not an out-of-character message. Decide and resolve what they do now with "
             "the combat tools, then finish the state step; their attack happens only when you "
-            "call hireling_attack. Roll their checks and saves with the dice tools instead of "
-            "asking the player to roll."
+            "call hireling_attack. Call the usual check, save, and spell tools for them as you "
+            "would for an NPC: the engine rolls their dice, so never ask the player to roll."
         )
     record(
         db,
