@@ -99,22 +99,46 @@
     "id": "survivor-names",
     "name": "Survivor Names",
     "options": [
-      "Mara",
-      "Doyle",
-      "Kestrel",
-      "Nia",
-      "Rook",
-      "Sable",
-      "Tobin",
-      "Vale",
-      "Iris",
-      "Mack",
-      "Juno",
-      "Oren",
-      "Cass",
-      "Briar",
-      "Hollis",
-      "Wren"
+      "Marcus",
+      "Danielle",
+      "Ashley",
+      "Devon",
+      "Maya",
+      "Luis",
+      "Priya",
+      "Cole",
+      "Jasmine",
+      "Kevin",
+      "Rosa",
+      "Tanya",
+      "Andre",
+      "Erin",
+      "Miguel",
+      "Dana",
+      "Wesley",
+      "Nina",
+      "Travis",
+      "Grace",
+      "Omar",
+      "Chloe",
+      "Brett",
+      "Sasha",
+      "Julian",
+      "Monica",
+      "Desmond",
+      "Kara",
+      "Rafael",
+      "Holly",
+      "Nathan",
+      "Yvonne",
+      "Derek",
+      "Leila",
+      "Scott",
+      "Bianca",
+      "Trevor",
+      "Naomi",
+      "Curtis",
+      "Aisha"
     ]
   },
   {
@@ -808,31 +832,87 @@
     "genres": [
       "apocalypse"
     ],
-    "dice": "1d6",
+    "dice": "1d20",
     "rows": [
       {
         "roll": "1",
-        "result": "Mara"
+        "result": "Marcus Webb"
       },
       {
         "roll": "2",
-        "result": "Doyle"
+        "result": "Danielle Ortiz"
       },
       {
         "roll": "3",
-        "result": "Kestrel"
+        "result": "Ashley Chen"
       },
       {
         "roll": "4",
-        "result": "Nia"
+        "result": "Devon Brooks"
       },
       {
         "roll": "5",
-        "result": "Rook"
+        "result": "Maya Patel"
       },
       {
         "roll": "6",
-        "result": "Sable"
+        "result": "Luis Romero"
+      },
+      {
+        "roll": "7",
+        "result": "Priya Nair"
+      },
+      {
+        "roll": "8",
+        "result": "Cole Harrington"
+      },
+      {
+        "roll": "9",
+        "result": "Jasmine Carter"
+      },
+      {
+        "roll": "10",
+        "result": "Kevin Okafor"
+      },
+      {
+        "roll": "11",
+        "result": "Rosa Delgado"
+      },
+      {
+        "roll": "12",
+        "result": "Tanya Mercer"
+      },
+      {
+        "roll": "13",
+        "result": "Andre Lewis"
+      },
+      {
+        "roll": "14",
+        "result": "Erin Walsh"
+      },
+      {
+        "roll": "15",
+        "result": "Miguel Santos"
+      },
+      {
+        "roll": "16",
+        "result": "Dana Whitfield"
+      },
+      {
+        "roll": "17",
+        "result": "Wesley Park"
+      },
+      {
+        "roll": "18",
+        "result": "Nina Kowalski"
+      },
+      {
+        "roll": "19",
+        "result": "Travis Boone"
+      },
+      {
+        "roll": "20",
+        "result": "Grace Adeyemi"
       }
     ]
   },

@@ -212,3 +212,33 @@ def test_a_hordes_fight_creates_no_encounter_or_turn_events(client_factory):
         or kind in {"combat.struck", "combat.save_rolled", "combat.group_break_resolved"}
         for kind in kinds
     )
+
+
+def test_hordes_names_are_modern_for_players_and_npcs():
+    rules = rules_for(RULE_SET)
+    survivors = [option.value for option in rules.tables["survivor-names"]]
+    names = rules.dice_tables["name"]
+
+    assert names.dice == "1d20"
+    full_names = [row.result for row in names.rows]
+    assert len(full_names) == 20
+    assert len(set(full_names)) == 20
+    assert all(len(name.split()) == 2 for name in full_names)
+
+    assert len(survivors) >= 36
+    assert len(set(survivors)) == len(survivors)
+    for name in ("Marcus", "Danielle", "Priya", "Miguel", "Grace"):
+        assert name in survivors
+    for name in ("Kestrel", "Rook", "Sable", "Briar", "Wren"):
+        assert name not in survivors
+
+    first_names = {name.split()[0] for name in full_names}
+    assert first_names <= set(survivors)
+
+
+def test_hordes_tells_the_gm_to_roll_modern_names():
+    prompts = {prompt.id: prompt for prompt in rules_for(RULE_SET).prompt_fragments}
+
+    assert "people_and_names" in prompts
+    assert "roll_tables" in prompts["people_and_names"].text
+    assert "name table" in prompts["people_and_names"].text

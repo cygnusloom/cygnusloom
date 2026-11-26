@@ -136,6 +136,12 @@
   },
   {
     "type": "prompt",
+    "id": "people_and_names",
+    "step": "state",
+    "text": "Survivors are ordinary people from the world before the fall, so they carry ordinary modern names. The name table gives a full modern name: roll it with roll_tables before you name a new survivor in create_npc, hire_hireling, or a survivor's description, and roll again if the result is already taken. Use the full name when the person is introduced and shorten it the way people do. Roll npc-drive, npc-burden, and npc-quirk in the same call when the person needs a want, a problem, or a habit. Never invent a fantasy, nature, or virtue name for a survivor, and never rename the player character; a surname, nickname, or callsign must come from the story. Threats and the dead are not survivors: name them by what they are, such as the walker in the fence."
+  },
+  {
+    "type": "prompt",
     "id": "skill_practice_and_knowledge",
     "step": "state",
     "text": "Skills rise through practice: three ticks to rank 1 and six total to rank 2. A move marks one tick in its skill once per scene; training and teaching add ticks with train_skill. Knowledge moves are learned, not assumed: a playbook grants one, and others come from a teacher, a manual, or difficult experimentation with learn_move. Never roll a knowledge move the character has not learned."
