@@ -2697,6 +2697,14 @@ def update_storyline(
     list clears it. Reactivating a storyline counts it against the three-active limit."""
     state = load_state(db, campaign_id)
     old = _storyline_named(state, storyline)
+    if old.question == "" and question is None and any(
+        value is not None
+        for value in (summary, plot, characters, locations, objects, notes, forces, pressure)
+    ):
+        raise InvalidInput(
+            f"{old.name!r} has no dramatic question yet; give it one with the question argument "
+            "when you update the situation"
+        )
     if all(
         value is None
         for value in (

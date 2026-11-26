@@ -224,6 +224,8 @@ def test_state_prompt_keeps_the_active_situations_current():
     assert "player-facing summary" in text
     assert "next visible sign of pressure" in text
     assert "decide what its forces did" in text
+    assert "If a situation has no question yet" in text
+    assert "Keep the Keep the" not in text
     assert "make it the " in text
     assert "focus with focus_storyline" in text
     assert "not the one that mattered last turn" in text

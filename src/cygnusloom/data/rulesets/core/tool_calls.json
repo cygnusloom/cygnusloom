@@ -568,7 +568,7 @@
   {
     "type": "tool_call",
     "id": "update_storyline",
-    "description": "Change a situation as the story moves. Leave a field out to keep it as it is, pass an empty string or list to clear it, or give a new value. Use the storyline's name or its id. Keep the summary, question, forces, and pressure current whenever the player acts or time passes: what changed, what the player now knows, and what each force does next. Set active false to deactivate it, or active true to bring a deactivated storyline back; at most three may be active. A resolved storyline cannot be reactivated.",
+    "description": "Change a situation as the story moves. Leave a field out to keep it as it is, pass an empty string or list to clear it, or give a new value. Use the storyline's name or its id. Keep the summary, question, forces, and pressure current whenever the player acts or time passes: what changed, what the player now knows, and what each force does next. If an older situation has no question yet, fill it. Set active false to deactivate it, or active true to bring a deactivated storyline back; at most three may be active. A resolved storyline cannot be reactivated.",
     "parameters": {
       "properties": {
         "storyline": {

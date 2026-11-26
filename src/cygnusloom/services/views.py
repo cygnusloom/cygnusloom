@@ -1541,6 +1541,11 @@ def _storyline_lines(state: CampaignState) -> list[str]:
         lines.append(f"- [{storyline.id}] {storyline.name} ({role}): {storyline.summary}")
         if storyline.question:
             lines.append(f"  Question: {storyline.question}")
+        else:
+            lines.append(
+                "  Question: (none recorded yet; decide what this older situation asks and "
+                "record it with update_storyline)"
+            )
         if storyline.plot:
             lines.append(f"  Situation: {storyline.plot}")
         if storyline.forces:

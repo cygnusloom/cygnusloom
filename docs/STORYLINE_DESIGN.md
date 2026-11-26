@@ -310,6 +310,34 @@ schema rather than the storyline system.
 - The `story_craft` and `encounter_craft` fragments were confirmed in the live system prompts of
   both campaigns.
 
+**Deep SRD 5.2.1 run (50+ turns).** A second D&D campaign played from the starting party through a
+full arc: the Bell & Bushel negotiation, the reeve's promise at Saltmere, the temple novice at the
+narrows, the drowned carter at the North Gate, the Harrow Sink, a three-warden fight, the League
+station, and the assize at Wardencross. The run exercised social checks, investigation, travel,
+combat, nonlethal defeat, currency, rest, level 2 for both Simon and Gore, and the new `Find
+Familiar` and `Fog Cloud` spells. Failed checks kept producing new paths rather than dead ends;
+for example, the failed assize persuasion led to a public docket entry and a different route to the
+same evidence.
+
+### Backwards compatibility check
+
+An old-code campaign with three legacy storylines (created before `question`, `forces`, and
+`pressure` existed) was loaded by the new code. The Story tab rendered all three correctly, the
+turn orientation showed their summaries, and export/import preserved the old event payloads exactly.
+The first live turn on the new code exposed a real gap: the GM updated an old situation's forces
+and pressure but never supplied its missing question, because the field is optional on update.
+
+The fix has three parts:
+
+- The orientation prints `Question: (none recorded yet; ...)` for a legacy situation, so the
+  missing anchor is visible.
+- `STATE_INSTRUCTION` tells the GM to decide the question when one is missing.
+- `update_storyline` refuses a narrative update to a legacy situation until the question is
+  supplied. Active-only changes and focus changes remain allowed.
+
+A live recheck filled all three legacy questions in one turn with sensible questions, then kept the
+new forces and pressure current.
+
 ### What still needs watching
 
 - Information-only beats: the GM still sometimes ends on an NPC's answer. The new wording pushes

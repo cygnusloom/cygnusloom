@@ -14,7 +14,7 @@ from cygnusloom.content.character import NO_CAMPAIGN
 from cygnusloom.llm.base import ToolRequest
 from cygnusloom.rules.context import ToolContext, brief
 from cygnusloom.services import world
-from cygnusloom.services.events import CampaignState, load_state
+from cygnusloom.services.events import CampaignState, StorylineCreated, load_state, record
 from cygnusloom.services.tools import ToolRun, run_tool
 from cygnusloom.services.views import story_view, world_state_text
 from tests.conftest import content_library
@@ -129,6 +129,45 @@ def test_creating_a_storyline_records_it_focuses_it_and_shows_it_to_the_player(
         ("The Missing Heir", True, True)
     ]
     assert view.storylines[0].summary == storyline.summary
+
+
+def test_an_older_storyline_without_situation_fields_tells_the_gm_to_add_a_question(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = campaign_ready_fast(client_factory)
+    app = client.app
+    with Session(app.state.engine) as session:
+        record(
+            session,
+            campaign_id,
+            StorylineCreated(name="The Old Thread", summary="A thread from before situations."),
+        )
+        session.commit()
+
+    context = world_state_text(_state(app, campaign_id), NO_CAMPAIGN)
+    assert "The Old Thread" in context
+    assert "none recorded yet" in context
+    assert "record it with update_storyline" in context
+
+    refused = _tool(
+        app,
+        campaign_id,
+        "update_storyline",
+        {"storyline": "The Old Thread", "summary": "A thread from before situations."},
+    )
+    assert "no dramatic question yet" in refused["error"]
+
+    updated = _tool(
+        app,
+        campaign_id,
+        "update_storyline",
+        {
+            "storyline": "The Old Thread",
+            "question": "What does the old thread ask?",
+            "summary": "The old thread now has a question.",
+        },
+    )
+    assert updated["question"] == "What does the old thread ask?"
 
 
 def test_up_to_three_storylines_can_be_active_and_a_fourth_is_refused(
