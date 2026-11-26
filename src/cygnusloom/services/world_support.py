@@ -2772,7 +2772,7 @@ def update_storyline(
 
 
 def focus_storyline(db: Session, campaign_id: int, storyline: str) -> dict[str, Any]:
-    """Make one active storyline the main plot of the moment."""
+    """Make one active storyline the situation the player is engaging now."""
     state = load_state(db, campaign_id)
     story = _storyline_named(state, storyline)
     if story.resolved:
