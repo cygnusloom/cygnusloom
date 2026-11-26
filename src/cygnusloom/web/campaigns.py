@@ -18,6 +18,7 @@ from fastapi.responses import (
     StreamingResponse,
 )
 from sqlalchemy.exc import SQLAlchemyError
+from starlette.concurrency import run_in_threadpool
 from starlette.datastructures import FormData
 from starlette.responses import Response
 
@@ -41,6 +42,7 @@ from cygnusloom.llm.presets import PRESETS
 from cygnusloom.services import campaign_files
 from cygnusloom.services import character_fields as character_field_service
 from cygnusloom.services import credits as credit_service
+from cygnusloom.services import documents as documents_service
 from cygnusloom.services import level_up as level_up_service
 from cygnusloom.services.accounts import public_name, set_show_internal_thinking
 from cygnusloom.services.campaigns import (
@@ -248,6 +250,27 @@ async def create(request: Request) -> Response:
             status_code=503,
             error="No language model is configured. An administrator must add one under Admin → Models.",
         )
+    # The adventure source is optional and read before the campaign exists, so a bad file never
+    # leaves a half-made campaign behind.
+    upload = form.get("file")
+    prepared = None
+    source_name = ""
+    if hasattr(upload, "read") and getattr(upload, "filename", ""):
+        source_name = documents_service.document_name(str(upload.filename))
+        raw = await upload.read(documents_service.MAX_DOCUMENT_BYTES + 1)
+        try:
+            prepared = await run_in_threadpool(documents_service.prepare, source_name, raw)
+        except InvalidInput as exc:
+            return _new_form(
+                request,
+                user,
+                status_code=400,
+                error=str(exc),
+                label=label,
+                world_template=world_template,
+                rule_set=rule_set,
+                model=model,
+            )
     try:
         campaign = create_campaign(
             request.app.state.engine,
@@ -270,6 +293,34 @@ async def create(request: Request) -> Response:
             rule_set=rule_set,
             model=model,
         )
+    note = ""
+    if prepared is not None:
+        try:
+            _document_id, charged = documents_service.add_document(
+                request.app.state.engine,
+                request.app.state.settings,
+                campaign,
+                prepared,
+                source_name,
+            )
+        except InvalidInput as exc:
+            # The campaign was made only for this upload, so a refused one is removed and the
+            # form comes back with the same choices.
+            delete_campaign_service(request.app.state.engine, user.id, campaign.id)
+            return _new_form(
+                request,
+                user,
+                status_code=400,
+                error=str(exc),
+                label=label,
+                world_template=world_template,
+                rule_set=rule_set,
+                model=model,
+            )
+        noun = "credit" if charged == 1 else "credits"
+        cost = f", {charged} {noun}" if charged else ""
+        note = f" with the adventure source {source_name} ({len(prepared.text):,} characters{cost})"
+    _flash(request, f"Created {campaign.name}{note}.")
     return RedirectResponse(f"/campaigns/{campaign.id}", status_code=303)
 
 
@@ -2541,6 +2592,8 @@ def _campaign_page(
             )
         except InvalidInput:
             advancement_available = False
+    source_documents = documents_service.document_summaries(engine, campaign.id)
+    documents_text = documents_service.state_text(source_documents)
     context = context_usage(
         campaign,
         world.state,
@@ -2553,6 +2606,8 @@ def _campaign_page(
         world=world_template,
         tool_schema_mode=settings.tool_schema_mode,
         rule_info_mode=settings.rule_info_mode,
+        documents_text=documents_text,
+        has_source=bool(source_documents),
     )
     credit_price = credit_service.model_price(engine, campaign.model)
     credit_balance = credit_service.balance(engine, campaign.owner_id)

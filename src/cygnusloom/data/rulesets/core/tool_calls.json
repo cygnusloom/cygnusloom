@@ -2912,5 +2912,63 @@
         "dice"
       ]
     }
+  },
+  {
+    "type": "tool_call",
+    "id": "list_documents",
+    "lookup": true,
+    "description": "List the source documents the campaign was created from, such as an uploaded adventure. Each document gives its kind, character count, and section index: section titles, the character offset where each starts, and a page number for a PDF. Use it to see what the campaign is based on and where to read next.",
+    "parameters": {
+      "properties": {}
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "read_document",
+    "lookup": true,
+    "description": "Read a passage of a source document. Pass the document's id or name and a character offset, which the section index gives; the result returns the text, the section it starts in, and the next offset to continue from. Read the relevant passage before playing a scene the source covers rather than inventing what it settles.",
+    "parameters": {
+      "properties": {
+        "document": {
+          "type": "string",
+          "description": "The document's id or name, as list_documents shows it."
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "The character offset to start at; leave it out to read from the beginning."
+        },
+        "length": {
+          "type": "integer",
+          "minimum": 200,
+          "maximum": 20000,
+          "description": "How many characters to read, up to 20000. Leave it out for about 6000, a few pages."
+        }
+      },
+      "required": [
+        "document"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "search_documents",
+    "lookup": true,
+    "description": "Search the campaign's source documents for a word or phrase, such as a person, place, item, or room name. Returns short excerpts with the document, character offset, and section for each match. Search first when you need to find where a topic is covered, then read_document at that offset.",
+    "parameters": {
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "The word or phrase to find."
+        },
+        "document": {
+          "type": "string",
+          "description": "Optional id or name to search only one document."
+        }
+      },
+      "required": [
+        "query"
+      ]
+    }
   }
 ]

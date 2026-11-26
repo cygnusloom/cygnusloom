@@ -38,6 +38,7 @@ from cygnusloom.llm.base import (
 from cygnusloom.llm.registry import ProviderFactory
 from cygnusloom.rules.context import ToolContext, brief
 from cygnusloom.rules.dice import roll_values
+from cygnusloom.services import documents as documents_service
 from cygnusloom.services import encounters
 from cygnusloom.services import modules as modules_service
 from cygnusloom.services.common import Conflict, InvalidInput, NotFound, session_scope
@@ -630,6 +631,9 @@ class _Run:
     # The setting and story the player asked for at creation, or blank. It is prompt guidance,
     # not world state.
     setting: str = ""
+    # The campaign's uploaded source documents, such as its adventure. A campaign with a source
+    # counts as having a setting, so the setting-forge instructions are left out of its prompts.
+    documents: tuple[documents_service.DocumentSummary, ...] = ()
     # Whether the campaign enforces inventory space. Off means anything reasonable is carried.
     tracks_inventory: bool = True
     # Whether the campaign tracks food, water, and rest privation. Off means rests spend
@@ -656,6 +660,10 @@ class _Run:
     @property
     def tool_calls(self) -> Mapping[str, ToolCall]:
         return self.rule_set.tool_calls
+
+    @property
+    def has_source(self) -> bool:
+        return bool(self.documents)
 
 
 def _tool_context(
@@ -828,6 +836,7 @@ def _start_run(
         unattached_rules=world.unattached_rules,
         world=schema,
         setting=campaign.setting,
+        documents=documents_service.document_summaries(engine, campaign.id or 0),
         tracks_inventory=campaign.use_inventory_space,
         tracks_survival_needs=campaign.use_survival_needs,
         player_id=player_id,
@@ -921,7 +930,7 @@ def _narration_messages(
     placeholder). The narration keeps recent results because it must narrate their outcomes;
     the journal reads the log instead."""
     state = _state(run.engine, run.campaign_id)
-    instruction = narrate_instruction(run.rule_set, run.world)
+    instruction = narrate_instruction(run.rule_set, run.world, run.has_source)
     scene = system_parts(
         run.rule_set.id,
         {**run.rule_set.rules, **run.unattached_rules},
@@ -1608,7 +1617,7 @@ async def _begin(run: _Run, turn: Turn) -> AsyncIterator[TurnEvent]:
         if watermark < m.id < turn.opener
     ]
     present_text = present_rules_text(state, run.ctx.rules)
-    state_text = state_instruction(run.rule_set, run.world)
+    state_text = state_instruction(run.rule_set, run.world, run.has_source)
     modules_text = modules_service.module_state_text(
         getattr(run.ctx.world, "modules", {}),
         run.campaign,
@@ -1616,6 +1625,7 @@ async def _begin(run: _Run, turn: Turn) -> AsyncIterator[TurnEvent]:
         default_genres=run.rule_set.table_genres,
         default_tones=run.rule_set.table_tones,
     )
+    documents_text = documents_service.state_text(run.documents) if run.documents else ""
     groups = state_tool_groups(state, message) | run.extra_groups
     checklist, _ = _checklist_for(run, turn)
     tool_parts = _campaigns().tool_definition_parts(
@@ -1643,6 +1653,8 @@ async def _begin(run: _Run, turn: Turn) -> AsyncIterator[TurnEvent]:
     prompt_tokens += estimate_tokens(state_text)
     if modules_text:
         prompt_tokens += estimate_tokens(modules_text)
+    if documents_text:
+        prompt_tokens += estimate_tokens(documents_text)
     prompt_tokens += sum(part.tokens for part in tool_parts)
     history_tokens = sum(estimate_tokens(m.content) for m in history)
     prompt_tokens += estimate_tokens(message) + history_tokens
@@ -1709,6 +1721,8 @@ async def _begin(run: _Run, turn: Turn) -> AsyncIterator[TurnEvent]:
     )
     if modules_text:
         system.append(ContextPart("system", "Modules", modules_text))
+    if documents_text:
+        system.append(ContextPart("system", "Adventure source", documents_text))
     conversation = [
         *(ContextPart(m.role, _campaigns()._message_source(m), m.content) for m in history),
         player,
@@ -1749,7 +1763,7 @@ async def _write_journal(
     log = _turn_log(run.engine, run.campaign_id, state.journal_through or turn.opener)
     _record(run.engine, run.campaign_id, JournalStarted())
     instruction = journal_instruction(state.clock.day, state.journal)
-    narrate = narrate_instruction(run.rule_set, run.world)
+    narrate = narrate_instruction(run.rule_set, run.world, run.has_source)
     view: list[dict[str, Any]] = [
         *(
             m
@@ -1858,7 +1872,7 @@ def _review_view(
     the narrator's rewrite note, and replaces the latter with a review note naming the fault the
     rewrite was meant to fix. Earlier reviews' prose is left out: the review judges this narration
     against the record, not a review of an earlier version."""
-    instruction = narrate_instruction(run.rule_set, run.world)
+    instruction = narrate_instruction(run.rule_set, run.world, run.has_source)
     view = [
         message
         for message in _narration_messages(
@@ -2340,7 +2354,7 @@ def _record_state_finished(
         messages,
         context,
         "Narrate instruction",
-        narrate_instruction(run.rule_set, run.world),
+        narrate_instruction(run.rule_set, run.world, run.has_source),
     )
     _record(
         run.engine,
@@ -2460,7 +2474,7 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
     map_line = _map_option_line(run)
     state_message = {
         "role": "system",
-        "content": state_instruction(run.rule_set, run.world)
+        "content": state_instruction(run.rule_set, run.world, run.has_source)
         + (f"\n\n{map_line}" if map_line else ""),
     }
     while True:
@@ -2627,7 +2641,7 @@ async def _drive(run: _Run) -> AsyncIterator[TurnEvent]:
                     messages,
                     context,
                     "Narrate instruction",
-                    narrate_instruction(run.rule_set, run.world),
+                    narrate_instruction(run.rule_set, run.world, run.has_source),
                 )
                 event_id = _record(
                     run.engine,
