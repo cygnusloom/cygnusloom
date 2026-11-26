@@ -132,6 +132,7 @@ from cygnusloom.services.membership import (
     remove_member,
 )
 from cygnusloom.services.music import music_view
+from cygnusloom.services.state import Threat
 from cygnusloom.services.tools import check_arguments
 from cygnusloom.services.views import get_statblock, map_view, scene_view, story_view, time_view
 from cygnusloom.web.character_form import (
@@ -1233,7 +1234,8 @@ def statblock_fragment(request: Request, campaign_id: int, name: str = "") -> Re
 
     The dialog is player-facing. An NPC's description is a GM record that may hold secrets, so
     only what the player has learned about them is shown. A character with a bestiary entry also
-    links to that entry.
+    links to that entry. A visible single-monster threat opens here too, with its harm capacity,
+    armor, tags, and moves in place of a character sheet.
     """
     user = page_user(request)
     engine = request.app.state.engine
@@ -1245,7 +1247,10 @@ def statblock_fragment(request: Request, campaign_id: int, name: str = "") -> Re
     world = campaign_world(engine, user.id, campaign.id)
     character = world.state.named(name)
     if not isinstance(character, Character):
-        raise NotFound(f"there is no character named {name!r}")
+        threat = _visible_threat(world.state, name)
+        if threat is None:
+            raise NotFound(f"there is no character named {name!r}")
+        return _threat_statblock(request, threat)
     content = library.world_content(campaign.world_template, campaign.rule_set)
     # A player character's and a hireling's options are the player's own reading of the sheet.
     # An NPC's fields, like its description, are GM records and stay out of the player's view.
@@ -1300,6 +1305,56 @@ def statblock_fragment(request: Request, campaign_id: int, name: str = "") -> Re
             "entry": entry,
         },
         sheet_links=compendium.sheet_links,
+    )
+
+
+def _visible_threat(state: CampaignState, name: str) -> Threat | None:
+    """A threat the player may read a statblock for. A threat the GM has not revealed is not
+    theirs to see."""
+    wanted = name_key(name)
+    return next(
+        (
+            threat
+            for threat in state.threats.values()
+            if threat.visible and name_key(threat.name) == wanted
+        ),
+        None,
+    )
+
+
+def _threat_statblock(request: Request, threat: Threat) -> Response:
+    """A threat's statblock in the same dialog a monster opens. A threat has a harm capacity
+    rather than hit points, and moves rather than attacks that roll, so the lines say so."""
+    lines: list[str] = []
+    if threat.armor:
+        lines.append(f"Armor {threat.armor}")
+    if threat.attack:
+        lines.append(f"Attack {threat.attack}")
+    if threat.magnitude:
+        lines.append(f"Magnitude {threat.magnitude}")
+    if threat.tags:
+        lines.append("Tags: " + ", ".join(threat.tags))
+    if threat.moves:
+        lines.append("Moves: " + "; ".join(threat.moves))
+    if threat.conditions:
+        lines.append("Conditions: " + ", ".join(threat.conditions))
+    if threat.broken:
+        lines.append("Broken")
+    return render_fragment(
+        request,
+        "_statblock.html",
+        statblock={
+            "name": threat.name,
+            "kind": threat.kind.title() if threat.kind else "Threat",
+            "location": threat.location,
+            "description": threat.description,
+            "hp": threat.harm,
+            "hp_max": threat.harm_max,
+            "hp_label": "Harm",
+            "lines": lines,
+            "entry": "",
+        },
+        sheet_links={},
     )
 
 

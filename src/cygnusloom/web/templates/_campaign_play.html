@@ -218,7 +218,6 @@
               {% if projects %}<button type="button" class="tab" role="tab" id="tab-projects" aria-controls="panel-projects" aria-selected="false" tabindex="-1">Projects</button>{% endif %}
               <button type="button" class="tab" role="tab" id="tab-inventory" aria-controls="panel-inventory" aria-selected="false" tabindex="-1">Inventory</button>
               {% if scene.clocks %}<button type="button" class="tab" role="tab" id="tab-clocks" aria-controls="panel-clocks" aria-selected="false" tabindex="-1">Clocks</button>{% endif %}
-              {% if scene.threats %}<button type="button" class="tab" role="tab" id="tab-threats" aria-controls="panel-threats" aria-selected="false" tabindex="-1">Threats</button>{% endif %}
               {% if scene.improvements or scene.vehicles %}<button type="button" class="tab" role="tab" id="tab-shelter" aria-controls="panel-shelter" aria-selected="false" tabindex="-1">Shelter</button>{% endif %}
               {% if not single_player %}<button type="button" class="tab" role="tab" id="tab-players" aria-controls="panel-players" aria-selected="false" tabindex="-1">Players</button>{% endif %}
               {% if debug_panel %}<button type="button" class="tab" role="tab" id="tab-debug" aria-controls="panel-debug" aria-selected="false" tabindex="-1">Debug</button>{% endif %}
@@ -237,6 +236,9 @@
                   {% for npc in scene.npcs %}
                   {% set creature_entry = creature_links.get(npc.creature, '') if creature_links and npc.creature else '' %}
                   <li><strong><a href="#" class="statblock-name" data-statblock-name="{{ npc.name }}">{{ npc.name }}</a></strong>{% if creature_entry %} <a href="#{{ creature_entry }}" data-view-link="compendium">{{ npc.creature }}</a>{% endif %}{% if npc.defeated %} <span class="muted">(body)</span>{% endif %}</li>
+                  {% endfor %}
+                  {% for threat in scene.threats_here %}
+                  <li><strong><a href="#" class="statblock-name" data-statblock-name="{{ threat.name }}">{{ threat.name }}</a></strong>{% if threat.kind %} <span class="muted">{{ threat.kind }}</span>{% endif %}{% if threat.broken %} <span class="muted">(broken)</span>{% endif %}</li>
                   {% endfor %}
                   {% for hireling in scene.hirelings %}
                   <li><strong><a href="#" class="statblock-name" data-statblock-name="{{ hireling.name }}">{{ hireling.name }}</a></strong> <span class="muted">(hireling of {{ hireling.employer }})</span></li>
@@ -355,23 +357,6 @@
                     {% for pip in range(clock.segments) %}<span class="track-pip{% if pip < clock.filled %} filled{% endif %}"></span>{% endfor %}
                   </span>
                   {% if clock.description %}<p class="muted">{{ clock.description }}</p>{% endif %}
-                </li>
-                {% endfor %}
-              </ul>
-            </div>
-            {% endif %}
-            {% if scene.threats %}
-            <div class="tab-panel" role="tabpanel" id="panel-threats" aria-labelledby="tab-threats" hidden>
-              <ul class="track-list">
-                {% for threat in scene.threats %}
-                <li>
-                  <strong>{{ threat.name }}</strong> <span class="muted">{{ threat.kind }}{% if threat.broken %} · broken{% endif %}</span>
-                  <span class="track" role="img" aria-label="{{ threat.name }} harm {{ threat.harm }} of {{ threat.harm_max }}">
-                    {% for pip in range(threat.harm_max) %}<span class="track-pip{% if pip < threat.harm %} filled{% endif %}"></span>{% endfor %}
-                  </span>
-                  <p class="muted">Harm {{ threat.harm }} / {{ threat.harm_max }}{% if threat.armor %} · Armor {{ threat.armor }}{% endif %}{% if threat.magnitude %} · Magnitude {{ threat.magnitude }}{% endif %}</p>
-                  {% if threat.tags %}<p class="sheet-chips">{% for tag in threat.tags %}<span class="sheet-chip">{{ tag }}</span>{% endfor %}</p>{% endif %}
-                  {% if threat.moves %}<p class="muted">{{ threat.moves|join("; ") }}</p>{% endif %}
                 </li>
                 {% endfor %}
               </ul>
