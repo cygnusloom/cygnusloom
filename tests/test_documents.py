@@ -316,8 +316,20 @@ def test_the_gm_can_list_read_and_search_the_source(
     found = tools.search_documents("mill window")
     assert found["matches"]
     assert found["matches"][0]["section"] == "The Mill"
+    assert found["matches"][0]["matched"] == 2
     assert "mill window" in found["matches"][0]["excerpt"].casefold()
+    multi = tools.search_documents("lantern flour")
+    top = multi["matches"][0]
+    assert top["matched"] == 2
+    assert "lantern" in top["excerpt"].casefold()
+    assert "flour" in top["excerpt"].casefold()
+    scattered = tools.search_documents("road loft")
+    assert scattered["matches"]
+    assert scattered["matches"][0]["matched"] == 1
+    assert {match["section"] for match in scattered["matches"]} >= {"The Hollow", "The Mill"}
     assert tools.search_documents("lantern", "adventure.md")["matches"]
+    with pytest.raises(InvalidInput):
+        tools.search_documents("— —")
     with pytest.raises(InvalidInput):
         tools.read_document("no such source")
     rows = documents.campaign_documents(app.state.engine, campaign_id)

@@ -42,6 +42,9 @@ CHARACTERS_PER_CREDIT = 100_000
 READ_LENGTH = 6000
 MAX_READ_LENGTH = 20000
 SEARCH_RESULTS = 8
+# How far around a query word another query word may sit and still share a passage's score.
+_SEARCH_WINDOW = 260
+_SEARCH_TERM = re.compile(r"[^\W_]+", re.UNICODE)
 _PASSAGE_CHARS = 8000
 _MARKDOWN_HEADING = re.compile(r"^(#{1,6})[ \t]+(.+?)[ \t]*#*[ \t]*$", re.MULTILINE)
 _CHAPTER_HEADING = re.compile(
@@ -548,10 +551,13 @@ class DocumentToolsMixin:
         }
 
     def search_documents(self, query: str, document: str = "") -> dict[str, Any]:
-        """Find a word or phrase in the source documents."""
+        """Search the source documents for words or a phrase. A passage that contains more of
+        the query's words ranks first, so a question about a person in a place finds the passage
+        where both are named rather than the first mention of either."""
         wanted = query.strip()
-        if len(wanted) < 2:
-            raise InvalidInput("search for at least two characters")
+        terms = _search_terms(wanted)
+        if not terms:
+            raise InvalidInput("search for a word of at least two characters")
         all_rows = campaign_documents(self.engine, self.campaign_id)
         if not all_rows:
             return {
@@ -561,28 +567,26 @@ class DocumentToolsMixin:
                 "note": "This campaign has no source documents.",
             }
         rows = (_find_document(all_rows, document),) if document.strip() else all_rows
-        needle = wanted.casefold()
-        matches: list[dict[str, Any]] = []
-        more = False
+        phrase = wanted.casefold()
+        found: list[tuple[int, int, CampaignDocument]] = []
         for row in rows:
+            for score, offset in _rank_search_hits(row.text, terms, phrase):
+                found.append((score, offset, row))
+        found.sort(key=lambda hit: (-hit[0], hit[1], hit[2].name.casefold()))
+        more = len(found) > SEARCH_RESULTS
+        matches = []
+        longest = max(len(term) for term in terms)
+        for score, offset, row in found[:SEARCH_RESULTS]:
             sections = document_sections(row)
-            haystack = row.text.casefold()
-            position = haystack.find(needle)
-            while position >= 0:
-                if len(matches) >= SEARCH_RESULTS:
-                    more = True
-                    break
-                matches.append(
-                    {
-                        "document": row.name,
-                        "offset": position,
-                        "section": _section_at(sections, position),
-                        "excerpt": _excerpt(row.text, position, len(wanted)),
-                    }
-                )
-                position = haystack.find(needle, position + len(needle))
-            if more:
-                break
+            matches.append(
+                {
+                    "document": row.name,
+                    "offset": offset,
+                    "section": _section_at(sections, offset),
+                    "matched": min(score, len(terms)),
+                    "excerpt": _excerpt(row.text, offset, longest),
+                }
+            )
         note = ""
         if not matches:
             note = "No matches. Try a shorter or different word."
@@ -592,6 +596,51 @@ class DocumentToolsMixin:
             "more": more,
             "note": note,
         }
+
+
+def _search_terms(query: str) -> list[str]:
+    """The words of a query, lower-cased, in order and without duplicates. Punctuation and
+    one-letter words are dropped, so a GM can paste a question's subject words freely."""
+    terms = [term for term in _SEARCH_TERM.findall(query.casefold()) if len(term) >= 2]
+    return list(dict.fromkeys(terms))
+
+
+def _term_positions(haystack: str, term: str, limit: int = 200) -> list[int]:
+    positions: list[int] = []
+    at = haystack.find(term)
+    while at >= 0 and len(positions) < limit:
+        positions.append(at)
+        at = haystack.find(term, at + len(term))
+    return positions
+
+
+def _rank_search_hits(text: str, terms: Sequence[str], phrase: str) -> list[tuple[int, int]]:
+    """The best places in one document for a query, as (score, offset), highest first. A
+    candidate sits at each occurrence of a query word; its score counts the distinct query words
+    within a small window, and an exact phrase outranks any partial window. Overlapping
+    candidates collapse to their best one, so a long paragraph is returned once, not per word."""
+    haystack = text.casefold()
+    positions = {term: _term_positions(haystack, term) for term in terms}
+    hits: list[tuple[int, int]] = []
+    if len(terms) > 1 and phrase in haystack:
+        at = haystack.find(phrase)
+        while at >= 0:
+            hits.append((len(terms) + 1, at))
+            at = haystack.find(phrase, at + len(phrase))
+    for term in terms:
+        for at in positions[term]:
+            start = max(0, at - _SEARCH_WINDOW)
+            end = min(len(haystack), at + len(term) + _SEARCH_WINDOW)
+            score = sum(
+                1 for other in terms if any(start <= found < end for found in positions[other])
+            )
+            hits.append((score, at))
+    ranked: list[tuple[int, int]] = []
+    for score, at in sorted(hits, key=lambda hit: (-hit[0], hit[1])):
+        if any(abs(at - chosen) <= _SEARCH_WINDOW * 2 for _, chosen in ranked):
+            continue
+        ranked.append((score, at))
+    return ranked
 
 
 def _find_document(rows: Sequence[CampaignDocument], value: str) -> CampaignDocument:
@@ -624,6 +673,7 @@ def _section_at(sections: Sequence[DocumentSection], offset: int) -> str:
 
 
 def _excerpt(text: str, position: int, length: int) -> str:
-    start = max(0, position - 120)
-    end = min(len(text), position + length + 180)
+    # Wide enough to show the other query words that earned the passage its score.
+    start = max(0, position - _SEARCH_WINDOW)
+    end = min(len(text), position + length + _SEARCH_WINDOW)
     return re.sub(r"\s+", " ", text[start:end]).strip()
