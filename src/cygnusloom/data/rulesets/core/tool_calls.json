@@ -2987,7 +2987,7 @@
     "type": "tool_call",
     "id": "search_documents",
     "lookup": true,
-    "description": "Search the campaign's source documents for a word or phrase, such as a person, place, item, or room name. Returns short excerpts with the document, character offset, and section for each match. Search first when you need to find where a topic is covered, then read_document at that offset.",
+    "description": "Search the campaign's source documents for words or a phrase; a passage that contains more of the query's words ranks first. Returns short excerpts with the document, character offset, and section for each match, and how many of the words each passage contains. Search first when you need to find where a topic is covered, then read_document at that offset.",
     "parameters": {
       "properties": {
         "query": {
