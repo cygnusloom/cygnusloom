@@ -207,9 +207,6 @@
     <div class="map-scalebar" aria-hidden="true"><span></span>{{ (view.radius_km / 2) | round(1) }} km</div>
   </div>
   {% if framed %}<button type="button" class="secondary map-recenter">Recenter</button></div>{% endif %}
-  {% if view.markers %}
-    <p class="muted map-scale">About {{ (view.radius_km * 2) | round(1) }} km across. North is up.</p>
-  {% endif %}
 {%- endmacro %}
 
 {% macro encounter_board(encounter, rows) -%}
