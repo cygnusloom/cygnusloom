@@ -21,7 +21,14 @@ from cygnusloom.services.views import world_state_text
 from tests.conftest import csrf_token
 from tests.factories import campaign_ready_fast
 from tests.test_combat import CAIRN, PC, YARD, _character, _fight, _fight_client
-from tests.test_export_import import _export, _import, _imported_id, _target_app, _target_client
+from tests.test_export_import import (
+    _document,
+    _export,
+    _import,
+    _imported_id,
+    _target_app,
+    _target_client,
+)
 from tests.test_inventory import CAPACITY, _fill, _used
 from tests.test_wwn_refactor import WREN, WWN, _empty_pack, _wwn_campaign, _wwn_pc, _wwn_tools
 
@@ -279,7 +286,7 @@ def test_export_and_import_round_trip_the_inventory_space_flag(
 
     response = _export(client, campaign_id)
 
-    assert response.json()["campaign"]["use_inventory_space"] is False
+    assert _document(response)["campaign"]["use_inventory_space"] is False
     target_app = _target_app(tmp_path, settings)
     target_client = _target_client(target_app)
     new_id = _imported_id(_import(target_client, response.content))
@@ -290,7 +297,7 @@ def test_an_old_export_without_the_flag_imports_with_space_tracked(
     tmp_path, settings, client_factory: Callable[[], TestClient]
 ):
     client, campaign_id = campaign_ready_fast(client_factory)
-    document = _export(client, campaign_id).json()
+    document = _document(_export(client, campaign_id))
     document["campaign"].pop("use_inventory_space")
 
     target_app = _target_app(tmp_path, settings)

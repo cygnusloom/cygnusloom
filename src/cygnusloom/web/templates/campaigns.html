@@ -78,7 +78,7 @@
           class="campaign-import">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <label>Campaign file
-        <input type="file" name="file" accept="application/json,.json" required>
+        <input type="file" name="file" accept="application/zstd,.json.zst,.json" required>
       </label>
       <button type="submit">Import campaign</button>
     </form>

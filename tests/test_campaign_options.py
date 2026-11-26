@@ -769,7 +769,7 @@ def test_an_exported_campaign_carries_the_respec_option(
     owner_id = _row(app, campaign_id).owner_id
 
     _, payload = campaign_files.export_campaign(app.state.engine, owner_id, campaign_id)
-    assert json.loads(payload)["campaign"]["allow_respec"] is True
+    assert campaign_files.read_export(payload)["campaign"]["allow_respec"] is True
 
     imported = campaign_files.import_campaign(
         app.state.engine,
@@ -782,7 +782,7 @@ def test_an_exported_campaign_carries_the_respec_option(
     assert imported.campaign.allow_respec is True
 
     # A file exported before the option existed keeps respecs off.
-    document = json.loads(payload)
+    document = campaign_files.read_export(payload)
     del document["campaign"]["allow_respec"]
     older = campaign_files.import_campaign(
         app.state.engine,
@@ -803,7 +803,7 @@ def test_an_imported_respec_option_must_be_true_or_false(
     app = client.app
     owner_id = _row(app, campaign_id).owner_id
     _, payload = campaign_files.export_campaign(app.state.engine, owner_id, campaign_id)
-    document = json.loads(payload)
+    document = campaign_files.read_export(payload)
     document["campaign"]["allow_respec"] = value
 
     with pytest.raises(InvalidInput, match="allow_respec must be true or false"):

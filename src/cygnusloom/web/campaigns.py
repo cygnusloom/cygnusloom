@@ -328,19 +328,15 @@ async def create(request: Request) -> Response:
 
 @router.post("/import")
 async def import_campaign_file(request: Request) -> Response:
-    """Rebuild a campaign from a JSON file exported by this or another server."""
+    """Rebuild a campaign from a file exported by this or another server."""
     user = page_user(request)
     await verify_csrf(request)
     form = await request.form()
     upload = form.get("file")
     if not hasattr(upload, "read"):
-        _flash(request, "Choose a Cygnus Loom campaign .json file.", "error")
+        _flash(request, "Choose a Cygnus Loom campaign file (.json.zst or .json).", "error")
         return RedirectResponse("/campaigns", status_code=303)
-    data = await upload.read(campaign_files.MAX_IMPORT_BYTES + 1)
-    if len(data) > campaign_files.MAX_IMPORT_BYTES:
-        limit = campaign_files.MAX_IMPORT_BYTES // (1024 * 1024)
-        _flash(request, f"That file is larger than {limit} MB.", "error")
-        return RedirectResponse("/campaigns", status_code=303)
+    data = await upload.read()
     try:
         result = campaign_files.import_campaign(
             request.app.state.engine,
@@ -991,7 +987,7 @@ def _advancement_done_message(
 
 @router.get("/{campaign_id}/export")
 def export_campaign_file(request: Request, campaign_id: int) -> Response:
-    """Download the campaign row and its complete event log as one JSON file."""
+    """Download the campaign row and its complete event log as one compressed file."""
     user = page_user(request)
     try:
         filename, payload = campaign_files.export_campaign(
@@ -1003,7 +999,7 @@ def export_campaign_file(request: Request, campaign_id: int) -> Response:
         return PlainTextResponse(str(exc), status_code=400)
     return Response(
         content=payload,
-        media_type="application/json; charset=utf-8",
+        media_type="application/zstd",
         headers={
             "Content-Disposition": f'attachment; filename="{filename}"',
             "Cache-Control": "no-store",
