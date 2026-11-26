@@ -2467,6 +2467,7 @@ def _campaign_page(
                     rule_set.clock.wage_currency if rule_set is not None and rule_set.clock else ""
                 ),
                 hp_stat=rule_set.hp_stat if rule_set is not None else None,
+                hooks=rule_set.hooks if rule_set is not None else None,
             ),
             world_map=world_map,
             rule_set=rule_set,
@@ -2625,6 +2626,7 @@ def _campaign_page(
                 rule_set.clock.wage_currency if rule_set is not None and rule_set.clock else ""
             ),
             hp_stat=rule_set.hp_stat if rule_set is not None else None,
+            hooks=rule_set.hooks if rule_set is not None else None,
         ),
         "world_map": world_map,
         "time": time_view(world.state, rule_set.clock if rule_set else None),

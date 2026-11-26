@@ -82,7 +82,7 @@
     "id": "player_save",
     "python_module": "dnd_srd_2024",
     "function": "roll_save",
-    "description": "Ask the player to roll an ability save against an effect's DC. Use it for a player character; an NPC saves with roll_save. The engine adds the ability modifier and the proficiency bonus when the class is proficient in that save.",
+    "description": "Ask the player to roll an ability save against an effect's DC. Use it for a player character; an NPC saves with roll_save. The engine adds the ability modifier and the proficiency bonus when the class is proficient in that save. When damage leaves a concentrating character a save due, pass its dc and cause unchanged.",
     "parameters": {
       "properties": {
         "prompt": {

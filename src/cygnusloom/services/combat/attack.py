@@ -34,6 +34,7 @@ from cygnusloom.services.combat.damage import (
     _living,
     _require_impaired,
     apply_damage,
+    notify_damage_taken,
 )
 from cygnusloom.services.combat.initiative import _no_initiative_pending
 from cygnusloom.services.combat.save import _save
@@ -579,7 +580,7 @@ def _strike(
                 if not nonlethal and (target.kind == PC_KIND or target.important):
                     death.begin_dying(db, campaign_id, combat, target.name, spec=spec)
                 _end_if_one_side_left(db, campaign_id)
-            return {
+            result = {
                 "target": target.name,
                 "raw": raw,
                 "armor": 0,
@@ -590,6 +591,20 @@ def _strike(
                 "to_hit": to_hit,
                 "defeated": load_state(db, campaign_id).characters[name_key(target.name)].defeated,
             }
+            result.update(
+                notify_damage_taken(
+                    db,
+                    campaign_id,
+                    combat,
+                    target.name,
+                    sum(harm.values()),
+                    f"{attacker}'s {weapon}",
+                    spec=spec,
+                    rng=rng,
+                    plus=plus,
+                )
+            )
+            return result
     armor = 0 if ignores_armor else target.armor
     if shock_applies and combat.minimum_shock_damage:
         raw = max(raw, shock)
@@ -706,6 +721,19 @@ def _strike(
             result["morale"] = checks
     result["defeated"] = load_state(db, campaign_id).characters[name_key(target.name)].defeated
     _end_if_one_side_left(db, campaign_id)
+    result.update(
+        notify_damage_taken(
+            db,
+            campaign_id,
+            combat,
+            target.name,
+            sum(damage.harm.values()),
+            f"{attacker}'s {weapon}",
+            spec=spec,
+            rng=rng,
+            plus=plus,
+        )
+    )
     return result
 
 

@@ -3259,6 +3259,8 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
                 cause,
                 self._rules(),
                 spec=self.character,
+                rng=self.rng,
+                plus=self.plus,
             )
 
     def resolve_hazard(

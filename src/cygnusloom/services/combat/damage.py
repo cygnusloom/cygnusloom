@@ -40,6 +40,30 @@ from cygnusloom.services.injuries import EffectContext, gain_injury
 from cygnusloom.services.recovery import recover
 
 
+def notify_damage_taken(
+    db: Session,
+    campaign_id: int,
+    combat: CombatRules,
+    name: str,
+    amount: int,
+    cause: str,
+    *,
+    spec: CharacterSpec | None,
+    rng: random.Random | None,
+    plus: str,
+) -> dict[str, Any]:
+    """Let the rule set's combat module react to harm a character has taken, such as a
+    Constitution save to hold Concentration. The module names a `damage_taken` function; its
+    fields are added to the tool result, so the GM and the player can see what it calls for.
+    A rule set without the function, or damage of zero, changes nothing."""
+    module = combat.module
+    hook = getattr(module, "damage_taken", None) if module is not None else None
+    if not callable(hook) or amount <= 0:
+        return {}
+    added = hook(db, campaign_id, name, amount, cause, spec=spec, rng=rng, plus=plus)
+    return dict(added) if isinstance(added, Mapping) else {}
+
+
 @dataclass(frozen=True)
 class WeaponBonuses:
     """What a player character's weapon adds to an attack: `to_hit` to the hit roll, `damage` to
@@ -327,10 +351,13 @@ def harm_character(
     combat: CombatRules,
     *,
     spec: CharacterSpec | None = None,
+    rng: random.Random | None = None,
+    plus: str = "sum",
 ) -> dict[str, Any]:
     """Harm a character from a hazard rather than an attack, such as from a fall or poison.
     Only the rule set's outside-harm stats can take it. Harm that takes the overflow stat to 0
-    defeats the character."""
+    defeats the character. The rule set's `damage_taken` hook then runs, as it does after a
+    hit."""
     state = load_state(db, campaign_id)
     character = state.characters.get(name_key(name))
     if character is None:
@@ -391,10 +418,24 @@ def harm_character(
                 ),
             )
     db.commit()
-    return {
+    result = {
         "character": character.name,
         "stat": stat,
         "taken": taken,
         "current": before - taken,
         "defeated": defeats,
     }
+    result.update(
+        notify_damage_taken(
+            db,
+            campaign_id,
+            combat,
+            character.name,
+            taken,
+            bounded_text(cause, "cause", MAX_CAUSE_TEXT),
+            spec=spec,
+            rng=rng,
+            plus=plus,
+        )
+    )
+    return result

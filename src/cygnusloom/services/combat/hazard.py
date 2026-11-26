@@ -213,6 +213,8 @@ def resolve_hazard(
                     reason,
                     combat,
                     spec=spec,
+                    rng=rng,
+                    plus=plus,
                 )
                 result["harm"] = {
                     "stat": harm_stat,

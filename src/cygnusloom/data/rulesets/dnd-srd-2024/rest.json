@@ -32,6 +32,7 @@
     "type": "hooks",
     "id": "dnd-srd-2024",
     "python_module": "dnd_srd_2024",
-    "after_rest": "after_rest"
+    "after_rest": "after_rest",
+    "status": "status"
   }
 ]
