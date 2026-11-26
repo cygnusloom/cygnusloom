@@ -21,7 +21,7 @@ from cygnusloom.rules import dnd_srd_2024
 from cygnusloom.services import encounters
 from cygnusloom.services import level_up as level_up_service
 from cygnusloom.services.common import InvalidInput
-from cygnusloom.services.events import ChatGM, EncounterTurnEnded, load_state, record
+from cygnusloom.services.events import ChatGM, EncounterTurnEnded, decode, load_state, record
 
 from .factories import (
     Rolls,
@@ -196,6 +196,49 @@ def test_roll_initiative_sets_a_numeric_order_and_unblocks_the_first_turn(
     assert later.encounter is not None
     assert later.encounter.round == 2
     assert later.encounter.order == order
+
+
+def test_the_initiative_log_shows_each_d20_and_total_not_only_the_bonus(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    client, campaign_id, ctx = _campaign(client_factory)
+    _fight(client, campaign_id)
+    # The fighter rolls a 1 and the ogre a 20, so the ogre acts first despite its -1 bonus.
+    ctx = replace(ctx, world=replace(ctx.world, rng=Rolls(1, 20)))
+
+    result = dnd_srd_2024.roll_initiative(ctx)
+
+    assert result["order"] == ["Foe", "Rook"]
+    with Session(app.state.engine) as db:
+        row = db.exec(
+            select(Event)
+            .where(Event.campaign_id == campaign_id, Event.kind == "encounter.initiative_settled")
+            .order_by(Event.id)
+        ).all()[-1]
+    text = decode(row).render()
+    # The fighter's Dexterity is rolled at creation, so read back its bonus rather than
+    # assuming one; the point is that the face and the total show beside it.
+    rook = next(entry for entry in result["rolls"] if entry["name"] == "Rook")
+    foe = next(entry for entry in result["rolls"] if entry["name"] == "Foe")
+    assert rook["roll"] == 1 and foe["roll"] == 20
+    assert f"Rook: 1d20 1 {rook['bonus']:+d} Initiative = {rook['total']}" in text
+    assert f"Foe: 1d20 20 {foe['bonus']:+d} Initiative = {foe['total']}" in text
+    assert "Initiative is set: Foe, Rook." in text
+
+
+def test_an_old_individual_initiative_record_still_shows_its_d20() -> None:
+    from cygnusloom.services.events import InitiativeSettled
+
+    text = InitiativeSettled(
+        order=["Aelric", "Nib"],
+        individual=True,
+        rolls=[
+            {"name": "Aelric", "roll": 7, "bonus": 2, "total": 9},
+            {"name": "Nib", "roll": 19, "bonus": 1, "total": 20},
+        ],
+    ).render()
+    assert "Aelric: 1d20 7 +2 bonus = 9" in text
+    assert "Nib: 1d20 19 +1 bonus = 20" in text
 
 
 def test_awarding_experience_reaches_the_advancement_page(

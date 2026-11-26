@@ -78,6 +78,7 @@ from cygnusloom.services.events import (
     TurnFailed,
     decode,
     estimate_tokens,
+    event_hidden,
     events_since,
     is_hidden,
     last_event_id,
@@ -639,6 +640,8 @@ class _Run:
     # Whether the campaign tracks food, water, and rest privation. Off means rests spend
     # nothing and hunger and thirst are not tracked.
     tracks_survival_needs: bool = True
+    # Whether the GM plays each hireling's encounter turn. Off means the player plays them.
+    gm_plays_hirelings: bool = False
     # The account answering this turn's prompt, when a player does. An opening or an NPC's turn
     # has none, and any player at the table may continue it. Its display name is resolved from
     # the account when the log is folded, so a name change reaches an open turn.
@@ -839,6 +842,7 @@ def _start_run(
         documents=documents_service.document_summaries(engine, campaign.id or 0),
         tracks_inventory=campaign.use_inventory_space,
         tracks_survival_needs=campaign.use_survival_needs,
+        gm_plays_hirelings=campaign.gm_plays_hirelings,
         player_id=player_id,
         tool_schema_mode=getattr(settings, "tool_schema_mode", "brief"),
         rule_info_mode=getattr(settings, "rule_info_mode", "brief"),
@@ -899,6 +903,7 @@ def _world_text(run: _Run, state: CampaignState) -> str:
         unwritten_world=run.world is not None and not run.world.has_setting,
         track_inventory=run.tracks_inventory,
         track_survival_needs=run.tracks_survival_needs,
+        gm_plays_hirelings=run.gm_plays_hirelings,
         currency=rule_set.marketplace.currency if rule_set.marketplace else "",
         housekeeping=rule_set.housekeeping,
         character=rule_set.character,
@@ -1219,11 +1224,13 @@ def _flush(run: _Run) -> list[Logged]:
         rows = events_since(db, run.campaign_id, run.cursor, Channel.LOG)
     if rows:
         run.cursor = rows[-1].id or run.cursor
-    return [
-        Logged(text, hidden=is_hidden(row.kind))
-        for row in rows
-        if (text := decode(row).render()) is not None
-    ]
+    flushed: list[Logged] = []
+    for row in rows:
+        event = decode(row)
+        text = event.render()
+        if text is not None:
+            flushed.append(Logged(text, hidden=event_hidden(event)))
+    return flushed
 
 
 async def _await_with_heartbeat[T](
@@ -1923,7 +1930,7 @@ def _end_npc_encounter_turn(run: _Run, actor: str) -> None:
         ):
             return
         character = state.characters.get(name_key(actor))
-        if character is None or character.kind != NPC_KIND:
+        if character is None or not (character.kind == NPC_KIND or encounter.gm_played):
             return
         try:
             encounters.end_turn(db, run.campaign_id, character.name, by_player=False)
@@ -1944,7 +1951,7 @@ def _finish_reply(run: _Run, turn: Turn, reply: str, reasoning: str) -> int:
         encounter = state.encounter
         if encounter is not None and encounter.acting is not None:
             acting = state.characters.get(name_key(encounter.acting))
-            if acting is not None and acting.kind == NPC_KIND:
+            if acting is not None and (acting.kind == NPC_KIND or encounter.gm_played):
                 actor = acting.name
     if actor is not None:
         _end_npc_encounter_turn(run, actor)
@@ -2985,7 +2992,7 @@ def _check_encounter_turn(state: CampaignState, user_id: int) -> None:
     acting = state.characters.get(name_key(encounter.acting))
     if acting is None:
         return
-    if acting.kind == PC_KIND:
+    if acting.kind == PC_KIND and not encounter.gm_played:
         if not state.owned_by(acting, user_id):
             raise InvalidInput(f"it is {acting.name}'s turn")
         return
@@ -3190,11 +3197,7 @@ async def start_encounter_turn(
 
         run = _guarded_start(engine, campaign.id, build_run)
         with session_scope(engine) as db:
-            character = encounters.begin_turn(db, campaign.id, name)
-        if character.kind == PC_KIND:
-            raise InvalidInput(
-                f"{character.name} is a player character; their turn begins on its own"
-            )
+            encounters.begin_turn(db, campaign.id, name, gm_only=True)
         async for event in _guarded(run, _carry_on(run)):
             yield event
 
@@ -3228,7 +3231,10 @@ def end_encounter_turn(engine: Engine, owner_id: int, campaign_id: int, name: st
     character = state.characters.get(name_key(name))
     if character is None:
         raise InvalidInput(f"there is no character named {name!r}")
-    _end_turn_as(engine, owner_id, campaign_id, name, by_player=character.kind == PC_KIND)
+    gm_played = state.encounter is not None and state.encounter.gm_played
+    _end_turn_as(
+        engine, owner_id, campaign_id, name, by_player=character.kind == PC_KIND and not gm_played
+    )
 
 
 def end_player_turn(engine: Engine, owner_id: int, campaign_id: int, name: str) -> None:

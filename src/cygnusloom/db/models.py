@@ -208,7 +208,9 @@ class Campaign(SQLModel, table=True):
     after creation. `follow_owner_level`, on by default, keeps that level equal to the campaign
     owner's character level as it rises, so a character joining later begins at the table's
     level. `allow_respec`, off by default, lets each player rebuild their character's sheet,
-    refunding its levels, experience, and advancement picks."""
+    refunding its levels, experience, and advancement picks. `gm_plays_hirelings`, off by
+    default, hands each hireling's encounter turn to the GM: the turn waits for a Start button
+    and the GM acts for the hireling. Off, the player plays the hirelings' turns."""
 
     __tablename__ = "campaign"
 
@@ -230,6 +232,7 @@ class Campaign(SQLModel, table=True):
     start_level: int = Field(default=1)
     follow_owner_level: bool = Field(default=True)
     allow_respec: bool = Field(default=False)
+    gm_plays_hirelings: bool = Field(default=False)
     created_at: datetime = Field(default_factory=utcnow)
 
 

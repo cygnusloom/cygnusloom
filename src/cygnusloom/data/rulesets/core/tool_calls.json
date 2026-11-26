@@ -1700,16 +1700,17 @@
     "type": "tool_call",
     "id": "set_campaign_setting",
     "activity": "Campaign setting changed: {detail}",
-    "description": "Change a campaign setting only when the player has explicitly asked for that change. The settings this tool can change are inventory_space and survival_needs. Never change one on your own initiative, to make the story easier, or as part of another action. Never change the model, the campaign name, or how much of the record the player sees; tell the player to use the Settings page for those. record_setting is for invented world facts, not this.",
+    "description": "Change a campaign setting only when the player has explicitly asked for that change. The settings this tool can change are inventory_space, survival_needs, and hireling_turns. Never change one on your own initiative, to make the story easier, or as part of another action. Never change the model, the campaign name, or how much of the record the player sees; tell the player to use the Settings page for those. record_setting is for invented world facts, not this.",
     "parameters": {
       "properties": {
         "setting": {
           "type": "string",
           "enum": [
             "inventory_space",
-            "survival_needs"
+            "survival_needs",
+            "hireling_turns"
           ],
-          "description": "The setting to change. inventory_space turns the rule set's item slots and capacity limits on or off. survival_needs turns food, water, and rest privation on or off."
+          "description": "The setting to change. inventory_space turns the rule set's item slots and capacity limits on or off. survival_needs turns food, water, and rest privation on or off. hireling_turns hands the hirelings' encounter turns to the GM when true, and back to the players when false."
         },
         "value": {
           "type": "boolean",
@@ -2929,7 +2930,7 @@
   {
     "type": "tool_call",
     "id": "roll_dice",
-    "description": "Roll dice the rules call for outside an attack, check, or save, such as a feature die, a Bardic Inspiration die, a monster's recharge, or a random amount. Give a formula such as 1d12 or 2d6+3. The engine rolls and logs every face, so never invent this result.",
+    "description": "Roll dice the rules call for, such as a feature die, a monster's recharge, or a hidden creature's Stealth; pass secret true when the players must not see the roll. Give a formula such as 1d12 or 2d6+3. The engine rolls and logs every face, so never invent this result.",
     "parameters": {
       "properties": {
         "dice": {
@@ -2939,6 +2940,11 @@
         "reason": {
           "type": "string",
           "description": "What the roll is for, such as Stone's Endurance or a breath weapon recharge."
+        },
+        "secret": {
+          "type": "boolean",
+          "default": false,
+          "description": "True for a GM-only roll whose result or reason must stay out of the player's default transcript, such as a hidden creature's Stealth."
         }
       },
       "required": [

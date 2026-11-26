@@ -31,6 +31,7 @@ from cygnusloom.content.library import (
     InitiativeRules,
 )
 from cygnusloom.services import death, resolution
+from cygnusloom.services.campaign_switches import gm_plays_hirelings as campaign_gm_plays_hirelings
 from cygnusloom.services.common import InvalidInput, bounded_text
 from cygnusloom.services.events import (
     FOES_SIDE,
@@ -1616,9 +1617,11 @@ def settle_initiative(db: Session, campaign_id: int, initiative_order: Initiativ
     db.commit()
 
 
-def begin_turn(db: Session, campaign_id: int, name: str) -> Character:
-    """Start the turn of the character who is next in order. An NPC's turn opens a GM reply that
-    plays it out; a player character's turn opens nothing and waits for the player."""
+def begin_turn(db: Session, campaign_id: int, name: str, *, gm_only: bool = False) -> Character:
+    """Start the turn of the character who is next in order. An NPC's turn, or a hireling's turn
+    the campaign gives to the GM, opens a GM reply that plays it out; a player character's turn
+    opens nothing and waits for the player. `gm_only` refuses a turn the player still holds, and
+    hands an already-begun player turn for a GM-played hireling to the GM."""
     state = load_state(db, campaign_id)
     encounter = _encounter(state)
     if initiative_open(state):
@@ -1628,22 +1631,37 @@ def begin_turn(db: Session, campaign_id: int, name: str) -> Character:
         raise InvalidInput("initiative is not set yet; roll it before the first turn")
     if state.turn is not None:
         raise InvalidInput("the GM is still answering; wait for the reply to finish")
-    if encounter.acting is not None:
-        raise InvalidInput(f"{encounter.acting} is still taking their turn")
     if not encounter.order:
         raise InvalidInput("there is no one in the encounter to take a turn")
     character = state.characters[name_key(encounter.order[encounter.up])]
     if name_key(name) != name_key(character.name):
         raise InvalidInput(f"it is {character.name}'s turn next, not {name}'s")
-    for other in state.characters.values():
-        for condition in list(other.conditions):
-            source = other.condition_until.get(condition, "")
-            if source and name_key(source) == name_key(character.name):
-                record(
-                    db,
-                    campaign_id,
-                    ConditionEnded(name=other.name, condition=condition, how="turn start"),
-                )
+    gm_played = character.kind == NPC_KIND or (
+        character.hireling and campaign_gm_plays_hirelings(db, campaign_id)
+    )
+    if gm_only and not gm_played:
+        if character.kind == PC_KIND and not character.hireling:
+            raise InvalidInput(
+                f"{character.name} is a player character; their turn begins on its own"
+            )
+        raise InvalidInput(
+            f"{character.name}'s turn is the player's; they act in chat and press End turn"
+        )
+    already_acting = encounter.acting is not None
+    if already_acting and name_key(encounter.acting or "") != name_key(character.name):
+        raise InvalidInput(f"{encounter.acting} is still taking their turn")
+    if already_acting and not gm_played:
+        raise InvalidInput(f"{character.name} is taking their turn")
+    if not already_acting:
+        for other in state.characters.values():
+            for condition in list(other.conditions):
+                source = other.condition_until.get(condition, "")
+                if source and name_key(source) == name_key(character.name):
+                    record(
+                        db,
+                        campaign_id,
+                        ConditionEnded(name=other.name, condition=condition, how="turn start"),
+                    )
     instruction = ""
     if character.kind == NPC_KIND:
         instruction = (
@@ -1651,7 +1669,24 @@ def begin_turn(db: Session, campaign_id: int, name: str) -> Character:
             "message. Resolve what they do now with the combat tools, then finish the state step; "
             "an attack happens only when you call attack."
         )
-    record(db, campaign_id, EncounterTurnBegun(name=character.name, instruction=instruction))
+    elif gm_played:
+        instruction = (
+            f"It is {character.name}'s turn in the encounter, and you play this hireling's turn. "
+            "This is not an out-of-character message. Decide and resolve what they do now with "
+            "the combat tools, then finish the state step; their attack happens only when you "
+            "call hireling_attack. Roll their checks and saves with the dice tools instead of "
+            "asking the player to roll."
+        )
+    record(
+        db,
+        campaign_id,
+        EncounterTurnBegun(
+            name=character.name,
+            instruction=instruction,
+            gm_played=gm_played,
+            announce=not already_acting,
+        ),
+    )
     db.commit()
     return character
 
@@ -1672,18 +1707,23 @@ def begin_player_turn_if_next(db: Session, campaign_id: int) -> Character | None
     upcoming = state.characters[name_key(encounter.order[encounter.up])]
     if upcoming.kind != PC_KIND:
         return None
+    if upcoming.hireling and campaign_gm_plays_hirelings(db, campaign_id):
+        # A hireling the GM plays waits for Start, exactly as an NPC does.
+        return None
     return begin_turn(db, campaign_id, upcoming.name)
 
 
 def end_turn(db: Session, campaign_id: int, name: str, by_player: bool) -> dict[str, Any]:
-    """End the running turn. The GM ends NPC turns and the player ends their own character's."""
+    """End the running turn. The GM ends NPC turns and a GM-played hireling's turn; the player
+    ends their own character's turn and a hireling's turn they play."""
     state = load_state(db, campaign_id)
     encounter = _encounter(state)
     if encounter.acting is None or name_key(encounter.acting) != name_key(name):
         raise InvalidInput(f"{name} is not taking a turn")
     character = state.characters[name_key(encounter.acting)]
-    if (character.kind == PC_KIND) != by_player:
-        owner = "the player" if character.kind == PC_KIND else "the GM"
+    player_ends = character.kind == PC_KIND and not encounter.gm_played
+    if player_ends != by_player:
+        owner = "the player" if player_ends else "the GM"
         raise InvalidInput(f"{owner} ends {character.name}'s turn")
     round_before = encounter.round
     record(db, campaign_id, EncounterTurnEnded(name=character.name))
@@ -1850,6 +1890,7 @@ def encounter_view(
         "style": entry.style,
         "round": encounter.round,
         "acting": encounter.acting,
+        "gm_played": encounter.gm_played,
         "has_acted": encounter.attacked > 0 or encounter.moved > 0,
         "settled": encounter.settled,
         "side_initiative": encounter.side_initiative,

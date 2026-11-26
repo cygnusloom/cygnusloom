@@ -164,6 +164,7 @@ def export_campaign(engine: Engine, owner_id: int, campaign_id: int) -> tuple[st
             "start_level": campaign.start_level,
             "follow_owner_level": campaign.follow_owner_level,
             "allow_respec": campaign.allow_respec,
+            "gm_plays_hirelings": campaign.gm_plays_hirelings,
             "created_at": as_utc(campaign.created_at).isoformat(),
         },
         "documents": source_documents,
@@ -235,6 +236,7 @@ def import_campaign(
             start_level=config["start_level"],
             follow_owner_level=config["follow_owner_level"],
             allow_respec=config["allow_respec"],
+            gm_plays_hirelings=config["gm_plays_hirelings"],
             created_at=config["created_at"],
         )
         db.add(campaign)
@@ -614,6 +616,10 @@ def _read_campaign(data: dict[str, Any], library: ContentLibrary) -> dict[str, A
     allow_respec = data.get("allow_respec", False)
     if not isinstance(allow_respec, bool):
         raise InvalidInput("allow_respec must be true or false")
+    # A file exported before the option existed keeps the player playing the hirelings' turns.
+    gm_plays_hirelings = data.get("gm_plays_hirelings", False)
+    if not isinstance(gm_plays_hirelings, bool):
+        raise InvalidInput("gm_plays_hirelings must be true or false")
     created_at = _read_time(data.get("created_at"), "campaign")
     return {
         "name": _text(data, "name", MAX_NAME),
@@ -628,6 +634,7 @@ def _read_campaign(data: dict[str, Any], library: ContentLibrary) -> dict[str, A
         "start_level": start_level,
         "follow_owner_level": follow_owner_level,
         "allow_respec": allow_respec,
+        "gm_plays_hirelings": gm_plays_hirelings,
         "created_at": created_at,
     }
 

@@ -2199,8 +2199,10 @@ def roll_initiative(ctx: ToolContext) -> dict[str, Any]:
             rolls.append(
                 {
                     "name": character.name,
+                    "dice": "1d20",
                     "roll": roll,
                     "bonus": bonus,
+                    "bonus_label": "Initiative",
                     "total": roll + bonus,
                 }
             )

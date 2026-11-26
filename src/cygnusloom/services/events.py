@@ -100,6 +100,9 @@ class GameEvent:
     # Whether the player's transcript hides events of this kind. An event class declares its own
     # visibility next to its kind, so there is no central list to update when adding an event.
     hidden: ClassVar[bool] = False
+    # Whether a per-row `secret` flag hides the row. A check with a secret cause sets this false:
+    # its own dice and outcome stay visible, while its render() leaves out the cause and target.
+    secret_hides_row: ClassVar[bool] = True
     channel: ClassVar[Channel] = Channel.LOG
     # Payload fields that hold another event's id, mapped to the kinds that event must have.
     # Importing a campaign allocates new event ids, so these fields need remapping.
@@ -2949,6 +2952,7 @@ class ParticipantLeft(GameEvent):
         encounter.initiative.pop(key, None)
         if encounter.acting is not None and name_key(encounter.acting) == key:
             encounter.acting = None
+            encounter.gm_played = False
             encounter.moved = 0
             encounter.attacked = 0
         if index < encounter.up:
@@ -3000,14 +3004,19 @@ class ParticipantPlaced(GameEvent):
 
 @dataclass(frozen=True)
 class EncounterTurnBegun(GameEvent):
-    """A participant's turn starts. An NPC's turn opens a GM reply that plays it out, from the
-    instruction recorded here. A player character's turn opens nothing: the player acts in chat
-    and ends the turn with a button."""
+    """A participant's turn starts. An NPC's turn, or a hireling's turn the GM plays, opens a GM
+    reply that plays it out, from the instruction recorded here. A player character's turn opens
+    nothing: the player acts in chat and ends the turn with a button. `announce` is false when
+    an already-started player turn is handed to the GM, so the Log does not repeat the turn."""
 
     kind: ClassVar[str] = "encounter.turn_begun"
 
     name: str
     instruction: str = ""
+    # True when the GM plays this turn, such as a hireling the campaign gives to the GM.
+    gm_played: bool = False
+    # False when this only hands an already-begun player turn to the GM.
+    announce: bool = True
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         encounter = state.encounter
@@ -3023,6 +3032,7 @@ class EncounterTurnBegun(GameEvent):
             character.total_defense = False
             character.total_defense_armor = 0
         encounter.acting = character.name
+        encounter.gm_played = self.gm_played or character.kind == NPC_KIND
         encounter.moved = 0
         encounter.attacked = 0
         encounter.attacked_with = []
@@ -3031,11 +3041,11 @@ class EncounterTurnBegun(GameEvent):
         encounter.extra_attacks = []
         encounter.actions_used = 0
         encounter.bonus_actions_used = 0
-        if character.kind == NPC_KIND and state.turn is None:
+        if encounter.gm_played and state.turn is None:
             state.turn = Turn(opener=event_id, text=self.instruction, actor=character.name)
 
-    def render(self) -> str:
-        return f"{self.name}'s turn begins."
+    def render(self) -> str | None:
+        return f"{self.name}'s turn begins." if self.announce else None
 
 
 @dataclass(frozen=True)
@@ -3133,6 +3143,7 @@ class EncounterTurnEnded(GameEvent):
         if character is not None and character.surprised_turns > 0:
             character.surprised_turns -= 1
         encounter.acting = None
+        encounter.gm_played = False
         encounter.moved = 0
         encounter.attacked = 0
         encounter.attacked_with = []
@@ -3213,6 +3224,7 @@ class InitiativeSettled(GameEvent):
         # Settling can reorder the sides after a player character already joined and had a turn
         # opened, so clear that provisional turn and let the settled order open the right one.
         encounter.acting = None
+        encounter.gm_played = False
         encounter.moved = 0
         encounter.attacked = 0
         _skip_defeated(encounter, state)
@@ -3221,8 +3233,11 @@ class InitiativeSettled(GameEvent):
         if self.rolls:
             parts = []
             for entry in self.rolls:
+                # Older individual-initiative records stored the d20 face without naming its
+                # die, so they rendered as a bare bonus. Every such roll is a d20.
+                dice = str(entry.get("dice") or ("1d20" if self.individual else ""))
                 breakdown = roll_breakdown(
-                    str(entry.get("dice", "")),
+                    dice,
                     [int(entry.get("roll", 0))],
                     [(str(entry.get("bonus_label", "bonus")), int(entry.get("bonus", 0)))],
                     int(entry.get("total", 0)),
@@ -3713,7 +3728,9 @@ class TablesRolled(GameEvent):
 @dataclass(frozen=True)
 class DiceRolled(GameEvent):
     """The GM rolled dice the rules called for, such as a feature die, a Bardic Inspiration
-    die, or a monster's recharge. Every die face is recorded so the roll cannot be invented."""
+    die, or a monster's recharge. Every die face is recorded so the roll cannot be invented.
+    `secret` keeps the line out of the player's default transcript, as when the roll is a hidden
+    creature's Stealth or something else the players must not learn yet."""
 
     kind: ClassVar[str] = "dice.rolled"
 
@@ -3721,6 +3738,7 @@ class DiceRolled(GameEvent):
     values: list[int]
     total: int
     reason: str = ""
+    secret: bool = False
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         return None
@@ -5001,6 +5019,9 @@ class CheckMade(GameEvent):
     and `success` is whether it reached the difficulty."""
 
     kind: ClassVar[str] = "check.made"
+    # A secret check stays in the Log: the roller sees their own dice and outcome, without the
+    # cause or the target that would give the secret away.
+    secret_hides_row: ClassVar[bool] = False
 
     name: str
     check: str
@@ -5029,6 +5050,9 @@ class CheckMade(GameEvent):
     # A feature reaction that changed the roll and leaves no use to record, such as Lucky
     # rolling it twice. A limited reaction shows its use on its own event instead.
     reaction: str = ""
+    # True when the cause or the difficulty must stay out of the player's transcript, as when
+    # they name a hidden creature's Stealth. The roller's own dice and outcome still show.
+    secret: bool = False
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         return None
@@ -5037,12 +5061,19 @@ class CheckMade(GameEvent):
         result = "succeeds" if self.success else "fails"
         label = self.check or "check"
         article = "an" if label[:1].casefold() in "aeiou" else "a"
-        if self.breakdown:
+        breakdown = self.breakdown
+        if self.secret and breakdown:
+            # Drop the target rather than mark the line hidden: the player rolled these dice and
+            # may see their own total and outcome, but not what they were measured against.
+            breakdown = {
+                key: value for key, value in breakdown.items() if key != "target" and key != "target_label"
+            }
+        if breakdown:
             text = (
                 f"{self.name} makes {article} {label}: "
-                f"{breakdown_text(self.breakdown)} and {result}"
+                f"{breakdown_text(breakdown)} and {result}"
             )
-            if self.cause:
+            if self.cause and not self.secret:
                 text = f"{text} ({self.cause})"
             if self.reaction:
                 return f"{text}. {self.reaction}"
@@ -5057,11 +5088,12 @@ class CheckMade(GameEvent):
         if self.armor_penalty:
             used.append(f"armor {self.armor_penalty:+d}")
         with_used = f" ({', '.join(used)})" if used else ""
+        against = "" if self.secret else f" against difficulty {self.difficulty}"
         text = (
             f"{self.name} makes {article} {label}{with_used}: rolls {self.roll}{sign} "
-            f"for {self.total} against difficulty {self.difficulty} and {result}"
+            f"for {self.total}{against} and {result}"
         )
-        if self.cause:
+        if self.cause and not self.secret:
             text = f"{text} ({self.cause})"
         if self.reaction:
             return f"{text}. {self.reaction}"
@@ -6069,3 +6101,11 @@ class CharacterDrained(GameEvent):
 def is_hidden(kind: str) -> bool:
     """Whether the player's transcript hides events of this kind. An unknown kind raises KeyError."""
     return EVENT_TYPES[kind].hidden
+
+
+def event_hidden(event: GameEvent) -> bool:
+    """Whether the player's default transcript hides this event: its kind's usual visibility, or
+    a single event marked secret whose class hides secret rows, such as a hidden creature's
+    Stealth roll. A secret check is not hidden: its render() already leaves out the secret."""
+    secret = bool(getattr(event, "secret", False)) and event.secret_hides_row
+    return is_hidden(event.kind) or secret

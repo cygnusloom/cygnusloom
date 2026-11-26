@@ -154,7 +154,7 @@
           {% if actor or next %}
           <div class="encounter-turn">
             {% if encounter_control == "end" and actor %}
-              {% if actor.is_pc and (player_name == actor.name or is_owner) %}
+              {% if actor.is_pc and not encounter.gm_played and (player_name == actor.name or is_owner) %}
               <p>{{ "It is your turn." if player_name == actor.name else "End " ~ actor.name ~ "'s turn when the table is ready to move on." }} Send a message to act, then end the turn.{% if encounter.actions_left is not none %} Actions left: {{ encounter.actions_left }} of {{ encounter.actions_per_turn }}.{% endif %}{% if encounter.bonus_actions_left is not none %} Bonus actions left: {{ encounter.bonus_actions_left }} of {{ encounter.bonus_actions_per_turn }}.{% endif %}{% if encounter.reactions_left is not none %} Reactions left: {{ encounter.reactions_left }} of {{ encounter.reactions_per_round }}.{% endif %}{% if encounter.attacks_left is not none %} Attacks left: {{ encounter.attacks_left }} of {{ encounter.attacks_per_turn }}.{% endif %}{% if encounter.moves_left is not none %} Movement left: {{ encounter.moves_left }} of {{ encounter.move_cells }} cells.{% endif %}</p>
               {% else %}
               <p class="muted">{{ actor.name }} is taking their turn.{% if encounter.actions_left is not none %} Actions left: {{ encounter.actions_left }} of {{ encounter.actions_per_turn }}.{% endif %}{% if encounter.bonus_actions_left is not none %} Bonus actions left: {{ encounter.bonus_actions_left }} of {{ encounter.bonus_actions_per_turn }}.{% endif %}{% if encounter.reactions_left is not none %} Reactions left: {{ encounter.reactions_left }} of {{ encounter.reactions_per_round }}.{% endif %}{% if encounter.attacks_left is not none %} Attacks left: {{ encounter.attacks_left }} of {{ encounter.attacks_per_turn }}.{% endif %}{% if encounter.moves_left is not none %} Movement left: {{ encounter.moves_left }} of {{ encounter.move_cells }} cells.{% endif %}</p>
@@ -164,16 +164,17 @@
                 <input type="hidden" name="name" value="{{ actor.name }}">
                 <button type="submit"{% if pending or gm_busy %} disabled{% endif %}>End {{ "your" if player_name == actor.name else actor.name ~ "'s" }} turn</button>
               </form>
-            {% elif encounter_control == "start" and next %}
-              <form method="post" action="/campaigns/{{ campaign.id }}/encounter/turn/stream" data-encounter-turn data-busy-label="Starting {{ next.name }}'s turn…">
+            {% elif encounter_control == "start" and (next or actor) %}
+              {% set starter = next or actor %}
+              <form method="post" action="/campaigns/{{ campaign.id }}/encounter/turn/stream" data-encounter-turn data-busy-label="Starting {{ starter.name }}'s turn…">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                <input type="hidden" name="name" value="{{ next.name }}">
-                <button type="submit"{% if pending or credits_blocked or gm_busy %} disabled{% endif %}>Start {{ next.name }}'s turn</button>
+                <input type="hidden" name="name" value="{{ starter.name }}">
+                <button type="submit"{% if pending or credits_blocked or gm_busy %} disabled{% endif %}>Start {{ starter.name }}'s turn</button>
               </form>
             {% elif gm_busy %}
               <p class="muted">The GM is finishing the turn…</p>
             {% elif actor %}
-              <p class="muted">{{ actor.name }} is taking their turn.{% if actor.is_pc %} The player ends it when they are done.{% else %} The turn ends when the GM finishes it.{% endif %}</p>
+              <p class="muted">{{ actor.name }} is taking their turn.{% if actor.is_pc and not encounter.gm_played %} The player ends it when they are done.{% else %} The turn ends when the GM finishes it.{% endif %}</p>
             {% elif waiting_for %}
               <p class="muted">{{ waiting_for }}</p>
             {% endif %}
