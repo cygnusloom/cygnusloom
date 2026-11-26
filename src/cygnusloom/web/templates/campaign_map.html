@@ -1,4 +1,4 @@
-{% from "macros.html" import map_board, encounter_board, threat_watches, time_strip %}
+{% from "macros.html" import map_board, encounter_board, time_strip %}
 {#
   The map panel, kept apart from the page so the turn stream can refresh it while the GM is
   building an encounter. The player watches the board and the clock change as the GM works,
@@ -32,7 +32,6 @@
     {{ map_board(world_map, framed=true, prefix="tab") }}
   {% endif %}
   {{ time_strip(time) }}
-  {{ threat_watches(world_map) }}
 </section>
 {# The live map refresh also carries the map's caption and roster, which live in the Location tab. #}
 {% if map_fragment and (encounter or local_map) %}<div class="location-roster" data-map-roster>{% include "_map_details.html" %}</div>{% endif %}

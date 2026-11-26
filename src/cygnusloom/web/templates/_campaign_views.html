@@ -1,9 +1,8 @@
-{% from "macros.html" import character_actions, journal_text, map_board, map_places, threat_watches, time_strip %}
+{% from "macros.html" import character_actions, journal_text, map_board, map_places, time_strip %}
     <section class="view map-page" id="view-map" data-view="map" aria-labelledby="map-title" hidden>
       <h2 id="map-title">Map</h2>
       {{ map_board(world_map, framed=true, prefix="side") }}
       {{ time_strip(time) }}
-      {{ threat_watches(world_map) }}
       <h3>Places</h3>
       {{ map_places(world_map) }}
     </section>

@@ -18,12 +18,15 @@ from cygnusloom.auth.deps import current_user, get_csrf, is_admin_user
 from cygnusloom.auth.oidc import account_management_url
 from cygnusloom.services.accounts import decode_roles
 from cygnusloom.services.campaigns import last_activity_text
-from cygnusloom.web.icons import icon_path, item_icon_id, place_icon_path
+from cygnusloom.web.icons import icon_path, item_icon_id, place_icon_path, threat_icon_path
 
 TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
 templates.env.globals.update(
-    icon_path=icon_path, place_icon_path=place_icon_path, item_icon_id=item_icon_id
+    icon_path=icon_path,
+    place_icon_path=place_icon_path,
+    threat_icon_path=threat_icon_path,
+    item_icon_id=item_icon_id,
 )
 
 # Raw HTML in messages stays escaped; single newlines become line breaks for chat text, and a

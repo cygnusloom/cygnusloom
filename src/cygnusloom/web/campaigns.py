@@ -1218,6 +1218,7 @@ def map_fragment(request: Request, campaign_id: int) -> Response:
             rule_set.world_terrain if rule_set else None,
             pc=viewer_pc,
             roads=rule_set.roads if rule_set else None,
+            threats=rule_set.threats if rule_set else None,
         ),
         time=time_view(world.state, rule_set.clock if rule_set else None),
         encounter=encounter,
@@ -2356,6 +2357,7 @@ def _campaign_page(
         rule_set.world_terrain if rule_set else None,
         pc=viewer_pc,
         roads=rule_set.roads if rule_set else None,
+        threats=rule_set.threats if rule_set else None,
     )
     options_pending, character_pending = _creation_pending(world.state, rule_set, user.id)
     # The starting level follows the campaign owner's character while the campaign says so, and

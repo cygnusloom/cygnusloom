@@ -521,12 +521,18 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 }
 .time-strip svg { width: 1rem; height: 1rem; flex: none; color: var(--accent); }
 .time-strip.night svg { color: #b7c6e0; }
-/* A threat too big to be a single monster, such as a horde, kept under the map so the player
-   always knows where it is. */
-.threat-watch {
-  margin: 0.15rem 0 0; text-align: center; font-size: 0.85rem; line-height: 1.3;
+/* A threat big enough to be a scale of its own, such as a horde, stands on the map at the place
+   it holds. It is pushed off that place's token so both stay readable, and reads as a danger
+   rather than a place in either theme. */
+.map-marker.threat {
+  display: inline-flex; align-items: center; gap: 0.1rem;
+  color: #ffe3d8; border-color: #b3321f; background: #6c1f13;
+  box-shadow: 0 0 0 2px rgba(179, 50, 31, 0.35);
+  transform: translate(-50%, -50%) scale(calc(1 / var(--zoom, 1))) translate(76%, -72%);
 }
-.threat-watch strong { color: var(--accent); font-weight: 600; }
+.map-threat-magnitude {
+  font-size: 0.62rem; font-weight: 700; letter-spacing: 0.02em;
+}
 .encounter-board {
   display: grid; grid-template-columns: repeat(var(--columns), minmax(0, 1fr));
   grid-template-rows: repeat(var(--rows), minmax(0, 1fr));

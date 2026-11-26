@@ -12,6 +12,7 @@ __all__ = [
     "icon_path",
     "item_icon_id",
     "place_icon_path",
+    "threat_icon_path",
 ]
 
 ICON_URL_PREFIX = "/static/icons/"
@@ -38,6 +39,14 @@ WEAPON_ICON = "weapon"
 def place_icon_path(icon_id: str | None) -> str:
     """The icon for a map place, falling back to a settlement for places without one."""
     return icon_path(icon_id or PLACE_FALLBACK_ICON)
+
+
+THREAT_FALLBACK_ICON = "skull"
+
+
+def threat_icon_path(icon_id: str | None) -> str:
+    """The icon for a threat on the map, falling back to a skull for threats without one."""
+    return icon_path(icon_id or THREAT_FALLBACK_ICON)
 
 
 def item_icon_id(kind: str, damage: str, kind_icons: Mapping[str, str] | None = None) -> str | None:
