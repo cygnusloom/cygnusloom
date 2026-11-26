@@ -24,7 +24,8 @@ from cygnusloom.content.library import (
     effective_table_genres,
     effective_table_tones,
 )
-from cygnusloom.db.models import Campaign, Event, utcnow
+from cygnusloom.db.models import Campaign, CampaignDocument, Event, utcnow
+from cygnusloom.services import documents as documents_service
 from cygnusloom.services import level_up as level_up_service
 from cygnusloom.services.campaigns import (
     MAX_MODEL,
@@ -42,6 +43,7 @@ EXPORT_FORMAT = "cygnusloom.campaign"
 EXPORT_VERSION = 1
 MAX_IMPORT_BYTES = 256 * 1024 * 1024
 MAX_IMPORT_EVENTS = 500_000
+MAX_EXPORTED_DOCUMENTS = 8
 MAX_COLUMN = 64
 _SLUG = re.compile(r"[^a-z0-9]+")
 _CHANNELS = {channel.value for channel in Channel}
@@ -83,6 +85,13 @@ def export_campaign(engine: Engine, owner_id: int, campaign_id: int) -> tuple[st
                 select(Event).where(Event.campaign_id == campaign_id).order_by(Event.seq)
             ).scalars()
         )
+        document_rows = list(
+            db.execute(
+                select(CampaignDocument)
+                .where(CampaignDocument.campaign_id == campaign_id)
+                .order_by(CampaignDocument.id)
+            ).scalars()
+        )
     events: list[dict[str, Any]] = []
     for row in rows:
         try:
@@ -111,6 +120,17 @@ def export_campaign(engine: Engine, owner_id: int, campaign_id: int) -> tuple[st
         tones = []
     if not isinstance(tones, list):
         tones = []
+    source_documents = [
+        {
+            "name": row.name,
+            "kind": row.kind,
+            "characters": row.characters,
+            "sections": [section.as_dict() for section in documents_service.document_sections(row)],
+            "text": row.text,
+            "created_at": as_utc(row.created_at).isoformat(),
+        }
+        for row in document_rows
+    ]
     document = {
         "format": EXPORT_FORMAT,
         "version": EXPORT_VERSION,
@@ -137,6 +157,7 @@ def export_campaign(engine: Engine, owner_id: int, campaign_id: int) -> tuple[st
             "allow_respec": campaign.allow_respec,
             "created_at": as_utc(campaign.created_at).isoformat(),
         },
+        "documents": source_documents,
         "events": events,
     }
     payload = json.dumps(document, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
@@ -153,7 +174,7 @@ def import_campaign(
 ) -> ImportResult:
     """Rebuild a campaign from an exported file under `owner_id`."""
     document = _parse_document(data)
-    campaign_data, entries, major_version = _read_document(document)
+    campaign_data, entries, major_version, source_documents = _read_document(document)
     config = _read_campaign(campaign_data, library)
     allowed = set(allowed_models)
     model = config["model"]
@@ -260,6 +281,8 @@ def import_campaign(
                 row.payload = json.dumps(entry.payload, ensure_ascii=False, separators=(",", ":"))
                 db.add(row)
         db.flush()
+        for document_name, prepared in source_documents:
+            documents_service.store_document(db, campaign.id, prepared, document_name)
         state = None
         if not opaque:
             try:
@@ -319,7 +342,12 @@ def _parse_document(data: bytes) -> dict[str, Any]:
 
 def _read_document(
     document: dict[str, Any],
-) -> tuple[dict[str, Any], list[_Entry], int]:
+) -> tuple[
+    dict[str, Any],
+    list[_Entry],
+    int,
+    list[tuple[str, documents_service.DocumentText]],
+]:
     if document.get("format") != EXPORT_FORMAT:
         raise InvalidInput("that is not a Cygnus Loom campaign file")
     version = document.get("version")
@@ -331,6 +359,7 @@ def _read_document(
         raise InvalidInput("the file has no campaign details")
     if not isinstance(events_data, list):
         raise InvalidInput("the file has no event list")
+    source_documents = _read_exported_documents(document)
     major_version = campaign_data.get("major_version", 3)
     if type(major_version) is not int or major_version < 1:
         raise InvalidInput("the campaign's major_version must be a positive whole number")
@@ -345,7 +374,36 @@ def _read_document(
         last = entries[-1].source_id if entries else 0
         if declared_last is not None and declared_last != last:
             raise InvalidInput("the file's last event id does not match its event list")
-    return campaign_data, entries, major_version
+    return campaign_data, entries, major_version, source_documents
+
+
+def _read_exported_documents(
+    document: dict[str, Any],
+) -> list[tuple[str, documents_service.DocumentText]]:
+    """The source documents an export carries, such as the adventure the campaign was built
+    from. They are optional: an older export has none."""
+    raw = document.get("documents", [])
+    if raw is None:
+        return []
+    if not isinstance(raw, list):
+        raise InvalidInput("the campaign's source documents must be a list")
+    if len(raw) > MAX_EXPORTED_DOCUMENTS:
+        raise InvalidInput(f"the campaign has more than {MAX_EXPORTED_DOCUMENTS} source documents")
+    exported: list[tuple[str, documents_service.DocumentText]] = []
+    for entry in raw:
+        if not isinstance(entry, dict):
+            raise InvalidInput("a source document must be an object")
+        name = entry.get("name")
+        if not isinstance(name, str) or not name.strip():
+            raise InvalidInput("a source document has no name")
+        prepared = documents_service.restore(
+            entry.get("text"),
+            entry.get("kind", "text"),
+            entry.get("sections"),
+            entry.get("pages", 0),
+        )
+        exported.append((documents_service.document_name(name), prepared))
+    return exported
 
 
 def _read_entries(events_data: list[Any], *, opaque: bool = False) -> list[_Entry]:

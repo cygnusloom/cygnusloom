@@ -4,7 +4,7 @@
 {% block content %}
   <section class="card narrow">
     <h1>New campaign</h1>
-    <form method="post" action="/campaigns/new">
+    <form method="post" action="/campaigns/new" enctype="multipart/form-data">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <div class="campaign-picker">
         {% call pick_control("rule_set", "Rule set", "Choose the game system this campaign plays with.", "required", empty="Choose a rule set", roll=false, clear=false) %}
@@ -44,6 +44,16 @@
         Label
         <input type="text" name="label" value="{{ campaign_label }}" maxlength="120">
       </label>
+      <label>
+        Adventure source (optional)
+        <input type="file" name="file" accept=".pdf,.md,.markdown,.txt,text/plain,text/markdown,application/pdf">
+      </label>
+      <p class="muted">
+        Upload a published adventure to play it: a PDF, Markdown, or plain-text file. Cygnus reads
+        it as this campaign's source and follows its places, people, and events.{% if not single_player %}
+        Adding one costs 1 credit per 100,000 characters of extracted text, at least 1 credit,
+        and is free for credit-exempt accounts.{% endif %}
+      </p>
       {# The model is optional, so it stays folded away until someone wants it. #}
       {% if models %}
       <details class="advanced-options"{% if selected_model %} open{% endif %}>

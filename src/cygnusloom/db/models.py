@@ -220,6 +220,26 @@ class Campaign(SQLModel, table=True):
     created_at: datetime = Field(default_factory=utcnow)
 
 
+class CampaignDocument(SQLModel, table=True):
+    """A source document the owner uploaded when the campaign was created, such as a published
+    adventure. It holds the extracted text, never the original file, so the GM reads it as plain
+    text with the document tools. `sections` is a JSON list of `{title, offset, page}` entries
+    that indexes the text. `credits` is what the upload cost; it is 0 for an exempt account or a
+    free model."""
+
+    __tablename__ = "campaign_document"
+
+    id: int | None = Field(default=None, primary_key=True)
+    campaign_id: int = Field(foreign_key="campaign.id", index=True)
+    name: str = Field(max_length=200)
+    kind: str = Field(default="text", max_length=16)
+    characters: int = Field(default=0)
+    credits: int = Field(default=0)
+    text: str = Field(default="", sa_column=Column(Text, nullable=False))
+    sections: str = Field(default="[]", sa_column=Column(Text, nullable=False))
+    created_at: datetime = Field(default_factory=utcnow)
+
+
 class CampaignMember(SQLModel, table=True):
     """A player an owner shared a campaign with. The owner is implicit and never needs a row.
     A membership gives the account access to play; it is configuration, not part of the log, so

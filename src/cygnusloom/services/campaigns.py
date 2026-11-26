@@ -34,7 +34,14 @@ from cygnusloom.content.library import (
     read_table_genres,
     read_table_tones,
 )
-from cygnusloom.db.models import Campaign, CampaignInvite, CampaignMember, Event, User
+from cygnusloom.db.models import (
+    Campaign,
+    CampaignDocument,
+    CampaignInvite,
+    CampaignMember,
+    Event,
+    User,
+)
 from cygnusloom.llm.base import (
     LLMError,
     Provider,
@@ -1192,6 +1199,9 @@ def delete_campaign(engine: Engine, owner_id: int, campaign_id: int) -> None:
         db.execute(
             CampaignInvite.__table__.delete().where(CampaignInvite.campaign_id == campaign_id)
         )
+        db.execute(
+            CampaignDocument.__table__.delete().where(CampaignDocument.campaign_id == campaign_id)
+        )
         db.delete(campaign)
         db.commit()
 
@@ -1693,6 +1703,8 @@ def context_usage(
     world: WorldTemplate | None = None,
     tool_schema_mode: str = "brief",
     rule_info_mode: str = "brief",
+    documents_text: str = "",
+    has_source: bool = False,
 ) -> ContextUsage:
     unsummarized = [m for m in history if m.id > state.through]
     all_rules = {
@@ -1739,8 +1751,12 @@ def context_usage(
         checklist=checklist,
     )
     system_tokens = sum(part.tokens for part in system)
+    if documents_text:
+        system_tokens += estimate_tokens(documents_text)
     instruction_tokens = (
-        estimate_tokens(state_instruction(rule_set, world)) if rule_set is not None else 0
+        estimate_tokens(state_instruction(rule_set, world, has_source))
+        if rule_set is not None
+        else 0
     )
     groups = state_tool_groups(state, "") if rule_set is not None else set()
     checklist_labels = (

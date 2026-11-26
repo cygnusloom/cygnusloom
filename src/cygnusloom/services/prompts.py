@@ -545,41 +545,51 @@ def opening_prompt(template: WorldTemplate | None) -> str:
     return text
 
 
-def _prompt_fragments(rule_set: RuleSet, world: WorldTemplate | None) -> list[PromptFragment]:
+def _prompt_fragments(
+    rule_set: RuleSet, world: WorldTemplate | None, has_source: bool = False
+) -> list[PromptFragment]:
     """The ruleset's prompt fragments for this campaign, in order. A world with a setting (or an
-    unknown world) never gets the setting-forge instructions."""
+    unknown world) never gets the setting-forge instructions. A campaign created from an uploaded
+    source document counts as having a setting, because the source settles the world."""
     has_setting = world is None or world.has_setting
     return [
         fragment
         for fragment in rule_set.prompt_fragments
-        if not (fragment.unwritten_only and has_setting)
+        if not (fragment.unwritten_only and (has_setting or has_source))
     ]
 
 
-def narrate_instruction(rule_set: RuleSet, world: WorldTemplate | None = None) -> str:
+def narrate_instruction(
+    rule_set: RuleSet, world: WorldTemplate | None = None, has_source: bool = False
+) -> str:
     """The narration step's prompt, naming the ruleset's penalty item among what to narrate and
-    adding the fragments meant for narration."""
+    adding the fragments meant for narration. `has_source` leaves out the instructions for a
+    world the GM would otherwise invent, since an uploaded source supplies the setting."""
     penalty = f"{rule_set.inventory.penalty_name}, " if rule_set.inventory else ""
     return " ".join(
         [
             NARRATE_INSTRUCTION.format(penalty_clause=penalty),
             *(
                 fragment.text
-                for fragment in _prompt_fragments(rule_set, world)
+                for fragment in _prompt_fragments(rule_set, world, has_source)
                 if fragment.step in ("narration", "all")
             ),
         ]
     )
 
 
-def state_instruction(rule_set: RuleSet, world: WorldTemplate | None = None) -> str:
+def state_instruction(
+    rule_set: RuleSet, world: WorldTemplate | None = None, has_source: bool = False
+) -> str:
     """The state step's prompt: the generic loop text, then the ruleset's state prompt fragments
-    in order. The closing line is left out when the rule set has no turn checklist."""
+    in order. The closing line is left out when the rule set has no turn checklist. `has_source`
+    leaves out the instructions for a world the GM would otherwise invent, since an uploaded
+    source supplies the setting."""
     parts = [
         STATE_INSTRUCTION,
         *(
             fragment.text
-            for fragment in _prompt_fragments(rule_set, world)
+            for fragment in _prompt_fragments(rule_set, world, has_source)
             if fragment.step in ("state", "all")
         ),
     ]

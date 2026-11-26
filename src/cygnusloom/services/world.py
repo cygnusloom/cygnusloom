@@ -101,6 +101,7 @@ from cygnusloom.services.common import (
 from cygnusloom.services.conditions import add_condition, end_condition
 from cygnusloom.services.dice_tables import roll_creative as roll_creative_tables
 from cygnusloom.services.dice_tables import roll_tables as roll_dice_tables
+from cygnusloom.services.documents import DocumentToolsMixin
 from cygnusloom.services.dungeon import dungeon_cycle as dungeon_cycle_service
 from cygnusloom.services.dungeon import dungeon_rules
 from cygnusloom.services.dungeon import roll_reaction as roll_reaction_service
@@ -272,7 +273,7 @@ def _finish_reaction_save(pending: Mapping[str, Any], total: int) -> dict[str, A
 
 
 @dataclass(frozen=True)
-class WorldTools(PlacesMixin, PeopleMixin, TravelMixin):
+class WorldTools(PlacesMixin, PeopleMixin, TravelMixin, DocumentToolsMixin):
     """The world as the rule set's tools use it. Each call runs in its own session and commits."""
 
     engine: Engine

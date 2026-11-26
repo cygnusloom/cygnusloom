@@ -39,6 +39,8 @@ for distribution in ("PySide6", "PySide6-Essentials", "PySide6-Addons", "PySide6
 
 hiddenimports = collect_submodules("cygnusloom")
 hiddenimports += collect_submodules("uvicorn")
+# Uploaded PDFs are read with pypdf, which the upload path imports inside a function.
+hiddenimports += collect_submodules("pypdf")
 hiddenimports += [
     "PySide6.QtNetwork",
     "PySide6.QtWebEngineCore",

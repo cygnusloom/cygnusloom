@@ -35,6 +35,7 @@ TURN_REASON = "turn"
 REFUND_REASON = "refund"
 ADMIN_REASON = "admin"
 DEBUG_REASON = "debug"
+DOCUMENT_REASON = "document"
 MAX_BALANCE = 1_000_000_000
 MAX_TURN_PRICE = 1_000_000
 # Fixed by the bundled Authentik blueprint, unlike the configurable administrator roles.
@@ -206,6 +207,45 @@ def charge_reply(
                 balance_after=after,
                 reason=TURN_REASON,
                 note="AI GM reply",
+            )
+        )
+        db.commit()
+    return price
+
+
+def charge_document(
+    engine: Engine,
+    user_id: int,
+    price: int,
+    *,
+    campaign_id: int,
+    note: str,
+) -> int:
+    """Deduct the one-time price of an uploaded source document. The document is campaign
+    configuration, not a reply, so the ledger entry links to no event. Like a reply, the charge
+    is made even if the balance goes negative after the price was checked."""
+    if price <= 0:
+        return 0
+    with session_scope(engine) as db:
+        exists = db.execute(select(User.id).where(User.id == user_id)).scalar_one_or_none()
+        if exists is None:
+            raise NotFound("account not found")
+        db.execute(
+            update(User)
+            .where(User.id == user_id)
+            .values(credit_balance=User.credit_balance - price)
+        )
+        after = int(db.execute(select(User.credit_balance).where(User.id == user_id)).scalar_one())
+        db.add(
+            CreditEntry(
+                user_id=user_id,
+                campaign_id=campaign_id,
+                event_id=None,
+                model="",
+                delta=-price,
+                balance_after=after,
+                reason=DOCUMENT_REASON,
+                note=note,
             )
         )
         db.commit()
