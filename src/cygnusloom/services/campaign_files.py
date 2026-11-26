@@ -12,7 +12,6 @@ fifty times. Imports also accept the plain `*.json` files older versions wrote.
 
 from __future__ import annotations
 
-import io
 import json
 import re
 from collections.abc import Iterable
@@ -358,10 +357,15 @@ def _uncompress(data: bytes) -> bytes:
     if data[:4] != _ZSTD_MAGIC:
         return data
     try:
-        with zstandard.ZstdDecompressor().stream_reader(io.BytesIO(data)) as reader:
-            return reader.read()
+        decompressor = zstandard.ZstdDecompressor().decompressobj()
+        payload = decompressor.decompress(data)
     except zstandard.ZstdError as exc:
         raise InvalidInput(f"the campaign file is not valid zstandard data: {exc}") from exc
+    if not decompressor.eof:
+        raise InvalidInput("the campaign file is a truncated zstandard file")
+    if decompressor.unused_data:
+        raise InvalidInput("the campaign file has data after its zstandard frame")
+    return payload
 
 
 def _read_document(
