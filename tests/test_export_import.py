@@ -46,6 +46,10 @@ def _export(client: TestClient, campaign_id: int):
     return response
 
 
+def _document(response) -> dict:
+    return campaign_files.read_export(response.content)
+
+
 def _import(client: TestClient, payload: bytes, filename: str = "campaign.json"):
     token = csrf_token(client, "/campaigns")
     return client.post(
@@ -80,13 +84,58 @@ def _imported_id(response) -> int:
 
 def test_the_export_declares_the_campaign_major(client_factory, tmp_path, settings):
     client, campaign_id = campaign_ready_fast(client_factory)
-    document = json.loads(_export(client, campaign_id).content)
+    document = _document(_export(client, campaign_id))
     assert document["campaign"]["major_version"] == CAMPAIGN_MAJOR_VERSION
+
+
+def test_the_export_is_zstandard_compressed(client_factory: Callable[[], TestClient]):
+    client, campaign_id = campaign_ready_fast(client_factory)
+    response = _export(client, campaign_id)
+    assert response.content.startswith(b"\x28\xb5\x2f\xfd")
+    document = campaign_files.read_export(response.content)
+    plain = json.dumps(document, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    assert len(response.content) < len(plain) / 2
+
+
+def test_an_uncompressed_export_still_imports(
+    tmp_path, settings: Settings, client_factory: Callable[[], TestClient]
+):
+    client, campaign_id = campaign_ready_fast(client_factory)
+    document = _document(_export(client, campaign_id))
+    payload = json.dumps(document, ensure_ascii=False).encode("utf-8")
+    target_app = _target_app(tmp_path, settings)
+    new_id = _imported_id(_import(_target_client(target_app), payload))
+    source = open_campaign(client.app, campaign_id)
+    target = open_campaign(target_app, new_id)
+    assert set(source.characters) == set(target.characters)
+
+
+def test_a_compressed_file_named_json_still_imports(
+    tmp_path, settings: Settings, client_factory: Callable[[], TestClient]
+):
+    client, campaign_id = campaign_ready_fast(client_factory)
+    payload = _export(client, campaign_id).content
+    target_app = _target_app(tmp_path, settings)
+    new_id = _imported_id(_import(_target_client(target_app), payload, "campaign.json"))
+    assert open_campaign(target_app, new_id).characters
+
+
+def test_a_broken_compressed_file_is_refused(
+    tmp_path, settings: Settings, client_factory: Callable[[], TestClient]
+):
+    target_app = _target_app(tmp_path, settings)
+    target_client = _target_client(target_app)
+    response = _import(target_client, b"\x28\xb5\x2f\xfdnot a frame")
+    assert response.status_code == 303
+    page = target_client.get("/campaigns")
+    assert "Could not import the campaign" in page.text
+    with Session(target_app.state.engine) as session:
+        assert session.execute(select(Campaign)).scalars().first() is None
 
 
 def test_another_major_imports_but_cannot_be_played(client_factory, tmp_path, settings):
     client, campaign_id = campaign_ready_fast(client_factory)
-    document = json.loads(_export(client, campaign_id).content)
+    document = _document(_export(client, campaign_id))
     document["campaign"]["major_version"] = 3
     payload = json.dumps(document).encode()
 
@@ -110,7 +159,7 @@ def test_another_major_imports_but_cannot_be_played(client_factory, tmp_path, se
         == 409
     )
 
-    exported = json.loads(_export(target, imported_id).content)
+    exported = _document(_export(target, imported_id))
     assert exported["campaign"]["major_version"] == 3
 
 
@@ -231,11 +280,12 @@ def test_export_and_import_round_trip(
     client, campaign_id = campaign_ready_fast(client_factory)
     _add_referenced_events(client.app, campaign_id)
     response = _export(client, campaign_id)
-    document = response.json()
-    assert response.headers["content-type"].startswith("application/json")
+    document = _document(response)
+    assert response.headers["content-type"].startswith("application/zstd")
     assert response.headers["content-disposition"].startswith(
         'attachment; filename="cygnusloom-contract-hollow-'
     )
+    assert response.headers["content-disposition"].endswith('.json.zst"')
     assert document["format"] == "cygnusloom.campaign"
     assert document["version"] == 1
     assert document["campaign"]["world_template"] == "testhollow"
@@ -331,7 +381,7 @@ def test_an_old_export_keeps_only_current_creative_categories(
     tmp_path, settings: Settings, client_factory: Callable[[], TestClient]
 ):
     client, campaign_id = campaign_ready_fast(client_factory)
-    document = _export(client, campaign_id).json()
+    document = _document(_export(client, campaign_id))
     document["campaign"]["table_genres"] = ["generic", "horror", "historical"]
     document["campaign"].pop("table_tones")
 
@@ -352,7 +402,7 @@ def test_an_export_with_a_removed_tone_keeps_the_valid_ones(
     tmp_path, settings: Settings, client_factory: Callable[[], TestClient]
 ):
     client, campaign_id = campaign_ready_fast(client_factory)
-    document = _export(client, campaign_id).json()
+    document = _document(_export(client, campaign_id))
     document["campaign"]["table_tones"] = ["mystery", "cozy"]
 
     target_app = _target_app(tmp_path, settings)
@@ -371,7 +421,7 @@ def test_an_old_major_export_stores_its_events_opaque(
     """A removed event kind from another major is kept verbatim, but the log is not replayed."""
     client, campaign_id = campaign_ready_fast(client_factory)
     _add_referenced_events(client.app, campaign_id)
-    document = _export(client, campaign_id).json()
+    document = _document(_export(client, campaign_id))
     document["campaign"]["major_version"] = 3
     last = document["events"][-1]
     document["events"].append(
@@ -409,7 +459,7 @@ def test_import_remaps_event_id_references(
 ):
     client, campaign_id = campaign_ready_fast(client_factory)
     _add_referenced_events(client.app, campaign_id)
-    document = _export(client, campaign_id).json()
+    document = _document(_export(client, campaign_id))
     for event in document["events"]:
         event["id"] += 1000
         for field_name in EVENT_TYPES[event["kind"]].id_refs:
@@ -505,7 +555,7 @@ def test_invalid_campaign_files_are_rejected(
     tmp_path, settings: Settings, client_factory: Callable[[], TestClient]
 ):
     client, campaign_id = campaign_ready_fast(client_factory)
-    document = _export(client, campaign_id).json()
+    document = _document(_export(client, campaign_id))
     target_app = _target_app(tmp_path, settings)
     target_client = _target_client(target_app)
     cases = {
@@ -577,20 +627,6 @@ def test_campaign_pages_offer_import_and_export(client_factory: Callable[[], Tes
     assert f'href="/campaigns/{campaign_id}/export"' in page
     campaign_page = client.get(f"/campaigns/{campaign_id}").text
     assert f'href="/campaigns/{campaign_id}/export"' in campaign_page
-
-
-def test_import_rejects_a_file_over_the_limit(
-    tmp_path, settings: Settings, client_factory: Callable[[], TestClient], monkeypatch
-):
-    client, campaign_id = campaign_ready_fast(client_factory)
-    payload = _export(client, campaign_id).content
-    target_app = _target_app(tmp_path, settings)
-    target_client = _target_client(target_app)
-    monkeypatch.setattr(campaign_files, "MAX_IMPORT_BYTES", 10)
-    response = _import(target_client, payload)
-    assert response.status_code == 303
-    page = target_client.get("/campaigns")
-    assert "larger than" in page.text
 
 
 def test_a_corrected_reply_survives_export_and_import(

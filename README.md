@@ -37,10 +37,12 @@ plain HTTP is accepted only for this machine.
 - The Linux binary needs glibc 2.35 or newer (Ubuntu 22.04 and later). QtWebEngine is bundled,
   so no system webview or browser is required.
 
-Campaigns can be exported to a single `.json` file from the campaign list or the campaign's
-settings dialog, and imported on another machine or server. The file contains the campaign
+Campaigns can be exported to a single `.json.zst` file from the campaign list or the campaign's
+settings dialog, and imported on another machine or server. The file is zstandard-compressed
+JSON, so a long campaign's log stays small. The file contains the campaign
 configuration and its complete event log, including characters, maps, notes, objects, the
-journal, and any pending turn. Import creates a new campaign for the signed-in account; if the
+journal, and any pending turn. Imports also read the uncompressed `.json` files older versions
+exported. Import creates a new campaign for the signed-in account; if the
 exported model is not configured on the target server, the default model is used instead.
 
 ## Play with other people

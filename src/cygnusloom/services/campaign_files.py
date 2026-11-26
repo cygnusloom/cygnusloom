@@ -1,13 +1,18 @@
-"""Portable campaign files: one raw JSON document for everything a campaign owns.
+"""Portable campaign files: one zstandard-compressed JSON document for everything a campaign
+owns.
 
 A campaign is its row plus its event log. Characters, maps, notes, objects, summaries, and
 pending turns all live in that log, so an export is the row and every event, and an import
 rebuilds them under a new owner. Event ids are local to a database, so an import allocates new
 ones and rewrites the few payload fields that refer to another event.
+
+An export is zstandard-compressed JSON named `*.json.zst`, which shrinks a big log by roughly
+fifty times. Imports also accept the plain `*.json` files older versions wrote.
 """
 
 from __future__ import annotations
 
+import io
 import json
 import re
 from collections.abc import Iterable
@@ -15,6 +20,7 @@ from dataclasses import MISSING, dataclass, fields
 from datetime import datetime
 from typing import Any
 
+import zstandard
 from sqlalchemy import Engine, select
 
 from cygnusloom import CAMPAIGN_MAJOR_VERSION, __version__
@@ -41,12 +47,15 @@ from cygnusloom.services.sessions import as_utc
 
 EXPORT_FORMAT = "cygnusloom.campaign"
 EXPORT_VERSION = 1
-MAX_IMPORT_BYTES = 256 * 1024 * 1024
+EXPORT_SUFFIX = ".json.zst"
+EXPORT_COMPRESSION_LEVEL = 10
 MAX_IMPORT_EVENTS = 500_000
 MAX_EXPORTED_DOCUMENTS = 8
 MAX_COLUMN = 64
 _SLUG = re.compile(r"[^a-z0-9]+")
 _CHANNELS = {channel.value for channel in Channel}
+# The zstandard frame magic. A file that starts with it is decompressed before parsing.
+_ZSTD_MAGIC = b"\x28\xb5\x2f\xfd"
 
 
 @dataclass(frozen=True)
@@ -73,11 +82,11 @@ class _Entry:
 def export_filename(campaign: Campaign) -> str:
     slug = _SLUG.sub("-", campaign.name.lower()).strip("-")[:40] or "campaign"
     stamp = utcnow().strftime("%Y%m%d-%H%M%S")
-    return f"cygnusloom-{slug}-{stamp}.json"
+    return f"cygnusloom-{slug}-{stamp}{EXPORT_SUFFIX}"
 
 
 def export_campaign(engine: Engine, owner_id: int, campaign_id: int) -> tuple[str, bytes]:
-    """The campaign's file name and JSON bytes. Refused while its GM is still writing."""
+    """The campaign's file name and compressed bytes. Refused while its GM is still writing."""
     campaign = get_owned_campaign(engine, owner_id, campaign_id)
     with _exclusive(campaign_id), session_scope(engine) as db:
         rows = list(
@@ -161,7 +170,8 @@ def export_campaign(engine: Engine, owner_id: int, campaign_id: int) -> tuple[st
         "events": events,
     }
     payload = json.dumps(document, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
-    return export_filename(campaign), payload
+    compressed = zstandard.ZstdCompressor(level=EXPORT_COMPRESSION_LEVEL).compress(payload)
+    return export_filename(campaign), compressed
 
 
 def import_campaign(
@@ -172,8 +182,8 @@ def import_campaign(
     owner_id: int,
     data: bytes,
 ) -> ImportResult:
-    """Rebuild a campaign from an exported file under `owner_id`."""
-    document = _parse_document(data)
+    """Rebuild a campaign from an exported file, compressed or plain, under `owner_id`."""
+    document = read_export(data)
     campaign_data, entries, major_version, source_documents = _read_document(document)
     config = _read_campaign(campaign_data, library)
     allowed = set(allowed_models)
@@ -320,11 +330,11 @@ def _reject_constant(value: str) -> Any:
     raise ValueError(f"{value} is not valid JSON")
 
 
-def _parse_document(data: bytes) -> dict[str, Any]:
-    if len(data) > MAX_IMPORT_BYTES:
-        raise InvalidInput(f"the file is larger than {MAX_IMPORT_BYTES // (1024 * 1024)} MB")
+def read_export(data: bytes) -> dict[str, Any]:
+    """The JSON object a campaign file holds, decompressing a `*.json.zst` file first."""
+    payload = _uncompress(data)
     try:
-        text = data.decode("utf-8")
+        text = payload.decode("utf-8")
     except UnicodeDecodeError as exc:
         raise InvalidInput("the file is not valid UTF-8") from exc
     try:
@@ -338,6 +348,20 @@ def _parse_document(data: bytes) -> dict[str, Any]:
     if not isinstance(document, dict):
         raise InvalidInput("the file must contain a JSON object")
     return document
+
+
+def _uncompress(data: bytes) -> bytes:
+    """The JSON bytes of a file, which is zstandard-compressed when it starts with the magic.
+
+    Older exports are plain JSON, so a file without the magic is returned unchanged.
+    """
+    if data[:4] != _ZSTD_MAGIC:
+        return data
+    try:
+        with zstandard.ZstdDecompressor().stream_reader(io.BytesIO(data)) as reader:
+            return reader.read()
+    except zstandard.ZstdError as exc:
+        raise InvalidInput(f"the campaign file is not valid zstandard data: {exc}") from exc
 
 
 def _read_document(

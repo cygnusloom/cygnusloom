@@ -15,7 +15,7 @@
       </p>
       {% if is_owner %}
       <p>
-        <a class="button secondary" href="/campaigns/{{ campaign.id }}/export">Export this campaign as JSON</a>
+        <a class="button secondary" href="/campaigns/{{ campaign.id }}/export">Export this campaign</a>
       </p>
       {% if can_upgrade %}
       <form method="post" action="/campaigns/{{ campaign.id }}/convert" class="inline" data-confirm="Upgrade this campaign to Cygnus Loom {{ current_major }}? Upgrading is routine and keeps the campaign, its players, and its history. The event log is rewritten in place, so export a copy first if you want to keep the original Cygnus Loom {{ campaign.major_version }} log.">

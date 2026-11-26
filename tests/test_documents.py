@@ -474,10 +474,10 @@ def test_an_export_carries_the_source_and_an_import_restores_it(
     campaign_id = _campaign_id(_new_campaign(client, text=text, label="Carried source"))
     user = _account(app)
     filename, payload = campaign_files.export_campaign(app.state.engine, user.id, campaign_id)
-    exported = json.loads(payload)
+    exported = campaign_files.read_export(payload)
     assert exported["documents"][0]["name"] == "adventure.md"
     assert exported["documents"][0]["text"] == text.strip()
-    assert filename.endswith(".json")
+    assert filename.endswith(".json.zst")
     result = campaign_files.import_campaign(
         app.state.engine,
         app.state.content,

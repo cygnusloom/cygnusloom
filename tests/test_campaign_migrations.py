@@ -13,6 +13,7 @@ from cygnusloom import CAMPAIGN_MAJOR_VERSION, campaign_migrations
 from cygnusloom.config import Settings
 from cygnusloom.db.models import Campaign, Event
 from cygnusloom.llm.fake import FakeProvider
+from cygnusloom.services import campaign_files
 from cygnusloom.services.events import NoteAdded, NoteUpdated, is_hidden, record
 from tests.conftest import csrf_token, make_app
 from tests.factories import (
@@ -68,7 +69,7 @@ def _old_document(
     extra: Iterable[dict[str, Any]] = (),
 ) -> dict[str, Any]:
     """A current export relabelled as a 3.x file, with the upgrade turn a 3.x log records."""
-    document = json.loads(_export(client, campaign_id).content)
+    document = campaign_files.read_export(_export(client, campaign_id).content)
     document["campaign"]["major_version"] = 3
     last = document["events"][-1]
     created_at = last["created_at"]
@@ -413,7 +414,7 @@ def test_the_blocked_page_hides_the_upgrade_when_no_migration_chain_exists(
 
 def _v4_document(client: TestClient, campaign_id: int) -> dict[str, Any]:
     """A current export relabelled as a 4.x file."""
-    document = json.loads(_export(client, campaign_id).content)
+    document = campaign_files.read_export(_export(client, campaign_id).content)
     document["campaign"]["major_version"] = 4
     return document
 
