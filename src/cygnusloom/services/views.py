@@ -985,8 +985,10 @@ def _map_road(
     label_left = round(50 + (middle[0] - cx) / radius * 50, 2)
     label_top = round(50 - (middle[1] - cy) / radius * 50, 2)
     name = kind.name if kind is not None else road.kind
-    text = f"{road.name} ({name})." if kind is None or not kind.rule else (
-        f"{road.name} ({kind.name}). {kind.rule}"
+    text = (
+        f"{road.name} ({name})."
+        if kind is None or not kind.rule
+        else (f"{road.name} ({kind.name}). {kind.rule}")
     )
     on_board = 0 <= label_left <= 100 and 0 <= label_top <= 100
     return MapRoad(

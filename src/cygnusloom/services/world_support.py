@@ -1210,9 +1210,7 @@ def create_road(
         )
     if road_kind not in kinds:
         choices = ", ".join(sorted(kinds)) or "none"
-        raise InvalidInput(
-            f"{road_kind!r} is not a road kind. The road kinds are: {choices}."
-        )
+        raise InvalidInput(f"{road_kind!r} is not a road kind. The road kinds are: {choices}.")
     if not isinstance(discovered, bool):
         raise InvalidInput("discovered must be true or false")
     corners = _road_points(points)
@@ -1252,12 +1250,8 @@ def update_road(
     chosen_kind = where.kind if road_kind is None else road_kind
     if chosen_kind not in kinds:
         choices = ", ".join(sorted(kinds)) or "none"
-        raise InvalidInput(
-            f"{chosen_kind!r} is not a road kind. The road kinds are: {choices}."
-        )
-    corners = (
-        [tuple(point) for point in where.points] if points is None else _road_points(points)
-    )
+        raise InvalidInput(f"{chosen_kind!r} is not a road kind. The road kinds are: {choices}.")
+    corners = [tuple(point) for point in where.points] if points is None else _road_points(points)
     if discovered is not None and not isinstance(discovered, bool):
         raise InvalidInput("discovered must be true or false")
     chosen_discovered = where.discovered if discovered is None else discovered
@@ -2697,9 +2691,13 @@ def update_storyline(
     list clears it. Reactivating a storyline counts it against the three-active limit."""
     state = load_state(db, campaign_id)
     old = _storyline_named(state, storyline)
-    if old.question == "" and question is None and any(
-        value is not None
-        for value in (summary, plot, characters, locations, objects, notes, forces, pressure)
+    if (
+        old.question == ""
+        and question is None
+        and any(
+            value is not None
+            for value in (summary, plot, characters, locations, objects, notes, forces, pressure)
+        )
     ):
         raise InvalidInput(
             f"{old.name!r} has no dramatic question yet; give it one with the question argument "
