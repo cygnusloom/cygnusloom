@@ -262,6 +262,9 @@ class CoreWorld(Protocol):
         objects: Sequence[str] | None = None,
         notes: str | None = None,
         focus: bool = False,
+        question: str | None = None,
+        forces: Sequence[str] | None = None,
+        pressure: str | None = None,
     ) -> dict[str, Any]: ...
 
     def update_storyline(
@@ -275,6 +278,9 @@ class CoreWorld(Protocol):
         objects: Sequence[str] | None = None,
         notes: str | None = None,
         active: bool | None = None,
+        question: str | None = None,
+        forces: Sequence[str] | None = None,
+        pressure: str | None = None,
     ) -> dict[str, Any]: ...
 
     def focus_storyline(self, storyline: str) -> dict[str, Any]: ...

@@ -65,7 +65,13 @@ def _tool(app: FastAPI, campaign_id: int, name: str, arguments: dict[str, Any]) 
 
 
 def _create(app: FastAPI, campaign_id: int, **fields: Any) -> dict[str, Any]:
-    payload = {"name": "The Missing Heir", "summary": "A miller's son has vanished."}
+    payload = {
+        "name": "The Missing Heir",
+        "summary": "A miller's son has vanished.",
+        "question": "Who took the miller's son?",
+        "forces": ["The bog witch — wants the old bargain kept — sends bogles if the cellar opens"],
+        "pressure": "In three days the mill is seized; first the reeve's clerk asks after the tithe.",
+    }
     payload.update(fields)
     return _tool(app, campaign_id, "create_storyline", payload)
 
@@ -79,6 +85,9 @@ def test_creating_a_storyline_records_it_focuses_it_and_shows_it_to_the_player(
         app,
         campaign_id,
         summary="The miller's son is missing, and the village blames the fog.",
+        question="Who took the miller's son, and why does the village hide it?",
+        forces=["The bog witch wants the bargain kept", "The reeve wants the mill"],
+        pressure="At the next full moon the witch takes another child.",
         plot="The bog witch took the heir; the village hid the bargain.",
         characters=["Mara Thistledown", "Brin Gallowcap"],
         locations=["Mossbell Hollow"],
@@ -91,6 +100,9 @@ def test_creating_a_storyline_records_it_focuses_it_and_shows_it_to_the_player(
     storyline = state.storylines[result["id"]]
     assert storyline.name == "The Missing Heir"
     assert storyline.summary == "The miller's son is missing, and the village blames the fog."
+    assert storyline.question == "Who took the miller's son, and why does the village hide it?"
+    assert storyline.forces == ("The bog witch wants the bargain kept", "The reeve wants the mill")
+    assert storyline.pressure == "At the next full moon the witch takes another child."
     assert storyline.plot == "The bog witch took the heir; the village hid the bargain."
     assert storyline.characters == ("Mara Thistledown", "Brin Gallowcap")
     assert storyline.locations == ("Mossbell Hollow",)
@@ -100,10 +112,13 @@ def test_creating_a_storyline_records_it_focuses_it_and_shows_it_to_the_player(
     assert state.focused_storyline() is storyline
 
     context = world_state_text(state, NO_CAMPAIGN)
-    assert "Storylines (the focused one is the main plot; the others are secondary):" in context
+    assert "Situations (storylines; the focused one is what the player is engaging now" in context
     assert "- [" in context
     assert "The Missing Heir (focused): " in context
-    assert "Plot: The bog witch took the heir; the village hid the bargain." in context
+    assert "Question: Who took the miller's son, and why does the village hide it?" in context
+    assert "Situation: The bog witch took the heir; the village hid the bargain." in context
+    assert "Forces: The bog witch wants the bargain kept; The reeve wants the mill" in context
+    assert "Pressure: At the next full moon the witch takes another child." in context
     assert "Characters: Mara Thistledown, Brin Gallowcap" in context
     assert "Locations: Mossbell Hollow" in context
     assert "Objects: A brass key" in context
@@ -287,6 +302,9 @@ def test_updating_a_storyline_keeps_fields_left_out_and_can_clear_them(
         {
             "storyline": "The Missing Heir",
             "summary": "The heir is held in the bog.",
+            "question": "Can the heir be brought home before the moon?",
+            "forces": ["The village wants the bargain kept"],
+            "pressure": "The moon rises in two days.",
             "characters": ["Mara", "Brin"],
             "notes": "",
         },
@@ -296,10 +314,23 @@ def test_updating_a_storyline_keeps_fields_left_out_and_can_clear_them(
     state = _state(app, campaign_id)
     storyline = state.storylines[created["id"]]
     assert storyline.name == "The Missing Heir"
+    assert storyline.question == "Can the heir be brought home before the moon?"
+    assert storyline.forces == ("The village wants the bargain kept",)
+    assert storyline.pressure == "The moon rises in two days."
     assert storyline.plot == "The witch holds the heir."
     assert storyline.characters == ("Mara", "Brin")
     assert storyline.objects == ("A brass key",)
     assert storyline.notes == ""
+
+    cleared = _tool(
+        app,
+        campaign_id,
+        "update_storyline",
+        {"storyline": "The Missing Heir", "forces": [], "pressure": ""},
+    )
+    assert cleared["forces"] == []
+    assert cleared["pressure"] == ""
+    assert cleared["question"] == "Can the heir be brought home before the moon?"
 
     # A name shared with another storyline is refused rather than making references ambiguous.
     other = _create(app, campaign_id, name="The Salt Road", summary="The road is closed.")
@@ -328,7 +359,16 @@ def test_searching_storylines_finds_deactivated_threads_by_any_field(
     )
     _tool(app, campaign_id, "deactivate_storyline", {"storyline": "The Missing Heir"})
 
-    for query in ("missing heir", "Mara", "Old Mill", "brass key", "third stone"):
+    for query in (
+        "missing heir",
+        "bog witch",
+        "old bargain",
+        "three days",
+        "Mara",
+        "Old Mill",
+        "brass key",
+        "third stone",
+    ):
         found = _tool(app, campaign_id, "search_storylines", {"query": query})
         assert found["storylines"][0]["id"] == created["id"], query
         assert found["storylines"][0]["active"] is False, query

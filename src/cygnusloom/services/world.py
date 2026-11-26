@@ -3432,6 +3432,9 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin, DocumentToolsMixin):
         objects: Sequence[str] | None = None,
         notes: str | None = None,
         focus: bool = False,
+        question: str | None = None,
+        forces: Sequence[str] | None = None,
+        pressure: str | None = None,
     ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return create_storyline(
@@ -3445,6 +3448,9 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin, DocumentToolsMixin):
                 objects,
                 notes,
                 focus,
+                question,
+                forces,
+                pressure,
             )
 
     def update_storyline(
@@ -3458,6 +3464,9 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin, DocumentToolsMixin):
         objects: Sequence[str] | None = None,
         notes: str | None = None,
         active: bool | None = None,
+        question: str | None = None,
+        forces: Sequence[str] | None = None,
+        pressure: str | None = None,
     ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return update_storyline(
@@ -3472,6 +3481,9 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin, DocumentToolsMixin):
                 objects,
                 notes,
                 active,
+                question,
+                forces,
+                pressure,
             )
 
     def focus_storyline(self, storyline: str) -> dict[str, Any]:

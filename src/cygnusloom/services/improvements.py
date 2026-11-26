@@ -9,6 +9,7 @@ from sqlmodel import Session
 
 from cygnusloom.content.character import CharacterSpec
 from cygnusloom.content.library import ImprovementDefinition
+from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.crafting import _consume  # shared input spending
 from cygnusloom.services.events import (
     ImprovementAdded,
@@ -29,7 +30,7 @@ def _definition(name: str, definitions: Mapping[str, ImprovementDefinition]) -> 
     for candidate in definitions.values():
         if alias_key(candidate.id) == wanted or alias_key(candidate.name) == wanted:
             return candidate
-    raise ValueError(f"there is no improvement named {name!r}")
+    raise InvalidInput(f"there is no improvement named {name!r}")
 
 
 def _find(state: Any, name: str) -> SiteImprovement | None:
@@ -89,7 +90,7 @@ def improve_site(
             None,
         )
         if found is None:
-            raise ValueError(f"{definition.name} needs {required!r} at {site} first")
+            raise InvalidInput(f"{definition.name} needs {required!r} at {site} first")
     existing = next(
         (
             i
@@ -100,13 +101,13 @@ def improve_site(
         None,
     )
     if existing is not None and existing.completed:
-        raise ValueError(f"{definition.name} is already finished at {site}")
+        raise InvalidInput(f"{definition.name} is already finished at {site}")
     if existing is None:
         for entry in definition.cost:
             from cygnusloom.services.crafting import _held
 
             if _held(character, spec, str(entry["item"])) is None:
-                raise ValueError(
+                raise InvalidInput(
                     f"{character.name} lacks {entry['item']!r} for {definition.name}"
                 )
         for entry in definition.cost:

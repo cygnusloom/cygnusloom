@@ -2570,14 +2570,16 @@ def _storyline_named(state: CampaignState, reference: object) -> Storyline:
     )
 
 
-def _storyline_links(value: Sequence[str] | None, label: str) -> list[str] | None:
+def _storyline_links(
+    value: Sequence[str] | None, label: str, limit: int = MAX_NAME
+) -> list[str] | None:
     """A list of names or short descriptions for one storyline field, or None when it is left
     unchanged by an update."""
     if value is None:
         return None
     if isinstance(value, str) or len(value) > MAX_STORYLINE_LINKS:
         raise InvalidInput(f"{label} must be a list of up to {MAX_STORYLINE_LINKS} short texts")
-    return [bounded_text(item, f"each {label} entry", MAX_NAME) for item in value]
+    return [bounded_text(item, f"each {label} entry", limit) for item in value]
 
 
 def _storyline_text(value: object, label: str, limit: int) -> str:
@@ -2598,7 +2600,10 @@ def _storyline_payload(state: CampaignState, storyline: Storyline) -> dict[str, 
         "id": storyline.id,
         "name": storyline.name,
         "summary": storyline.summary,
+        "question": storyline.question,
         "plot": storyline.plot,
+        "forces": list(storyline.forces),
+        "pressure": storyline.pressure,
         "characters": list(storyline.characters),
         "locations": list(storyline.locations),
         "objects": list(storyline.objects),
@@ -2621,10 +2626,14 @@ def create_storyline(
     objects: Sequence[str] | None = None,
     notes: str | None = None,
     focus: bool = False,
+    question: str | None = None,
+    forces: Sequence[str] | None = None,
+    pressure: str | None = None,
 ) -> dict[str, Any]:
-    """Begin a storyline. Its name and summary are the player-facing ones; the remaining fields
-    are the GM's private record. The first active storyline takes the focus, and `focus` moves it
-    to this one even when another storyline is already focused."""
+    """Begin a live situation, recorded as a storyline. Its name and summary are the
+    player-facing ones; the question, forces, pressure, and remaining fields are the GM's
+    private record. The first active storyline takes the focus, and `focus` moves it to this
+    one even when another storyline is already focused."""
     state = load_state(db, campaign_id)
     name = bounded_text(name, "name", MAX_NAME)
     summary = bounded_text(summary, "summary", MAX_SUMMARY)
@@ -2649,6 +2658,13 @@ def create_storyline(
             objects=_storyline_links(objects, "objects") or [],
             notes=_storyline_text(notes, "notes", MAX_TEXT) if notes is not None else "",
             focus=focus,
+            question=_storyline_text(question, "question", MAX_SUMMARY)
+            if question is not None
+            else "",
+            forces=_storyline_links(forces, "forces", MAX_DETAIL) or [],
+            pressure=_storyline_text(pressure, "pressure", MAX_TEXT)
+            if pressure is not None
+            else "",
         ),
     )
     db.commit()
@@ -2673,6 +2689,9 @@ def update_storyline(
     objects: Sequence[str] | None = None,
     notes: str | None = None,
     active: bool | None = None,
+    question: str | None = None,
+    forces: Sequence[str] | None = None,
+    pressure: str | None = None,
 ) -> dict[str, Any]:
     """Change any of a storyline's fields. A field left out stays as it is; an empty string or
     list clears it. Reactivating a storyline counts it against the three-active limit."""
@@ -2680,7 +2699,19 @@ def update_storyline(
     old = _storyline_named(state, storyline)
     if all(
         value is None
-        for value in (name, summary, plot, characters, locations, objects, notes, active)
+        for value in (
+            name,
+            summary,
+            plot,
+            characters,
+            locations,
+            objects,
+            notes,
+            active,
+            question,
+            forces,
+            pressure,
+        )
     ):
         raise InvalidInput("give at least one storyline field to update")
     if active is not None and not isinstance(active, bool):
@@ -2724,6 +2755,15 @@ def update_storyline(
             else _storyline_links(objects, "objects") or [],
             notes=old.notes if notes is None else _storyline_text(notes, "notes", MAX_TEXT),
             active=new_active,
+            question=old.question
+            if question is None
+            else _storyline_text(question, "question", MAX_SUMMARY),
+            forces=list(old.forces)
+            if forces is None
+            else _storyline_links(forces, "forces", MAX_DETAIL) or [],
+            pressure=old.pressure
+            if pressure is None
+            else _storyline_text(pressure, "pressure", MAX_TEXT),
         ),
     )
     db.commit()
@@ -2771,6 +2811,9 @@ def deactivate_storyline(db: Session, campaign_id: int, storyline: str) -> dict[
             objects=list(story.objects),
             notes=story.notes,
             active=False,
+            question=story.question,
+            forces=list(story.forces),
+            pressure=story.pressure,
         ),
     )
     db.commit()
@@ -2825,9 +2868,12 @@ def search_storylines(state: CampaignState, query: str) -> dict[str, list[dict[s
             words,
             storyline.name,
             storyline.summary,
+            storyline.question,
             storyline.plot,
+            storyline.pressure,
             storyline.notes,
             storyline.resolution,
+            *storyline.forces,
             *storyline.characters,
             *storyline.locations,
             *storyline.objects,
