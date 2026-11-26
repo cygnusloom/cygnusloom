@@ -178,6 +178,23 @@ def _context_tokens(form) -> int:
         raise InvalidInput("context tokens must be a whole number")
 
 
+def _document_pricing(form) -> str | None:
+    # An older page or another client may not submit these fields; keep the stored values.
+    if "document_pricing" not in form:
+        return None
+    return form_text(form, "document_pricing").strip() or None
+
+
+def _document_amount(form, name: str, label: str) -> int | None:
+    if name not in form:
+        return None
+    raw = form_text(form, name).strip() or "0"
+    try:
+        return int(raw)
+    except ValueError:
+        raise InvalidInput(f"{label} must be a whole number")
+
+
 def _owner_id(form) -> int:
     raw = form_text(form, "owner_id").strip()
     try:
@@ -583,6 +600,21 @@ async def update_model(request: Request, row_id: int) -> Response:
             credits_per_turn=(
                 None if request.app.state.settings.single_player else _turn_price(form)
             ),
+            document_pricing=(
+                None if request.app.state.settings.single_player else _document_pricing(form)
+            ),
+            document_multiple=(
+                None
+                if request.app.state.settings.single_player
+                else _document_amount(form, "document_multiple", "document replies")
+            ),
+            document_per_100k=(
+                None
+                if request.app.state.settings.single_player
+                else _document_amount(
+                    form, "document_per_100k", "document credits per 100,000 characters"
+                )
+            ),
             stream_usage=form_text(form, "stream_usage") == "1",
             context_tokens=_context_tokens(form),
             enabled=form_text(form, "enabled") == "1",
@@ -600,6 +632,9 @@ async def update_model(request: Request, row_id: int) -> Response:
             "enabled": updated.enabled,
             "default": updated.is_default,
             "credits_per_turn": updated.credits_per_turn,
+            "document_pricing": updated.document_pricing,
+            "document_multiple": updated.document_multiple,
+            "document_per_100k": updated.document_per_100k,
             "stream_usage": updated.stream_usage,
             "context_tokens": updated.context_tokens,
         },

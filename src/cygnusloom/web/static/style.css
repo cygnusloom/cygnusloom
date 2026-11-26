@@ -1200,6 +1200,12 @@ th { color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-s
 .admin-search input { flex: 1; }
 .admin-form { display: flex; gap: 0.5rem; align-items: end; flex-wrap: wrap; margin-top: 1rem; }
 .admin-form label { flex: 1 1 14rem; margin: 0; }
+.admin-form fieldset {
+  flex: 1 1 100%; display: flex; gap: 0.5rem; align-items: end; flex-wrap: wrap;
+  margin: 0; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px;
+}
+.admin-form fieldset legend { padding: 0 0.35rem; color: var(--muted); }
+.admin-form fieldset p { flex: 1 1 100%; margin: 0; }
 /* Account searcher shared by the accounts page and the campaign transfer form. */
 .user-search { position: relative; flex: 1 1 14rem; min-width: 0; margin: 0; }
 .admin-search .user-search { flex: 1; }

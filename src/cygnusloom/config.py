@@ -17,6 +17,15 @@ TOOL_SCHEMA_MODES = ("full", "compact", "summary", "brief")
 RULE_INFO_MODES = ("full", "brief", "index")
 # The prompt budget a model starts with. Administrators can change it per model at runtime.
 DEFAULT_MODEL_CONTEXT_TOKENS = 65536
+# How an uploaded adventure source is priced. `turns` charges a multiple of the model's credits
+# per reply once per document; `characters` charges a flat fee per 100,000 characters of
+# extracted text. Three replies keeps the old one-credit-per-100,000 rate's price for a typical
+# published adventure (about 260,000 characters, which cost 3 credits) while following the
+# campaign model's own price. See docs in services/documents.py for the cost evidence.
+DOCUMENT_PRICING_MODES = ("turns", "characters")
+DEFAULT_DOCUMENT_PRICING = "turns"
+DEFAULT_DOCUMENT_MULTIPLE = 3
+DEFAULT_DOCUMENT_PER_100K = 1
 DEFAULT_SESSION_HOURS = 7 * 24
 DEFAULT_STEP_UP_MINUTES = 15
 _TRUE_VALUES = ("1", "true", "yes", "on")

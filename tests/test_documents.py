@@ -188,12 +188,43 @@ def test_a_file_name_cannot_carry_a_path_or_prompt_lines():
     )
 
 
+def test_the_default_document_price_is_three_replies():
+    pricing = documents.DocumentPricing()
+    assert pricing.mode == "turns"
+    # The price follows the model's reply price, not the size of the document.
+    assert pricing.price(1, 1) == 3
+    assert pricing.price(261_741, 1) == 3
+    assert pricing.price(261_741, 4) == 12
+    # A free model is free.
+    assert pricing.price(261_741, 0) == 0
+
+
 @pytest.mark.parametrize(
     ("characters", "price"),
     [(0, 1), (1, 1), (100_000, 1), (100_001, 2), (261_741, 3)],
 )
-def test_a_documents_price_follows_its_character_count(characters: int, price: int):
-    assert documents.document_price(characters) == price
+def test_a_character_priced_document_follows_its_character_count(characters: int, price: int):
+    pricing = documents.DocumentPricing(mode="characters", per_100k=1)
+    assert pricing.price(characters, 5) == price
+    twice = documents.DocumentPricing(mode="characters", per_100k=2)
+    assert twice.price(characters, 5) == price * 2
+
+
+def test_document_pricing_reads_the_model_settings(app: FastAPI):
+    with Session(app.state.engine) as session:
+        row = session.exec(select(LlmModel).where(LlmModel.model == "scripted")).one()
+        row.document_pricing = "characters"
+        row.document_multiple = 5
+        row.document_per_100k = 2
+        session.add(row)
+        session.commit()
+    assert documents.document_pricing(
+        app.state.engine, "fake/scripted"
+    ) == documents.DocumentPricing(mode="characters", multiple=5, per_100k=2)
+    assert (
+        documents.document_pricing(app.state.engine, "fake/no-such-model")
+        == documents.DocumentPricing()
+    )
 
 
 def test_a_restored_document_rebuilds_a_missing_index():
@@ -223,7 +254,7 @@ def test_a_new_campaign_stores_the_uploaded_source(
     assert "adventure.md" in page
 
 
-def test_a_source_document_costs_credits_by_its_characters(
+def test_a_source_document_costs_three_replies_by_default(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
     client = signed_in_client(client_factory)
@@ -233,7 +264,7 @@ def test_a_source_document_costs_credits_by_its_characters(
     response = _new_campaign(client, text=_module_text())
     campaign_id = _campaign_id(response)
     row = _stored_documents(app, campaign_id)[0]
-    price = documents.document_price(row.characters)
+    price = documents.DocumentPricing().price(row.characters, 1)
     assert price == 3
     assert row.credits == price
     assert _account(app).credit_balance == 10 - price
@@ -243,6 +274,26 @@ def test_a_source_document_costs_credits_by_its_characters(
         ).one()
     assert entry.delta == -price
     assert "adventure.md" in entry.note
+
+
+def test_the_saved_document_pricing_applies_to_an_upload(
+    client_factory: Callable[[], TestClient], app: FastAPI
+):
+    client = signed_in_client(client_factory)
+    _set_price(app, "fake/scripted", 2)
+    with Session(app.state.engine) as session:
+        row = session.exec(select(LlmModel).where(LlmModel.model == "scripted")).one()
+        row.document_pricing = "characters"
+        row.document_per_100k = 3
+        session.add(row)
+        session.commit()
+    user = _account(app)
+    credits.set_balance(app.state.engine, user.id, 20, reason="admin")
+    campaign_id = _campaign_id(_new_campaign(client, text=_module_text()))
+    row = _stored_documents(app, campaign_id)[0]
+    # 250,000 characters is three started blocks at 3 credits each.
+    assert row.credits == 9
+    assert _account(app).credit_balance == 11
 
 
 def test_an_upload_that_costs_more_than_the_balance_is_refused(

@@ -43,6 +43,13 @@
         {% if not single_player %}
         <dt>Credits per reply</dt>
         <dd>{{ row.credits_per_turn if row.credits_per_turn else "free" }}</dd>
+        <dt>Source document price</dt>
+        <dd>
+          {% if not row.credits_per_turn %}free{% else %}
+            {{ row.document_price_label }}{% if row.document_pricing == "turns" %}
+            <span class="muted">· {{ row.document_multiple * row.credits_per_turn }} credits</span>{% endif %}
+          {% endif %}
+        </dd>
         {% endif %}
         <dt>Stream usage</dt>
         <dd>{{ "requested" if row.stream_usage else "not requested" }}</dd>
@@ -178,6 +185,32 @@
             <input type="number" name="credits_per_turn" min="0" step="1"
                    value="{{ row.credits_per_turn }}" required>
           </label>
+          <fieldset>
+            <legend>Source documents</legend>
+            <label>
+              Price an uploaded adventure
+              <select name="document_pricing">
+                <option value="turns"{% if row.document_pricing == "turns" %} selected{% endif %}>As a multiple of a reply</option>
+                <option value="characters"{% if row.document_pricing == "characters" %} selected{% endif %}>As a flat fee per 100,000 characters</option>
+              </select>
+            </label>
+            <label>
+              Replies per document
+              <input type="number" name="document_multiple" min="0" max="1000000" step="1"
+                     value="{{ row.document_multiple }}">
+            </label>
+            <label>
+              Credits per 100,000 characters
+              <input type="number" name="document_per_100k" min="0" max="1000000" step="1"
+                     value="{{ row.document_per_100k }}">
+            </label>
+            <p class="muted">
+              A source document is charged once, when it is uploaded. “Multiple of a reply”
+              charges that number of replies at this model's credits per reply; the flat fee
+              charges the given credits for each started 100,000 characters of extracted text.
+              Free models and credit-exempt accounts pay nothing.
+            </p>
+          </fieldset>
           {% endif %}
           <label class="show-hidden-option">
             <input type="checkbox" name="stream_usage" value="1" {% if row.stream_usage %}checked{% endif %}>
@@ -257,6 +290,10 @@
         Credits per reply
         <input type="number" name="credits_per_turn" min="0" step="1" value="0" required>
       </label>
+      <p class="muted">
+        Source documents start at 3 replies per document, or a flat 1 credit per 100,000
+        characters. Change the choice on the model's card after adding it.
+      </p>
       {% endif %}
       <label class="show-hidden-option">
         <input type="checkbox" name="stream_usage" value="1" checked>
