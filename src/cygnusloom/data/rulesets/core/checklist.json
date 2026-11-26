@@ -23,13 +23,13 @@
         "id": "attack",
         "group": "combat",
         "when": "npc_turn",
-        "text": "the acting NPC's attack action: whether they attack, and the attack tool result"
+        "text": "the acting character's attack action: whether they attack, and the attack tool result"
       },
       {
         "id": "tactical_move",
         "group": "combat",
         "when": "npc_turn",
-        "text": "the acting NPC's movement: whether they move, and the place_participant result"
+        "text": "the acting character's movement: whether they move, and the place_participant result"
       },
       {
         "id": "notes",

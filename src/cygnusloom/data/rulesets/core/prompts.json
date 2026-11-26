@@ -124,5 +124,11 @@
     "id": "hireling_gear",
     "step": "state",
     "text": "A hireling brings the tools of their former life. Right after hire_hireling or hire_existing_npc, call give_item for the kit their prior trade or station would provide, chosen by you to fit how they have been portrayed: a guard has a spear and armor, a groom a knife and brushes, a scholar books and ink. Do not leave a new hireling empty-handed unless the story says they lost everything. This is the hireling's own outfit, not a purchase by the employer."
+  },
+  {
+    "type": "prompt",
+    "id": "secret_rolls",
+    "step": "state",
+    "text": "Keep hidden information out of the player's Log. When a roll's reason, a check's cause, or a check's difficulty would reveal something the players have not found, such as a hidden creature's Stealth total, a secret door, or an unseen trap, pass secret true to roll_dice or roll_check: a GM-only roll is then hidden from the player's default transcript, and a check still shows the player's own dice and outcome without naming the cause or difficulty. Write the prompt and cause in plain terms that do not name what the player has not perceived. Do not use secret for ordinary rolls the players should see."
   }
 ]

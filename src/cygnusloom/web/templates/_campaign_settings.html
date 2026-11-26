@@ -94,6 +94,10 @@
           <label><input type="checkbox" name="use_inventory_space" value="1"{% if campaign.use_inventory_space %} checked{% endif %}> Track item slots and their limits</label>
           <label><input type="checkbox" name="use_survival_needs" value="1"{% if campaign.use_survival_needs %} checked{% endif %}> Track food, water, and rest needs</label>
         {% endcall %}
+        {% call optional_panel("settings-hireling-turns-panel", "Hireling turns", campaign.gm_plays_hirelings) %}
+          <label><input type="checkbox" name="gm_plays_hirelings" value="1"{% if campaign.gm_plays_hirelings %} checked{% endif %}> The GM plays the hirelings' turns</label>
+          <p class="muted">When on, a hireling's encounter turn waits for a Start button and the GM acts for them, like an NPC's. When off, you play your hirelings' turns yourself.</p>
+        {% endcall %}
         {% if start_levels|length > 1 %}
         {% call optional_panel("settings-start-level-panel", "Starting level", not follow_owner_level) %}
           <label class="show-hidden-option"><input type="checkbox" name="follow_owner_level" value="1" data-follow-owner-level{% if follow_owner_level %} checked{% endif %}> Follow the campaign owner's character level</label>

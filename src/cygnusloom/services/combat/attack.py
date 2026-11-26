@@ -1420,6 +1420,7 @@ def player_attack(
     mastery: str = "",
     extra: str = "",
     extra_from: str = "",
+    gm_played: bool = False,
 ) -> dict[str, Any]:
     """A player character's hit. The engine rolls the damage unless the player's roll is passed as
     `damage_roll`. The hit mode decides whether it lands. A group takes only impaired attacks.
@@ -1467,6 +1468,7 @@ def player_attack(
         mastery=mastery,
         extra=extra,
         extra_from=extra_from,
+        gm_played=gm_played,
     )
     state, pc, struck = prepared.state, prepared.pc, prepared.struck
     mastery = prepared.mastery
@@ -1699,6 +1701,7 @@ def _prepare_player_attack(
     mastery: str = "",
     extra: str = "",
     extra_from: str = "",
+    gm_played: bool = False,
 ) -> _PreparedAttack:
     """Every check `player_attack` makes before it rolls: the attacker may act now, carries the
     weapon, and can reach the target. Both the attack and its prompt check share it, so the
@@ -1706,6 +1709,17 @@ def _prepare_player_attack(
     state = load_state(db, campaign_id)
     _no_initiative_pending(state)
     pc = _player_character(state, character)
+    encounter = state.encounter
+    if (
+        not gm_played
+        and pc.hireling
+        and encounter is not None
+        and encounter.gm_played
+        and name_key(encounter.acting or "") == name_key(pc.name)
+    ):
+        raise InvalidInput(
+            f"the GM plays {pc.name}'s turn; use hireling_attack for their attack"
+        )
     override = mastery.strip().casefold()
     if override and override not in MASTERY_PROPERTIES:
         raise InvalidInput(f"there is no weapon mastery property named {mastery!r}")

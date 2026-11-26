@@ -287,11 +287,12 @@ def test_a_legacy_long_revision_id_is_rewritten(tmp_path, monkeypatch):
         version = connection.execute(
             sa.text("SELECT version_num FROM alembic_version")
         ).scalar_one()
-    assert version == "0023_llm_document_pricing"
+    assert version == "0024_campaign_gm_plays_hirelings"
     campaign_columns = {
         column["name"] for column in inspect(make_engine(url)).get_columns("campaign")
     }
     assert "game_version" not in campaign_columns
+    assert "gm_plays_hirelings" in campaign_columns
     user_columns = {column["name"] for column in inspect(make_engine(url)).get_columns("user")}
     assert "show_internal_thinking" in user_columns
     assert "campaign_document" in inspect(make_engine(url)).get_table_names()

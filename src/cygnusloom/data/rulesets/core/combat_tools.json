@@ -614,6 +614,63 @@
   },
   {
     "type": "tool_call",
+    "id": "hireling_attack",
+    "requires": ["combat"],
+    "description": "Attack for a hireling whose turn the GM plays, when the campaign gives hireling turns to the GM. The engine rolls the d20 and the damage, like an NPC's attack; it is refused when the player controls the hirelings or it is not that hireling's turn. Use player_attack instead when the player plays the hireling. On an encounter map, the weapon's reach or range and a clear line of sight are enforced; move the hireling with place_participant first when the attack is refused for distance.",
+    "parameters": {
+      "properties": {
+        "character": {
+          "type": "string",
+          "description": "The hireling attacking."
+        },
+        "target": {
+          "type": "string",
+          "description": "The name of the character or NPC being attacked."
+        },
+        "weapon": {
+          "type": "string",
+          "description": "The weapon or means of attack, such as 'mace'. It must be carried, or 'unarmed' for fists."
+        },
+        "nonlethal": {
+          "type": "boolean",
+          "default": false,
+          "description": "Strike to subdue rather than kill: a target brought down is unconscious, not dead. Only an unarmed attack or a club or staff may be nonlethal."
+        },
+        "two_handed": {
+          "type": "boolean",
+          "default": false,
+          "description": "Use a Versatile weapon in two hands, rolling its larger damage die."
+        },
+        "force": {
+          "type": "boolean",
+          "default": false,
+          "description": "Resolve the attack even though it is not the hireling's turn, or their attacks for this turn are spent. Set it only when the story needs it."
+        },
+        "roll_mode": {
+          "type": "string",
+          "enum": ["normal", "advantage", "disadvantage"],
+          "default": "normal",
+          "description": "How the attack is rolled when the rules give advantage or disadvantage."
+        },
+        "mastery": {
+          "type": "string",
+          "description": "A mastery property to use in place of the weapon's own for this attack, when a feature such as the Fighter's Tactical Master allows it, such as 'push'."
+        },
+        "extra": {
+          "type": "string",
+          "enum": ["cleave", "light"],
+          "description": "Record this as an extra attack the rules grant this turn: cleave after a hit with a Cleave weapon, or light for the Light property's attack with a different Light weapon."
+        },
+        "extra_from": {
+          "type": "string",
+          "description": "For cleave, the first creature the same weapon hit this turn; the second target must be within 5 feet of it."
+        }
+      },
+      "required": ["character", "target", "weapon"]
+    }
+  },
+  {
+    "type": "tool_call",
     "id": "roll_save",
     "requires": ["combat"],
     "description": "Roll a save for a character. The engine rolls the die and compares it to the stat, and records the result. A failure does not defeat the character; apply what the save costs yourself.",

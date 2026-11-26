@@ -1156,11 +1156,11 @@ def _turn_snapshot(
     if state.encounter is not None and state.encounter.acting:
         acting = state.characters.get(name_key(state.encounter.acting))
         if acting is not None:
-            if acting.kind == PC_KIND:
+            if acting.kind == PC_KIND and not getattr(state.encounter, "gm_played", False):
                 actor_id = state.owner_of(acting)
                 actor = acting.player_name or acting.name
             else:
-                # The GM plays an NPC's turn; no player owns it.
+                # The GM plays an NPC's or a GM-played hireling's turn; no player owns it.
                 actor_id = None
                 actor = acting.name
     return {
@@ -1644,6 +1644,7 @@ async def change_campaign_settings(request: Request, campaign_id: int) -> Respon
                 else None
             ),
             allow_respec=allow_respec,
+            gm_plays_hirelings=form_text(form, "gm_plays_hirelings") == "1",
             options=options,
             campaign_options=campaign_options,
             rule_set=rule_set,
@@ -2643,7 +2644,14 @@ def _campaign_page(
     # still catches the saved reply through the live stream's newest event.
     gm_busy = turn_busy(campaign.id) and world.state.turn is not None
     gm_activity, gm_reply = turn_progress(campaign.id) if gm_busy else ("", "")
-    interact = _interaction_state(world.state, user.id, pending, is_owner=is_owner, busy=gm_busy)
+    interact = _interaction_state(
+        world.state,
+        user.id,
+        pending,
+        is_owner=is_owner,
+        busy=gm_busy,
+        gm_plays_hirelings=campaign.gm_plays_hirelings,
+    )
     music = music_view(
         world.state,
         clock_rules=rule_set.clock if rule_set is not None else None,
@@ -2785,7 +2793,13 @@ class _Interaction:
 
 
 def _interaction_state(
-    state: CampaignState, user_id: int, pending: Any, *, is_owner: bool, busy: bool = False
+    state: CampaignState,
+    user_id: int,
+    pending: Any,
+    *,
+    is_owner: bool,
+    busy: bool = False,
+    gm_plays_hirelings: bool = False,
 ) -> dict:
     """The page's view of whose turn it is. Every player sees the same turn, but only the
     player whose character is acting may post. The owner may also end anyone's turn."""
@@ -2813,16 +2827,30 @@ def _interaction_state(
     control = ""
     encounter = state.encounter
     if encounter is not None:
+        gm_played = bool(getattr(encounter, "gm_played", False))
         actor = state.characters.get(name_key(encounter.acting)) if encounter.acting else None
-        if actor is not None and actor.kind == PC_KIND:
-            mine = state.owned_by(actor, user_id)
-            if not mine:
-                waiting_for = f"It is {actor.name}'s turn."
+        if actor is not None and actor.kind == PC_KIND and not gm_played:
+            if (
+                gm_plays_hirelings
+                and getattr(actor, "hireling", False)
+                and state.turn is None
+                and pending is None
+                and not busy
+            ):
+                # The hireling's turn was begun for the player before the setting changed.
+                # Start hands it to the GM without repeating the turn in the Log.
+                waiting_for = f"The GM plays {actor.name}'s turn."
                 other_turn = True
-            # The GM is resolving the action the player just described; ending the turn in
-            # the middle of that reply would race it.
-            if (mine or is_owner) and not busy:
-                control = "end"
+                control = "start"
+            else:
+                mine = state.owned_by(actor, user_id)
+                if not mine:
+                    waiting_for = f"It is {actor.name}'s turn."
+                    other_turn = True
+                # The GM is resolving the action the player just described; ending the turn in
+                # the middle of that reply would race it.
+                if (mine or is_owner) and not busy:
+                    control = "end"
         elif actor is not None:
             waiting_for = f"The GM is playing {actor.name}'s turn."
             other_turn = True
@@ -2834,7 +2862,9 @@ def _interaction_state(
         elif encounter.order and encounter.up < len(encounter.order) and not busy:
             upcoming = state.characters.get(name_key(encounter.order[encounter.up]))
             if upcoming is not None:
-                if upcoming.kind == PC_KIND:
+                if upcoming.kind == PC_KIND and not (
+                    getattr(upcoming, "hireling", False) and gm_plays_hirelings
+                ):
                     mine = state.owned_by(upcoming, user_id)
                     if not mine:
                         waiting_for = f"Waiting for {upcoming.name}'s turn."

@@ -751,6 +751,9 @@ class Encounter:
     round: int = 1
     # The participant whose turn is running, or None between turns.
     acting: str | None = None
+    # Whether the GM plays the running turn. An NPC's turn always is the GM's; a hireling's is
+    # when the campaign gives hireling turns to the GM.
+    gm_played: bool = False
     # Cells the acting participant has moved this turn.
     moved: int = 0
     # Attack actions the acting participant has used this turn. A statblock's multiattack is one

@@ -1311,6 +1311,7 @@ def world_state_text(
     currency: str = "",
     housekeeping: HousekeepingRules | None = None,
     track_survival_needs: bool = True,
+    gm_plays_hirelings: bool = False,
     character: CharacterSpec | None = None,
     monsters: Mapping[str, MonsterTemplate] | None = None,
     species: Sequence[Species] = (),
@@ -1457,15 +1458,24 @@ def world_state_text(
         lines.extend(_npc_stat_lines(state, names, character, combat, monsters, heading))
     hirelings = [c for c in state.characters.values() if c.hireling]
     if hirelings:
-        controller = "the players" if multiplayer else "the player"
+        if gm_plays_hirelings:
+            controller = "the GM"
+            note = (
+                " You play the hirelings' turns: their encounter turn waits for Start and you "
+                "act for them, attacking with hireling_attack."
+            )
+        else:
+            controller = "the players" if multiplayer else "the player"
+            note = " Their turns are the player's, so do not act for them."
         lines.append(
-            f"Hirelings, controlled by {controller}: "
+            f"Hirelings, played by {controller}: "
             + "; ".join(
                 f"{h.name}, at {h.location or 'no location'}, hired by {h.employer} "
                 f"at {h.wage} a day"
                 for h in hirelings
             )
             + "."
+            + note
         )
         for h in hirelings:
             if h.pronouns:
@@ -1507,6 +1517,7 @@ def world_state_text(
             encounter_objects,
             character=character,
             monsters=monsters,
+            gm_plays_hirelings=gm_plays_hirelings,
         )
     )
     if state.encounter is None:
@@ -1865,6 +1876,7 @@ def _encounter_lines(
     encounter_objects: Mapping[str, EncounterObject] | None = None,
     character: CharacterSpec | None = None,
     monsters: Mapping[str, MonsterTemplate] | None = None,
+    gm_plays_hirelings: bool = False,
 ) -> list[str]:
     view = encounters.encounter_view(state, grid, combat, terrain, encounter_objects)
     if view is None:
@@ -1883,10 +1895,19 @@ def _encounter_lines(
         marked = [_marked_cell_text(cell) for cell in view["marked_cells"]]
         lines.append("Marked cells: " + "; ".join(marked) + ".")
     if view["awaiting_initiative"]:
-        waiting = ", ".join(view["awaiting_initiative"])
-        lines.append(
-            f"Initiative is not set yet. {waiting} must roll for initiative with player_initiative."
-        )
+        if combat is not None and combat.initiative is not None:
+            # An engine-rolled initiative, individual (D&D) or by side (WWN), settles the whole
+            # order from one tool call. Only a save-based rule set asks each player to roll.
+            lines.append(
+                "Initiative is not set yet. Roll it for every combatant with roll_initiative "
+                "before the first turn."
+            )
+        else:
+            waiting = ", ".join(view["awaiting_initiative"])
+            lines.append(
+                f"Initiative is not set yet. {waiting} must roll for initiative with "
+                "player_initiative."
+            )
     if view["side_initiative"] and not view["settled"]:
         lines.append(
             "Initiative is not set yet. Roll initiative for the sides with roll_initiative "
@@ -1900,6 +1921,9 @@ def _encounter_lines(
             left.append(f"{view['moves_left']} of {view['move_cells']} cells of movement")
         suffix = f", with {' and '.join(left)} left" if left else ""
         line = f"Taking their turn now: {view['acting']}{suffix}."
+        actor = state.characters.get(name_key(str(view["acting"])))
+        if view.get("gm_played") and actor is not None and actor.hireling:
+            line += " You play this hireling's turn; their attack happens only with hireling_attack."
         if not view["has_acted"]:
             line += " No attack or movement has been recorded for them yet this turn."
         lines.append(line)

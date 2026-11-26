@@ -91,7 +91,7 @@ from cygnusloom.services import threats as threats_service
 from cygnusloom.services import timers as timers_service
 from cygnusloom.services import vehicles as vehicles_service
 from cygnusloom.services import wilderness as wilderness_service
-from cygnusloom.services.campaign_switches import survival_needs_enabled
+from cygnusloom.services.campaign_switches import gm_plays_hirelings, survival_needs_enabled
 from cygnusloom.services.common import (
     InvalidInput,
     bounded_text,
@@ -364,10 +364,11 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin, DocumentToolsMixin):
                 db, self.campaign_id, tables, self.dice_tables, self.rng, plus=self.plus
             )
 
-    def roll_dice(self, dice: str, reason: str = "") -> dict[str, Any]:
+    def roll_dice(self, dice: str, reason: str = "", secret: bool = False) -> dict[str, Any]:
         """Roll a dice formula the rules call for, such as a feature die, a Bardic Inspiration
         die, or a monster's recharge. The engine rolls every face and records the result, so the
-        GM never needs to invent one."""
+        GM never needs to invent one. A secret roll stays out of the player's default transcript,
+        as when it rolls a hidden creature's Stealth against the party's passive Perception."""
         formula = dice.strip()
         if not is_formula(formula):
             raise InvalidInput(f"{dice!r} is not a dice formula such as '1d12' or '2d6+3'")
@@ -377,10 +378,15 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin, DocumentToolsMixin):
             record(
                 db,
                 self.campaign_id,
-                DiceRolled(dice=formula, values=values, total=total, reason=why),
+                DiceRolled(
+                    dice=formula, values=values, total=total, reason=why, secret=secret
+                ),
             )
             db.commit()
-        return {"dice": formula, "values": values, "total": total, "reason": why}
+        result = {"dice": formula, "values": values, "total": total, "reason": why}
+        if secret:
+            result["secret"] = True
+        return result
 
     def list_dice_tables(self) -> dict[str, Any]:
         """The dice and creative tables this campaign offers, after genre filtering."""
@@ -1638,6 +1644,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin, DocumentToolsMixin):
         use_optional: bool = True,
         player_rolls_reaction: bool = False,
         roll_mode: str = "normal",
+        secret: bool = False,
     ) -> dict[str, Any]:
         try:
             check_id = resolve_id(
@@ -1674,6 +1681,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin, DocumentToolsMixin):
                 use_optional=use_optional,
                 player_rolls_reaction=player_rolls_reaction,
                 roll_mode=roll_mode,
+                secret=secret,
             )
 
     def optional_check_reactions(
@@ -1759,6 +1767,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin, DocumentToolsMixin):
                         cause=str(pending.get("cause", "")),
                         armor_penalty=int(pending.get("armor_penalty", 0)),
                         reaction=triggered.text,
+                        secret=bool(pending.get("secret", False)),
                     ),
                 )
             reactions.use(db, self.campaign_id, character, triggered)
@@ -2614,6 +2623,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin, DocumentToolsMixin):
         mastery: str = "",
         extra: str = "",
         extra_from: str = "",
+        gm_played: bool = False,
     ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             return combat.player_attack(
@@ -2644,6 +2654,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin, DocumentToolsMixin):
                 mastery=mastery,
                 extra=extra,
                 extra_from=extra_from,
+                gm_played=gm_played,
             )
 
     def attack_dice(self, weapon: str, modifier: str = "", two_handed: bool = False) -> str:
@@ -2693,6 +2704,70 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin, DocumentToolsMixin):
                 extra=extra,
                 extra_from=extra_from,
             )
+
+    def hireling_attack(
+        self,
+        character: str,
+        target: str,
+        weapon: str,
+        modifier: str = "",
+        hit_modifier: int = 0,
+        damage_modifier: int = 0,
+        shock_modifier: int = 0,
+        range_band: str = "",
+        dual_wield: bool = False,
+        force: bool = False,
+        nonlethal: bool = False,
+        two_handed: bool = False,
+        roll_mode: str = "normal",
+        mastery: str = "",
+        extra: str = "",
+        extra_from: str = "",
+    ) -> dict[str, Any]:
+        """Play a hireling's attack for the GM, when the campaign gives hireling turns to the GM.
+        The engine rolls the d20 and the damage, as it does for an NPC's attack. Refused when the
+        hirelings' turns are the player's, which keeps this path from acting for them."""
+        with session_scope(self.engine) as db:
+            state = load_state(db, self.campaign_id)
+            hired = state.characters.get(name_key(character))
+            if hired is None:
+                raise InvalidInput(f"there is no character named {character!r}")
+            if not hired.hireling:
+                raise InvalidInput(
+                    f"{hired.name} is not a hireling; use player_attack for a player character "
+                    "or attack for an NPC"
+                )
+            if not gm_plays_hirelings(db, self.campaign_id):
+                raise InvalidInput(
+                    "this campaign's hireling turns belong to the player; the player attacks "
+                    "with player_attack"
+                )
+            encounter = state.encounter
+            if (
+                encounter is None
+                or not encounter.gm_played
+                or name_key(encounter.acting or "") != name_key(hired.name)
+            ):
+                raise InvalidInput(f"{hired.name} is not taking a GM-played turn right now")
+        return self.player_attack(
+            target,
+            weapon,
+            modifier,
+            hit_modifier=hit_modifier,
+            damage_modifier=damage_modifier,
+            shock_modifier=shock_modifier,
+            range_band=range_band,
+            dual_wield=dual_wield,
+            force=force,
+            character=character,
+            nonlethal=nonlethal,
+            two_handed=two_handed,
+            roll_mode=roll_mode,
+            mastery=mastery,
+            extra=extra,
+            extra_from=extra_from,
+            gm_played=True,
+        )
 
     def resolve_group_break(self, name: str, outcome: str) -> dict[str, Any]:
         with session_scope(self.engine) as db:

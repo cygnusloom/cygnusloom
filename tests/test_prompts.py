@@ -354,8 +354,8 @@ def test_an_npc_turn_checklist_reminds_the_gm_about_attacks_and_movement():
     assert ids.index("tactical_move") == ids.index("attack") + 1
     text, keys = turn_checklist(rules_for().checklist, {"combat"}, npc_turn=True)
     assert "attack" in keys and "tactical_move" in keys
-    assert "the acting NPC's attack action" in text
-    assert "the acting NPC's movement" in text
+    assert "the acting character's attack action" in text
+    assert "the acting character's movement" in text
 
 
 def test_the_system_prompt_carries_the_checklist_as_its_own_part():

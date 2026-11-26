@@ -5,7 +5,7 @@
     "bind": {
       "check": "ability"
     },
-    "description": "Ask the player to roll an ability check: d20 plus the ability modifier and the proficiency bonus when the character is proficient. Call it whenever an action is uncertain and a skill or ability applies. Give a DC: 10 easy, 15 medium, 20 hard, 25 very hard. Pass roll_mode advantage or disadvantage when the rules give it.",
+    "description": "Ask the player to roll an ability check: d20 plus the ability modifier and the proficiency bonus when the character is proficient. Pass secret true when the cause or DC would reveal something hidden, such as a hidden creature's Stealth; the player then sees their own roll and outcome without the cause or difficulty. Call it whenever an action is uncertain and a skill or ability applies. Give a DC: 10 easy, 15 medium, 20 hard, 25 very hard. Pass roll_mode advantage or disadvantage when the rules give it.",
     "parameters": {
       "properties": {
         "prompt": {
@@ -60,6 +60,11 @@
         "cause": {
           "type": "string",
           "description": "What the check is for, in a few words."
+        },
+        "secret": {
+          "type": "boolean",
+          "default": false,
+          "description": "True when the cause or DC names something hidden, such as a hidden creature's Stealth. The player's line then keeps their dice and outcome but leaves out the cause and difficulty."
         }
       },
       "required": [

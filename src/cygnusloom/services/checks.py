@@ -73,6 +73,7 @@ def _check_reaction_pending(
     *,
     dice: str,
     ones: list[int] | None = None,
+    secret: bool = False,
 ) -> dict[str, Any]:
     """What the player's roll prompt needs to finish a reroll reaction."""
     effect = triggered.reaction.effect
@@ -105,6 +106,7 @@ def _check_reaction_pending(
         "original_success": result.passed,
         "cause": cause,
         "armor_penalty": armor_penalty,
+        "secret": secret,
     }
 
 
@@ -137,6 +139,7 @@ def roll_check(
     use_optional: bool = True,
     player_rolls_reaction: bool = False,
     roll_mode: str = "normal",
+    secret: bool = False,
 ) -> dict[str, Any]:
     """Roll `check` for a character and record what it made. The roll is the check's dice plus the
     skill's level (or the check's untrained penalty when the character has no level in it), the
@@ -146,7 +149,9 @@ def roll_check(
 
     `skill` or `stat` may be empty for a roll that adds neither. `roll` is the dice total a
     player reported; when it is None the engine rolls the check's dice. `features` are a world's
-    own feature definitions, in addition to the rule set's, for reactions."""
+    own feature definitions, in addition to the rule set's, for reactions. `secret` keeps the
+    cause and the difficulty out of the player's transcript, as when they name a hidden
+    creature's Stealth; the dice and the outcome still show."""
     found = load_state(db, campaign_id).characters.get(name_key(character))
     if found is None:
         raise InvalidInput(f"there is no character named {character!r}")
@@ -252,6 +257,7 @@ def roll_check(
                 cause,
                 armor_penalty,
                 dice=check.dice,
+                secret=secret,
             )
         elif player_rolls_reaction and effect["op"] == "reroll_ones":
             die = _best_of_die(check.dice)
@@ -274,6 +280,7 @@ def roll_check(
                     armor_penalty,
                     dice=f"{len(ones)}d{sides}",
                     ones=ones,
+                    secret=secret,
                 )
             else:
                 # No 1 was rolled, so there is nothing to reroll.
@@ -365,6 +372,7 @@ def roll_check(
                 if triggered is not None and pending is None and triggered.reaction.uses <= 0
                 else ""
             ),
+            secret=secret,
         ),
     )
     if triggered is not None and pending is None:
@@ -385,6 +393,7 @@ def roll_check(
         "success": result.passed,
         "armor_penalty": armor_penalty,
         "cause": cause,
+        "secret": secret,
         **({"reaction": triggered.text} if triggered is not None and pending is None else {}),
     }
     if pending is not None:

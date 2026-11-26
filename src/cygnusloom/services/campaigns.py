@@ -70,8 +70,8 @@ from cygnusloom.services.events import (
     TurnFailed,
     decode,
     estimate_tokens,
+    event_hidden,
     events_since,
-    is_hidden,
     load_state,
     name_key,
     record,
@@ -120,7 +120,7 @@ class NotPlayable(Conflict):
 
 # The campaign-wide settings the AI GM may change during a turn, and only on the owner's
 # explicit request.
-TURN_SETTINGS = {"inventory_space", "survival_needs"}
+TURN_SETTINGS = {"inventory_space", "survival_needs", "hireling_turns"}
 # The player's optional setting/story brief at campaign creation. It is prompt text, not state.
 MAX_SETTING = 4000
 # Spoken words never contain angle brackets or call syntax, so either means a tool call was written.
@@ -1277,6 +1277,7 @@ def update_campaign_settings(
     table_genres: Sequence[str] | None = None,
     table_tones: Sequence[str] | None = None,
     allow_respec: bool | None = None,
+    gm_plays_hirelings: bool | None = None,
     options: Mapping[str, Any] | None = None,
     campaign_options: CampaignSpec | None = None,
     rule_set: RuleSet | None = None,
@@ -1325,6 +1326,9 @@ def update_campaign_settings(
         campaign.use_survival_needs = survival_needs
         if allow_respec is not None:
             campaign.allow_respec = allow_respec
+        hireling_turns_before = campaign.gm_plays_hirelings
+        if gm_plays_hirelings is not None:
+            campaign.gm_plays_hirelings = gm_plays_hirelings
         if start_level is not None:
             campaign.start_level = start_level
         if follow_owner_level is not None:
@@ -1339,6 +1343,10 @@ def update_campaign_settings(
         db.add(campaign)
         db.commit()
         db.refresh(campaign)
+        if hireling_turns_before and not campaign.gm_plays_hirelings:
+            # A hireling turn that was waiting for the GM now belongs to the player, so begin
+            # it as the player's turn instead of leaving the table without a control.
+            encounters.begin_player_turn_if_next(db, campaign_id)
         return campaign
 
 
@@ -1379,6 +1387,19 @@ def set_campaign_setting_from_turn(
                 "Food, water, and rest needs are tracked again."
                 if value
                 else "Food, water, and rest needs are no longer tracked."
+            )
+            return {"setting": setting, "value": value, "detail": detail}
+        if setting == "hireling_turns":
+            campaign.gm_plays_hirelings = value
+            db.add(campaign)
+            db.commit()
+            if not value:
+                # A waiting hireling turn goes back to the player at once.
+                encounters.begin_player_turn_if_next(db, campaign_id)
+            detail = (
+                "The GM now plays the hirelings' turns; each waits for a Start button."
+                if value
+                else "The players now play the hirelings' turns."
             )
             return {"setting": setting, "value": value, "detail": detail}
     raise InvalidInput(f"{setting!r} is not a campaign setting the GM can change")
@@ -1569,7 +1590,7 @@ def campaign_transcript(
             if isinstance(event, TurnFailed) and (row.id or 0) < progress:
                 continue
             if (text := event.render()) is not None:
-                items.append(LogLine(id=row.id or 0, content=text, hidden=is_hidden(row.kind)))
+                items.append(LogLine(id=row.id or 0, content=text, hidden=event_hidden(event)))
     return sorted(items, key=lambda item: item.id)
 
 
@@ -1736,6 +1757,7 @@ def context_usage(
             tallies=rule_set.tallies if rule_set else None,
             track_inventory=campaign.use_inventory_space,
             track_survival_needs=campaign.use_survival_needs,
+            gm_plays_hirelings=campaign.gm_plays_hirelings,
             currency=(rule_set.marketplace.currency if rule_set and rule_set.marketplace else ""),
             housekeeping=rule_set.housekeeping if rule_set else None,
             character=rule_set.character if rule_set else None,
