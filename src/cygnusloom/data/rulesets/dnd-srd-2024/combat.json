@@ -2,6 +2,7 @@
   {
     "type": "combat",
     "id": "dnd-srd-2024",
+    "python_module": "dnd_srd_2024",
     "damage": [
       {
         "kind": "harm",

@@ -10,11 +10,14 @@ level are also handled here from the validated ``progression`` rule data.
 
 from __future__ import annotations
 
+import random
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from itertools import pairwise
 from types import MappingProxyType
 from typing import Any, Protocol
+
+from sqlmodel import Session
 
 from cygnusloom.content.character import CharacterSpec, Feature, ItemTemplate
 from cygnusloom.content.definitions import ContentError
@@ -36,8 +39,10 @@ from cygnusloom.services.events import (
     FeatureLearned,
     HitDicePoolsSet,
     InitiativeSettled,
+    MarkSet,
     SpellAttackMade,
     current,
+    load_state,
     name_key,
     record,
     same_item_name,
@@ -63,7 +68,20 @@ PREPARED_MARK = "prepared"
 # not clear another class's list.
 PREPARED_BY_CLASS_MARK = "prepared_by_class"
 ALWAYS_PREPARED_MARK = "always_prepared"
+# The concentration spell being maintained. Its value is {"id", "name", "saves"}, where "saves"
+# lists the Constitution saves still due from damage; a mark recorded before saves were tracked
+# is the bare spell id. Concentration ends when another concentration spell starts, after a
+# long rest, on Incapacitated or falling unconscious, and when a damage save fails.
 CONCENTRATION_MARK = "concentration"
+# The smallest and largest Constitution save damage can force.
+CONCENTRATION_SAVE_BASE = 10
+CONCENTRATION_SAVE_MAX = 30
+# Conditions that include Incapacitated, which breaks Concentration.
+INCAPACITATING_CONDITIONS = frozenset(
+    {"incapacitated", "paralyzed", "petrified", "stunned", "unconscious"}
+)
+# A raging Barbarian can neither cast spells nor maintain Concentration.
+RAGE_MARK = "raging"
 # The Magic Initiate spell cast for free since the last long rest.
 MAGIC_INITIATE_MARK = "magic_initiate_free"
 # Lineage and similar spells cast without a slot since the last long rest.
@@ -1494,6 +1512,267 @@ def _option(feature: Feature) -> dict[str, Any]:
     }
 
 
+# --- concentration ------------------------------------------------------------------------
+
+
+def concentration_state(character: Any) -> tuple[str, str, list[dict[str, Any]]]:
+    """The spell a character is maintaining, its name, and the damage saves still due. A mark
+    recorded before saves were tracked is the bare spell id and reports no name."""
+    held = character.marks.get(CONCENTRATION_MARK)
+    if isinstance(held, Mapping):
+        saves = [dict(entry) for entry in held.get("saves") or () if isinstance(entry, Mapping)]
+        return str(held.get("id") or ""), str(held.get("name") or ""), saves
+    return (str(held or ""), "", [])
+
+
+def _concentration_value(
+    spell_id: str, spell_name: str, saves: Sequence[Mapping[str, Any]] = ()
+) -> dict[str, Any]:
+    """The mark value for a concentration spell, with the saves it still owes."""
+    value: dict[str, Any] = {"id": spell_id, "name": spell_name}
+    if saves:
+        value["saves"] = [dict(entry) for entry in saves]
+    return value
+
+
+def _spell_name(spec: CharacterSpec, spell_id: str) -> str:
+    feature = spec.features.get(spell_id)
+    return feature.name if feature is not None else spell_id
+
+
+def concentration_save_dc(amount: int) -> int:
+    """The Constitution save damage forces: DC 10 or half the damage, whichever is higher, up
+    to 30."""
+    return min(CONCENTRATION_SAVE_MAX, max(CONCENTRATION_SAVE_BASE, amount // 2))
+
+
+def damage_taken(
+    db: Session,
+    campaign_id: int,
+    name: str,
+    amount: int,
+    cause: str,
+    *,
+    spec: CharacterSpec | None = None,
+    rng: random.Random | None = None,
+    plus: str = "sum",
+) -> dict[str, Any]:
+    """The Constitution save a concentrating character must make after taking damage: DC 10 or
+    half the damage, whichever is higher, up to 30. An NPC's save is rolled here. A player
+    character's save is left for the player, and the result names the DC and cause to pass to
+    player_save. Damage that has already defeated the character ends Concentration instead."""
+    character = load_state(db, campaign_id).characters.get(name_key(name))
+    if character is None or amount < 1:
+        return {}
+    spell_id, spell_name, saves = concentration_state(character)
+    if not spell_id:
+        return {}
+    if not spell_name and spec is not None:
+        spell_name = _spell_name(spec, spell_id)
+    label = spell_name or spell_id
+    if character.dead or character.defeated:
+        fate = "die" if character.dead else "fall unconscious"
+        record(
+            db,
+            campaign_id,
+            MarkSet(
+                name=character.name,
+                key=CONCENTRATION_MARK,
+                value=None,
+                text=f"{character.name}'s Concentration on {label} ends as they {fate}.",
+            ),
+        )
+        db.commit()
+        return {
+            "concentration": {
+                "spell": label,
+                "save": "con",
+                "ended": True,
+                "reason": "dead" if character.dead else "unconscious",
+            }
+        }
+    dc = concentration_save_dc(amount)
+    if character.kind != PC_KIND:
+        bonus = _npc_save_bonus(character, spec)
+        rolled = rng.randint(1, 20) if rng is not None else random.randint(1, 20)
+        total = rolled + bonus
+        passed = total >= dc
+        record(
+            db,
+            campaign_id,
+            CharacterSaved(
+                name=character.name,
+                stat="con",
+                roll=rolled,
+                score=dc,
+                passed=passed,
+                cause=f"concentration ({label})",
+            ),
+        )
+        record(
+            db,
+            campaign_id,
+            EffectNoted(
+                name=character.name,
+                text=(
+                    f"{character.name}'s Constitution save: {rolled} "
+                    f"{'+' if bonus >= 0 else '-'} {abs(bonus)} = {total} against DC {dc} "
+                    f"({'success' if passed else 'failure'}) to hold Concentration on {label}."
+                ),
+            ),
+        )
+        if not passed:
+            record(
+                db,
+                campaign_id,
+                MarkSet(
+                    name=character.name,
+                    key=CONCENTRATION_MARK,
+                    value=None,
+                    text=f"{character.name}'s Concentration on {label} ends.",
+                ),
+            )
+        db.commit()
+        return {
+            "concentration": {
+                "spell": label,
+                "save": "con",
+                "dc": dc,
+                "roll": rolled,
+                "bonus": bonus,
+                "total": total,
+                "passed": passed,
+                "ended": not passed,
+            }
+        }
+    entry = {"dc": dc, "cause": f"{CONCENTRATION_MARK} ({label}) after {cause}"}
+    record(
+        db,
+        campaign_id,
+        MarkSet(
+            name=character.name,
+            key=CONCENTRATION_MARK,
+            value=_concentration_value(spell_id, label, [*saves, entry]),
+            text=(
+                f"{character.name} must make a DC {dc} Constitution save to hold "
+                f"Concentration on {label}."
+            ),
+        ),
+    )
+    db.commit()
+    return {
+        "concentration": {
+            "spell": label,
+            "save": "con",
+            "dc": dc,
+            "cause": entry["cause"],
+            "pending": True,
+        }
+    }
+
+
+def condition_gained(db: Session, campaign_id: int, name: str, condition: str, cause: str) -> None:
+    """A condition that includes Incapacitated breaks Concentration."""
+    if condition not in INCAPACITATING_CONDITIONS:
+        return
+    character = load_state(db, campaign_id).characters.get(name_key(name))
+    if character is None:
+        return
+    spell_id, spell_name, _saves = concentration_state(character)
+    if not spell_id:
+        return
+    record(
+        db,
+        campaign_id,
+        MarkSet(
+            name=character.name,
+            key=CONCENTRATION_MARK,
+            value=None,
+            text=(
+                f"{character.name}'s Concentration on {spell_name or spell_id} ends "
+                f"({condition.title()})."
+            ),
+        ),
+    )
+
+
+def _resolve_concentration_save(
+    db: Session, campaign_id: int, name: str, cause: str, passed: bool
+) -> None:
+    """Apply a player's concentration save. Only a save whose cause names concentration is
+    taken up, so an ordinary Constitution save leaves a due concentration save alone. A
+    failed save ends the spell even when the engine recorded no save, since the GM may call
+    for one in their own words."""
+    if "concentrat" not in cause.strip().casefold():
+        return
+    character = load_state(db, campaign_id).characters.get(name_key(name))
+    if character is None:
+        return
+    spell_id, spell_name, saves = concentration_state(character)
+    if not spell_id:
+        return
+    label = spell_name or spell_id
+    dc: int | None = None
+    remaining: list[dict[str, Any]] = []
+    if saves:
+        index = max(range(len(saves)), key=lambda at: int(saves[at].get("dc", 0)))
+        dc = int(saves[index].get("dc", 0))
+        remaining = [entry for at, entry in enumerate(saves) if at != index]
+    if not passed:
+        difficulty = f"the DC {dc} Constitution save" if dc is not None else "a Constitution save"
+        record(
+            db,
+            campaign_id,
+            MarkSet(
+                name=character.name,
+                key=CONCENTRATION_MARK,
+                value=None,
+                text=f"{character.name}'s Concentration on {label} ends (failed {difficulty}).",
+            ),
+        )
+        return
+    if not saves:
+        return
+    record(
+        db,
+        campaign_id,
+        MarkSet(
+            name=character.name,
+            key=CONCENTRATION_MARK,
+            value=_concentration_value(spell_id, label, remaining),
+            text=(
+                f"{character.name} holds Concentration on {label}."
+                if not remaining
+                else f"{character.name} holds Concentration on {label}; "
+                f"{len(remaining)} more save{'s' if len(remaining) != 1 else ''} due."
+            ),
+        ),
+    )
+
+
+def _npc_save_bonus(character: Any, spec: CharacterSpec | None) -> int:
+    """An NPC's Constitution save bonus: its printed save, or its Constitution modifier."""
+    printed = character.stats.get("save_con")
+    if printed is not None:
+        # Statblock scores are stored non-negative, so a save bonus is recorded as 11 + bonus.
+        return int(printed) - 11
+    if spec is not None:
+        return _modifier(character, spec, "con")
+    return (int(character.stats.get("con", 10)) - 10) // 2
+
+
+def status(hc: HookContext, character: Any) -> list[str]:
+    """Status lines for a character: the concentration spell, and any save it owes."""
+    spell_id, spell_name, saves = concentration_state(character)
+    if not spell_id:
+        return []
+    lines = [f"Concentrating: {spell_name or spell_id}"]
+    if saves:
+        dc = max(int(entry.get("dc", 0)) for entry in saves)
+        lines.append(f"Concentration save due: DC {dc} Constitution")
+    return lines
+
+
 # --- tools --------------------------------------------------------------------------------
 
 
@@ -1549,6 +1828,8 @@ def roll_save(
                 ),
             ),
         )
+        if stat_id == "con":
+            _resolve_concentration_save(db, campaign_id, found.name, cause, passed)
         db.commit()
 
     ctx.world.with_hook_context(action)
@@ -1989,17 +2270,19 @@ def end_concentration(name: str, ctx: ToolContext) -> dict[str, Any]:
     """End the concentration spell a character is maintaining, such as when they choose to stop or
     fail a Constitution save against damage."""
 
+    spec = ctx.world.character
+
     def action(hc: HookContext) -> dict[str, Any]:
         found = hc.character(name)
-        current_spell = found.marks.get(CONCENTRATION_MARK)
-        if current_spell:
+        spell_id, spell_name, _saves = concentration_state(found)
+        if spell_id:
             hc.set_mark(
                 found.name,
                 CONCENTRATION_MARK,
                 None,
-                f"{found.name} stops concentrating on a spell.",
+                f"{found.name} stops concentrating on {spell_name or _spell_name(spec, spell_id)}.",
             )
-        return {"character": found.name, "ended": str(current_spell) if current_spell else None}
+        return {"character": found.name, "ended": spell_id or None}
 
     return ctx.world.with_hook_context(action)
 
@@ -2096,6 +2379,8 @@ def spell_attack(
     progression = require_progression(ctx.world)
     spec = ctx.world.character
     found = _read_character(name, ctx)
+    _require_conscious(found)
+    _require_able_to_cast(found)
     feature = _find_spell(spec, spell)
     rules = _class_rules(found, progression)
     if rules.casting == "none":
@@ -2200,6 +2485,21 @@ def use_feature(character: str, feature: str, ctx: ToolContext, cause: str = "")
     if source.resource_counter:
         changed = ctx.world.adjust_counter(character, source.resource_counter, -1)
         remaining = int(changed["value"])
+    if source.active_mark == RAGE_MARK:
+        # Rage cannot be maintained alongside Concentration.
+        def break_concentration(hc: HookContext) -> None:
+            character_now = hc.character(found.name)
+            spell_id, spell_name, _saves = concentration_state(character_now)
+            if spell_id:
+                hc.set_mark(
+                    found.name,
+                    CONCENTRATION_MARK,
+                    None,
+                    f"{found.name}'s Concentration on {spell_name or spell_id} ends as "
+                    f"{source.name} takes hold.",
+                )
+
+        ctx.world.with_hook_context(break_concentration)
     if source.active_mark:
 
         def mark(hc: HookContext) -> None:
@@ -2235,6 +2535,7 @@ def cast_spell(
     spec = ctx.world.character
     found = _read_character(name, ctx)
     _require_conscious(found)
+    _require_able_to_cast(found)
     feature = _find_spell(spec, spell)
     if not _knows_spell(found, feature, progression):
         raise InvalidInput(f"{found.name} does not know {feature.name}")
@@ -2475,29 +2776,53 @@ def _is_prepared(
 
 
 def _set_concentration(ctx: ToolContext, found: Any, feature: Feature, spec: CharacterSpec) -> None:
-    """Record the concentration spell being maintained, ending any earlier one."""
+    """Record the concentration spell being maintained, ending any earlier one. A recast
+    replaces the effect, so any save the old casting still owed is dropped."""
     if "duration: concentration" not in (feature.description or "").casefold():
         return
 
     def action(hc: HookContext) -> None:
-        current = hc.character(found.name).marks.get(CONCENTRATION_MARK)
-        if current and current != feature.id:
-            old = spec.features.get(str(current))
+        character = hc.character(found.name)
+        current_id, current_name, saves = concentration_state(character)
+        if current_id and current_id != feature.id:
+            old_name = current_name or _spell_name(spec, current_id)
             hc.set_mark(
                 found.name,
                 CONCENTRATION_MARK,
                 None,
-                f"{found.name} stops concentrating on {old.name if old else current}.",
+                f"{found.name} stops concentrating on {old_name}.",
             )
-        if current != feature.id:
+            current_id = ""
+        if current_id != feature.id:
             hc.set_mark(
                 found.name,
                 CONCENTRATION_MARK,
-                feature.id,
+                _concentration_value(feature.id, feature.name),
                 f"{found.name} concentrates on {feature.name}.",
+            )
+        elif saves:
+            hc.set_mark(
+                found.name,
+                CONCENTRATION_MARK,
+                _concentration_value(feature.id, feature.name),
+                f"{found.name} renews {feature.name}.",
             )
 
     ctx.world.with_hook_context(action)
+
+
+def _require_able_to_cast(found: Any) -> None:
+    """Refuse a spell a raging character cannot cast, and a cast that would run past the
+    Constitution save damage has already made due."""
+    if found.marks.get(RAGE_MARK):
+        raise InvalidInput(f"{found.name} can't cast spells while raging")
+    spell_id, spell_name, saves = concentration_state(found)
+    if saves:
+        due = max(saves, key=lambda entry: int(entry.get("dc", 0)))
+        raise InvalidInput(
+            f"{found.name} owes a DC {due.get('dc')} Constitution save to hold Concentration "
+            f"on {spell_name or spell_id}; call player_save first"
+        )
 
 
 def _spend_turn_resource(
@@ -2829,12 +3154,13 @@ def after_rest(
             None,
             f"{character.name}'s Rage ends over the long rest.",
         )
-    if character.marks.get(CONCENTRATION_MARK):
+    spell_id, spell_name, _saves = concentration_state(character)
+    if spell_id:
         hc.set_mark(
             character.name,
             CONCENTRATION_MARK,
             None,
-            f"{character.name} stops concentrating on a spell over the long rest.",
+            f"{character.name} stops concentrating on {spell_name or spell_id} over the long rest.",
         )
     targets = {index: 0 for index in range(1, 10)}
     if len(levels) <= 1:

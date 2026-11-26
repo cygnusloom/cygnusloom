@@ -1163,12 +1163,14 @@ def scene_view(
     track_inventory: bool = True,
     wage_currency: str = "",
     hp_stat: str | None = None,
+    hooks: Hooks | None = None,
 ) -> SceneView:
     """The player's view. It shows only what is at the player character's location, including any
     hirelings there, and everyone the player has met. The pack shows the player character's items
     when the rule set has an inventory. The link maps name the compendium entries behind carried
     items, the player character's features, met NPCs' creatures, and the current place. The rule
-    set's HP stat, when it has one, gives every sheet its current and maximum hit points."""
+    set's HP stat, when it has one, gives every sheet its current and maximum hit points. The
+    rule set's hooks add status lines, such as the spell a character is concentrating on."""
     links = item_links or {}
     ability_entries = ability_links or {}
     creature_entries = creature_links or {}
@@ -1181,7 +1183,7 @@ def scene_view(
     npcs = _npcs_at(state, place.name) if place is not None else []
     sheet = _sheet_text(spec, pc).splitlines() if pc is not None else []
     if pc is not None and conditions is not None:
-        sheet += _status_lines(pc, conditions, None, None, None)
+        sheet += _status_lines(pc, conditions, None, hooks, None)
     abilities = _feature_links(spec, pc, ability_entries) if pc is not None else ()
     reactions = _reaction_links(spec, pc) if pc is not None else ()
     pc_sheet = None

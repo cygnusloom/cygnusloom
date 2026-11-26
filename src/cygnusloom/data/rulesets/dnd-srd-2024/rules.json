@@ -368,7 +368,7 @@
   {
     "type": "rule",
     "id": "spellcasting",
-    "text": "Spellcasting. A spellcaster knows cantrips and leveled spells. Casting a leveled spell spends a slot of its level or higher; a cantrip costs no slot. Use cast_spell with the slot level when upcasting. A spell that requires concentration ends an earlier concentration spell. Long rests restore all slots.",
+    "text": "Spellcasting. A spellcaster knows cantrips and leveled spells. Casting a leveled spell spends a slot of its level or higher; a cantrip costs no slot. Use cast_spell with the slot level when upcasting. A spell that requires concentration ends an earlier concentration spell. Damage while concentrating requires a Constitution save at DC 10 or half the damage taken, whichever is higher, up to 30. Incapacitated or 0 hit points breaks concentration, and a raging Barbarian can neither cast spells nor hold it. Long rests restore all slots.",
     "important": true
   },
   {

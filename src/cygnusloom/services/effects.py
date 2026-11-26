@@ -746,6 +746,10 @@ def gain_condition(
         )
         return
     record(db, campaign_id, ConditionAdded(name=name, condition=condition, cause=cause))
+    if combat is not None:
+        hook = getattr(combat.module, "condition_gained", None) if combat.module else None
+        if callable(hook):
+            hook(db, campaign_id, name, condition, cause)
     if combat is not None and condition in combat.dying_conditions:
         begin_dying(db, campaign_id, combat, name, cause=f"from {cause}")
 

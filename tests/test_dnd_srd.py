@@ -521,9 +521,14 @@ def test_concentration_moves_to_the_new_spell(
     _client, campaign_id, ctx = _prepared_wizard(app, client_factory)
     dnd_srd_2024.prepare_spells("Wren", ["detect-magic", "fog-cloud"], ctx)
     dnd_srd_2024.cast_spell("Wren", "detect-magic", ctx, ritual=True)
-    assert character_named(app, campaign_id, "Wren").marks["concentration"] == "spell-detect-magic"
+    wren = character_named(app, campaign_id, "Wren")
+    assert dnd_srd_2024.concentration_state(wren)[:2] == (
+        "spell-detect-magic",
+        "Detect Magic",
+    )
     dnd_srd_2024.cast_spell("Wren", "fog-cloud", ctx)
-    assert character_named(app, campaign_id, "Wren").marks["concentration"] == "spell-fog-cloud"
+    wren = character_named(app, campaign_id, "Wren")
+    assert dnd_srd_2024.concentration_state(wren)[:2] == ("spell-fog-cloud", "Fog Cloud")
 
 
 def test_a_level_up_shows_and_records_new_class_feature_choices(
