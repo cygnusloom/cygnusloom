@@ -623,7 +623,6 @@ body.workspace-page main { flex: 1; min-height: 0; width: 100%; max-width: none;
 }
 .map-tip.here { color: var(--accent); border-color: var(--accent); }
 .map-tip[hidden] { display: none; }
-.map-scale { margin: 0; font-size: 0.8rem; }
 .map-page h2, .map-page h3 { margin-top: 1rem; }
 .map-place { padding: 0.5rem 0; border-bottom: 1px solid var(--border); }
 .map-place p { margin: 0.25rem 0 0; }

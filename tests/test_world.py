@@ -2277,4 +2277,6 @@ def test_framed_map_has_a_recenter_button_inside_the_frame(
     button = '<button type="button" class="secondary map-recenter">Recenter</button></div>'
     assert button in page
     frame = page.index('<div class="map-frame">')
-    assert frame < page.index(button) < page.index('class="muted map-scale"', frame)
+    next_frame = page.index('<div class="map-frame">', frame + 1)
+    board = page.index('class="map-board world-map', frame)
+    assert frame < board < page.index(button) < next_frame
