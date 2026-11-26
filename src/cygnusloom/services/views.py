@@ -283,10 +283,12 @@ class SceneView:
     # The player character's own sheet, and the sheets of every hireling the player plays for.
     pc_sheet: CharacterSheetView | None = None
     hireling_sheets: tuple[CharacterSheetView, ...] = ()
-    # Campaign progress clocks, threats, vehicles, and shelter improvements, when the rule set
-    # or the campaign has them. Hidden entries stay out of the player's view.
+    # Campaign progress clocks, vehicles, and shelter improvements, when the rule set or the
+    # campaign has them. Hidden entries stay out of the player's view.
     clocks: tuple[CampaignClock, ...] = ()
-    threats: tuple[Threat, ...] = ()
+    # Visible single monsters at the player's place, shown and opened like any other monster.
+    # A threat big enough to be a scale of its own is the line under the map instead.
+    threats_here: tuple[Threat, ...] = ()
     vehicles: tuple[Vehicle, ...] = ()
     improvements: tuple[SiteImprovement, ...] = ()
 
@@ -420,6 +422,15 @@ class MapRoad:
 
 
 @dataclass(frozen=True)
+class ThreatWatch:
+    """A threat too big to be a single monster, such as a horde, kept in view under the map.
+    `where` is where it is from the player, such as "2.4 km east" or "here"."""
+
+    name: str
+    where: str = ""
+
+
+@dataclass(frozen=True)
 class TimeView:
     """The campaign day, the part of that day, and the hour within the part, shown beside the
     map."""
@@ -448,6 +459,8 @@ class MapView:
     roads: list[MapRoad] = field(default_factory=list)
     patterns: list[MapPattern] = field(default_factory=list)
     style: WorldMapStyle = field(default_factory=WorldMapStyle)
+    # Large-scale threats, nearest first, kept in view under the map.
+    watches: list[ThreatWatch] = field(default_factory=list)
 
 
 def get_statblock(
@@ -861,7 +874,42 @@ def map_view(
         roads=drawn_roads,
         patterns=list(patterns.values()),
         style=state.world_map_style,
+        watches=_threat_watches(state, at, cx, cy, center is not None),
     )
+
+
+def _threat_watches(
+    state: CampaignState,
+    player_place: str | None,
+    cx: float,
+    cy: float,
+    centered: bool,
+) -> list[ThreatWatch]:
+    """The threats too big for a single monster, such as a horde, with where each is from the
+    player. A threat that is not visible, or that is a single monster, is left to the scene."""
+    found: list[tuple[float, str, ThreatWatch]] = []
+    for threat in state.threats.values():
+        if not threat.visible or threat.magnitude < 1:
+            continue
+        where = ""
+        distance = math.inf
+        if threat.location:
+            place = state.places.get(name_key(threat.location))
+            if place is None:
+                where = threat.location
+            elif player_place is not None and name_key(place.name) == name_key(player_place):
+                where = "here"
+                distance = 0.0
+            elif centered and place.position is not None:
+                dx = place.position.x - cx
+                dy = place.position.y - cy
+                where = _offset_text(dx, dy)
+                distance = max(abs(dx), abs(dy))
+            else:
+                where = place.name
+        found.append((distance, threat.name.casefold(), ThreatWatch(threat.name, where)))
+    found.sort(key=lambda entry: (entry[0], entry[1]))
+    return [watch for _, _, watch in found]
 
 
 def _road_known(state: CampaignState, road: Road) -> bool:
@@ -1170,7 +1218,20 @@ def scene_view(
         pc_sheet=pc_sheet,
         hireling_sheets=hireling_sheets,
         clocks=tuple(clock for clock in state.campaign_clocks.values() if clock.visible),
-        threats=tuple(threat for threat in state.threats.values() if threat.visible),
+        threats_here=tuple(
+            sorted(
+                (
+                    threat
+                    for threat in state.threats.values()
+                    if threat.visible
+                    and threat.magnitude < 1
+                    and place is not None
+                    and threat.location
+                    and name_key(threat.location) == name_key(place.name)
+                ),
+                key=lambda threat: threat.name.casefold(),
+            )
+        ),
         vehicles=tuple(state.vehicles.values()),
         improvements=tuple(
             sorted(

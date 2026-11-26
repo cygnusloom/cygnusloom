@@ -223,6 +223,14 @@
   </div>
 {%- endmacro %}
 
+{# A threat big enough to be a scale of its own, such as a horde, kept under the map with
+   where it is. A single monster is a statblock in the place's list instead. #}
+{% macro threat_watches(view) -%}
+  {% for watch in view.watches %}
+  <p class="threat-watch"><strong>{{ watch.name }}</strong>{% if watch.where %} <span class="muted">{{ watch.where }}</span>{% endif %}</p>
+  {% endfor %}
+{%- endmacro %}
+
 {% macro map_places(view) -%}
   {% for place in view.places %}
     <div class="map-place">
