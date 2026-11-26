@@ -21,6 +21,7 @@ from tests.test_campaign_settings import _tool_results, _tool_runs, _tool_script
 from tests.test_combat import _fight_client, _foe
 from tests.test_encounters import _npc_turn_stream
 from tests.test_export_import import (
+    _document,
     _export,
     _import,
     _imported_id,
@@ -201,10 +202,11 @@ def test_export_and_import_carry_the_hireling_turn_setting(
     client, campaign_id = campaign_ready_fast(client_factory)
     _set_flag(client.app, campaign_id, True)
 
-    payload = _export(client, campaign_id).content
+    response = _export(client, campaign_id)
 
-    document = json.loads(payload)
+    document = _document(response)
     assert document["campaign"]["gm_plays_hirelings"] is True
+    payload = response.content
     target = _target_client(_target_app(tmp_path, settings))
     imported_id = _imported_id(_import(target, payload))
     assert _flag(target.app, imported_id) is True
@@ -214,8 +216,7 @@ def test_an_export_without_the_setting_keeps_the_player_in_control(
     client_factory: Callable[[], TestClient], tmp_path, settings
 ):
     client, campaign_id = campaign_ready_fast(client_factory)
-    payload = _export(client, campaign_id).content
-    document = json.loads(payload)
+    document = _document(_export(client, campaign_id))
     del document["campaign"]["gm_plays_hirelings"]
 
     target = _target_client(_target_app(tmp_path, settings))
