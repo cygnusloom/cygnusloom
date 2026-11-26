@@ -1462,7 +1462,8 @@ def world_state_text(
             controller = "the GM"
             note = (
                 " You play the hirelings' turns: their encounter turn waits for Start and you "
-                "act for them, attacking with hireling_attack."
+                "act for them, attacking with hireling_attack; the engine rolls their checks "
+                "and saves."
             )
         else:
             controller = "the players" if multiplayer else "the player"
@@ -1923,7 +1924,10 @@ def _encounter_lines(
         line = f"Taking their turn now: {view['acting']}{suffix}."
         actor = state.characters.get(name_key(str(view["acting"])))
         if view.get("gm_played") and actor is not None and actor.hireling:
-            line += " You play this hireling's turn; their attack happens only with hireling_attack."
+            line += (
+                " You play this hireling's turn; their attack happens only with hireling_attack, "
+                "and the engine rolls their other dice."
+            )
         if not view["has_acted"]:
             line += " No attack or movement has been recorded for them yet this turn."
         lines.append(line)

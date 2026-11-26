@@ -127,6 +127,12 @@
   },
   {
     "type": "prompt",
+    "id": "hireling_turns",
+    "step": "state",
+    "text": "When the campaign gives you the hirelings' turns, the player rolls nothing for those hirelings: call the rule set's check, save, spell, and attack tools for them, naming them in the tool, and the engine rolls their dice just as it does for an NPC. Never ask the player to roll for them, whether or not their turn is running, and never roll a die by hand for them; their attack happens only with hireling_attack. A tool that cannot name the hireling cannot roll for them, so use its engine-rolled equivalent, such as roll_save for a save."
+  },
+  {
+    "type": "prompt",
     "id": "secret_rolls",
     "step": "state",
     "text": "Keep hidden information out of the player's Log. When a roll's reason, a check's cause, or a check's difficulty would reveal something the players have not found, such as a hidden creature's Stealth total, a secret door, or an unseen trap, pass secret true to roll_dice or roll_check: a GM-only roll is then hidden from the player's default transcript, and a check still shows the player's own dice and outcome without naming the cause or difficulty. Write the prompt and cause in plain terms that do not name what the player has not perceived. Do not use secret for ordinary rolls the players should see."

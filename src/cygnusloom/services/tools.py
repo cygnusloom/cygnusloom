@@ -20,7 +20,7 @@ from cygnusloom.content.library import (
 )
 from cygnusloom.llm.base import LLMError, ToolRequest
 from cygnusloom.rules.context import ToolContext, brief
-from cygnusloom.rules.dice import is_formula
+from cygnusloom.rules.dice import is_formula, roll_values
 from cygnusloom.services.attacks import modifier_name
 from cygnusloom.services.common import InvalidInput, NotFound
 
@@ -613,6 +613,12 @@ async def run_tool(
             return ToolRun(_error(problem), None)
         if not is_formula(dice):
             return ToolRun(_error(f"{dice!r} is not a dice formula such as '1d8'"), None)
+        if character and ctx is not None and ctx.world.gm_plays(character):
+            # The GM plays this character, so the table is never asked to roll for them. The
+            # tool rolls its own dice, exactly as it does for an NPC, and a reroll reaction the
+            # rule set would hand back to the player is finished here as well.
+            arguments.pop(PROMPT_ARGUMENT, None)
+            return _gm_answers(await _call(tool, arguments, ctx), ctx)
         shown = dict(arguments)
         if tool.player_input.dice_param:
             shown[tool.player_input.dice_param] = dice
@@ -693,6 +699,18 @@ async def run_tool(
                 weapon=str(payload.get("weapon", "") or ""),
             )
     return result
+
+
+def _gm_answers(result: ToolRun, ctx: ToolContext) -> ToolRun:
+    """Finish a reroll reaction a tool left for the player, for a character the GM plays. The
+    engine rolls the reaction's dice, so the tool needs no answer from the table."""
+    payload = _json_object(result.output)
+    pending = payload.get("reaction_pending") if isinstance(payload, dict) else None
+    if not isinstance(pending, dict):
+        return result
+    values, total = roll_values(str(pending.get("dice", "")), ctx.world.rng, plus=ctx.world.plus)
+    final = ctx.world.resolve_reaction(pending, total, values)
+    return ToolRun(json.dumps(final, separators=(",", ":"), ensure_ascii=False), None)
 
 
 def _reaction_ask(details: str, pending: Mapping[str, Any], character: str = "") -> Ask:

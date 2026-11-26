@@ -17,6 +17,7 @@ from fastapi.responses import (
     RedirectResponse,
     StreamingResponse,
 )
+from sqlalchemy import Engine
 from sqlalchemy.exc import SQLAlchemyError
 from starlette.concurrency import run_in_threadpool
 from starlette.datastructures import FormData
@@ -34,6 +35,7 @@ from cygnusloom.content.library import (
     CREATIVE_CATEGORY_HELP,
     TONE_HELP,
     RuleSet,
+    ToolCall,
     effective_table_genres,
 )
 from cygnusloom.db.models import User
@@ -45,6 +47,7 @@ from cygnusloom.services import credits as credit_service
 from cygnusloom.services import documents as documents_service
 from cygnusloom.services import level_up as level_up_service
 from cygnusloom.services.accounts import public_name, set_show_internal_thinking
+from cygnusloom.services.campaign_switches import gm_plays_hirelings
 from cygnusloom.services.campaigns import (
     Delta,
     Logged,
@@ -112,6 +115,7 @@ from cygnusloom.services.campaigns import (
 from cygnusloom.services.common import Conflict, InvalidInput, NotFound, session_scope
 from cygnusloom.services.compendium import compendium_view
 from cygnusloom.services.encounters import encounter_view, local_map_view
+from cygnusloom.services.encounters import gm_plays as encounter_gm_plays
 from cygnusloom.services.events import (
     PC_KIND,
     CampaignState,
@@ -1804,6 +1808,24 @@ async def change_debug_currency(request: Request, campaign_id: int) -> Response:
     return RedirectResponse(f"/campaigns/{campaign_id}", status_code=303)
 
 
+def _injection_rolls_for_gm(
+    engine: Engine, campaign_id: int, tool: ToolCall, arguments: dict[str, object]
+) -> bool:
+    """Whether a player-input tool can run without the player's answer because the GM plays
+    the character it names; the engine rolls the dice instead. A hireling whose turns the
+    campaign gives to the GM counts before its turn opens, so the injection can be set up for
+    the turn the GM is about to play."""
+    assert tool.player_input is not None
+    param = tool.player_input.character_param
+    named = str(arguments.get(param, "") or "") if param else ""
+    if not named:
+        return False
+    with session_scope(engine) as db:
+        return encounter_gm_plays(
+            load_state(db, campaign_id), named, gm_plays_hirelings(db, campaign_id)
+        )
+
+
 @router.post("/{campaign_id}/debug/injection")
 async def change_debug_injection(request: Request, campaign_id: int) -> Response:
     settings = request.app.state.settings
@@ -1826,8 +1848,6 @@ async def change_debug_injection(request: Request, campaign_id: int) -> Response
             )
             if tool is None:
                 raise InvalidInput(f"there is no tool named {name!r}")
-            if tool.player_input is not None:
-                raise InvalidInput("choose a tool the GM can use without the player's answer")
             if (
                 tool.lookup
                 or tool.journal_step
@@ -1842,6 +1862,10 @@ async def change_debug_injection(request: Request, campaign_id: int) -> Response
             problem = check_arguments(tool.parameters, arguments)
             if problem:
                 raise InvalidInput(problem)
+            if tool.player_input is not None and not _injection_rolls_for_gm(
+                request.app.state.engine, campaign_id, tool, arguments
+            ):
+                raise InvalidInput("choose a tool the GM can use without the player's answer")
             set_debug_injection(
                 request.app.state.engine,
                 user.id,

@@ -37,6 +37,10 @@ class CoreWorld(Protocol):
     def rng(self) -> random.Random:
         """The campaign's dice, shared by modules so rolls remain reproducible."""
 
+    @property
+    def plus(self) -> str:
+        """What "+" between several dice terms means in this rule set: "sum" or "highest"."""
+
     def draw_character_table(self, table: str) -> str:
         """Choose one option from a character table without recording a campaign event."""
 
@@ -243,6 +247,11 @@ class CoreWorld(Protocol):
     def place_participant(self, name: str, column: int, row: int) -> dict[str, Any]: ...
 
     def end_npc_turn(self, name: str) -> dict[str, Any]: ...
+
+    def gm_plays(self, character: str) -> bool:
+        """Whether the GM plays this character for its rolls: any NPC, or a hireling whose
+        turns the campaign gives to the GM. A tool that would ask the player to roll for such
+        a character has the engine roll instead."""
 
     def add_note(self, text: str, subject: str | None = None) -> dict[str, Any]: ...
 
