@@ -1,7 +1,9 @@
 """Credits for AI GM replies, measured token usage, and the append-only balance ledger.
 
 A campaign owner pays a flat price per completed AI GM reply, set on the model
-(`LlmModel.credits_per_turn`). Administrators, the single-player account, and members of the
+(`LlmModel.credits_per_turn`). An uploaded adventure source is charged once, at the model's
+configured document price (`LlmModel.document_pricing`; see `services/documents.py`).
+Administrators, the single-player account, and members of the
 fixed `cygnusloom-credit-exempt` role are exempt unless a debug campaign forces charges. Payment
 is not handled here; an administrator grants credits.
 

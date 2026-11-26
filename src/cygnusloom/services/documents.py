@@ -21,8 +21,13 @@ from typing import Any
 from sqlalchemy import Engine, select
 from sqlmodel import Session
 
-from cygnusloom.config import Settings
-from cygnusloom.db.models import Campaign, CampaignDocument
+from cygnusloom.config import (
+    DEFAULT_DOCUMENT_MULTIPLE,
+    DEFAULT_DOCUMENT_PER_100K,
+    DEFAULT_DOCUMENT_PRICING,
+    Settings,
+)
+from cygnusloom.db.models import Campaign, CampaignDocument, LlmModel
 from cygnusloom.services import credits as credit_service
 from cygnusloom.services.common import InvalidInput, session_scope
 
@@ -35,9 +40,8 @@ MAX_SECTIONS = 400
 # A section index is part of a tool result, so a book with hundreds of headings still gets a
 # readable overview; search reaches the rest.
 LISTED_SECTIONS = 80
-# One credit per 100,000 characters of extracted text, rounded up, with a one-credit minimum.
-# The extracted text is about 25,000 words, or one long turn's worth of input tokens, so the
-# price tracks what the GM's reading adds to the campaign's model use.
+# The unit a flat document price is measured in: one block of 100,000 characters of extracted
+# text is about 25,000 tokens, roughly one long turn's worth of input.
 CHARACTERS_PER_CREDIT = 100_000
 READ_LENGTH = 6000
 MAX_READ_LENGTH = 20000
@@ -109,9 +113,36 @@ def document_kind(filename: str) -> str:
     return "text"
 
 
-def document_price(characters: int) -> int:
-    """What one upload costs: one credit per 100,000 characters, at least one credit."""
-    return max(1, math.ceil(max(0, characters) / CHARACTERS_PER_CREDIT))
+@dataclass(frozen=True)
+class DocumentPricing:
+    """How one model prices an uploaded adventure source.
+
+    `turns` charges `multiple` times the model's credits per reply, once per document. The
+    default of three keeps the old flat rate's price for a typical published adventure: the
+    261,741-character module used in the live test cost 3 credits at the previous
+    one-credit-per-100,000 rate. `characters` charges `per_100k` credits for each started
+    100,000 characters instead.
+
+    DeepSeek evidence for the default: `deepseek-flash` publishes $0.15 per 1M cache-miss input
+    tokens, $0.003 per 1M cache-hit tokens, and $0.60 per 1M output tokens off-peak (double in
+    its peak hours). A 260,000-character document is about 65,000 tokens, so one full read costs
+    about $0.01, the same as roughly half of a measured GM reply. The GM searches and re-reads a
+    book across a whole campaign, so three replies is a rounded fee that matches the previous
+    default and the model's real per-reply cost.
+    """
+
+    mode: str = DEFAULT_DOCUMENT_PRICING
+    multiple: int = DEFAULT_DOCUMENT_MULTIPLE
+    per_100k: int = DEFAULT_DOCUMENT_PER_100K
+
+    def price(self, characters: int, reply_price: int) -> int:
+        """The credits to charge for one uploaded document. A free model stays free."""
+        if reply_price <= 0:
+            return 0
+        if self.mode == "characters":
+            blocks = max(1, math.ceil(max(0, characters) / CHARACTERS_PER_CREDIT))
+            return self.per_100k * blocks
+        return self.multiple * reply_price
 
 
 def prepare(filename: str, data: bytes) -> DocumentText:
@@ -347,11 +378,31 @@ def document_credits(
 ) -> int:
     """The upload's price after the campaign's model and the owner's exemption are applied.
     A free model or an exempt account makes the document free, exactly like a reply."""
-    if credit_service.model_price(engine, campaign.model) <= 0:
+    reply_price = credit_service.model_price(engine, campaign.model)
+    if reply_price <= 0:
         return 0
     if credit_service.is_exempt(engine, settings, campaign):
         return 0
-    return document_price(chars)
+    return document_pricing(engine, campaign.model).price(chars, reply_price)
+
+
+def document_pricing(engine: Engine, model_id: str) -> DocumentPricing:
+    """The saved source-document price for `provider/model`, or the defaults when the model is
+    not in the catalog (an environment seed or a removed row)."""
+    provider, separator, model = model_id.partition("/")
+    if not separator or not provider or not model:
+        return DocumentPricing()
+    with session_scope(engine) as db:
+        row = db.execute(
+            select(
+                LlmModel.document_pricing,
+                LlmModel.document_multiple,
+                LlmModel.document_per_100k,
+            ).where(LlmModel.provider == provider, LlmModel.model == model)
+        ).one_or_none()
+    if row is None:
+        return DocumentPricing()
+    return DocumentPricing(mode=row[0], multiple=int(row[1]), per_100k=int(row[2]))
 
 
 def add_document(

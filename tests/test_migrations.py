@@ -53,6 +53,9 @@ def test_migrations_create_the_full_schema(tmp_path, monkeypatch):
         column["name"] for column in inspect(make_engine(url)).get_columns("llm_model")
     }
     assert "credits_per_turn" in model_columns
+    assert "document_pricing" in model_columns
+    assert "document_multiple" in model_columns
+    assert "document_per_100k" in model_columns
     assert "stream_usage" in model_columns
     assert "context_tokens" in model_columns
     assert "calculator_json" in model_columns
@@ -201,7 +204,15 @@ def test_model_context_tokens_default_to_64k_for_existing_models(tmp_path, monke
     upgraded_model = sa.Table("llm_model", sa.MetaData(), autoload_with=upgraded)
     with upgraded.connect() as connection:
         value = connection.execute(sa.select(upgraded_model.c.context_tokens)).scalar_one()
+        source_price = connection.execute(
+            sa.select(
+                upgraded_model.c.document_pricing,
+                upgraded_model.c.document_multiple,
+                upgraded_model.c.document_per_100k,
+            )
+        ).one()
     assert value == 65536
+    assert tuple(source_price) == ("turns", 3, 1)
 
 
 def test_migrations_can_be_reversed(tmp_path, monkeypatch):
@@ -276,7 +287,7 @@ def test_a_legacy_long_revision_id_is_rewritten(tmp_path, monkeypatch):
         version = connection.execute(
             sa.text("SELECT version_num FROM alembic_version")
         ).scalar_one()
-    assert version == "0022_campaign_document"
+    assert version == "0023_llm_document_pricing"
     campaign_columns = {
         column["name"] for column in inspect(make_engine(url)).get_columns("campaign")
     }

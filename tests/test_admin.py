@@ -454,6 +454,76 @@ def test_admin_can_save_and_clear_model_calculators(settings: Settings):
     assert "Cleared saved calculator values for" in page.text
 
 
+def test_admin_can_price_source_documents_per_model(settings: Settings):
+    client = _admin_client(settings)
+    register(client, "admin@example.com")
+    engine = _engine(settings)
+    with Session(engine) as db:
+        row = db.exec(select(LlmModel).where(LlmModel.model == "scripted")).one()
+        row_id = row.id
+        assert (row.document_pricing, row.document_multiple, row.document_per_100k) == (
+            "turns",
+            3,
+            1,
+        )
+
+    page = client.get("/admin/models")
+    assert "Source document price" in page.text
+    assert "3 replies per document" in page.text
+    assert 'name="document_pricing"' in page.text
+    assert 'name="document_multiple"' in page.text
+    assert 'name="document_per_100k"' in page.text
+
+    token = csrf_token(client, "/admin/models")
+    response = client.post(
+        f"/admin/models/{row_id}/update",
+        data={
+            "csrf_token": token,
+            "base_url": "",
+            "credits_per_turn": "2",
+            "document_pricing": "characters",
+            "document_multiple": "3",
+            "document_per_100k": "4",
+            "stream_usage": "1",
+            "context_tokens": "65536",
+            "enabled": "1",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    with Session(engine) as db:
+        saved = db.get(LlmModel, row_id)
+    assert saved is not None
+    assert (saved.document_pricing, saved.document_multiple, saved.document_per_100k) == (
+        "characters",
+        3,
+        4,
+    )
+    page = client.get("/admin/models")
+    assert "4 credits per 100,000 characters" in page.text
+
+    token = csrf_token(client, "/admin/models")
+    rejected = client.post(
+        f"/admin/models/{row_id}/update",
+        data={
+            "csrf_token": token,
+            "base_url": "",
+            "credits_per_turn": "2",
+            "document_pricing": "per-word",
+            "document_multiple": "3",
+            "document_per_100k": "4",
+            "stream_usage": "1",
+            "context_tokens": "65536",
+            "enabled": "1",
+        },
+        follow_redirects=False,
+    )
+    assert rejected.status_code == 303
+    page = client.get("/admin/models")
+    assert "document pricing must be" in page.text
+    assert "model.updated" in client.get("/admin/audit").text
+
+
 def test_admin_models_page_hides_estimated_token_counts(settings: Settings):
     client = _admin_client(settings)
     register(client, "admin@example.com")

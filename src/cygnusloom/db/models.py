@@ -3,7 +3,12 @@ from datetime import UTC, datetime
 from sqlalchemy import Column, Text, UniqueConstraint
 from sqlmodel import Field, SQLModel
 
-from cygnusloom.config import DEFAULT_MODEL_CONTEXT_TOKENS
+from cygnusloom.config import (
+    DEFAULT_DOCUMENT_MULTIPLE,
+    DEFAULT_DOCUMENT_PER_100K,
+    DEFAULT_DOCUMENT_PRICING,
+    DEFAULT_MODEL_CONTEXT_TOKENS,
+)
 
 
 def utcnow() -> datetime:
@@ -51,6 +56,10 @@ class LlmModel(SQLModel, table=True):
 
     `credits_per_turn` is the average price of one completed AI GM reply with this model. It is
     shown in the campaign's model picker and deducted from the campaign owner's balance.
+    `document_pricing` chooses how an uploaded adventure source is priced: `turns` charges
+    `document_multiple` credits per reply once per document, and `characters` charges
+    `document_per_100k` credits per 100,000 characters of extracted text. A free model or an
+    exempt account uploads for free either way.
     `stream_usage` asks the provider for token counts in streamed replies; turn it off for an
     OpenAI-compatible server that rejects the `stream_options` request field. `context_tokens`
     is the model's prompt budget; older chat is summarized at 70% of it.
@@ -66,6 +75,10 @@ class LlmModel(SQLModel, table=True):
     base_url: str = Field(default="", max_length=500)
     api_key: str = Field(default="", sa_column=Column(Text, nullable=False))
     credits_per_turn: int = Field(default=0)
+    # How an uploaded adventure source is priced; see the class docstring.
+    document_pricing: str = Field(default=DEFAULT_DOCUMENT_PRICING, max_length=16)
+    document_multiple: int = Field(default=DEFAULT_DOCUMENT_MULTIPLE)
+    document_per_100k: int = Field(default=DEFAULT_DOCUMENT_PER_100K)
     stream_usage: bool = Field(default=True)
     # The prompt budget for campaigns using this model. Older chat is summarized at 70% of it.
     context_tokens: int = Field(default=DEFAULT_MODEL_CONTEXT_TOKENS)

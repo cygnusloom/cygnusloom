@@ -15,7 +15,14 @@ from cryptography.fernet import Fernet, InvalidToken
 from sqlalchemy import Engine, select
 from sqlmodel import Session
 
-from cygnusloom.config import DEFAULT_MODEL_CONTEXT_TOKENS, Settings
+from cygnusloom.config import (
+    DEFAULT_DOCUMENT_MULTIPLE,
+    DEFAULT_DOCUMENT_PER_100K,
+    DEFAULT_DOCUMENT_PRICING,
+    DEFAULT_MODEL_CONTEXT_TOKENS,
+    DOCUMENT_PRICING_MODES,
+    Settings,
+)
 from cygnusloom.db.models import LlmModel, utcnow
 from cygnusloom.services.common import Conflict, InvalidInput, NotFound, session_scope
 
@@ -68,8 +75,10 @@ class ModelSpec:
 
     `credits_per_turn` is shown in the campaign model picker. `stream_usage` asks the provider
     for exact token counts in streamed replies; usage measurements never affect the charge.
-    `context_tokens` is the prompt budget for campaigns using this model. `calculator` holds the
-    administrator's saved cost-calculator prices and peak hours."""
+    `context_tokens` is the prompt budget for campaigns using this model. `document_pricing`,
+    `document_multiple`, and `document_per_100k` price an uploaded adventure source: a multiple
+    of the reply price charged once per document, or a flat fee per 100,000 characters.
+    `calculator` holds the administrator's saved cost-calculator prices and peak hours."""
 
     row_id: int | None
     provider: str
@@ -78,6 +87,9 @@ class ModelSpec:
     api_key: str
     api_key_set: bool
     credits_per_turn: int
+    document_pricing: str
+    document_multiple: int
+    document_per_100k: int
     stream_usage: bool
     context_tokens: int
     enabled: bool
@@ -87,6 +99,15 @@ class ModelSpec:
     @property
     def model_id(self) -> str:
         return f"{self.provider}/{self.model}"
+
+    @property
+    def document_price_label(self) -> str:
+        """The configured source-document price in words, for the admin page."""
+        if self.document_pricing == "characters":
+            noun = "credit" if self.document_per_100k == 1 else "credits"
+            return f"{self.document_per_100k} {noun} per 100,000 characters"
+        noun = "reply" if self.document_multiple == 1 else "replies"
+        return f"{self.document_multiple} {noun} per document"
 
 
 def _identity(provider: str, model: str) -> tuple[str, str, str]:
@@ -124,6 +145,19 @@ def _check_context_tokens(value: int) -> int:
         or not 1 <= value <= _MAX_CONTEXT_TOKENS
     ):
         raise InvalidInput(f"context tokens must be a whole number from 1 to {_MAX_CONTEXT_TOKENS}")
+    return value
+
+
+def _check_document_pricing(value: str) -> str:
+    value = (value or "").strip()
+    if value not in DOCUMENT_PRICING_MODES:
+        raise InvalidInput("document pricing must be 'turns' or 'characters'")
+    return value
+
+
+def _check_document_amount(value: int, label: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or not 0 <= value <= _MAX_TURN_PRICE:
+        raise InvalidInput(f"{label} must be a whole number from 0 to {_MAX_TURN_PRICE}")
     return value
 
 
@@ -208,6 +242,9 @@ class ModelCatalog:
                     api_key=self.settings.provider_api_keys.get(provider, ""),
                     api_key_set=bool(self.settings.provider_api_keys.get(provider)),
                     credits_per_turn=0,
+                    document_pricing=DEFAULT_DOCUMENT_PRICING,
+                    document_multiple=DEFAULT_DOCUMENT_MULTIPLE,
+                    document_per_100k=DEFAULT_DOCUMENT_PER_100K,
                     stream_usage=True,
                     context_tokens=DEFAULT_MODEL_CONTEXT_TOKENS,
                     enabled=True,
@@ -225,6 +262,9 @@ class ModelCatalog:
                 api_key=first.api_key,
                 api_key_set=first.api_key_set,
                 credits_per_turn=first.credits_per_turn,
+                document_pricing=first.document_pricing,
+                document_multiple=first.document_multiple,
+                document_per_100k=first.document_per_100k,
                 stream_usage=first.stream_usage,
                 context_tokens=first.context_tokens,
                 enabled=first.enabled,
@@ -242,6 +282,9 @@ class ModelCatalog:
             api_key=decrypt_api_key(self.settings.secret_key, row.api_key),
             api_key_set=bool(row.api_key),
             credits_per_turn=row.credits_per_turn,
+            document_pricing=row.document_pricing,
+            document_multiple=row.document_multiple,
+            document_per_100k=row.document_per_100k,
             stream_usage=row.stream_usage,
             context_tokens=row.context_tokens,
             enabled=row.enabled,
@@ -457,6 +500,9 @@ class ModelCatalog:
         base_url: str,
         api_key: str | None = None,
         credits_per_turn: int | None = None,
+        document_pricing: str | None = None,
+        document_multiple: int | None = None,
+        document_per_100k: int | None = None,
         stream_usage: bool | None = None,
         context_tokens: int | None = None,
         enabled: bool = True,
@@ -472,6 +518,16 @@ class ModelCatalog:
                 row.api_key = encrypt_api_key(self.settings.secret_key, api_key)
             if credits_per_turn is not None:
                 row.credits_per_turn = _check_turn_price(credits_per_turn)
+            if document_pricing is not None:
+                row.document_pricing = _check_document_pricing(document_pricing)
+            if document_multiple is not None:
+                row.document_multiple = _check_document_amount(
+                    document_multiple, "document replies"
+                )
+            if document_per_100k is not None:
+                row.document_per_100k = _check_document_amount(
+                    document_per_100k, "document credits per 100,000 characters"
+                )
             if stream_usage is not None:
                 row.stream_usage = stream_usage
             if context_tokens is not None:
