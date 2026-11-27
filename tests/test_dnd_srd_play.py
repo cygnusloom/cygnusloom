@@ -398,6 +398,25 @@ def test_a_player_attack_prompts_for_the_players_own_d20(
     assert struck.hit_breakdown["rolls"] == [18]
 
 
+def test_a_next_up_players_resource_is_spent_when_the_turn_opens(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    """An action a next-up player character spends in the reply that begins the encounter is
+    charged to the turn that opens when the reply ends."""
+    client, campaign_id, ctx = _campaign(client_factory)
+    tools, _ = _fight(client, campaign_id)
+    initiative = replace(ctx, world=replace(ctx.world, rng=Rolls(20, 1)))
+    assert dnd_srd_2024.roll_initiative(initiative)["order"][0] == "Rook"
+
+    spent = tools.use_turn_resource("Rook", "action", "a test action")
+    assert spent["remaining"] == 0
+    with Session(client.app.state.engine) as db:
+        encounters.begin_turn(db, campaign_id, "Rook")
+    state = _state(client.app, campaign_id)
+    assert state.encounter is not None and state.encounter.acting == "Rook"
+    assert state.encounter.actions_used == 1
+
+
 def test_awarding_experience_reaches_the_advancement_page(
     app: FastAPI, client_factory: Callable[[], TestClient]
 ) -> None:

@@ -27,6 +27,7 @@ from cygnusloom.services.events import (
     ChatGM,
     ChatPlayer,
     Encounter,
+    EncounterTurnBegun,
     ParticipantLeft,
     group_by_side,
     name_key,
@@ -644,6 +645,130 @@ def test_a_next_up_player_character_may_attack_while_none_is_acting(
 
     result = tools.player_attack("Bo", "unarmed", damage_roll=1)
     assert result["target"] == "Bo"
+
+
+def _next_up_ada(
+    client_factory: Callable[[], TestClient],
+) -> tuple[TestClient, int, Any]:
+    """A Cairn encounter where Pip has passed and Ada is next with nobody acting."""
+    client, campaign_id = _encounter_with(client_factory, cairn=True)
+    app = client.app
+    tools = _tools(app, campaign_id)
+    tools.create_monster(
+        "Bo",
+        TOWN,
+        description="A test foe.",
+        stats={"hp": 6, "str": 10, "dex": 10, "wil": 10},
+        attacks=[{"name": "Claw", "dice": "1d6"}],
+    )
+    assert tools.add_participant("Bo")["added"] == "Bo"
+    _begin(app, campaign_id, "Pip")
+    _end(app, campaign_id, "Pip", by_player=False)
+    _finish_gm_reply(app, campaign_id)
+    state = _encounter(app, campaign_id).encounter
+    assert state is not None and state.acting is None
+    assert state.order[state.up] == "Ada"
+    return client, campaign_id, tools
+
+
+def test_a_next_up_players_attack_is_spent_when_the_turn_opens(
+    client_factory: Callable[[], TestClient],
+):
+    """The attack the reply lets a next-up player character make belongs to the turn that opens
+    when the reply ends, so the turn does not grant a second one."""
+    client, campaign_id, tools = _next_up_ada(client_factory)
+    app = client.app
+    tools.player_attack("Bo", "unarmed", damage_roll=1)
+    _begin(app, campaign_id, "Ada")
+    state = _encounter(app, campaign_id).encounter
+    assert state is not None
+    assert state.acting == "Ada"
+    assert state.attacked == 1
+    assert state.actions_used == 1
+    with pytest.raises(InvalidInput, match="already attacked this turn"):
+        tools.player_attack("Bo", "unarmed", damage_roll=1)
+
+
+def test_a_forced_attack_by_another_character_does_not_spend_the_next_turn(
+    client_factory: Callable[[], TestClient],
+):
+    """An attack the GM forces while Ada is next but not yet acting is not hers to spend."""
+    client, campaign_id, tools = _next_up_ada(client_factory)
+    app = client.app
+    tools.attack("Bo", "Claw", "Ada", force=True)
+    _begin(app, campaign_id, "Ada")
+    state = _encounter(app, campaign_id).encounter
+    assert state is not None and state.acting == "Ada"
+    assert state.attacked == 0
+    assert state.actions_used == 0
+
+
+def test_an_order_change_during_the_next_up_window_drops_the_spent_budget(
+    client_factory: Callable[[], TestClient],
+):
+    """If a correction makes someone else next, the action spent for the old next participant
+    does not become the new participant's spent action."""
+    client, campaign_id, tools = _next_up_ada(client_factory)
+    app = client.app
+    tools.player_attack("Bo", "unarmed", damage_roll=1)
+    tools.adjust_encounter_order(["Pip", "Ada", "Bo"], current="Pip")
+    state = _encounter(app, campaign_id).encounter
+    assert state is not None and state.acting == "Pip"
+    assert state.attacked == 0
+    assert state.actions_used == 0
+
+
+def test_removing_the_next_up_character_drops_their_spent_budget(
+    client_factory: Callable[[], TestClient],
+):
+    """A participant who leaves does not leave a spent action behind for the next participant."""
+    client, campaign_id, tools = _next_up_ada(client_factory)
+    app = client.app
+    tools.player_attack("Bo", "unarmed", damage_roll=1)
+    assert tools.remove_participant("Ada") == {"removed": "Ada"}
+    state = _encounter(app, campaign_id).encounter
+    assert state is not None and state.acting is None
+    assert state.order == ["Pip", "Bo"]
+    assert state.attacked == 0
+    assert state.actions_used == 0
+
+
+def test_a_next_up_players_move_is_spent_when_the_turn_opens(
+    client_factory: Callable[[], TestClient],
+):
+    """Moving during the reply that begins the encounter spends the turn's movement."""
+    client, campaign_id, tools = _next_up_ada(client_factory)
+    app = client.app
+    tools.place_participant("Ada", 1, 1)
+    moved = tools.place_participant("Ada", 2, 1)
+    assert moved["cost"] == 1
+    _begin(app, campaign_id, "Ada")
+    state = _encounter(app, campaign_id).encounter
+    assert state is not None and state.acting == "Ada"
+    assert state.moved == 1
+
+
+def test_handing_a_running_turn_to_the_gm_keeps_its_budget(
+    client_factory: Callable[[], TestClient],
+):
+    """A hand-over is not a new turn, so the action already spent stays spent."""
+    client, campaign_id, tools = _next_up_ada(client_factory)
+    app = client.app
+    tools.player_attack("Bo", "unarmed", damage_roll=1)
+    _begin(app, campaign_id, "Ada")
+    with _db(app) as db:
+        record(
+            db,
+            campaign_id,
+            EncounterTurnBegun(name="Ada", gm_played=True, announce=False, resume=True),
+        )
+        db.commit()
+    state = _encounter(app, campaign_id).encounter
+    assert state is not None
+    assert state.acting == "Ada"
+    assert state.gm_played is True
+    assert state.attacked == 1
+    assert state.actions_used == 1
 
 
 def test_an_effect_on_an_npc_waits_for_a_turn_and_force_allows_it(

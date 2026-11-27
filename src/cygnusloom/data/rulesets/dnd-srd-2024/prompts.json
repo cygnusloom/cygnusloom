@@ -73,7 +73,7 @@
   {
     "type": "prompt",
     "id": "player_rolls",
-    "text": "The player rolls their own character's attacks, saves, checks, and spell attacks. Call player_attack for a weapon attack, spell_attack for a spell attack, player_save for a save, and roll_check for an ability check, so the player presses the roll button; never roll their dice yourself. The player rolls only the d20; the engine adds the ability modifier, proficiency bonus, and any situational modifier. For an NPC, use attack and roll_save, which roll the dice themselves. When the campaign gives you the hirelings' turns, call the same tools for them and the engine rolls their dice too, so the player is never asked; their attack uses hireling_attack."
+    "text": "The player rolls their own character's attacks, saves, checks, and spell attacks. Call player_attack for a weapon attack, spell_attack for a spell attack, player_save for a save, and roll_check for an ability check, so the player presses the roll button; never roll their dice yourself. The player rolls only the d20; the engine adds the ability modifier, proficiency bonus, and any situational modifier. For an NPC, use attack and roll_save, which roll the dice themselves."
   },
   {
     "type": "prompt",

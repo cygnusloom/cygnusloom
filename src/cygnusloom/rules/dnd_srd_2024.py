@@ -2196,7 +2196,11 @@ def roll_initiative(ctx: ToolContext) -> dict[str, Any]:
             character = state.characters.get(name_key(name))
             if character is None:
                 continue
-            bonus = _initiative_bonus(character, getattr(ctx.world, "monsters", {}))
+            bonus = _initiative_bonus(
+                character,
+                getattr(ctx.world, "monsters", {}),
+                getattr(ctx.world, "features", {}),
+            )
             roll = ctx.world.rng.randint(1, 20)
             rolls.append(
                 {
@@ -2225,7 +2229,7 @@ def roll_initiative(ctx: ToolContext) -> dict[str, Any]:
     return ctx.world.with_hook_context(action)
 
 
-def _initiative_bonus(character: Any, monsters: Any = None) -> int:
+def _initiative_bonus(character: Any, monsters: Any = None, features: Any = None) -> int:
     """Dexterity for a player character; a bestiary NPC's printed initiative bonus when known."""
     if character.kind != PC_KIND and monsters:
         template = next(
@@ -2243,9 +2247,14 @@ def _initiative_bonus(character: Any, monsters: Any = None) -> int:
         return int(printed)
     dex = int(character.stats.get("dex", 10))
     bonus = (dex - 10) // 2
-    # Alert adds the proficiency bonus to Initiative.
-    if "feat-alert" in character.features:
-        bonus += proficiency_bonus(_stored_level(character))
+    # A feature such as Alert may add a flat bonus or the proficiency bonus; the data says how.
+    for feature_id in character.features:
+        feature = (features or {}).get(feature_id)
+        if feature is None:
+            continue
+        bonus += int(getattr(feature, "initiative_bonus", 0) or 0)
+        if getattr(feature, "initiative_proficient", False):
+            bonus += proficiency_bonus(_stored_level(character))
     return bonus
 
 
@@ -2852,28 +2861,26 @@ def _spend_turn_resource(
     if not feature.turn_resource:
         return
 
-    def read(hc: HookContext) -> tuple[str | None, bool]:
+    def read(hc: HookContext) -> tuple[bool, bool]:
         encounter = hc.state().encounter
-        if encounter is None:
-            return None, False
-        return encounter.acting, found.name in encounter.order
+        return encounter is not None, encounter is not None and found.name in encounter.order
 
-    acting, participant = ctx.world.with_hook_context(read)
+    in_encounter, participant = ctx.world.with_hook_context(read)
     if feature.turn_resource == "reaction":
         if participant:
             ctx.world.use_turn_resource(  # type: ignore[attr-defined]
                 found.name, "reaction", cause=cause or f"using {feature.name}"
             )
         return
-    if force:
+    if force or not in_encounter:
         return
-    if acting is not None and name_key(str(acting)) == name_key(found.name):
-        ctx.world.use_turn_resource(  # type: ignore[attr-defined]
-            found.name, feature.turn_resource, cause=cause or f"using {feature.name}"
-        )
-        return
+    # The next player character's turn may still be opening in the reply that began the
+    # encounter; the action they take now is charged to that turn when it begins.
     ctx.world.require_turn(  # type: ignore[attr-defined]
         found.name, f"use {feature.name}"
+    )
+    ctx.world.use_turn_resource(  # type: ignore[attr-defined]
+        found.name, feature.turn_resource, cause=cause or f"using {feature.name}"
     )
 
 

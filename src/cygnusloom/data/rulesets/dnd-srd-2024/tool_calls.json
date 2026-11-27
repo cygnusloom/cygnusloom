@@ -668,20 +668,10 @@
     "id": "resolve_hazard",
     "python_module": "dnd_srd_2024",
     "function": "resolve_hazard",
+    "extends": "core:tool_call/resolve_hazard",
     "description": "Resolve a D&D trap, breath weapon, fall, or area effect against NPCs: each rolls d20 plus its saving-throw bonus against the DC. Player characters roll their own save, so name only NPCs here. On a failure apply damage and the named condition; half_on_save halves damage on a success.",
     "parameters": {
       "properties": {
-        "hazard": {
-          "type": "string",
-          "description": "What the hazard is."
-        },
-        "targets": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "The NPCs caught in the effect."
-        },
         "save": {
           "type": "string",
           "enum": [
@@ -700,39 +690,11 @@
           "maximum": 40,
           "description": "The saving-throw DC."
         },
-        "damage": {
-          "type": "string",
-          "description": "Damage dice such as 4d6, or a fixed number."
-        },
-        "half_on_save": {
-          "type": "boolean",
-          "default": false,
-          "description": "True when a successful save halves the damage."
-        },
-        "condition": {
-          "type": "string",
-          "description": "A condition a failed save applies."
-        },
         "stat": {
           "type": "string",
           "description": "Leave it out; D&D hazards take hit points."
-        },
-        "cause": {
-          "type": "string",
-          "description": "What caused the hazard."
-        },
-        "save_modifier": {
-          "type": "integer",
-          "minimum": -20,
-          "maximum": 20,
-          "default": 0,
-          "description": "A situational bonus or penalty to the save."
         }
-      },
-      "required": [
-        "hazard",
-        "targets"
-      ]
+      }
     }
   },
   {

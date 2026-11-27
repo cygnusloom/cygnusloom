@@ -1199,6 +1199,39 @@ def _next_round(encounter: Encounter, state: CampaignState) -> None:
         group_by_side(encounter, keep_turn=False, party=player_sides(encounter, state))
 
 
+def _reset_turn_budget(encounter: Encounter) -> None:
+    """Clear everything an acting participant has spent this turn. The budget belongs to the
+    encounter, so it moves with the turn and must be cleared when the turn does."""
+    encounter.moved = 0
+    encounter.attacked = 0
+    encounter.attacked_with = []
+    encounter.hit_with = []
+    encounter.hit_targets = []
+    encounter.extra_attacks = []
+    encounter.actions_used = 0
+    encounter.bonus_actions_used = 0
+
+
+def _is_up_next(encounter: Encounter, name: str) -> bool:
+    """Whether this participant is next in the turn order."""
+    return (
+        bool(encounter.order)
+        and 0 <= encounter.up < len(encounter.order)
+        and name_key(encounter.order[encounter.up]) == name_key(name)
+    )
+
+
+def _counts_toward_turn(encounter: Encounter, state: CampaignState, name: str) -> bool:
+    """Whether this participant's action spends the turn budget. The acting participant's does.
+    Between turns only the player-controlled participant whose turn is next may act (the reply
+    that begins the encounter can resolve their action before the turn is opened), so only that
+    participant's action counts; a forced action by anyone else does not."""
+    if encounter.acting is not None:
+        return name_key(encounter.acting) == name_key(name)
+    character = state.characters.get(name_key(name))
+    return character is not None and character.kind == PC_KIND and _is_up_next(encounter, name)
+
+
 def _sits_out_first_round(encounter: Encounter, character: Character) -> bool:
     """Whether a player character failed the first round's initiative save. Such a character
     loses that round's turn; later rounds begin with the party as usual."""

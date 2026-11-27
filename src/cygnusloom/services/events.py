@@ -67,10 +67,13 @@ from cygnusloom.services.state import (  # noqa: F401
     Vehicle,
     WorldMapStyle,
     WorldObject,
+    _counts_toward_turn,
+    _is_up_next,
     _next_round,
     _player_present,
     _position,
     _remember_npc,
+    _reset_turn_budget,
     _skip_defeated,
     alias_key,
     current,
@@ -2946,6 +2949,9 @@ class ParticipantLeft(GameEvent):
             tokens = dict(entry.tokens)
             tokens[key] = cell
             state.maps[name_key(encounter.map)] = replace(entry, tokens=tokens)
+        held_budget = (
+            encounter.acting is not None and name_key(encounter.acting) == key
+        ) or (encounter.acting is None and _is_up_next(encounter, self.name))
         del encounter.order[index]
         encounter.cells.pop(key, None)
         encounter.sides.pop(key, None)
@@ -2953,8 +2959,8 @@ class ParticipantLeft(GameEvent):
         if encounter.acting is not None and name_key(encounter.acting) == key:
             encounter.acting = None
             encounter.gm_played = False
-            encounter.moved = 0
-            encounter.attacked = 0
+        if held_budget:
+            _reset_turn_budget(encounter)
         if index < encounter.up:
             encounter.up -= 1
         if encounter.order and encounter.up >= len(encounter.order):
@@ -2984,7 +2990,9 @@ class ParticipantPlaced(GameEvent):
         key = name_key(self.name)
         cell = (self.column, self.row)
         encounter.cells[key] = cell
-        if encounter.acting is not None and name_key(encounter.acting) == key:
+        if name_key(encounter.acting or "") == key or (
+            encounter.acting is None and _is_up_next(encounter, self.name)
+        ):
             encounter.moved += self.cost
         # Keep the map's token with the fight, so the board and statblocks agree and a fight
         # that ends on this map leaves everyone where they actually stood.
@@ -3017,30 +3025,33 @@ class EncounterTurnBegun(GameEvent):
     gm_played: bool = False
     # False when this only hands an already-begun player turn to the GM.
     announce: bool = True
+    # True when control of a turn that is already running changes hands, so no new turn starts.
+    resume: bool = False
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         encounter = state.encounter
         if encounter is None:
             return
         character = state.characters[name_key(self.name)]
-        if character.shield_suspended:
-            character.armor = max(character.armor, character.shield_suspended_armor)
-            character.shield_suspended = False
-            character.shield_suspended_armor = 0
-        if character.total_defense:
-            character.armor = character.total_defense_armor
-            character.total_defense = False
-            character.total_defense_armor = 0
+        previous = encounter.acting
+        if not self.resume:
+            # Starting a turn restores a shield used to bash and a total-defense stance. Handing
+            # an already-started turn to the GM is not a new turn, so those stay as they are.
+            if character.shield_suspended:
+                character.armor = max(character.armor, character.shield_suspended_armor)
+                character.shield_suspended = False
+                character.shield_suspended_armor = 0
+            if character.total_defense:
+                character.armor = character.total_defense_armor
+                character.total_defense = False
+                character.total_defense_armor = 0
         encounter.acting = character.name
         encounter.gm_played = self.gm_played or character.kind == NPC_KIND
-        encounter.moved = 0
-        encounter.attacked = 0
-        encounter.attacked_with = []
-        encounter.hit_with = []
-        encounter.hit_targets = []
-        encounter.extra_attacks = []
-        encounter.actions_used = 0
-        encounter.bonus_actions_used = 0
+        if previous is not None and not self.resume:
+            # A different character takes over a turn that was running; their budget is fresh.
+            # With no acting character the turn is opening after a reply that may already have
+            # spent the next player character's action, and that action stays spent.
+            _reset_turn_budget(encounter)
         if encounter.gm_played and state.turn is None:
             state.turn = Turn(opener=event_id, text=self.instruction, actor=character.name)
         elif state.turn is not None:
@@ -3082,7 +3093,7 @@ class EncounterAttacked(GameEvent):
             return
         # A player character may attack while their turn is next but not yet opened. That is
         # still their action, so it counts; a forced strike during someone else's turn does not.
-        if encounter.acting is None or name_key(encounter.acting) == name_key(self.name):
+        if _counts_toward_turn(encounter, state, self.name):
             if self.extra:
                 encounter.extra_attacks.append(self.extra)
                 if self.bonus_action:
@@ -3123,7 +3134,7 @@ class EncounterResourceUsed(GameEvent):
             key = name_key(self.name)
             encounter.reactions_used[key] = encounter.reactions_used.get(key, 0) + 1
             return
-        if encounter.acting is not None and name_key(encounter.acting) != name_key(self.name):
+        if not _counts_toward_turn(encounter, state, self.name):
             return
         if self.resource == "action":
             encounter.actions_used += 1
@@ -3149,14 +3160,7 @@ class EncounterTurnEnded(GameEvent):
             character.surprised_turns -= 1
         encounter.acting = None
         encounter.gm_played = False
-        encounter.moved = 0
-        encounter.attacked = 0
-        encounter.attacked_with = []
-        encounter.hit_with = []
-        encounter.hit_targets = []
-        encounter.extra_attacks = []
-        encounter.actions_used = 0
-        encounter.bonus_actions_used = 0
+        _reset_turn_budget(encounter)
         encounter.up += 1
         if encounter.up >= len(encounter.order):
             _next_round(encounter, state)
@@ -3230,8 +3234,7 @@ class InitiativeSettled(GameEvent):
         # opened, so clear that provisional turn and let the settled order open the right one.
         encounter.acting = None
         encounter.gm_played = False
-        encounter.moved = 0
-        encounter.attacked = 0
+        _reset_turn_budget(encounter)
         _skip_defeated(encounter, state)
 
     def render(self) -> str:
@@ -3297,12 +3300,14 @@ class EncounterOrderAdjusted(GameEvent):
         encounter = state.encounter
         if encounter is None:
             return
+        previous_next = (
+            encounter.order[encounter.up] if encounter.up < len(encounter.order) else ""
+        )
         encounter.order = list(self.order)
         if self.current:
             character = state.characters[name_key(self.current)]
             if encounter.acting is None or name_key(encounter.acting) != name_key(character.name):
-                encounter.moved = 0
-                encounter.attacked = 0
+                _reset_turn_budget(encounter)
                 if character.shield_suspended:
                     character.armor = max(character.armor, character.shield_suspended_armor)
                     character.shield_suspended = False
@@ -3316,6 +3321,14 @@ class EncounterOrderAdjusted(GameEvent):
                 state.turn.actor = character.name if character.kind == NPC_KIND else None
         if self.current or self.next:
             target = self.current or self.next
+            if (
+                encounter.acting is None
+                and previous_next
+                and name_key(previous_next) != name_key(target)
+            ):
+                # The order moved to another participant before any turn was opened; any action
+                # already taken belongs to the participant who is no longer next.
+                _reset_turn_budget(encounter)
             encounter.up = encounter.order.index(state.characters[name_key(target)].name)
 
     def render(self) -> str:

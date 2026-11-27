@@ -15,7 +15,6 @@
       "combat": true,
       "social": ["conditions", "counters", "checks", "factions", "projects"]
     },
-    "plus": "sum",
     "item_sizes": {
       "tiny": 0,
       "small": 1,
@@ -33,7 +32,6 @@
       }
     },
     "table_genres": ["generic", "fantasy"],
-    "table_tones": ["grim", "mystery", "whimsical", "relaxing", "adventure"],
     "ordered_feature_tags": ["focus"],
     "skill_progression": {
       "untrained": -1,
