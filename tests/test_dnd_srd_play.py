@@ -209,6 +209,66 @@ def test_the_initiative_log_shows_each_d20_and_total_not_only_the_bonus(
     assert "Initiative is set: Foe, Rook." in text
 
 
+def test_surprise_gives_disadvantage_on_initiative_and_costs_no_turn(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    client, campaign_id, ctx = _campaign(client_factory)
+    tools, _ = _fight(client, campaign_id)
+    result = tools.surprise("Rook")
+    assert result == {"character": "Rook", "initiative": "disadvantage"}
+
+    # Rook rolls 19 and 2, keeping 2; the ogre rolls 10.
+    ctx = replace(ctx, world=replace(ctx.world, rng=Rolls(19, 2, 10)))
+    rolled = dnd_srd_2024.roll_initiative(ctx)
+
+    rook = next(entry for entry in rolled["rolls"] if entry["name"] == "Rook")
+    foe = next(entry for entry in rolled["rolls"] if entry["name"] == "Foe")
+    assert (rook["roll_mode"], rook["roll"]) == ("disadvantage", 2)
+    assert (foe["roll_mode"], foe["roll"]) == ("normal", 10)
+    with Session(app.state.engine) as db:
+        row = db.exec(
+            select(Event)
+            .where(Event.campaign_id == campaign_id, Event.kind == "encounter.initiative_settled")
+            .order_by(Event.id)
+        ).all()[-1]
+    assert "Rook: 1d20 2 (disadvantage)" in decode(row).render()
+
+    # D&D surprise changes only the initiative roll; it is not a lost turn, and the marker
+    # does not survive the roll.
+    rook_state = _state(app, campaign_id).characters["rook"]
+    assert rook_state.surprised_turns == 0
+    assert rook_state.surprised_initiative == ""
+
+
+def test_incapacitated_and_invisible_conditions_change_the_initiative_roll(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    client, campaign_id, ctx = _campaign(client_factory)
+    tools, _ = _fight(client, campaign_id)
+    tools.add_condition("Rook", "incapacitated", "test")
+    tools.add_condition("Foe", "invisible", "test", force=True)
+
+    # Rook keeps 3 of 15 and 3; the ogre keeps 18 of 4 and 18.
+    ctx = replace(ctx, world=replace(ctx.world, rng=Rolls(15, 3, 4, 18)))
+    rolled = dnd_srd_2024.roll_initiative(ctx)
+
+    rook = next(entry for entry in rolled["rolls"] if entry["name"] == "Rook")
+    foe = next(entry for entry in rolled["rolls"] if entry["name"] == "Foe")
+    assert (rook["roll_mode"], rook["roll"]) == ("disadvantage", 3)
+    assert (foe["roll_mode"], foe["roll"]) == ("advantage", 18)
+
+
+def test_surprise_after_initiative_is_set_is_refused(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    client, campaign_id, ctx = _campaign(client_factory)
+    tools, _ = _fight(client, campaign_id)
+    dnd_srd_2024.roll_initiative(ctx)
+
+    with pytest.raises(InvalidInput, match="initiative is already set"):
+        tools.surprise("Rook")
+
+
 def test_an_old_individual_initiative_record_still_shows_its_d20() -> None:
     from cygnusloom.services.events import InitiativeSettled
 

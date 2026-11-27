@@ -2642,6 +2642,10 @@ class EncounterEnded(GameEvent):
             character.fled = False
             character.surrendered = False
             character.critical_due = False
+            # Surprise belongs to the fight that just ended, so a character who never took a
+            # lost turn does not carry it into the next encounter.
+            character.surprised_turns = 0
+            character.surprised_initiative = ""
             if character.shield_suspended:
                 character.armor = max(character.armor, character.shield_suspended_armor)
                 character.shield_suspended = False
@@ -3261,6 +3265,11 @@ class InitiativeSettled(GameEvent):
         encounter.order = list(self.order)
         encounter.up = 0
         encounter.settled = True
+        # Surprise only changes this initiative roll; it leaves no marker behind.
+        for name in self.order:
+            character = state.characters.get(name_key(name))
+            if character is not None:
+                character.surprised_initiative = ""
         if self.individual:
             encounter.fixed_order = True
             for name in self.order:
@@ -3283,11 +3292,13 @@ class InitiativeSettled(GameEvent):
                 # Older individual-initiative records stored the d20 face without naming its
                 # die, so they rendered as a bare bonus. Every such roll is a d20.
                 dice = str(entry.get("dice") or ("1d20" if self.individual else ""))
+                mode = str(entry.get("roll_mode") or "normal")
                 breakdown = roll_breakdown(
                     dice,
                     [int(entry.get("roll", 0))],
                     [(str(entry.get("bonus_label", "bonus")), int(entry.get("bonus", 0)))],
                     int(entry.get("total", 0)),
+                    note="" if mode == "normal" else mode,
                 )
                 parts.append(
                     f"{entry.get('name') or entry.get('side', 'side')}: {breakdown_text(breakdown)}"
@@ -3557,19 +3568,27 @@ class GrappleEnded(GameEvent):
 @dataclass(frozen=True)
 class Surprised(GameEvent):
     """A character was caught off guard. They lose `turns` turns, consumed as each of their
-    encounter turns ends."""
+    encounter turns ends, or take `initiative` on their initiative roll, or both, as the rule
+    set's surprise rule says."""
 
     kind: ClassVar[str] = "combat.surprised"
     hidden: ClassVar[bool] = True
 
     name: str
     turns: int = 1
+    # The initiative roll mode the surprise applies, such as "disadvantage". Empty when the
+    # rule set's surprise costs turns instead.
+    initiative: str = ""
 
     def apply(self, state: CampaignState, event_id: int) -> None:
         character = state.characters[name_key(self.name)]
         character.surprised_turns = max(character.surprised_turns, self.turns)
+        if self.initiative:
+            character.surprised_initiative = self.initiative
 
     def render(self) -> str:
+        if self.initiative and not self.turns:
+            return f"{self.name} is surprised and has {self.initiative} on initiative."
         return f"{self.name} is surprised and loses {self.turns} turn(s)."
 
 

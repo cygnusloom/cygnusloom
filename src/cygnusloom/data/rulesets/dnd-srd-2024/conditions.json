@@ -85,7 +85,10 @@
       "save",
       "time",
       "magic"
-    ]
+    ],
+    "roll_modes": {
+      "initiative": "disadvantage"
+    }
   },
   {
     "type": "condition",
@@ -99,7 +102,8 @@
     ],
     "roll_modes": {
       "attack": "advantage",
-      "attack_against": "disadvantage"
+      "attack_against": "disadvantage",
+      "initiative": "advantage"
     }
   },
   {
@@ -113,7 +117,8 @@
       "magic"
     ],
     "roll_modes": {
-      "attack_against": "advantage"
+      "attack_against": "advantage",
+      "initiative": "disadvantage"
     }
   },
   {
@@ -127,7 +132,8 @@
       "magic"
     ],
     "roll_modes": {
-      "attack_against": "advantage"
+      "attack_against": "advantage",
+      "initiative": "disadvantage"
     }
   },
   {
@@ -186,7 +192,8 @@
       "magic"
     ],
     "roll_modes": {
-      "attack_against": "advantage"
+      "attack_against": "advantage",
+      "initiative": "disadvantage"
     }
   },
   {
@@ -200,7 +207,8 @@
       "magic"
     ],
     "roll_modes": {
-      "attack_against": "advantage"
+      "attack_against": "advantage",
+      "initiative": "disadvantage"
     }
   },
   {

@@ -174,6 +174,18 @@ def test_combat_defeat_still_needs_the_core_labels(tree: Path):
         ContentLibrary.load(tree)
 
 
+def test_combat_surprise_initiative_accepts_only_a_supported_roll_mode(tree: Path):
+    _write(
+        tree,
+        {
+            "rulesets/testset/stats.json": _stats(),
+            "rulesets/testset/combat.json": [_combat(surprise_initiative="advantage")],
+        },
+    )
+    with pytest.raises(ContentError, match="'surprise_initiative' must be"):
+        ContentLibrary.load(tree)
+
+
 @pytest.mark.parametrize(
     ("files", "message"),
     [

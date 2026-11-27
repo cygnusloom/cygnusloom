@@ -1694,6 +1694,17 @@ def test_a_surprised_character_loses_a_turn_before_acting(client_factory):
     assert _character(app, campaign_id, FOE).surprised_turns == 0
 
 
+def test_the_end_of_an_encounter_clears_unspent_surprise(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _foe(tools, hp=20)
+    tools.surprise(FOE)
+    assert _character(app, campaign_id, FOE).surprised_turns == 1
+
+    tools.end_encounter()
+
+    assert _character(app, campaign_id, FOE).surprised_turns == 0
+
+
 def test_long_range_takes_the_configured_penalty(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, hp=20, armor=20)
