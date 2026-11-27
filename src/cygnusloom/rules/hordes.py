@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from cygnusloom.rules import core
 from cygnusloom.rules.context import ToolContext
 from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.events import CounterChanged, record
@@ -76,11 +77,10 @@ async def create_site(
     icon: str | None = None,
 ) -> dict[str, Any]:
     """Add a seeded, searchable place from a site type."""
-    if ctx.check_new_location is not None:
-        await ctx.check_new_location(name)
-    return ctx.world.create_location(
+    return await core.create_location(
         name,
         description,
+        ctx,
         discovered=discovered,
         parent=parent,
         icon=icon,

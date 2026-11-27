@@ -3312,7 +3312,19 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin, DocumentToolsMixin):
                 if character.name not in encounter.order:
                     raise InvalidInput(f"{character.name} is not in the encounter")
             elif encounter.acting is None or name_key(encounter.acting) != name_key(character.name):
-                raise InvalidInput(f"it is not {character.name}'s turn")
+                player_control = not encounters.gm_plays(
+                    state,
+                    character.name,
+                    gm_plays_hirelings(db, self.campaign_id),
+                )
+                error = encounters.acting_error(
+                    state,
+                    character.name,
+                    player_control=player_control,
+                    action=f"spend a {resource.replace('_', ' ')}",
+                )
+                if error is not None:
+                    raise InvalidInput(error)
             limit = (
                 rules.actions_per_turn
                 if resource == "action"
@@ -3504,6 +3516,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin, DocumentToolsMixin):
     def place_participant(
         self, name: str, column: int, row: int, force: bool = False
     ) -> dict[str, Any]:
+        player_control = not self.gm_plays(name)
         with session_scope(self.engine) as db:
             return encounters.place_participant(
                 db,
@@ -3515,6 +3528,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin, DocumentToolsMixin):
                 self.terrain,
                 self.encounter_objects,
                 force=force,
+                player_control=player_control,
             )
 
     def add_note(self, text: str, subject: str | None = None) -> dict[str, Any]:

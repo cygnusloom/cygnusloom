@@ -151,6 +151,7 @@
     "id": "first_winter_opening",
     "unwritten_only": true,
     "step": "state",
+    "supersedes": ["setting_forge"],
     "text": "Open in the first winter after the dead rose. Roll the setting tables with roll_creative(role=\"setting\") for the cause, region, season, shelter, settlement, faction, threat, and omen, then record them with record_settings. Build the starting shelter and one or two people who share it, give the shelter one fragile improvement and a few days of stores, and end the opening on a concrete pressure that cannot wait. Do not explain the cause or name a published setting; the origin stays unwritten."
   }
 ]

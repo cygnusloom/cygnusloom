@@ -19,7 +19,6 @@
         "checks"
       ]
     },
-    "plus": "sum",
     "item_sizes": {
       "tiny": 0,
       "small": 1,
@@ -61,10 +60,6 @@
       "serious": 22,
       "elite": 45,
       "heroic": 90
-    },
-    "default_campaign": {
-      "rule_set": "dnd-srd-2024",
-      "world_template": "unwritten-world"
     },
     "recommended_worlds": [
       "unwritten-world"

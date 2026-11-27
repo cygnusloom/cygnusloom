@@ -95,60 +95,6 @@
   },
   {
     "type": "tool_call",
-    "id": "apply_condition",
-    "description": "Give a character a condition the story has put on them, such as wounded, pinned, or panicked.",
-    "parameters": {
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "The name of the character."
-        },
-        "condition": {
-          "type": "string",
-          "description": "The condition to add."
-        },
-        "cause": {
-          "type": "string",
-          "description": "What in the story caused it."
-        }
-      },
-      "required": [
-        "name",
-        "condition",
-        "cause"
-      ]
-    },
-    "world_method": "add_condition"
-  },
-  {
-    "type": "tool_call",
-    "id": "clear_condition",
-    "description": "End a condition a character has, when its ending happens in the story.",
-    "parameters": {
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "The name of the character."
-        },
-        "condition": {
-          "type": "string",
-          "description": "The condition to end."
-        },
-        "how": {
-          "type": "string",
-          "description": "What ended it: a trigger the condition names, or gm."
-        }
-      },
-      "required": [
-        "name",
-        "condition",
-        "how"
-      ]
-    },
-    "world_method": "end_condition"
-  },
-  {
-    "type": "tool_call",
     "id": "adjust_counter",
     "description": "Change a character's harm, infection, Rejection, Dread, or morale when the fiction moves it outside a move.",
     "parameters": {

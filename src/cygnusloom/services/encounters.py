@@ -190,8 +190,10 @@ def _character(state: CampaignState, name: str) -> Character:
     return character
 
 
-def _moves_left(encounter: Encounter, grid: EncounterGrid | None) -> int | None:
-    if grid is None or encounter.acting is None:
+def _moves_left(
+    encounter: Encounter, grid: EncounterGrid | None, *, charging: bool = False
+) -> int | None:
+    if grid is None or (encounter.acting is None and not charging):
         return None
     return max(0, grid.move_cells - encounter.moved)
 
@@ -1463,6 +1465,7 @@ def place_participant(
     terrain: Mapping[str, EncounterTerrain] | None = None,
     encounter_objects: Mapping[str, EncounterObject] | None = None,
     force: bool = False,
+    player_control: bool = False,
 ) -> dict[str, Any]:
     """Move a participant to a cell. Obstacles block; difficult terrain costs two moves per cell
     entered. Without marks or a background, the cost is the plain distance in cells. `force` lets
@@ -1505,6 +1508,14 @@ def place_participant(
         )
     cost = 0
     previous = encounter.cells.get(key)
+    # A player-controlled character whose turn is next may move during the reply that begins
+    # the encounter; the move belongs to the turn that opens when the reply ends.
+    charging = encounter.acting == character.name or (
+        encounter.acting is None
+        and player_control
+        and encounter.up < len(encounter.order)
+        and name_key(encounter.order[encounter.up]) == key
+    )
     if previous == (column, row):
         # A repeated placement, such as a retried tool call, is the same position; do not add a
         # second Log line or spend movement on it.
@@ -1516,7 +1527,7 @@ def place_participant(
             "column": column,
             "row": row,
             "cost": 0,
-            "moves_left": _moves_left(encounter, grid),
+            "moves_left": _moves_left(encounter, grid, charging=charging),
             "note": f"{character.name} is already at column {column}, row {row}.",
         }
         result.update(_map_space(entry, cells, encounter_objects or {}))
@@ -1524,8 +1535,7 @@ def place_participant(
     if previous is not None:
         # A route around obstacles is required at any time, but moves are charged only on the
         # participant's own turn.
-        acting = encounter.acting == character.name
-        left = _moves_left(encounter, grid) if acting else None
+        left = _moves_left(encounter, grid, charging=charging) if charging else None
         if entry.marks or entry.background:
             route = _path_cost(entry, previous, target, terrain or {}, encounter_objects or {})
             if route is None:
@@ -1542,7 +1552,7 @@ def place_participant(
         else:
             route = max(abs(column - previous[0]), abs(row - previous[1]))
             too_far = f"{character.name} can move {left} more cells this turn, and that is {route}"
-        if acting:
+        if charging:
             cost = route
             if left is not None and cost > left and not force:
                 raise InvalidInput(too_far)
@@ -1552,7 +1562,7 @@ def place_participant(
         ParticipantPlaced(name=character.name, column=column, row=row, cost=cost),
     )
     db.commit()
-    after = _moves_left(encounter, grid)
+    after = _moves_left(encounter, grid, charging=charging)
     if after is not None:
         after = max(0, after - cost)
     cells = dict(encounter.cells)
@@ -1756,7 +1766,15 @@ def begin_turn(db: Session, campaign_id: int, name: str, *, gm_only: bool = Fals
         raise InvalidInput(f"{encounter.acting} is still taking their turn")
     if already_acting and not gm_played:
         raise InvalidInput(f"{character.name} is taking their turn")
-    _start_turn(db, campaign_id, state, character, gm_played=gm_played, announce=not already_acting)
+    _start_turn(
+        db,
+        campaign_id,
+        state,
+        character,
+        gm_played=gm_played,
+        announce=not already_acting,
+        resume=already_acting,
+    )
     db.commit()
     return character
 
@@ -1788,8 +1806,10 @@ def _start_turn(
     *,
     gm_played: bool,
     announce: bool,
+    resume: bool = False,
 ) -> None:
-    """Record a turn's start, ending every condition that expires when it begins."""
+    """Record a turn's start, ending every condition that expires when it begins. `resume`
+    marks a control change on a turn that is already running, which starts nothing anew."""
     encounter = _encounter(state)
     already_acting = encounter.acting is not None and name_key(encounter.acting) == name_key(
         character.name
@@ -1812,6 +1832,7 @@ def _start_turn(
             instruction=_turn_instruction(character, gm_played),
             gm_played=gm_played,
             announce=announce,
+            resume=resume,
         ),
     )
 

@@ -962,7 +962,6 @@ def build_rule_set() -> None:
                     "combat": True,
                     "social": ["conditions", "counters", "checks"],
                 },
-                "plus": "sum",
                 "item_sizes": {
                     "tiny": 0,
                     "small": 1,
@@ -986,7 +985,7 @@ def build_rule_set() -> None:
                     "creation_maximum": 4,
                     "maximum": 12,
                 },
-                "condition_ends": ["rest", "long_rest", "save", "time", "magic"],
+                "condition_ends": ["rest", "long_rest", "save", "time", "magic", "turn start"],
                 "npc_hp_stat": "hp",
                 "npc_hp": {
                     "average": 4,
@@ -994,10 +993,6 @@ def build_rule_set() -> None:
                     "serious": 22,
                     "elite": 45,
                     "heroic": 90,
-                },
-                "default_campaign": {
-                    "rule_set": "dnd-srd-2024",
-                    "world_template": "unwritten-world",
                 },
                 "recommended_worlds": ["unwritten-world"],
             },
@@ -4363,7 +4358,7 @@ def build_prompts() -> None:
                 "type": "prompt",
                 "id": "rests",
                 "step": "state",
-                "text": "A short rest takes 1 hour: call rest with length short, then spend_hit_die once for each Hit Point Die a character spends. A long rest takes 8 hours and restores all hit points, Hit Point Dice, class resource uses, and spell slots; call rest with length long. The engine refills slots, Hit Point Dice, and class resources for you. After a long rest, call prepare_spells for each spellcaster so the player can change their prepared list. Do not add advance_time for the same period, and do not restore hit points by narration alone.",
+                "text": "A short rest takes 1 hour: call rest with length short, then spend_hit_die once for each Hit Point Die a character spends. A long rest takes 8 hours and restores all hit points, Hit Point Dice, class resource uses, and spell slots; call rest with length long. The engine refills slots, Hit Point Dice, and class resources for you. After a long rest, call prepare_spells for each spellcaster so the player can change their prepared list, and change one Weapon Mastery choice with choose_feature_choice, passing replace with the old weapon and choice with the new one. Do not add advance_time for the same period, and do not restore hit points by narration alone.",
             },
             {
                 "type": "prompt",
@@ -4870,15 +4865,10 @@ def build_tool_calls() -> None:
             "id": "resolve_hazard",
             "python_module": "dnd_srd_2024",
             "function": "resolve_hazard",
+            "extends": "core:tool_call/resolve_hazard",
             "description": "Resolve a D&D trap, breath weapon, fall, or area effect against NPCs: each rolls d20 plus its saving-throw bonus against the DC. Player characters roll their own save, so name only NPCs here. On a failure apply damage and the named condition; half_on_save halves damage on a success.",
             "parameters": {
                 "properties": {
-                    "hazard": {"type": "string", "description": "What the hazard is."},
-                    "targets": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "The NPCs caught in the effect.",
-                    },
                     "save": {
                         "type": "string",
                         "enum": ["str", "dex", "con", "int", "wis", "cha"],
@@ -4890,33 +4880,11 @@ def build_tool_calls() -> None:
                         "maximum": 40,
                         "description": "The saving-throw DC.",
                     },
-                    "damage": {
-                        "type": "string",
-                        "description": "Damage dice such as 4d6, or a fixed number.",
-                    },
-                    "half_on_save": {
-                        "type": "boolean",
-                        "default": False,
-                        "description": "True when a successful save halves the damage.",
-                    },
-                    "condition": {
-                        "type": "string",
-                        "description": "A condition a failed save applies.",
-                    },
                     "stat": {
                         "type": "string",
                         "description": "Leave it out; D&D hazards take hit points.",
                     },
-                    "cause": {"type": "string", "description": "What caused the hazard."},
-                    "save_modifier": {
-                        "type": "integer",
-                        "minimum": -20,
-                        "maximum": 20,
-                        "default": 0,
-                        "description": "A situational bonus or penalty to the save.",
-                    },
                 },
-                "required": ["hazard", "targets"],
             },
         },
         {

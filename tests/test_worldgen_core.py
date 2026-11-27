@@ -163,6 +163,21 @@ def test_the_academy_forge_replaces_the_core_setting_forge():
     assert continuity.text in prompt
 
 
+def test_the_hordes_opening_replaces_the_core_setting_forge():
+    library = content_library()
+    rules = library.rule_sets["hordes"]
+    prompt = state_instruction(rules, library.world_templates["unwritten-world"])
+    core_forge = next(
+        fragment for fragment in library.core.prompt_fragments if SETTING_FORGE in fragment.text
+    )
+    forge = next(
+        fragment for fragment in rules.prompt_fragments if fragment.id == "first_winter_opening"
+    )
+    assert core_forge.id in forge.supersedes
+    assert forge.text in prompt
+    assert core_forge.text not in prompt
+
+
 @pytest.mark.parametrize(
     ("world", "rule_set"),
     [

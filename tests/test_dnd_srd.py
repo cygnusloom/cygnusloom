@@ -232,8 +232,8 @@ def test_alert_adds_proficiency_and_savage_attacker_rerolls_weapon_dice(
     }
     create_character_direct(client, campaign_id, name="Rook", fields=fields)
     pc = character_named(app, campaign_id, "Rook")
-    assert dnd_srd_2024._initiative_bonus(pc, {}) == 4  # Dexterity +2 and PB +2
     rules = _dnd_rules()
+    assert dnd_srd_2024._initiative_bonus(pc, {}, rules.character.features) == 4
     assert rules.character.features["feat-savage-attacker"].weapon_damage_reroll is True
 
 

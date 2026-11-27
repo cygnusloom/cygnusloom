@@ -13,7 +13,6 @@
       "dungeon": false,
       "social": ["conditions", "counters", "moves", "relations", "tallies", "factions", "projects", "periods"]
     },
-    "plus": "sum",
     "item_sizes": {
       "tiny": 0,
       "small": 1,
@@ -41,7 +40,6 @@
       ]
     },
     "table_genres": ["generic", "fantasy", "magicschool"],
-    "table_tones": ["grim", "mystery", "whimsical", "relaxing", "adventure"],
     "condition_ends": ["rest", "downtime", "scene"],
     "starting_years": {
       "subjects": ["Charms", "Transfiguration", "Warding", "Divination", "Healing", "Illusion", "Elemental"],
