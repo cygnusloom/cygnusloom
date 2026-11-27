@@ -3043,6 +3043,11 @@ class EncounterTurnBegun(GameEvent):
         encounter.bonus_actions_used = 0
         if encounter.gm_played and state.turn is None:
             state.turn = Turn(opener=event_id, text=self.instruction, actor=character.name)
+        elif state.turn is not None:
+            # A reply already open now plays out this turn, so it follows the character acting.
+            state.turn.actor = (
+                character.name if (character.kind == NPC_KIND or self.gm_played) else None
+            )
 
     def render(self) -> str | None:
         return f"{self.name}'s turn begins." if self.announce else None

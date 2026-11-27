@@ -1425,11 +1425,15 @@ def adjust_turn_order(
             raise InvalidInput("order must list every participant in the encounter exactly once")
         names = [state.characters[key].name for key in keys]
     target = ""
+    hand_over = False
     if current:
         character = _participant(state, current)
         if out_of_fight(character):
             raise InvalidInput(f"{character.name} is out of the fight")
         target = character.name
+        # A change of actor begins that turn properly, so a reply can never play out a turn
+        # that never began.
+        hand_over = encounter.acting is None or name_key(encounter.acting) != name_key(target)
     if encounter.order and encounter.up >= len(encounter.order):
         next_name = target
     else:
@@ -1437,8 +1441,14 @@ def adjust_turn_order(
     record(
         db,
         campaign_id,
-        EncounterOrderAdjusted(order=names, next=next_name, current=target),
+        EncounterOrderAdjusted(order=names, next=next_name, current="" if hand_over else target),
     )
+    if hand_over:
+        character = state.characters[name_key(target)]
+        gm_played = character.kind == NPC_KIND or (
+            character.hireling and campaign_gm_plays_hirelings(db, campaign_id)
+        )
+        _start_turn(db, campaign_id, state, character, gm_played=gm_played, announce=True)
     db.commit()
     return {"order": names, "next": next_name, "current": target or encounter.acting}
 
@@ -1746,6 +1756,44 @@ def begin_turn(db: Session, campaign_id: int, name: str, *, gm_only: bool = Fals
         raise InvalidInput(f"{encounter.acting} is still taking their turn")
     if already_acting and not gm_played:
         raise InvalidInput(f"{character.name} is taking their turn")
+    _start_turn(db, campaign_id, state, character, gm_played=gm_played, announce=not already_acting)
+    db.commit()
+    return character
+
+
+def _turn_instruction(character: Character, gm_played: bool) -> str:
+    """What the GM should do on the turn it plays, or nothing for a player's own turn."""
+    if character.kind == NPC_KIND:
+        return (
+            f"It is {character.name}'s turn in the encounter. This is not an out-of-character "
+            "message. Resolve what they do now with the combat tools, then finish the state step; "
+            "an attack happens only when you call attack."
+        )
+    if gm_played:
+        return (
+            f"It is {character.name}'s turn in the encounter, and you play this hireling's turn. "
+            "This is not an out-of-character message. Decide and resolve what they do now with "
+            "the combat tools, then finish the state step; their attack happens only when you "
+            "call hireling_attack. Call the usual check, save, and spell tools for them as you "
+            "would for an NPC: the engine rolls their dice, so never ask the player to roll."
+        )
+    return ""
+
+
+def _start_turn(
+    db: Session,
+    campaign_id: int,
+    state: CampaignState,
+    character: Character,
+    *,
+    gm_played: bool,
+    announce: bool,
+) -> None:
+    """Record a turn's start, ending every condition that expires when it begins."""
+    encounter = _encounter(state)
+    already_acting = encounter.acting is not None and name_key(encounter.acting) == name_key(
+        character.name
+    )
     if not already_acting:
         for other in state.characters.values():
             for condition in list(other.conditions):
@@ -1756,33 +1804,16 @@ def begin_turn(db: Session, campaign_id: int, name: str, *, gm_only: bool = Fals
                         campaign_id,
                         ConditionEnded(name=other.name, condition=condition, how="turn start"),
                     )
-    instruction = ""
-    if character.kind == NPC_KIND:
-        instruction = (
-            f"It is {character.name}'s turn in the encounter. This is not an out-of-character "
-            "message. Resolve what they do now with the combat tools, then finish the state step; "
-            "an attack happens only when you call attack."
-        )
-    elif gm_played:
-        instruction = (
-            f"It is {character.name}'s turn in the encounter, and you play this hireling's turn. "
-            "This is not an out-of-character message. Decide and resolve what they do now with "
-            "the combat tools, then finish the state step; their attack happens only when you "
-            "call hireling_attack. Call the usual check, save, and spell tools for them as you "
-            "would for an NPC: the engine rolls their dice, so never ask the player to roll."
-        )
     record(
         db,
         campaign_id,
         EncounterTurnBegun(
             name=character.name,
-            instruction=instruction,
+            instruction=_turn_instruction(character, gm_played),
             gm_played=gm_played,
-            announce=not already_acting,
+            announce=announce,
         ),
     )
-    db.commit()
-    return character
 
 
 def begin_player_turn_if_next(db: Session, campaign_id: int) -> Character | None:
