@@ -44,33 +44,73 @@
     );
   };
 
-  // On phones the details panel is a drawer opened from the bottom bar.
+  // On phones the details panel is a drawer opened from the bottom bar and from the composer.
+  // The drawer is a place of its own, so opening it pushes a marker onto the history stack and
+  // Browser Back just closes it instead of leaving the campaign.
   const shell = document.querySelector(".shell");
-  const sideToggle = document.querySelector("[data-side-toggle]");
-  const setSide = (open, focus = true) => {
+  const SIDE_HISTORY = "cygnusDetails";
+  let sideHistory = false;
+  let sideHistoryDrop = false;
+  let sideOpener = null;
+  const sideToggles = () => Array.from(document.querySelectorAll("[data-side-toggle]"));
+  const pushSideHistory = () => {
+    if (sideHistory) return;
+    sideHistory = true;
+    history.pushState({ ...history.state, [SIDE_HISTORY]: true }, "");
+  };
+  const dropSideHistory = () => {
+    if (!sideHistory) return;
+    sideHistory = false;
+    sideHistoryDrop = true;
+    history.back();
+  };
+  const setSide = (open, focus = true, fromHistory = false) => {
     // The side panel is replaced in place after a turn, so look it up instead of holding the
     // old element.
     const side = document.querySelector(".side");
-    if (!shell || !side || !sideToggle) return;
+    const toggles = sideToggles();
+    if (!shell || !side || !toggles.length) return;
+    const wasOpen = shell.classList.contains("show-side");
     shell.classList.toggle("show-side", open);
-    sideToggle.setAttribute("aria-pressed", String(open));
+    for (const toggle of toggles) toggle.setAttribute("aria-pressed", String(open));
     if (open) setMenu(false, false);
+    if (!fromHistory && open !== wasOpen) {
+      if (open) pushSideHistory();
+      else dropSideHistory();
+    }
     if (!focus) return;
     if (open) side.querySelector('[role="tab"]')?.focus();
-    else sideToggle.focus();
+    else (sideOpener?.isConnected ? sideOpener : toggles[0]).focus();
   };
-  if (shell && sideToggle) {
-    sideToggle.addEventListener("click", () => {
-      const open = !shell.classList.contains("show-side");
-      // The details drawer belongs to the Play view, so asking for it from another view
-      // returns to Play first instead of toggling a drawer that cannot be seen.
-      if (open && document.querySelector('[data-view="play"]')?.hidden) selectView("play");
-      setSide(open);
-    });
+  if (shell) {
+    for (const toggle of sideToggles()) {
+      toggle.addEventListener("click", () => {
+        const open = !shell.classList.contains("show-side");
+        // The details drawer belongs to the Play view, so asking for it from another view
+        // returns to Play first instead of toggling a drawer that cannot be seen.
+        if (open && document.querySelector('[data-view="play"]')?.hidden) selectView("play");
+        sideOpener = toggle;
+        setSide(open);
+      });
+    }
     document.addEventListener("keydown", (event) => {
       if (event.key !== "Escape" || document.querySelector("dialog[open]")) return;
       if (shell.classList.contains("show-side")) setSide(false);
     });
+    window.addEventListener("popstate", () => {
+      // Closing from the page consumed the marker itself; this is that pop, not a Back.
+      if (sideHistoryDrop) {
+        sideHistoryDrop = false;
+        return;
+      }
+      if (!sideHistory) return;
+      sideHistory = false;
+      if (shell.classList.contains("show-side")) setSide(false, false, true);
+    });
+    if (history.state?.[SIDE_HISTORY]) {
+      // A reload starts with the drawer closed, so leave no marker behind in the back stack.
+      history.replaceState({ ...history.state, [SIDE_HISTORY]: false }, "");
+    }
     const wide = window.matchMedia("(min-width: 901px)");
     wide.addEventListener("change", (event) => {
       if (event.matches) setSide(false, false);

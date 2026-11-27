@@ -856,6 +856,19 @@ def test_campaign_page_has_sidebar_controls(client_factory: Callable[[], TestCli
     assert 'id="site-menu"' in page
 
 
+def test_the_composer_mirrors_send_with_a_scene_and_character_toggle(
+    client_factory: Callable[[], TestClient],
+):
+    """Phones get a second way into the details drawer beside the message box."""
+    client, campaign_id = _campaign_id(client_factory)
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert page.count("data-side-toggle") == 2
+    assert 'class="scene-toggle" data-side-toggle' in page
+    assert "Scene &amp; Character" in page
+    assert 'aria-controls="side-panel"' in page
+    assert 'id="side-panel"' in page
+
+
 def test_the_details_button_returns_to_play_before_opening_its_drawer(
     client_factory: Callable[[], TestClient],
 ):
@@ -863,10 +876,22 @@ def test_the_details_button_returns_to_play_before_opening_its_drawer(
     client, _ = _campaign_id(client_factory)
     script = client.get("/static/workspace.js")
     assert script.status_code == 200
-    start = script.text.index('sideToggle.addEventListener("click"')
+    start = script.text.index('toggle.addEventListener("click"')
     handler = script.text[start : script.text.index("});", start)]
     assert 'selectView("play")' in handler
     assert "document.querySelector('[data-view=\"play\"]')?.hidden" in handler
+
+
+def test_browser_back_closes_the_details_drawer(client_factory: Callable[[], TestClient]):
+    """Opening the drawer pushes history, so Back closes it instead of leaving the campaign."""
+    client, _ = _campaign_id(client_factory)
+    script = client.get("/static/workspace.js").text
+    assert 'SIDE_HISTORY = "cygnusDetails"' in script
+    assert "history.pushState(" in script
+    popstate = script[script.index('addEventListener("popstate"') :]
+    handler = popstate[: popstate.index("});")]
+    assert 'shell.classList.contains("show-side")' in handler
+    assert "setSide(false" in handler
 
 
 def test_debug_panel_is_hidden_and_refused_by_default(client_factory):
