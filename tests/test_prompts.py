@@ -482,8 +482,10 @@ def test_core_owns_the_encounter_start_policy():
     assert "start the encounter" in core.text
     assert "add every combatant" in core.text
     assert "settle initiative" in core.text
-    assert "An action the player declared before the fight is not part of the first turn" in core.text
+    assert "An out-of-combat action before the fight is not part of the first turn" in core.text
     assert "resolve it before you start the encounter" in core.text
+    assert "The action that starts the fight is an encounter action" in core.text
+    assert "spending that turn's budget" in core.text
 
 
 def test_each_combat_ruleset_adds_only_its_own_initiative_rule():
