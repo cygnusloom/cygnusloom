@@ -464,6 +464,34 @@ def test_a_spell_attack_spends_the_first_turn_action(
         dnd_srd_2024.spell_attack("Wren", "fire-bolt", "Foe", ctx, roll=15)
 
 
+def test_adjusting_the_order_mid_turn_ends_the_turn_it_replaces(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    """A correction that gives another participant the turn closes the old one first."""
+    client, campaign_id, ctx = _campaign(client_factory)
+    tools, _ = _fight(client, campaign_id)
+    initiative = replace(ctx, world=replace(ctx.world, rng=Rolls(1, 20)))
+    assert dnd_srd_2024.roll_initiative(initiative)["order"][0] == "Foe"
+    with Session(client.app.state.engine) as db:
+        encounters.begin_turn(db, campaign_id, "Foe")
+
+    tools.adjust_encounter_order(["Rook", "Foe"], current="Rook")
+
+    state = _state(client.app, campaign_id)
+    assert state.encounter is not None and state.encounter.acting == "Rook"
+    with Session(client.app.state.engine) as db:
+        kinds = [
+            decode(row).kind
+            for row in db.exec(
+                select(Event).where(Event.campaign_id == campaign_id).order_by(Event.seq)
+            )
+        ]
+    ended = kinds.index("encounter.turn_ended")
+    adjusted = kinds.index("encounter.order_adjusted")
+    begun = len(kinds) - 1 - kinds[::-1].index("encounter.turn_begun")
+    assert ended < adjusted < begun
+
+
 def test_a_defeated_participant_is_skipped_when_their_turn_is_next(
     app: FastAPI, client_factory: Callable[[], TestClient]
 ) -> None:

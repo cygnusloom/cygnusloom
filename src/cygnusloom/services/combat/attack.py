@@ -826,7 +826,7 @@ def attack(
             roll_mode=roll_mode,
         )
         if state.encounter is not None:
-            _mark_attack(db, campaign_id, source.name)
+            _mark_attack(db, campaign_id, source.name, weapon=name)
         return {**result, **placement}
     flags = AttackFlags.of(source.attack_flags.get(name, ()))
     if flags.hits_all_targets:
@@ -848,7 +848,7 @@ def attack(
             roll_mode=roll_mode,
         )
         if state.encounter is not None:
-            _mark_attack(db, campaign_id, source.name)
+            _mark_attack(db, campaign_id, source.name, weapon=name)
         return {**result, **placement}
     if targets:
         raise InvalidInput(f"{name} has no Blast, so it hits one target; leave targets out")
@@ -978,7 +978,14 @@ def attack(
         critical=critical,
     )
     if state.encounter is not None:
-        _mark_attack(db, campaign_id, source.name)
+        _mark_attack(
+            db,
+            campaign_id,
+            source.name,
+            weapon=name,
+            target=struck.name,
+            hit=bool(result.get("hit", True)),
+        )
     return {**result, **placement}
 
 

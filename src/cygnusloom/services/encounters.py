@@ -1441,6 +1441,10 @@ def adjust_turn_order(
         next_name = target
     else:
         next_name = target or encounter.order[encounter.up]
+    if hand_over and encounter.acting is not None:
+        # The correction brings a different participant to the fore, so the turn it
+        # replaces ends first rather than disappearing from the log.
+        record(db, campaign_id, EncounterTurnEnded(name=encounter.acting))
     record(
         db,
         campaign_id,
