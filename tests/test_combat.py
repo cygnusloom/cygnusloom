@@ -39,6 +39,7 @@ from cygnusloom.services.events import (
     NPC_KIND,
     CharacterSaved,
     ChatGM,
+    EncounterAttacked,
     EncounterEnded,
     MaxChanged,
     PcAdded,
@@ -177,6 +178,27 @@ def _finish_gm_reply(app: FastAPI, campaign_id: int) -> None:
 def _hit(tools: WorldTools, attacker: str, target: str, *dice: int) -> dict[str, Any]:
     """`attacker` swings its Claw at `target`, with the given dice."""
     return replace(tools, rng=Rolls(*dice)).attack(attacker, "Claw", target)
+
+
+def test_an_npc_attack_records_its_weapon_target_and_result(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    _foe(tools, "Bo")
+    take_turn(tools, "Bo")
+
+    result = replace(tools, rng=Rolls(2, 1)).attack("Bo", "Claw", PC)
+    assert "harm" in result
+
+    with _db(app) as db:
+        attacks = [
+            event
+            for event in (decode(row) for row in events_since(db, campaign_id))
+            if isinstance(event, EncounterAttacked)
+        ]
+    assert len(attacks) == 1
+    assert attacks[0].name == "Bo"
+    assert attacks[0].weapon == "Claw"
+    assert attacks[0].target == PC
+    assert attacks[0].hit is True
 
 
 def _character(app: FastAPI, campaign_id: int, name: str):
