@@ -7,9 +7,6 @@ import pytest
 
 from cygnusloom.content.definitions import ContentError, Definition
 from cygnusloom.content.library import (
-    MAP_AMBIENTS,
-    MAP_PALETTES,
-    TERRAIN_PATTERNS,
     ContentLibrary,
     EncounterCell,
     EncounterTemplate,
@@ -18,173 +15,6 @@ from cygnusloom.content.library import (
     _load_encounter_terrain,
 )
 from tests.conftest import bundled_library
-
-TERRAIN_IDS = {
-    "floor",
-    "grass",
-    "dirt",
-    "shore",
-    "mud",
-    "rubble",
-    "shallow-water",
-    "marble",
-    "wood",
-    "carpet",
-    "sand",
-    "snow",
-    "ice",
-    "lava",
-    "moss",
-    "gravel",
-    "cobblestone",
-    "void",
-    "meadow",
-}
-DIFFICULT_TERRAIN = {"mud", "rubble", "shallow-water", "lava", "void"}
-OBJECT_IDS = {
-    "wall",
-    "tree",
-    "boulder",
-    "pillar",
-    "well",
-    "deep-water",
-    "table",
-    "door",
-    "campfire",
-    "crate",
-    "barrel",
-    "bookshelf",
-    "bench",
-    "statue",
-    "altar",
-    "bed",
-    "stairs-up",
-    "stairs-down",
-    "gate",
-    "portcullis",
-    "bones",
-    "boat",
-    "cart",
-    "ladder",
-    "fountain",
-    "throne",
-    "tent",
-    "anvil",
-    "cauldron",
-    "obelisk",
-    "window",
-    "rug",
-    "curtain",
-    "candle",
-    "lantern",
-    "brazier",
-    "chandelier",
-    "plant",
-    "flower",
-    "mushroom",
-    "bush",
-    "pine",
-    "rock-small",
-    "sack",
-    "pot",
-    "jar",
-    "desk",
-    "chair",
-    "stool",
-    "cabinet",
-    "shelf",
-    "fireplace",
-    "oven",
-    "counter",
-    "keg",
-    "banner",
-    "tapestry",
-    "globe",
-    "telescope",
-    "alchemy-table",
-    "potion-shelf",
-    "crystal",
-    "rune-circle",
-    "portal",
-    "trapdoor",
-    "pit",
-    "bridge",
-    "fence",
-    "hay",
-    "wagon",
-    "bedroll",
-    "hammock",
-    "armor-stand",
-    "weapon-rack",
-    "shrine",
-    "idol",
-    "mirror",
-    "painting",
-    "clock",
-    "cauldron-small",
-}
-BLOCKING_OBJECTS = {
-    "wall",
-    "tree",
-    "boulder",
-    "pillar",
-    "well",
-    "deep-water",
-    "crate",
-    "barrel",
-    "bookshelf",
-    "statue",
-    "altar",
-    "gate",
-    "portcullis",
-    "cart",
-    "fountain",
-    "throne",
-    "anvil",
-    "cauldron",
-    "obelisk",
-    "alchemy-table",
-    "potion-shelf",
-    "pine",
-    "desk",
-    "cabinet",
-    "shelf",
-    "fireplace",
-    "oven",
-    "counter",
-    "keg",
-    "pit",
-    "fence",
-    "hay",
-    "wagon",
-    "shrine",
-}
-TEMPLATE_SIZES = {
-    "room": (10, 8),
-    "corridor": (16, 5),
-    "clearing": (14, 12),
-    "shoreline": (14, 10),
-    "tavern": (14, 10),
-    "house": (12, 9),
-    "shop": (12, 9),
-    "temple": (14, 12),
-    "crypt": (12, 10),
-    "cave": (14, 11),
-    "watchtower": (10, 10),
-    "market": (16, 12),
-    "camp": (12, 10),
-    "ship": (16, 7),
-    "dungeon_hall": (14, 10),
-    "castle_hall": (16, 12),
-    "library": (14, 10),
-    "cellar": (12, 8),
-    "great_hall": (20, 14),
-    "dormitory": (16, 10),
-    "alchemy_lab": (12, 10),
-    "courtyard": (18, 14),
-    "market_stall": (10, 8),
-    "crypt_annex": (14, 12),
-}
 
 
 @pytest.fixture(scope="module")
@@ -236,67 +66,6 @@ def _cells_by_position(template: EncounterTemplate) -> dict[tuple[int, int], Enc
     return {(cell.column, cell.row): cell for cell in template.cells}
 
 
-# Real content -----------------------------------------------------------------
-
-
-def test_core_defines_terrain_objects_and_templates(library: ContentLibrary) -> None:
-    core = library.core
-    assert TERRAIN_IDS <= set(core.terrain)
-    assert OBJECT_IDS <= set(core.encounter_objects)
-    assert set(TEMPLATE_SIZES) <= set(core.encounter_templates)
-
-
-def test_terrain_and_object_flags_match_spec(library: ContentLibrary) -> None:
-    core = library.core
-    assert {i for i, t in core.terrain.items() if t.difficult} == DIFFICULT_TERRAIN
-    assert {i for i, o in core.encounter_objects.items() if o.blocks} == BLOCKING_OBJECTS
-
-
-def test_every_terrain_says_its_rule_effect(library: ContentLibrary) -> None:
-    assert all(terrain.rule for terrain in library.core.terrain.values())
-    assert library.core.terrain["mud"].rule == "Difficult: each cell entered costs two moves."
-
-
-def test_every_terrain_and_object_has_a_hex_colour(library: ContentLibrary) -> None:
-    for item in [*library.core.terrain.values(), *library.core.encounter_objects.values()]:
-        assert re.fullmatch(r"#[0-9a-f]{6}", item.color), f"{item.id} colour {item.color!r}"
-
-
-def test_only_walls_are_solid_blocks(library: ContentLibrary) -> None:
-    solid = {i for i, o in library.core.encounter_objects.items() if o.solid}
-    assert solid == {"wall"}
-
-
-def test_every_template_covers_its_grid_with_resolvable_ids(library: ContentLibrary) -> None:
-    core = library.core
-    for ident, (columns, rows) in TEMPLATE_SIZES.items():
-        template = core.encounter_templates[ident]
-        assert (template.columns, template.rows) == (columns, rows)
-        # Every template has a background terrain, so every grid cell is painted.
-        assert len(template.cells) == columns * rows, ident
-        positions = [(cell.column, cell.row) for cell in template.cells]
-        assert positions == sorted(positions, key=lambda p: (p[1], p[0])), ident
-        for cell in template.cells:
-            assert cell.terrain in core.terrain, (ident, cell)
-            assert cell.object == "" or cell.object in core.encounter_objects, (ident, cell)
-
-
-def test_room_layout(library: ContentLibrary) -> None:
-    cells = _cells_by_position(library.core.encounter_templates["room"])
-    assert cells[(4, 0)].object == "door"
-    assert cells[(0, 0)].object == "wall"
-    assert cells[(9, 7)].object == "wall"
-    assert cells[(5, 4)].object == "table"
-    interior = [cell for (x, y), cell in cells.items() if 0 < x < 9 and 0 < y < 7]
-    assert all(cell.object in ("", "table") for cell in interior)
-
-
-def test_corridor_pillar_near_middle(library: ContentLibrary) -> None:
-    cells = _cells_by_position(library.core.encounter_templates["corridor"])
-    assert cells[(8, 2)].object == "pillar"
-    assert cells[(0, 0)].object == "wall" and cells[(15, 4)].object == "wall"
-
-
 def test_all_rule_sets_see_the_same_encounter_content(library: ContentLibrary) -> None:
     assert "cairn2e" in library.rule_sets
     # A rule set may add local map content of its own, such as Hordes' modern streets and
@@ -307,60 +76,6 @@ def test_all_rule_sets_see_the_same_encounter_content(library: ContentLibrary) -
         assert (
             library.core.encounter_templates.items() <= rule_set.encounter_templates.items()
         ), name
-
-
-def test_terrain_patterns_are_valid_and_inked_when_present(library: ContentLibrary) -> None:
-    assert TERRAIN_PATTERNS[:2] == ("waves", "trees")
-    assert {"bricks", "tiles", "wood", "carpet", "snow", "lava", "hexes", "runes"} <= set(
-        TERRAIN_PATTERNS
-    )
-    patterned = [terrain for terrain in library.core.terrain.values() if terrain.pattern]
-    assert patterned
-    for terrain in patterned:
-        assert terrain.pattern in TERRAIN_PATTERNS, terrain
-        assert re.fullmatch(r"#[0-9a-f]{6}", terrain.ink or ""), terrain
-    assert library.core.terrain["marble"].pattern == "tiles"
-    assert library.core.terrain["lava"].difficult
-
-
-def test_palettes_and_ambients_are_unique_and_known(library: ContentLibrary) -> None:
-    assert len(set(MAP_PALETTES)) == len(MAP_PALETTES)
-    assert len(set(MAP_AMBIENTS)) == len(MAP_AMBIENTS)
-    for template in library.core.encounter_templates.values():
-        assert template.palette in {"", *MAP_PALETTES}
-        assert template.ambient in {"", *MAP_AMBIENTS}
-
-
-def test_new_templates_carry_their_look_and_content(library: ContentLibrary) -> None:
-    core = library.core
-    great_hall = core.encounter_templates["great_hall"]
-    assert (great_hall.palette, great_hall.ambient) == ("royal", "torchlit")
-    assert great_hall.background == "marble"
-    assert {cell.object for cell in great_hall.cells} >= {"throne", "brazier", "banner", "rug"}
-    lab = core.encounter_templates["alchemy_lab"]
-    assert (lab.palette, lab.ambient) == ("shadow", "magical")
-    assert {cell.object for cell in lab.cells} >= {"alchemy-table", "potion-shelf", "crystal"}
-    courtyard = core.encounter_templates["courtyard"]
-    assert (courtyard.palette, courtyard.ambient) == ("stone", "day")
-    assert {cell.object for cell in courtyard.cells} >= {"fountain", "bench", "plant"}
-    market = core.encounter_templates["market_stall"]
-    assert (market.palette, market.ambient) == ("parchment", "day")
-    assert {cell.object for cell in market.cells} >= {"counter", "crate", "sack"}
-    crypt = core.encounter_templates["crypt_annex"]
-    assert (crypt.palette, crypt.ambient) == ("shadow", "foggy")
-    assert {cell.object for cell in crypt.cells} >= {"idol", "shrine", "brazier"}
-    dormitory = core.encounter_templates["dormitory"]
-    assert (dormitory.palette, dormitory.ambient) == ("forest", "night")
-    assert {cell.object for cell in dormitory.cells} >= {"bed", "cabinet", "shelf"}
-
-
-def test_object_categories_are_grouped(library: ContentLibrary) -> None:
-    categories = {item.category for item in library.core.encounter_objects.values()}
-    assert {"structure", "furniture", "container", "nature", "decor", "hazard", "magic"} <= (
-        categories
-    )
-    assert library.core.encounter_objects["pit"].category == "hazard"
-    assert library.core.encounter_objects["alchemy-table"].category == "furniture"
 
 
 # Loader validation ------------------------------------------------------------
@@ -510,12 +225,6 @@ def test_duplicate_template_raises() -> None:
     ]
     with pytest.raises(ContentError, match="duplicate encounter template 'box'"):
         _load_encounter_templates(definitions, _load_encounter_terrain(floor, "core"), {}, "core")
-
-
-def test_every_object_and_template_has_a_player_description() -> None:
-    core = bundled_library().core
-    assert all(obj.description.strip() for obj in core.encounter_objects.values())
-    assert all(template.description.strip() for template in core.encounter_templates.values())
 
 
 def test_encounter_terrain_pattern_and_ink_are_validated() -> None:

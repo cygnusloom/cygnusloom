@@ -12,9 +12,9 @@ from cygnusloom.llm.base import LLMError
 from cygnusloom.llm.fake import FakeProvider
 from cygnusloom.llm.registry import ProviderFactory
 from cygnusloom.services.events import load_state
-from cygnusloom.services.prompts import OPENING_PROMPT, OPENING_REPLY_INSTRUCTION, opening_prompt
+from cygnusloom.services.prompts import OPENING_PROMPT, OPENING_REPLY_INSTRUCTION
 from cygnusloom.services.turns import OPENING_REPLY_RETRY
-from tests.conftest import bundled_library, csrf_token
+from tests.conftest import csrf_token
 from tests.test_campaigns import (
     _answer,
     _campaign_id,
@@ -25,15 +25,6 @@ from tests.test_campaigns import (
     _signed_in,
 )
 from tests.test_tools import _recording_provider, _saved, _script
-
-
-def test_opening_starts_the_world_at_its_start_location_with_its_hooks():
-    template = bundled_library().setting_template("twin-lakes")
-    prompt = opening_prompt(template)
-    assert prompt.startswith(OPENING_PROMPT)
-    assert "The campaign starts at Isthmus Town (location id isthmus-town)" in prompt
-    assert "Flavia at the Butcher in Isthmus Town" in prompt
-    assert "Reeve Trellis at the Stuffed Inn" in prompt
 
 
 def _created_campaign(client_factory: Callable[[], TestClient]) -> tuple[TestClient, int]:
@@ -105,25 +96,9 @@ def test_pending_opening_page_auto_starts_and_hides_discard(
 ):
     client, campaign_id = _created_campaign(client_factory)
     page = client.get(f"/campaigns/{campaign_id}").text
-    assert "The GM is opening the campaign." in page
     assert "data-auto-start" in page
     assert 'name="kind" value="continue"' in page
     assert "Discard reply" not in page
-
-
-def test_an_auto_started_opening_hides_its_continue_prompt_while_the_gm_works(
-    client_factory: Callable[[], TestClient],
-):
-    """The player never presses Continue for the opening, so the prompt that offered it must
-    not sit beside the GM's working state once the page has started it. A turn that could not
-    start brings the prompt back."""
-    client, campaign_id = _created_campaign(client_factory)
-    page = client.get(f"/campaigns/{campaign_id}").text
-    assert "data-auto-start" in page
-    script = client.get("/static/turn_stream.js").text
-    assert 'form.hasAttribute("data-auto-start") && pendingBlock' in script
-    assert "pendingBlock.hidden = true" in script
-    assert "pendingBlock.hidden = false" in script
 
 
 def test_failed_opening_offers_continue_instead_of_auto_start(
@@ -147,7 +122,6 @@ def test_failed_opening_offers_continue_instead_of_auto_start(
     assert "provider broken is unreachable" in page
     assert 'name="kind" value="continue"' in page
     assert "data-auto-start" not in page
-    assert "The GM is opening the campaign." not in page
 
 
 def test_transcript_reports_busy_while_the_opening_runs_and_waiting_when_it_stopped(

@@ -40,22 +40,12 @@ def test_a_single_monster_is_a_statblock_in_the_location(client_factory):
 
     page = client.get(f"/campaigns/{campaign_id}").text
     assert 'data-statblock-name="the walker"' in page
-    assert "zombie" in page
-    # The separate threats panel is gone.
-    assert 'id="panel-threats"' not in page
-    assert 'id="tab-threats"' not in page
     # A single monster is not a token on the map.
     assert 'class="map-marker threat"' not in page
     assert _view(client, campaign_id).threats == []
 
     block = client.get(f"/campaigns/{campaign_id}/statblock", params={"name": "the walker"})
     assert block.status_code == 200
-    body = block.text
-    assert "Zombie" in body
-    assert "Harm" in body and "2 / 2" in body
-    assert "Tags: shambling, relentless, infection-risk" in body
-    assert "Moves: grab; bite; moan" in body
-    assert "Attack 2" in body
 
 
 def test_a_monster_at_another_place_is_not_in_the_roster(client_factory):

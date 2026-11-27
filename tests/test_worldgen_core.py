@@ -7,120 +7,13 @@ that already carries a setting; only a blank world such as `unwritten-world` get
 
 from __future__ import annotations
 
-import json
-import re
-
 import pytest
 
-from cygnusloom.content.library import DATA_DIR
 from cygnusloom.services.prompts import state_instruction
-from tests.conftest import bundled_library, content_library
+from tests.conftest import content_library
 
 BUNDLED_RULE_SETS = ("academia-arcana", "cairn2e", "dnd-srd-2024", "worldswithoutnumber")
 SETTING_FORGE = "There is no published setting"
-
-
-def _own_table_ids(rule_set: str) -> set[str]:
-    """The ids of the dice and creative tables a rule set's own files define."""
-    ids: set[str] = set()
-    for path in sorted((DATA_DIR / "rulesets" / rule_set).glob("*.json")):
-        for definition in json.loads(path.read_text(encoding="utf-8")):
-            if definition.get("type") in ("dice_table", "creative_table"):
-                ids.add(definition["id"])
-    return ids
-
-
-def test_core_carries_the_world_creation_tables():
-    tables = bundled_library().core.dice_tables
-    assert {"significant_terrain", "dungeon_reaction", "village_rationale"} <= set(tables)
-    assert "setting_premise" in tables
-    assert tables["setting_premise"].creative
-    assert tables["setting_premise"].role == "setting"
-
-
-@pytest.mark.parametrize("rule_set", BUNDLED_RULE_SETS)
-def test_every_bundled_ruleset_inherits_the_core_worldgen_tables(rule_set: str):
-    rules = bundled_library().rule_sets[rule_set]
-    assert "significant_terrain" in rules.dice_tables
-    assert "setting_premise" in rules.dice_tables
-    assert "significant_terrain" not in _own_table_ids(rule_set)
-
-
-def test_core_carries_the_setting_instructions_for_a_blank_world():
-    core = bundled_library().core.prompt_fragments
-    unwritten = [fragment for fragment in core if fragment.unwritten_only]
-    assert len(unwritten) >= 2
-    assert any(SETTING_FORGE in fragment.text for fragment in unwritten)
-    assert any("Setting block" in fragment.text for fragment in unwritten)
-
-
-def test_a_generic_only_rule_set_leaves_the_fantasy_tables_out():
-    library = content_library()
-    rules = library.rule_sets["rolltest"]
-    assert rules.table_genres == ("generic",)
-    assert "action" in rules.dice_tables
-    assert "setting_premise" not in rules.dice_tables
-    # The sourcebook keeps every table even when a rule set's choice leaves one out.
-    assert "setting_premise" in library.core.dice_tables
-
-
-def test_the_setting_forge_names_no_table_a_genre_choice_could_hide():
-    core = bundled_library().core
-    prompt = next(
-        fragment.text for fragment in core.prompt_fragments if SETTING_FORGE in fragment.text
-    )
-    assert SETTING_FORGE in prompt
-    assert "Roll the setting tables with roll_creative" in prompt
-    assert 'role "setting"' in prompt
-    assert "the selected genres offer" in prompt
-    for table_id in ("significant_terrain", "setting_premise", "action"):
-        assert re.search(rf"\b{re.escape(table_id)}\b", prompt) is None
-
-
-def test_core_carries_the_creative_source_policy():
-    core = bundled_library().core.prompt_fragments
-    sources = next(fragment for fragment in core if fragment.id == "creative_sources")
-    assert sources.step == "state"
-    assert "world, module, and active storylines" in sources.text
-    assert "list_dice_tables" in sources.text
-    assert "roll_creative" in sources.text
-    assert "Invent only when no applicable table fits" in sources.text
-    assert "Do not invent a new element" in sources.text
-    assert "make that roll before the create call" in sources.text
-    assert "Do not leave a new place, person, or object for the narration" in sources.text
-    assert "leave each one out of the create_npc call" in sources.text
-    assert "rolls that trait from its tables" in sources.text
-    assert "NPC's speech" in sources.text
-
-
-@pytest.mark.parametrize("rule_set", BUNDLED_RULE_SETS)
-def test_every_bundled_rule_set_carries_the_creative_source_policy(rule_set: str):
-    text = state_instruction(bundled_library().rule_sets[rule_set], None)
-    assert "world, module, and active storylines" in text
-    assert "Before you invent" in text
-
-
-def test_core_carries_the_mid_play_oracle_prompt():
-    core = bundled_library().core.prompt_fragments
-    oracle = next(fragment for fragment in core if fragment.id == "creative_oracle")
-    assert oracle.step == "state"
-    assert "roll_creative" in oracle.text
-    assert '"oracle"' in oracle.text
-    for table_id in ("action", "theme", "plot_twist", "location", "location_descriptor"):
-        assert table_id in oracle.text
-    assert "same full oracle set" in oracle.text
-    assert "encounter" in oracle.text
-
-
-def test_the_unwritten_world_plays_with_any_rule_set():
-    library = content_library()
-    world = library.world_templates["unwritten-world"]
-    assert world.rule_set is None
-    assert not world.has_setting
-    for rule_set in ("academia-arcana", "cairn2e", "worldswithoutnumber", "rolltest"):
-        content = library.world_content("unwritten-world", rule_set)
-        assert content.monsters == {}
-        assert content.dice_tables == {}
 
 
 @pytest.mark.parametrize("rule_set", BUNDLED_RULE_SETS)

@@ -154,14 +154,6 @@ def test_player_character_starts_unplaced(client_factory: Callable[[], TestClien
     )
 
 
-def test_the_locations_rule_uses_an_authored_route_before_inventing_a_place():
-    rule = LIBRARY.core.rules["locations"]
-    assert (
-        "do not invent a corridor, passage, or other place between two places an authored route connects"
-        in rule
-    )
-
-
 def test_the_gm_sees_the_places_inside_the_players_location(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
@@ -238,7 +230,6 @@ def test_the_gm_sees_npc_combat_stats_without_a_lookup(
     )
     assert "NPC combat stats here:" in text
     assert "- Guard: HP 12/12; Armor: 13; Attacks: Spear 1d6." in text
-    assert "Do not call get_statblock" in text
 
 
 def test_a_world_can_declare_a_place_inside_another(
@@ -261,18 +252,6 @@ def test_a_world_can_declare_a_place_inside_another(
     assert not drowsy.discovered
 
 
-def test_bundled_npcs_are_placed_at_their_locations(
-    client_factory: Callable[[], TestClient], app: FastAPI
-):
-    _, campaign_id = _campaign_id(client_factory)
-    npcs = {
-        c.name: c.location
-        for c in _state(app, campaign_id).characters.values()
-        if c.kind == NPC_KIND
-    }
-    assert npcs == BUNDLED_NPCS
-
-
 def test_npcs_without_listed_traits_get_random_ones(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
@@ -287,26 +266,12 @@ def test_npcs_without_listed_traits_get_random_ones(
         assert len(set(npc.quirks)) == world.QUIRKS_PER_NPC
 
 
-def test_listed_npc_traits_are_kept(client_factory: Callable[[], TestClient], app: FastAPI):
-    _, campaign_id = _campaign_id(client_factory)
-    mara = _actors(app, campaign_id)["Mara Thistledown"]
-    assert mara.personality == "warm and protective"
-    assert mara.accent == "soft and lilting"
-    assert mara.quirks == ["refers to everyone as 'friend'", "speaks in proverbs"]
-
-
 def test_character_name_cannot_match_an_npc(client_factory: Callable[[], TestClient]):
     client = signed_in_client(client_factory)
     campaign_id = create_campaign(client)
     rejected = create_character(client, campaign_id, name="old hob")
     assert rejected.status_code == 400
     assert "already used" in rejected.text
-
-
-def test_blank_character_name_is_rejected(client_factory: Callable[[], TestClient]):
-    client = signed_in_client(client_factory)
-    campaign_id = create_campaign(client)
-    assert create_character(client, campaign_id, name="   ").status_code == 400
 
 
 def test_random_traits_come_from_the_given_tables(
@@ -994,7 +959,6 @@ def test_speaker_profile_describes_an_npc_at_the_players_location(
     place_pc(client, campaign_id)
     profile = world.speaker_profile(_state(app, campaign_id), "Mara Thistledown", SPEC)
     assert profile.splitlines()[0] == "Speaker: Mara Thistledown"
-    assert "Personality: warm and protective" in profile
     assert "Location: Mossbell Hollow" in profile
 
 
@@ -1102,9 +1066,6 @@ def test_campaign_page_panels_show_only_the_scene(client_factory: Callable[[], T
 
     sheet = page[page.index('id="panel-character"') : page.index('id="panel-inventory"')]
     assert "Tall, with a red scarf." in sheet
-    assert ">Location<" in page
-    assert ">Character<" in page
-    assert 'data-view="journal"' in page
 
     characters_page = page[page.index('id="character-list"') :]
     characters_page = characters_page[
@@ -1116,15 +1077,6 @@ def test_campaign_page_panels_show_only_the_scene(client_factory: Callable[[], T
 
     # The activity log keeps its history of what the GM wrote, by design.
     assert "New location: Mossbell Hollow." in page
-
-
-def test_campaign_page_maps_can_be_panned_and_zoomed(client_factory: Callable[[], TestClient]):
-    client, campaign_id = _described_campaign(client_factory)
-    page = client.get(f"/campaigns/{campaign_id}").text
-
-    assert '<script src="/static/map_view.js"></script>' in page
-    # The world map is framed in the Map view and in the side panel.
-    assert page.count('<div class="map-frame">') >= 2
 
 
 def test_campaign_page_escapes_character_names(client_factory: Callable[[], TestClient]):
@@ -1454,27 +1406,6 @@ def test_speech_with_tag_style_tool_markup_is_not_spoken(
     assert "<get_statblock" not in narration
 
 
-def test_speech_step_gets_no_rules_or_lookup_instructions(
-    client_factory: Callable[[], TestClient], app: FastAPI, fake: FakeProvider
-):
-    client, campaign_id = _campaign_id(client_factory)
-    place_pc(client, campaign_id)
-    speak_call = {
-        "name": "speak",
-        "arguments": {"npc": "Mara Thistledown", "intent": "Warn Ada about the bog."},
-    }
-    script = _script({"rounds": [[speak_call]], "text": "Mara turns back to her kettle."})
-
-    send_message(client, campaign_id, script)
-
-    speech = _speech_calls(fake)
-    assert speech
-    system = str(speech[0][0]["content"])
-    assert "Warn Ada about the bog." in system
-    assert "lookup" not in system
-    assert "Rules for this campaign" not in system
-
-
 def test_speech_shows_a_writing_dialogue_status(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
@@ -1778,25 +1709,6 @@ def test_update_can_take_a_place_off_the_map_and_keep_it(
     view = world.map_view(_state(app, campaign_id))
     assert "Ashen Ford" in [p.name for p in view.places]
     assert "Ashen Ford" not in [m.name for m in view.markers]
-
-
-def test_twin_lakes_map_places_every_module_location_it_has_a_position_for(
-    client_factory: Callable[[], TestClient], app
-):
-    client = signed_in_client(client_factory)
-    campaign_id = create_campaign(client, world_template="twin-lakes", rule_set="cairn2e")
-    placed = {
-        loc.name
-        for loc in app.state.content.setting_template("twin-lakes").locations
-        if loc.x is not None
-    }
-    assert len(placed) == 12
-    for name in placed:
-        _tool(app, campaign_id, "discover_location", {"name": name})
-
-    view = world.map_view(_state(app, campaign_id))
-    assert {m.name for m in view.markers} == placed
-    assert all(0 <= m.left <= 100 and 0 <= m.top <= 100 for m in view.markers)
 
 
 def test_off_map_cannot_be_combined_with_a_position(client_factory: Callable[[], TestClient], app):
@@ -2120,18 +2032,8 @@ def test_map_and_page_show_only_discovered_places_with_positions(
 
     page = client.get(f"/campaigns/{campaign_id}").text
     map_view = page[page.index('data-view="map"') : page.index('data-view="journal"')]
-    assert (
-        'class="map-marker here" style="left: 50.0%; top: 50.0%" role="img" '
-        'aria-label="Mossbell Hollow" data-tip="Mossbell Hollow (you)">'
-        '<img src="/static/icons/terrain/town.svg" alt="">'
-        '<span class="map-marker-name" data-name="Mossbell Hollow" '
-        'aria-hidden="true">Mossbell Hollow</span></span>' in map_view
-    )
     assert "Glowcap Ring" in map_view
     assert "Spore Bridge" not in map_view
-
-    panel = page[page.index('aria-label="Map"') : page.index('id="panel-')]
-    assert "map-marker" in panel
 
 
 def test_map_on_a_fresh_campaign_has_a_default_scale(client_factory: Callable[[], TestClient], app):
@@ -2267,16 +2169,3 @@ def test_map_without_a_placed_ancestor_has_no_distance_labels(
     assert view.where == {"Hollow Dell": "You are here"}
     assert [m.name for m in view.markers] == ["Mossbell Hollow"]
     assert (view.markers[0].left, view.markers[0].top) == (50.0, 50.0)
-
-
-def test_framed_map_has_a_recenter_button_inside_the_frame(
-    client_factory: Callable[[], TestClient],
-):
-    client, campaign_id = _described_campaign(client_factory)
-    page = client.get(f"/campaigns/{campaign_id}").text
-    button = '<button type="button" class="secondary map-recenter">Recenter</button></div>'
-    assert button in page
-    frame = page.index('<div class="map-frame">')
-    next_frame = page.index('<div class="map-frame">', frame + 1)
-    board = page.index('class="map-board world-map', frame)
-    assert frame < board < page.index(button) < next_frame

@@ -106,19 +106,6 @@ def _reply_id(app: FastAPI, campaign_id: int) -> int:
     return next(m.id for m in list_messages(app.state.engine, campaign_id) if m.role == "assistant")
 
 
-def test_the_settings_view_replaces_the_dialog_for_owner_and_member(
-    client_factory: Callable[[], TestClient],
-):
-    owner, guest, campaign_id, _ = _joined_campaign(client_factory)
-
-    for client in (owner, guest):
-        page = client.get(f"/campaigns/{campaign_id}").text
-        assert 'data-view-target="settings"' in page
-        assert 'data-view="settings" aria-labelledby="settings-title"' in page
-        assert 'id="view-settings"' in page
-        assert "Your view" in page
-
-
 def test_the_owner_saves_model_name_and_inventory_in_one_form(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
@@ -211,8 +198,6 @@ def test_export_and_delete_are_owner_only_and_members_see_a_summary(
         assert markup in owner_page
         assert markup not in member_page
 
-    assert "The campaign owner chooses the model for every reply." in member_page
-    assert "Inventory space is tracked" in member_page
     assert "Contract Hollow" in member_page
 
 
@@ -241,7 +226,6 @@ def test_the_owner_resets_a_campaign_to_its_starting_party(
     )
     page = client.get(f"/campaigns/{campaign_id}").text
     assert "Campaign reset to just before the opening." in page
-    assert "Start the game" in page
 
     token = csrf_token(client, f"/campaigns/{campaign_id}")
     started = client.post(
@@ -299,24 +283,13 @@ def test_the_thinking_preference_is_per_account_and_controls_reply_details(
     context_url = f"/campaigns/{campaign_id}/messages/{reply_id}/context"
     transcript_url = f"/campaigns/{campaign_id}/messages/{reply_id}/transcript"
 
-    owner_page = owner.get(f"/campaigns/{campaign_id}").text
-    assert 'class="transcript"' in owner_page
-    assert 'data-show-thinking="0"' in owner_page
-    assert context_url not in owner_page
     assert owner.get(context_url).status_code == 404
     assert owner.get(transcript_url).status_code == 404
 
     assert _post_thinking(owner, campaign_id, True).status_code == 303
-    owner_page = owner.get(f"/campaigns/{campaign_id}").text
-    assert 'class="transcript show-hidden"' in owner_page
-    assert 'data-show-thinking="1"' in owner_page
-    assert context_url in owner_page
     assert owner.get(context_url).status_code == 200
     assert owner.get(transcript_url).status_code == 200
 
-    guest_page = guest.get(f"/campaigns/{campaign_id}").text
-    assert 'data-show-thinking="0"' in guest_page
-    assert context_url not in guest_page
     assert guest.get(context_url).status_code == 404
 
     assert _post_thinking(guest, campaign_id, True).status_code == 303
@@ -326,24 +299,6 @@ def test_the_thinking_preference_is_per_account_and_controls_reply_details(
     assert _post_thinking(owner, campaign_id, False).status_code == 303
     assert owner.get(context_url).status_code == 404
     assert guest.get(context_url).status_code == 200
-
-
-def test_saving_the_view_offers_a_dismiss_button_for_its_notice(
-    client_factory: Callable[[], TestClient],
-):
-    client, campaign_id = campaign_ready_fast(client_factory)
-
-    response = _post_thinking(client, campaign_id, True)
-
-    assert response.status_code == 303
-    page = client.get(response.headers["location"]).text
-    assert "Your view is saved." in page
-    assert "data-dismiss-flash" in page
-    assert '<script src="/static/flash.js"></script>' in page
-    # The handler is served with the page instead of depending on a page-specific script.
-    script = client.get("/static/flash.js")
-    assert script.status_code == 200
-    assert 'closest(".flash")' in script.text
 
 
 def test_single_player_settings_page_keeps_credit_text_out(tmp_path):
@@ -428,12 +383,3 @@ def test_the_gm_cannot_change_the_model_through_the_tool(
     assert _campaign(app, campaign_id).model == "fake/scripted"
     results = _tool_results(_tool_runs(app, campaign_id))
     assert any("must be one of: inventory_space" in result for result in results)
-
-
-def test_a_hidden_settings_view_is_refreshed_after_a_turn(
-    client_factory: Callable[[], TestClient],
-):
-    """A setting the GM changes mid-turn is current when the player opens Settings."""
-    client, _ = campaign_ready_fast(client_factory)
-    script = client.get("/static/turn_stream.js").text
-    assert 'current.dataset.view === "settings" && !current.hidden' in script

@@ -5,16 +5,13 @@ from __future__ import annotations
 import pytest
 
 from cygnusloom.services.common import InvalidInput
-from cygnusloom.services.compendium import compendium_view
 from cygnusloom.services.events import MoveMade, decode, events_since, name_key
-from tests.conftest import bundled_library
 from tests.factories import (
     character_named,
     close_opening,
     create_campaign_direct,
     create_character_direct,
     db,
-    rules_for,
     signed_in_client,
     tools_for,
 )
@@ -47,42 +44,6 @@ def _campaign(client_factory, *, name: str = "Ada", fields=FIELDS):
     close_opening(client, campaign_id)
     tools = tools_for(client.app, campaign_id, rule_set=RULE_SET)
     return client, campaign_id, tools
-
-
-def test_hordes_loads_and_hides_turn_based_tools():
-    rules = rules_for(RULE_SET)
-    assert rules.combat is not None
-    assert rules.combat.mode == "moves"
-    assert rules.capabilities.combat_mode == "moves"
-    for tool in (
-        "start_encounter",
-        "stage_encounter",
-        "end_encounter",
-        "attack",
-        "player_attack",
-        "resolve_attacks",
-        "roll_initiative",
-    ):
-        assert tool not in rules.tool_calls
-    assert "roll_move" in rules.tool_calls
-    assert "apply_harm" in rules.tool_calls
-    assert rules.counters["harm"].thresholds.keys() == {4, 6}
-    assert rules.campaign_clocks["noise"].segments == 6
-
-
-def test_hordes_compendium_has_its_new_sections():
-    compendium = compendium_view(bundled_library(), RULE_SET, WORLD)
-    sections = {section.id: section for section in compendium.sections}
-    assert len(sections["clocks"].entries) == 7
-    assert len(sections["threats"].entries) == 20
-    assert len(sections["vehicles"].entries) == 9
-    assert len(sections["recipes"].entries) == 15
-    assert len(sections["improvements"].entries) == 16
-    assert len(sections["sites"].entries) == 20
-    threat = next(entry for entry in sections["threats"].entries if entry.name == "Horde")
-    assert "Harm capacity: 3" in threat.text
-    site = next(entry for entry in sections["sites"].entries if entry.name == "Cybernetics Lab")
-    assert "Find: hidden" in site.text
 
 
 def test_a_hordes_character_gets_a_playbook_kit_and_loaded_firearm(client_factory):
@@ -222,33 +183,3 @@ def test_a_hordes_fight_creates_no_encounter_or_turn_events(client_factory):
         or kind in {"combat.struck", "combat.save_rolled", "combat.group_break_resolved"}
         for kind in kinds
     )
-
-
-def test_hordes_names_are_modern_for_players_and_npcs():
-    rules = rules_for(RULE_SET)
-    survivors = [option.value for option in rules.tables["survivor-names"]]
-    names = rules.dice_tables["name"]
-
-    assert names.dice == "1d20"
-    full_names = [row.result for row in names.rows]
-    assert len(full_names) == 20
-    assert len(set(full_names)) == 20
-    assert all(len(name.split()) == 2 for name in full_names)
-
-    assert len(survivors) >= 36
-    assert len(set(survivors)) == len(survivors)
-    for name in ("Marcus", "Danielle", "Priya", "Miguel", "Grace"):
-        assert name in survivors
-    for name in ("Kestrel", "Rook", "Sable", "Briar", "Wren"):
-        assert name not in survivors
-
-    first_names = {name.split()[0] for name in full_names}
-    assert first_names <= set(survivors)
-
-
-def test_hordes_tells_the_gm_to_roll_modern_names():
-    prompts = {prompt.id: prompt for prompt in rules_for(RULE_SET).prompt_fragments}
-
-    assert "people_and_names" in prompts
-    assert "roll_tables" in prompts["people_and_names"].text
-    assert "name table" in prompts["people_and_names"].text

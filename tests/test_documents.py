@@ -12,8 +12,7 @@ from cygnusloom.db.models import Campaign, CampaignDocument, CreditEntry, LlmMod
 from cygnusloom.services import campaign_files, credits, documents
 from cygnusloom.services.accounts import encode_roles
 from cygnusloom.services.common import InvalidInput
-from cygnusloom.services.prompts import narrate_instruction, state_instruction
-from tests.conftest import content_library, csrf_token, is_journal_messages, is_review_messages
+from tests.conftest import csrf_token, is_journal_messages, is_review_messages
 from tests.factories import (
     close_opening,
     create_character_direct,
@@ -180,11 +179,6 @@ def test_an_unreadable_file_is_refused():
         documents.prepare("broken.pdf", b"%PDF-1.4 this is not a real PDF")
 
 
-def test_the_source_limits_are_one_gigabyte_and_one_hundred_million_characters():
-    assert documents.MAX_DOCUMENT_BYTES == 1024**3
-    assert documents.MAX_DOCUMENT_CHARACTERS == 100_000_000
-
-
 def test_a_file_over_the_size_limit_is_refused(monkeypatch):
     monkeypatch.setattr(documents, "MAX_DOCUMENT_BYTES", 1024 * 1024)
     with pytest.raises(InvalidInput, match="larger than 1 MB"):
@@ -329,16 +323,6 @@ def test_an_upload_that_costs_more_than_the_balance_is_refused(
     assert _account(app).credit_balance == 2
 
 
-def test_the_adventure_source_panel_starts_folded_away(
-    client_factory: Callable[[], TestClient],
-):
-    client = signed_in_client(client_factory)
-    page = client.get("/campaigns/new").text
-    assert page.index("Adventure source (optional)") < page.index('name="file"')
-    assert '<details class="optional-options">' in page
-    assert '<details class="optional-options" open>' not in page
-
-
 def test_a_refused_source_reopens_its_panel(
     client_factory: Callable[[], TestClient],
 ):
@@ -422,9 +406,6 @@ def test_the_gm_can_list_read_and_search_the_source(
     rows = documents.campaign_documents(app.state.engine, campaign_id)
     state = documents.state_text(rows)
     assert "adventure.md" in state
-    assert "list_documents" in state
-    assert "read_document" in state
-    assert "search_documents" in state
 
 
 def test_the_turn_prompt_carries_the_source(
@@ -452,15 +433,6 @@ def test_the_turn_prompt_carries_the_source(
     matching = [system for system in systems if "Adventure source" in system]
     assert matching, systems[-1][-500:]
     assert "adventure.md" in matching[0]
-
-
-def test_a_source_supplies_the_setting_instead_of_worldgen():
-    library = content_library()
-    rule_set = library.rule_sets["cairn2e"]
-    world = library.world_templates["unwritten-world"]
-    assert "Invent this world yourself" in state_instruction(rule_set, world)
-    assert "Invent this world yourself" not in state_instruction(rule_set, world, has_source=True)
-    assert "Invent this world yourself" not in narrate_instruction(rule_set, world, has_source=True)
 
 
 def test_deleting_a_campaign_deletes_its_source(

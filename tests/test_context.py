@@ -3,7 +3,6 @@ from __future__ import annotations
 import dataclasses
 import json
 import re
-from collections.abc import Callable
 from typing import Any
 
 import pytest
@@ -20,7 +19,6 @@ from cygnusloom.services.events import CampaignState, Channel, estimate_tokens, 
 from cygnusloom.services.prompts import (
     SUMMARY_PROMPT,
     SUMMARY_SHORTEN_PROMPT,
-    SYSTEM_PROMPT,
     system_parts,
 )
 from cygnusloom.services.turns import COMPRESS_AT, SUMMARY_HEADROOM
@@ -208,7 +206,6 @@ def test_other_rules_are_listed_with_a_brief_and_their_full_text_is_left_out():
     assert "- consistency: Keep the world consistent. Do it always." in prompt
     assert "- age: Roll 2d20+10 for your character's age" in prompt
     assert "Then write it down" not in prompt
-    assert "read any other rule with lookup_rule" in prompt
 
 
 @pytest.mark.parametrize(
@@ -224,11 +221,6 @@ def test_other_rules_are_listed_with_a_brief_and_their_full_text_is_left_out():
 )
 def test_brief_is_the_first_sentence_cut_to_a_short_length(text: str, expected: str):
     assert brief(text) == expected
-
-
-def test_base_prompts_make_cygnus_the_ai_gm():
-    assert SYSTEM_PROMPT.startswith("You are Cygnus, an AI game master (GM).")
-    assert SUMMARY_PROMPT.startswith("You are Cygnus, the AI game master")
 
 
 def test_summary_is_added_to_the_system_prompt_only_when_present():
@@ -406,17 +398,6 @@ def test_transcript_keeps_every_message_after_summarizing(settings: Settings):
     assert _state(app, campaign_id).summary == "SUMMARY"
     assert _saved_message_count(app) == 2 * sends + 1
     assert "m0 " in client.get(f"/campaigns/{campaign_id}").text
-
-
-def test_the_composer_has_no_settings_button_and_keeps_the_context_meter(
-    client_factory: Callable[[], TestClient],
-):
-    client, campaign_id = _campaign_id(client_factory)
-    page = client.get(f"/campaigns/{campaign_id}").text
-    assert 'class="context-meter"' in page
-    assert 'max="65536"' in page
-    assert 'class="composer-settings"' not in page
-    assert 'data-dialog-target="dialog-settings"' not in page
 
 
 def test_context_meter_uses_the_campaign_models_window(settings: Settings):

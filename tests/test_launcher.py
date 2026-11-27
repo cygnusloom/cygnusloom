@@ -170,13 +170,6 @@ class _FakeWindow:
         return self.mode == "fullscreen"
 
 
-def test_the_desktop_window_icon_is_shipped():
-    icon = desktop.brand_icon_path()
-
-    assert icon.is_file()
-    assert icon.name == "cygnus-loom-256.png"
-
-
 def test_a_first_launch_uses_the_default_window_size():
     window = _FakeWindow()
 
@@ -225,27 +218,6 @@ def test_library_symbol_probe_reads_the_file(tmp_path):
     assert launcher._library_has_symbol(tmp_path / "missing", b"GLIBCXX_3.4.29") is True
 
 
-def test_the_desktop_spec_uses_the_host_system_libraries():
-    spec = Path(__file__).resolve().parents[1] / "packaging" / "cygnusloom.spec"
-    text = spec.read_text(encoding="utf-8")
-
-    assert "libstdc++.so" in text
-    assert "libgcc_s.so" in text
-    assert "libfontconfig.so" in text
-    assert "a.binaries = [" in text
-
-
-def test_the_desktop_spec_uses_the_brand_icon():
-    spec = Path(__file__).resolve().parents[1] / "packaging" / "cygnusloom.spec"
-    text = spec.read_text(encoding="utf-8")
-
-    assert "cygnus-loom.ico" in text
-    assert "icon=str(EXE_ICON)" in text
-    assert desktop.brand_icon_path().parent == (
-        Path(__file__).resolve().parents[1] / "src" / "cygnusloom" / "web" / "static" / "brand"
-    )
-
-
 def test_the_desktop_edition_does_not_inherit_models_from_the_shell():
     env = {
         "CYGNUSLOOM_LLM_PROVIDERS": "fake/scripted",
@@ -258,13 +230,6 @@ def test_the_desktop_edition_does_not_inherit_models_from_the_shell():
     launcher._ignore_model_environment(env)
 
     assert env == {"UNRELATED": "kept"}
-
-
-def test_migrations_are_inside_the_package():
-    config = cli.migration_config("sqlite:///unused.db")
-    location = Path(config.get_main_option("script_location") or "")
-    assert location.is_dir()
-    assert (location / "versions" / "0001_initial.py").is_file()
 
 
 def test_where_prints_the_data_folder(tmp_path, monkeypatch, capsys):

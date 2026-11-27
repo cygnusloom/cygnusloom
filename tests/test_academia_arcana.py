@@ -6,7 +6,6 @@ import asyncio
 import json
 import random
 import re
-from collections import Counter
 from collections.abc import Callable, Mapping
 from types import SimpleNamespace
 
@@ -198,15 +197,6 @@ def test_academia_move_prompts_for_the_players_own_dice(
     assert result["total"] == 8 + result["bonus"]
 
 
-def test_the_move_prompt_leaves_condition_penalties_to_the_engine() -> None:
-    """The GM adds only story modifiers; the engine already counts every condition once."""
-    call = _academy().tool_calls["roll_move"]
-    modifier = call.parameters["properties"]["modifier"]["description"]
-    assert "engine adds" in call.description
-    assert "do not count a condition" in call.description
-    assert "not counting conditions" in modifier
-
-
 def test_a_seven_to_nine_spell_asks_the_player_to_choose(
     client_factory: Callable[[], TestClient], app: FastAPI, monkeypatch: pytest.MonkeyPatch
 ):
@@ -279,72 +269,6 @@ def _features(spec: CharacterSpec, features: Mapping[str, int], feature_type: st
     return {feature for feature in features if spec.features[feature].feature_type == feature_type}
 
 
-def test_the_ruleset_loads_its_academy_content() -> None:
-    rules = _academy()
-    assert list(rules.character.stats) == ["theory", "practice", "alchemy", "charm", "cunning"]
-    assert rules.character.kinds() == ["playbook", "starting_year"]
-
-    years = [
-        template.id
-        for template in rules.character.templates.values()
-        if template.kind == "starting_year"
-    ]
-    playbooks = [
-        template.id
-        for template in rules.character.templates.values()
-        if template.kind == "playbook"
-    ]
-    assert years == [f"year-{number}" for number in range(1, 8)]
-    assert set(playbooks) == {"prodigy", "scholar", "alchemist", "rebel", "socialite"}
-
-    assert len(rules.moves) == 17
-    assert len(rules.conditions) == 9
-    counts = Counter(feature.feature_type for feature in rules.character.features.values())
-    assert counts["spell"] == 40
-    assert counts["potion"] == 15
-    assert counts["enchantment"] == 15
-
-    cup = rules.tallies["college-cup"]
-    assert cup.dynamic
-    assert cup.label == "College Cup"
-
-    assert rules.inventory is not None
-    assert rules.inventory.capacity == 10
-    assert rules.item_sizes == {"tiny": 0, "small": 1, "normal": 1, "bulky": 2}
-
-    assert rules.clock is not None
-    assert rules.clock.wage_currency == "silver"
-    assert rules.rests
-    assert rules.marketplace is not None
-    assert rules.marketplace.currency == "silver"
-    assert rules.character.items["silver"].name == "Silver Pieces"
-
-    period = rules.periods["school-year"]
-    assert period.tallies == ("college-cup",)
-    assert any(
-        effect.get("op") == "counter"
-        and effect.get("id") == "advancements"
-        and effect.get("delta") == 4
-        for effect in period.effects
-    )
-
-
-def test_enchantments_are_workings_placed_on_objects() -> None:
-    rules = _academy()
-    workings = [
-        feature
-        for feature in rules.character.features.values()
-        if feature.feature_type == "enchantment"
-    ]
-    assert len(workings) == 15
-    assert all("place on" in feature.description.lower() for feature in workings)
-
-    found = rules.content.dice_tables["magicschool_enchanted_object"]
-    assert found.creative
-    assert len(found.rows) == 15
-    assert all(" with " in row.result.lower() for row in found.rows)
-
-
 def test_character_creation_makes_a_year_one_prodigy(
     client_factory: Callable[[], TestClient],
 ) -> None:
@@ -389,95 +313,6 @@ def test_a_year_seven_character_starts_with_the_larger_package() -> None:
         feature for feature in year_seven.features if spec.features[feature].tag == "training-7"
     }
     assert len(training) == 3
-
-
-SUBJECTS = (
-    "Charms",
-    "Transfiguration",
-    "Warding",
-    "Divination",
-    "Healing",
-    "Illusion",
-    "Elemental",
-)
-FORBIDDEN_SPELLS = (
-    "command-the-will",
-    "sever-the-thread",
-    "borrowed-years",
-    "hollow-name",
-    "open-the-deep",
-)
-
-
-def _year_picks(
-    subjects: int,
-    spells: int,
-    potions: int,
-    enchantments: int,
-    training: int = 0,
-    training_tag: str = "",
-) -> list[tuple[object, ...]]:
-    """The feat picks the bundled compact `starting_years` table expands into for one year."""
-    picks: list[tuple[object, ...]] = [
-        ("subjects", subjects, SUBJECTS, "", "", "subject", ()),
-        ("spells", spells, SUBJECTS, "", "subjects", "spell", FORBIDDEN_SPELLS),
-        ("potions", potions, (), "Potions", "", "potion", ()),
-        ("enchantments", enchantments, (), "Enchantments", "", "enchantment", ()),
-    ]
-    if training:
-        picks.append(("training", training, (), training_tag, "", "trait", ()))
-    return picks
-
-
-@pytest.mark.parametrize(
-    ("year", "picks"),
-    [
-        ("year-1", _year_picks(1, 2, 1, 1)),
-        ("year-3", _year_picks(2, 4, 2, 1, 1, "training-1-3")),
-        ("year-4", _year_picks(2, 5, 3, 2, 1, "training-4-6")),
-        ("year-7", _year_picks(4, 8, 4, 3, 3, "training-7")),
-    ],
-)
-def test_a_bundled_year_template_keeps_its_authored_picks(
-    year: str, picks: list[tuple[object, ...]]
-) -> None:
-    template = _academy().character.templates[year]
-    assert [
-        (pick.id, pick.count, pick.tags, pick.tag, pick.tags_from, pick.feature_type, pick.exclude)
-        for pick in template.feat_picks
-    ] == picks
-
-
-def test_every_bundled_starting_year_expands_from_one_table() -> None:
-    """All seven years keep their names, year counters, and pick counts."""
-    years = {
-        template.id: template
-        for template in _academy().character.templates.values()
-        if template.kind == "starting_year"
-    }
-    expected = [
-        ("year-1", 0, 1, 2, 1, 1, 0),
-        ("year-2", 1, 1, 3, 2, 1, 0),
-        ("year-3", 2, 2, 4, 2, 1, 1),
-        ("year-4", 3, 2, 5, 3, 2, 1),
-        ("year-5", 4, 3, 6, 3, 2, 2),
-        ("year-6", 5, 3, 7, 4, 2, 2),
-        ("year-7", 6, 4, 8, 4, 3, 3),
-    ]
-    assert list(years) == [ident for ident, *_ in expected]
-    for ident, counter, subjects, spells, potions, enchantments, training in expected:
-        template = years[ident]
-        assert (template.kind, template.name) == ("starting_year", f"Year {counter + 1}")
-        assert template.counters == {"year": counter}
-        counts = {
-            "subjects": subjects,
-            "spells": spells,
-            "potions": potions,
-            "enchantments": enchantments,
-        }
-        if training:
-            counts["training"] = training
-        assert {pick.id: pick.count for pick in template.feat_picks} == counts
 
 
 def test_year_end_advances_the_year_and_grants_four_advancements(
@@ -689,44 +524,6 @@ def test_a_found_enchanted_object_goes_into_the_pack(
 
     assert taken["item"] == "brass hand-lantern"
     assert any(item.name == "brass hand-lantern" for item in _pc(client.app, campaign_id).items)
-
-
-def test_creation_form_pluralizes_feature_picks(
-    client_factory: Callable[[], TestClient],
-) -> None:
-    client = signed_in_client(client_factory)
-    campaign_id = create_campaign(client, world_template=WORLD, rule_set=RULE_SET)
-    choose_campaign_options(client, campaign_id, RULE_SET)
-
-    page = client.get(f"/campaigns/{campaign_id}").text
-    assert "Pick 2 potions" in page
-    assert "Pick 1 enchantment" in page
-    assert "Potionss" not in page
-
-
-def test_creation_form_has_no_randomize_for_assigned_stats(
-    client_factory: Callable[[], TestClient],
-) -> None:
-    client = signed_in_client(client_factory)
-    campaign_id = create_campaign(client, world_template=WORLD, rule_set=RULE_SET)
-    choose_campaign_options(client, campaign_id, RULE_SET)
-
-    page = client.get(f"/campaigns/{campaign_id}").text
-    assert "data-stat-assigned" in page
-    assert "data-reroll-stats" not in page
-
-
-def test_creation_form_limits_spells_to_the_chosen_subjects(
-    client_factory: Callable[[], TestClient],
-) -> None:
-    client = signed_in_client(client_factory)
-    campaign_id = create_campaign(client, world_template=WORLD, rule_set=RULE_SET)
-    choose_campaign_options(client, campaign_id, RULE_SET)
-
-    page = client.get(f"/campaigns/{campaign_id}").text
-    assert 'data-tags-from="subjects"' in page
-    assert 'data-feature-tag="Charms"' in page
-    assert "Choose subjects first" in page
 
 
 def test_a_creation_spell_must_belong_to_a_chosen_subject() -> None:

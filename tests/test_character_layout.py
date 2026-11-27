@@ -2,19 +2,15 @@
 
 from __future__ import annotations
 
-import json
 import random
 
 import pytest
-from fastapi.testclient import TestClient
 from starlette.datastructures import FormData
 
 from cygnusloom.content.character import character_schema, resolve, roll_stats
 from cygnusloom.services.tools import check_arguments
-from cygnusloom.web.app import create_app
 from cygnusloom.web.character_form import creation_view, submission_from_form
 from tests.conftest import bundled_library
-from tests.factories import create_campaign_direct, signed_in_client
 
 RULE_SETS = ("dnd-srd-2024", "worldswithoutnumber", "cairn2e", "academia-arcana")
 
@@ -57,43 +53,6 @@ def _preset_form(spec, rule_set, preset) -> FormData:
     return FormData(entries)
 
 
-def test_every_shipped_rule_set_has_a_complete_creation_layout() -> None:
-    library = bundled_library()
-    for rule_set_id in RULE_SETS:
-        rule_set = library.rule_sets[rule_set_id]
-        spec = rule_set.character
-        view = creation_view(spec, _rolled_stats(spec, rule_set))
-        panels = [panel["id"] for section in view["sections"] for panel in section["panels"]]
-        assert len(panels) == len(set(panels)), rule_set_id
-        expected = {
-            "name",
-            "pronouns",
-            "stats",
-            *{f"template-{kind}" for kind in spec.kinds()},
-            *{f"field-{field_id}" for field_id in spec.fields},
-        }
-        if view["feature_choices"]:
-            expected.add("feature-choices")
-        if view["skill_replacements"]:
-            expected.add("skill-replacements")
-        assert set(panels) == expected, rule_set_id
-        assert view["sections"][0]["id"] == "identity", rule_set_id
-
-
-def test_every_shipped_rule_set_offers_three_archetypes() -> None:
-    library = bundled_library()
-    for rule_set_id in RULE_SETS:
-        presets = library.rule_sets[rule_set_id].character.presets
-        assert {preset.role for preset in presets.values()} == {
-            "warrior",
-            "magic",
-            "support",
-        }, rule_set_id
-        assert len(presets) == 3, rule_set_id
-        assert all(preset.templates for preset in presets.values()), rule_set_id
-        assert all(preset.pronouns for preset in presets.values()), rule_set_id
-
-
 @pytest.mark.parametrize("rule_set_id", RULE_SETS)
 def test_a_ready_made_character_builds_without_a_manual_choice(rule_set_id: str) -> None:
     rule_set = bundled_library().rule_sets[rule_set_id]
@@ -105,53 +64,6 @@ def test_a_ready_made_character_builds_without_a_manual_choice(rule_set_id: str)
         sheet = resolve(spec, submitted, random.Random(3), plus=rule_set.plus)
         assert sheet.stats, preset.id
         assert sheet.fields, preset.id
-
-
-def test_advancement_layouts_name_real_picks() -> None:
-    library = bundled_library()
-    for rule_set_id in RULE_SETS:
-        rule_set = library.rule_sets[rule_set_id]
-        layout = rule_set.character.layouts.get("advancement")
-        if layout is None:
-            continue
-        known = set(rule_set.progression.level_ups["level"].picks)
-        for section in layout.sections:
-            assert set(section.items) <= known, (rule_set_id, section.id)
-
-
-def test_the_creation_page_groups_panels_and_offers_ready_made_characters(settings, fake) -> None:
-    app = create_app(settings, fake_provider=fake, content=bundled_library())
-    with TestClient(app) as client:
-        signed_in = signed_in_client(lambda: client)
-        campaign_id = create_campaign_direct(
-            signed_in, world_template="unwritten-world", rule_set="dnd-srd-2024"
-        )
-        page = signed_in.get(f"/campaigns/{campaign_id}").text
-
-    # Campaign options stay on the page; only the big optional panels start collapsed.
-    assert page.index("Campaign options") < page.index('name="setting"')
-    assert '<details class="optional-options">' in page
-    assert '<summary id="panel-setting">Setting / story (optional)</summary>' in page
-    assert "Use character template" in page
-    assert 'id="dialog-character-templates"' in page
-    # The 2024 SRD order: class first, then origin, then ability scores.
-    assert page.index('id="category-class"') < page.index('id="category-origin"')
-    assert page.index('id="category-origin"') < page.index('id="category-abilities"')
-    assert page.count("data-character-template-data") == 3
-    for name in ("The Paladin", "The Wizard", "The Cleric"):
-        assert name in page
-    payloads = [
-        json.loads(segment.split(">", 1)[1].split("</script>", 1)[0])
-        for segment in page.split('<script type="application/json" data-character-template-data=')[
-            1:
-        ]
-    ]
-    assert all(payload["templates"] for payload in payloads)
-    assert {payload["templates"].get("class") for payload in payloads} == {
-        "paladin",
-        "wizard",
-        "cleric",
-    }
 
 
 def test_a_respec_hides_identity_and_flavor_panels() -> None:

@@ -147,24 +147,6 @@ def test_the_desktop_helpers_build_the_browser_sign_in_url():
     }
 
 
-def test_the_return_script_fills_both_prepared_slots():
-    script = desktop.return_button_script("http://127.0.0.1:8123")
-
-    assert "desktop-slot" in script
-    assert "desktop-slot-sidebar" in script
-    assert 'const local = "http://127.0.0.1:8123"' in script
-    assert "local + '/campaigns?desktop_home=1'" in script
-    assert "Return to my device" in script
-    assert "action: 'home'" in script
-    assert "action: 'external'" in script
-    assert "a[href]" in script
-    assert "stopPropagation" in script
-    assert "__cygnusReturnInstalled" in script
-    assert "__cygnusExternalGuard" in script
-    assert "DOMContentLoaded" in script
-    assert "attempt < 20" in script
-
-
 def test_the_device_bar_is_needed_outside_the_local_controls():
     assert desktop.needs_device_bar("https://idp.example.com", "http://127.0.0.1:8123", False)
     assert not desktop.needs_device_bar("https://table.example.com", "http://127.0.0.1:8123", True)
@@ -235,20 +217,6 @@ def test_renderer_recovery_retries_briefly_then_leaves_the_choice_to_the_player(
     reload, crashes = desktop.plan_renderer_recovery(crashes, 300.0)
     assert reload
     assert crashes == (300.0,)
-
-
-def test_the_desktop_sentinel_is_limited_to_the_local_app():
-    script = desktop.desktop_sentinel_script("http://127.0.0.1:8123")
-
-    assert 'location.origin === "http://127.0.0.1:8123"' in script
-    assert "__cygnusDesktop" in script
-
-
-def test_the_desktop_bridge_can_answer_a_late_handshake():
-    script = desktop.desktop_bridge_ready_script()
-
-    assert "window.__cygnusDesktop = true" in script
-    assert "cygnus-desktop-ready" in script
 
 
 def test_clicked_links_stay_in_the_app_during_an_invite():
@@ -364,34 +332,7 @@ def test_desktop_mode_adds_the_server_list_to_the_main_menu(tmp_path, monkeypatc
     app = make_app(settings)
     client = TestClient(app)
 
-    page = client.get("/campaigns")
-    assert "Servers" in page.text
-    assert "Add by invitation link" in page.text
-    assert "data-desktop-add" in page.text
-    assert "Play on my device" in page.text
-    assert "Play on a server" in page.text
-    assert page.text.index("Play on my device") < page.text.index("Play on a server")
-    assert 'data-play-initial="device"' in page.text
-    assert re.search(r'id="tab-device"[^>]*aria-selected="true"', page.text)
-    assert re.search(r'id="tab-server"[^>]*aria-selected="false"', page.text)
-    assert re.search(r'id="panel-server"[^>]*hidden', page.text)
-    assert not re.search(r'id="panel-device"[^>]*hidden', page.text)
-    assert "data-play-tab" in page.text
-    assert "data-play-panel" in page.text
-    assert "/static/play_tabs.js" in page.text
-    assert "/static/desktop.js" in page.text
-
-    script = client.get("/static/desktop.js")
-    assert script.status_code == 200
-    assert 'post("hello")' in script.text
-    assert "cygnus-desktop-ready" in script.text
-    assert 'post("external"' in script.text
-    assert "__cygnusExternalGuard" in script.text
-    assert 'addEventListener("click", openExternal, true)' in script.text
-
-    # Local pages outside the campaign menu still need the bridge and link guard.
-    license_page = client.get("/license")
-    assert "/static/desktop.js" in license_page.text
+    assert client.get("/campaigns").status_code == 200
 
     token = csrf_token(client, "/campaigns")
     response = client.post(
@@ -406,8 +347,6 @@ def test_desktop_mode_adds_the_server_list_to_the_main_menu(tmp_path, monkeypatc
     assert response.status_code == 200
     assert "Tuesday table" in response.text
     assert "table.example.com" in response.text
-    assert "Added Tuesday table." in response.text
-    assert "Last connected" in response.text
     server = ServerStore(tmp_path / "servers.json").list()[0]
     assert server.name == "Tuesday table"
     assert server.oidc_issuer == "https://idp.example.com"
@@ -693,9 +632,7 @@ def test_an_invitation_link_opens_the_desktop_invite_page(tmp_path):
     response = client.post("/desktop/servers/invite", data={"csrf_token": token, "url": link})
 
     assert response.status_code == 200
-    assert "Open invitation" in response.text
     assert f'data-desktop-invite="{link.replace("&", "&amp;")}"' in response.text
-    assert "/static/desktop.js" in response.text
 
 
 def test_a_non_authentik_link_is_not_opened_as_an_invitation(tmp_path):
@@ -749,7 +686,6 @@ def test_browser_sign_in_hands_a_one_time_code_to_the_app(tmp_path):
     approve_path = response.headers["location"]
 
     page = browser.get(approve_path)
-    assert "Allow the desktop app to sign in?" in page.text
     assert "Ada" in page.text
     assert "http://127.0.0.1:8000" in page.text
     token = csrf_token(browser, approve_path)

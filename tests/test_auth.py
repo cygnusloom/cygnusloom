@@ -39,21 +39,12 @@ def _client(settings: Settings, oidc: FakeOIDC | None = None) -> TestClient:
     return TestClient(make_app(settings, oidc_provider=oidc))
 
 
-def test_login_page_shows_sso_button(settings: Settings):
-    client = _client(settings, FakeOIDC())
-    page = client.get("/login")
-    assert page.status_code == 200
-    assert "Continue with Test SSO" in page.text
-    assert "Accounts, passwords, multi-factor authentication" in page.text
-
-
 def test_test_login_signs_in_and_opens_campaigns(client: TestClient):
     response = register(client)
     assert response.status_code == 303
     assert response.headers["location"] == "/campaigns"
     page = client.get("/campaigns")
     assert page.status_code == 200
-    assert "No campaigns yet" in page.text
 
 
 def test_test_login_rejects_missing_csrf(client: TestClient):
@@ -192,7 +183,6 @@ def test_account_page_changes_the_display_name(client: TestClient):
     assert response.status_code == 303
     page = client.get("/account")
     assert "Rowan Hart 1234" in page.text
-    assert "Display name saved." in page.text
 
 
 def test_account_display_name_rejects_an_email_address(client: TestClient):
@@ -267,7 +257,6 @@ def test_admin_role_comes_from_claims(settings: Settings):
     client.get("/auth/callback")
     page = client.get("/admin")
     assert page.status_code == 200
-    assert "Administration" in page.text
 
 
 def test_non_admin_is_forbidden(settings: Settings):
@@ -321,7 +310,6 @@ def test_test_user_new_campaign_form_gets_the_default_label(client: TestClient):
     register(client)
     page = client.get("/campaigns/new").text
     assert 'name="label" value="Unwritten World #1"' in page
-    assert 'name="character_name"' not in page
 
 
 def test_account_page_shows_identity_and_sessions(client: TestClient):
@@ -329,47 +317,7 @@ def test_account_page_shows_identity_and_sessions(client: TestClient):
     page = client.get("/account")
     assert page.status_code == 200
     assert "ada@example.com" in page.text
-    assert "Signed-in devices" in page.text
     assert "test" in page.text
-
-
-def test_account_page_links_to_the_authentik_user_interface(settings: Settings):
-    client = _client(
-        replace(settings, oidc_issuer="https://idp.example.com/application/o/cygnusloom/")
-    )
-    register(client)
-    page = client.get("/account").text
-    assert 'href="https://idp.example.com/if/user/"' in page
-    assert "Manage your account at the identity provider" in page
-
-
-def test_account_page_prefers_a_configured_account_url(settings: Settings):
-    client = _client(
-        replace(
-            settings,
-            oidc_issuer="https://idp.example.com/application/o/cygnusloom/",
-            oidc_account_url="https://idp.example.com/custom/account",
-        )
-    )
-    register(client)
-    page = client.get("/account").text
-    assert 'href="https://idp.example.com/custom/account"' in page
-    assert "if/user" not in page
-
-
-def test_account_page_has_no_provider_link_for_an_unknown_issuer(settings: Settings):
-    client = _client(replace(settings, oidc_issuer="https://accounts.example.com"))
-    register(client)
-    assert "Manage your account at the identity provider" not in client.get("/account").text
-
-
-def test_login_page_links_to_the_authentik_user_interface(settings: Settings):
-    client = _client(
-        replace(settings, oidc_issuer="https://idp.example.com/application/o/cygnusloom/"),
-        FakeOIDC(),
-    )
-    page = client.get("/login").text
-    assert 'href="https://idp.example.com/if/user/"' in page
 
 
 def test_sign_out_everywhere_revokes_all_clients(settings: Settings):

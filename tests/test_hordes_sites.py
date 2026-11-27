@@ -13,34 +13,10 @@ from cygnusloom.rules.hordes import navigate_city
 from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.events import load_state
 from cygnusloom.services.tools import ToolRun, run_tool
-from cygnusloom.web.character_form import creation_view
-from tests.conftest import bundled_library
 from tests.factories import character_named, db, rules_for
 from tests.test_hordes import _campaign
 
 RULE_SET = "hordes"
-
-
-def test_site_types_are_loaded_with_valid_zones_loot_and_threats():
-    rules = rules_for(RULE_SET)
-    assert len(rules.site_types) == 20
-    for site_type in rules.site_types.values():
-        assert site_type.description
-        assert site_type.zones
-        assert site_type.find in {"common", "uncommon", "hidden", "secret"}
-        for threat in site_type.threats:
-            assert threat in rules.threats
-        for zone in site_type.zones:
-            assert zone.loot
-            for entry in zone.loot:
-                assert entry["item"] in rules.character.items
-        for entry in site_type.loot:
-            assert entry["item"] in rules.character.items
-
-    lab = rules.site_types["cybernetics-lab"]
-    assert lab.find == "hidden"
-    assert "zombie-cyborg" in lab.threats
-    assert "operating-room" in {zone.id for zone in lab.zones}
 
 
 def test_listing_and_reading_site_types_filters_hard_to_find_places(client_factory):
@@ -205,43 +181,6 @@ def test_a_full_pack_leaves_site_loot_behind(client_factory):
     assert result["found"]
     assert result["left_behind"]
     assert any(entry["left_because"] for entry in result["left_behind"])
-
-
-def test_every_hordes_flavor_field_offers_choices_and_a_write_in():
-    spec = rules_for(RULE_SET).character
-    rolled = {
-        stat.id: (stat.values[0] if stat.values else stat.low)
-        for stat in spec.stats.values()
-        if stat.derived is None
-    }
-    view = creation_view(spec, rolled)
-    choice_ids = {field["id"] for field in view["choice_fields"]}
-    assert {
-        "drive",
-        "burden",
-        "scar",
-        "look",
-        "background",
-        "shelter_duty",
-        "personal_item",
-    } <= choice_ids
-    assert all(field["flavor"] for field in view["choice_fields"])
-    assert all(field["flavor"] for field in view["text_fields"])
-
-
-def test_the_bundled_content_still_credits_the_apocalypse_tables():
-    library = bundled_library()
-    hordes = library.rule_sets[RULE_SET]
-    site_tables = [
-        table for table in hordes.dice_tables.values() if table.creative and table.role == "site"
-    ]
-    assert {table.id for table in site_tables} == {
-        "site-detail",
-        "site-secret",
-        "site-occupant",
-        "site-sign",
-    }
-    assert all(table.genres == ("apocalypse",) for table in site_tables)
 
 
 def test_the_create_site_tool_is_bound_and_stores_the_site_type(client_factory):

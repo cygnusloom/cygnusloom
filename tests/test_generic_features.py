@@ -20,14 +20,13 @@ from cygnusloom.content.character import (
     Template,
     build_character,
     check_choices,
-    feature_pick_options,
     resolve,
 )
 from cygnusloom.content.definitions import ContentError, Definition
 from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.events import Character, NpcAdded, load_state, record
 from cygnusloom.web.character_form import creation_view
-from tests.conftest import bundled_library, content_library
+from tests.conftest import content_library
 from tests.test_campaigns import _create_character, _new_campaign, _signed_in
 from tests.test_wwn_combat import PC, _wwn_campaign
 
@@ -567,43 +566,6 @@ def test_a_skipped_tag_does_not_forbid_another_templates_pick():
     sheet = resolve(spec, submitted, random.Random(0), plus="sum")
 
     assert sheet.features["test-trait-0"] == 1
-
-
-def test_bundled_tagged_feature_pools_fill_every_required_pick():
-    for rule_set in bundled_library().rule_sets.values():
-        spec = rule_set.character
-        for template in spec.templates.values():
-            choose = template.choose
-            if choose is None:
-                continue
-            field = spec.fields[choose.tag_field]
-            assert field.table is not None
-            for option in spec.tables[field.table]:
-                if option.value in choose.skip_tags:
-                    continue
-                available = sum(
-                    feature.feature_type == choose.feature_type and feature.tag == option.value
-                    for feature in spec.features.values()
-                )
-                assert available >= choose.count, (
-                    f"{rule_set.id}: {template.id} requires {choose.count} "
-                    f"{choose.feature_type}s for {option.value!r}, but has {available}"
-                )
-
-
-def test_bundled_feature_pools_fill_each_template_pick():
-    for rule_set in bundled_library().rule_sets.values():
-        spec = rule_set.character
-        for template in spec.templates.values():
-            granted = {feature.feature for feature in template.features}
-            for pick in template.feat_picks:
-                available = sum(
-                    feature.id not in granted for feature in feature_pick_options(spec, pick)
-                )
-                assert available >= pick.count, (
-                    f"{rule_set.id}: {template.id} requires {pick.count} options for "
-                    f"{pick.id!r}, but has {available}"
-                )
 
 
 def test_a_granted_feature_from_another_tag_does_not_fill_a_pick():

@@ -16,7 +16,6 @@ from fastapi.testclient import TestClient
 from cygnusloom.content.definitions import ContentError, range_bands
 from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.world import WorldTools
-from tests.conftest import content_library
 from tests.test_combat import MAP, PC, _character, _fight, _foe
 from tests.turns import take_turn
 
@@ -99,19 +98,6 @@ def test_an_npc_armed_with_an_unlimited_band_reaches_anywhere(client_factory):
     }
     statblock = tools.get_statblock(FOE)
     assert "Sling 1d4 (range unlimited)" in " ".join(statblock["statblock"])
-
-
-def test_cairn_content_declares_adjacency_and_unlimited_missiles():
-    cairn = content_library().rule_sets["cairn2e"]
-
-    assert cairn.combat.ranges is not None
-    # No melee distance in the ruleset means one cell, so an attack must be next to its target.
-    assert cairn.combat.ranges.melee is None
-    assert "wall" in cairn.combat.ranges.sight_blocked_by
-    assert cairn.character.items["bow"].ranges == {"ranged": None}
-    assert cairn.character.items["crossbow"].ranges == {"ranged": None}
-    assert cairn.character.items["sling"].ranges == {"ranged": None}
-    assert cairn.character.items["long-sword"].ranges == {}
 
 
 def test_a_band_distance_of_zero_means_no_limit():

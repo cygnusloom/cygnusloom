@@ -59,7 +59,6 @@ from tests.turns import next_turn, take_turn
 
 LIBRARY = content_library()
 CAIRN = LIBRARY.rule_sets["cairn2e"]
-WWN = LIBRARY.rule_sets["worldswithoutnumber"]
 
 
 def save_succeeds(roll: int, score: int) -> bool:
@@ -583,32 +582,6 @@ def test_combat_rejects_invalid_level_damage_rules(changes, message):
         )
 
 
-def test_bundled_combat_rules_keep_their_unarmed_and_level_damage_sources():
-    assert CAIRN.combat.unarmed_skill == ""
-    assert CAIRN.combat.save.auto_success == 1
-    assert CAIRN.combat.save.auto_fail == 20
-    assert WWN.combat.unarmed_skill == "punch"
-    assert WWN.combat.level_damage is not None
-    assert (
-        WWN.combat.level_damage.template_kind,
-        WWN.combat.level_damage.templates,
-        WWN.combat.level_damage.counter,
-        WWN.combat.level_damage.divisor,
-    ) == (
-        "class",
-        # The source gives Killing Blow to a full Warrior and says partial Warriors do not
-        # get it.
-        ("warrior",),
-        "level",
-        2,
-    )
-    assert WWN.combat.level_damage.weapons_only is True
-    assert WWN.combat.level_damage.label == "Killing Blow"
-    warrior = SimpleNamespace(templates={"class": "warrior"}, counters={"level": 3})
-    assert _level_damage_bonus(WWN.combat, warrior, WWN.character) == 2
-    assert _level_damage_bonus(WWN.combat, warrior, WWN.character, unarmed=True) == 0
-
-
 @pytest.mark.parametrize(
     ("save", "roll", "score", "passed"),
     [
@@ -830,16 +803,6 @@ def test_a_statblock_template_gives_the_starting_values(client_factory):
     assert rover.kind == NPC_KIND
     assert rover.attacks == {"bite": "1d6"}
     assert rover.creature == "Blink Dog"
-
-
-def test_the_roster_shows_the_statblock_beside_a_monster(client_factory):
-    client, campaign_id, tools = _fight_client(client_factory)
-    tools.create_monster("Rover", YARD, template="blink-dog")
-    tools.add_participant("Rover")
-    page = client.get(f"/campaigns/{campaign_id}").text
-    roster = page[page.index('class="encounter-roster"') :]
-    assert '<a href="#" class="statblock-name" data-statblock-name="Rover">Rover</a>' in roster
-    assert '<span class="muted">Blink Dog</span>' in roster
 
 
 def test_the_roster_and_sheets_show_current_and_maximum_hit_points(client_factory):

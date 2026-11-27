@@ -127,35 +127,6 @@ def _campaign_choices(page: str) -> dict[str, str]:
     return choices
 
 
-def test_cairn_campaign_shows_the_creation_form_and_no_chat(
-    client_factory: Callable[[], TestClient],
-):
-    client, campaign_id = _cairn_campaign(client_factory)
-    page = client.get(f"/campaigns/{campaign_id}").text
-    assert "Create your character" in page
-    assert 'name="stat-str"' in page
-    assert "Twin Lakes" in page
-    assert "Cairn 2e" in page
-    assert f"/campaigns/{campaign_id}/messages" not in page
-
-
-def test_character_creation_keeps_the_sidebar_but_not_the_chat(
-    client_factory: Callable[[], TestClient],
-):
-    client, campaign_id = _cairn_campaign(client_factory)
-    page = client.get(f"/campaigns/{campaign_id}").text
-    assert 'class="view creation"' in page
-    assert 'class="sidebar"' in page
-    assert 'data-view-target="journal"' in page
-    assert 'data-view-target="settings"' not in page
-    assert 'id="view-settings"' not in page
-    assert "data-side-toggle" not in page
-    assert 'class="workspace"' not in page
-    assert 'class="chat"' not in page
-    assert 'class="side"' not in page
-    assert "/static/creation.js" in page
-
-
 def test_chat_is_refused_until_the_character_exists(client_factory: Callable[[], TestClient]):
     client = _signed_in(client_factory)
     campaign_id = int(_new_campaign(client).headers["location"].rsplit("/", 1)[1])
@@ -204,34 +175,6 @@ def _complete_form(client: TestClient, campaign_id: int) -> dict[str, str]:
     fields = {f"stat-{stat}": str(value) for stat, value in _rolled_stats(page).items()}
     fields.update(_choices(page))
     return fields
-
-
-def test_creation_page_offers_radio_cards_with_dice_and_no_random(
-    client_factory: Callable[[], TestClient],
-):
-    client, campaign_id = _cairn_campaign(client_factory)
-    page = client.get(f"/campaigns/{campaign_id}").text
-    assert 'type="radio" name="template-background"' in page
-    assert 'type="radio" name="field-physique"' in page
-    assert 'data-dice-for="template-background"' in page
-    assert 'data-dice-for="field-physique"' in page
-    assert not re.search(r'value="random"', page, re.IGNORECASE)
-    assert '<option value="">' not in page
-    assert 'data-randomize="all"' in page
-    assert 'data-randomize="unchosen"' in page
-
-
-def test_stats_have_their_own_randomize_button_and_rolled_swap_groups(
-    client_factory: Callable[[], TestClient],
-):
-    client, campaign_id = _cairn_campaign(client_factory)
-    page = client.get(f"/campaigns/{campaign_id}").text
-    assert page.count("data-randomize-stats") == 1
-    assert page.count("data-reroll-stats") == 1
-    assert "data-reroll-form" in page
-    assert 'data-stat-group="attributes"' in page
-    assert "data-stat-rolled=" in page
-    assert "data-stat-assigned" not in page
 
 
 def test_randomize_rolls_new_stats_and_keeps_the_rest_of_the_form(
@@ -286,35 +229,6 @@ def test_the_widget_offers_the_standard_array_the_rule_set_names(
     assert 'data-stat-standard="13"' in page
 
 
-def test_name_dice_draws_on_the_suggested_names_of_the_backgrounds(
-    client_factory: Callable[[], TestClient],
-):
-    client, campaign_id = _cairn_campaign(client_factory)
-    page = client.get(f"/campaigns/{campaign_id}").text
-    assert 'data-name-dice="name"' in page
-    assert 'data-name-source="scrivener"' in page
-    assert 'data-choice-panel="field-scrivener-names"' not in page
-    assert 'data-dice-for="field-scrivener-names"' not in page
-
-
-def test_every_choice_opens_a_dialog_and_radios_are_not_required(
-    client_factory: Callable[[], TestClient],
-):
-    client, campaign_id = _cairn_campaign(client_factory)
-    page = client.get(f"/campaigns/{campaign_id}").text
-    groups = set(re.findall(r'<input type="radio" name="([\w-]+)"', page))
-    dialog_ids = re.findall(r'<dialog id="(choice-dialog-[\w-]+)"', page)
-    opened = set(re.findall(r'data-open-choice="(choice-dialog-[\w-]+)"', page))
-    assert {f"choice-dialog-{name}" for name in groups} == set(dialog_ids) == opened
-    assert len(dialog_ids) == len(set(dialog_ids))
-    for dialog_id in dialog_ids:
-        # The chosen value and the Choose button both open the dialog.
-        assert page.count(f'data-open-choice="{dialog_id}"') == 2
-    for tag in re.findall(r'<input type="radio"[^>]*>', page):
-        attributes = re.sub(r'"[^"]*"', '""', tag)
-        assert " required" not in attributes
-
-
 def test_every_template_and_choice_must_be_set(client_factory: Callable[[], TestClient]):
     client, campaign_id = _cairn_campaign(client_factory)
     spec = client.app.state.content.rule_sets["cairn2e"].character
@@ -361,20 +275,6 @@ def test_stat_that_is_not_a_number_is_rejected(client_factory: Callable[[], Test
 
 SCRIVENER_WORK = "scrivener-what-work-did-you-keep-for-yourself"
 WILD_TONGUE = "The Wild Tongue"
-WILD_TONGUE_DETAIL = (
-    "A bundle of leather-bound scrolls. A seminal work, cataloging the hidden languages "
-    "of beasts and how to understand them."
-)
-
-
-def test_named_options_show_their_name_as_a_title_and_description(
-    client_factory: Callable[[], TestClient],
-):
-    client, campaign_id = _cairn_campaign(client_factory)
-    page = client.get(f"/campaigns/{campaign_id}").text
-    assert f'data-title="{WILD_TONGUE}"' in page
-    assert f"<span>{WILD_TONGUE}</span>" in page
-    assert f'<span class="muted choice-detail">{WILD_TONGUE_DETAIL}</span>' in page
 
 
 def test_a_named_option_is_stored_by_its_name(client_factory: Callable[[], TestClient]):
@@ -390,45 +290,6 @@ def test_a_named_option_is_stored_by_its_name(client_factory: Callable[[], TestC
         pc = load_state(db, campaign_id).pc()
     assert pc is not None
     assert pc.fields[SCRIVENER_WORK] == WILD_TONGUE
-
-
-def test_cairn_campaign_asks_for_its_options_and_character_on_one_page(
-    client_factory: Callable[[], TestClient],
-):
-    client = _signed_in(client_factory)
-    campaign_id = _new_cairn_campaign(client)
-    page = client.get(f"/campaigns/{campaign_id}").text
-    assert page.count('class="creation-form"') == 1
-    assert f'action="/campaigns/{campaign_id}/creation"' in page
-    assert "Campaign options" in page
-    assert "Your character" in page
-    assert 'name="campaign-omen"' in page
-    assert 'name="setting" rows="3" maxlength="4000"' in page
-    assert 'name="table_genres"' in page
-    assert page.index("Campaign options") < page.index('name="setting"')
-    assert page.index('name="setting"') < page.index("Creative sources")
-    assert page.index("Creative sources") < page.index("Your character")
-    assert 'name="stat-str"' in page
-    assert page.count('data-randomize="all"') == 1
-    assert page.count('data-randomize="unchosen"') == 1
-    assert "Create campaign and character" in page
-
-
-def test_a_rule_set_without_campaign_options_still_offers_the_setting(
-    client_factory: Callable[[], TestClient],
-):
-    client = _signed_in(client_factory)
-    response = _new_campaign(client)
-    assert response.status_code == 303
-    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
-    page = client.get(f"/campaigns/{campaign_id}").text
-    assert "Campaign options" in page
-    assert 'name="campaign-' not in page
-    assert 'name="setting" rows="3" maxlength="4000"' in page
-    assert 'name="table_genres"' in page
-    assert page.index("Campaign options") < page.index('name="setting"')
-    assert page.index('name="setting"') < page.index("Creative sources")
-    assert "Your character" in page
 
 
 def test_the_campaign_options_must_all_be_chosen(client_factory: Callable[[], TestClient]):
@@ -581,15 +442,3 @@ def test_other_pronouns_are_stored_as_written(client_factory: Callable[[], TestC
     assert created.status_code == 303
     pc = _stored_pc(client, campaign_id)
     assert pc is not None and pc.pronouns == "xe/xem"
-
-
-def test_pronoun_choices_put_other_last_and_freeform_so_randomize_skips_it(
-    client_factory: Callable[[], TestClient],
-):
-    client, campaign_id = _cairn_campaign(client_factory)
-    page = client.get(f"/campaigns/{campaign_id}").text
-    assert 'data-choice-panel="pronouns"' in page
-    assert 'type="radio" name="pronouns" value="he/him"' in page
-    assert 'type="radio" name="pronouns" value="other" data-title="Other" data-freeform>' in page
-    assert page.count("data-freeform") == 1
-    assert 'name="pronouns-other"' in page

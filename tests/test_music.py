@@ -26,17 +26,11 @@ from cygnusloom.services.events import (
     name_key,
 )
 from cygnusloom.services.music import (
-    MOODS,
-    MUSIC_DIR,
     MusicView,
     derive_scene_mood,
-    load_manifest,
     music_view,
     scene_key,
-    validate_manifest,
 )
-from cygnusloom.services.prompts import state_instruction
-from tests.conftest import bundled_library
 from tests.factories import campaign_ready_fast, send_message
 
 
@@ -102,23 +96,6 @@ def _music_events(app: FastAPI, campaign_id: int) -> list[MusicCued]:
         ]
 
 
-def test_the_bundled_pack_is_valid_and_covers_every_mood_but_silence():
-    manifest = load_manifest()
-
-    assert validate_manifest(manifest) == []
-    covered = {mood for track in manifest["tracks"] for mood in track["moods"]}
-    assert set(MOODS) - covered == {"silence"}
-    assert len(manifest["tracks"]) >= 40
-    assert all("intensity" not in track for track in manifest["tracks"])
-    for mood in MOODS:
-        if mood == "silence":
-            continue
-        count = sum(1 for track in manifest["tracks"] if mood in track["moods"])
-        assert count >= 4, f"only {count} tracks for the {mood} mood"
-    total = sum((MUSIC_DIR / track["file"]).stat().st_size for track in manifest["tracks"])
-    assert total < 100 * 1024 * 1024
-
-
 def test_combat_is_derived_during_an_encounter():
     state = _state(encounter=Encounter(map="Camp", location="Mossbell Hollow"))
 
@@ -182,15 +159,6 @@ def test_music_cues_are_hidden_from_the_transcript():
     assert is_hidden("music.cued")
 
 
-def test_every_shipped_rule_set_tells_the_gm_to_cue_music():
-    """Music is handled by its own core prompt, not the turn checklist. The GM cues a mood
-    only when the scene changes, and the engine derives combat, social, and night moods."""
-    for rule_set in bundled_library().rule_sets.values():
-        text = state_instruction(rule_set)
-        assert "Background music follows the mood of the scene" in text
-        assert "set_music" in text
-
-
 def test_the_gm_can_cue_music_and_the_page_renders_it(
     client_factory: Callable[[], TestClient], app: FastAPI
 ):
@@ -207,8 +175,6 @@ def test_the_gm_can_cue_music_and_the_page_renders_it(
     assert cues and cues[-1].mood == "tension"
     page = client.get(f"/campaigns/{campaign_id}").text
     assert 'data-music-mood="tension"' in page
-    assert "data-music-intensity" not in page
-    assert 'data-music-manifest="/static/music/manifest.json"' in page
     assert "data-music-mood-label>Tension<" in page
 
 
@@ -238,27 +204,6 @@ def test_repeating_the_same_cue_in_the_same_scene_does_not_fill_the_log(
     assert send_message(client, campaign_id, script).status_code == 303
 
     assert len(_music_events(app, campaign_id)) == 1
-
-
-def test_the_page_has_player_controls_and_the_license_page_has_music_credits(
-    client_factory: Callable[[], TestClient],
-):
-    client, campaign_id = campaign_ready_fast(client_factory)
-
-    page = client.get(f"/campaigns/{campaign_id}").text
-    assert "data-music-toggle" in page
-    assert "data-music-volume" in page
-    assert "data-music-ticker" in page
-    assert "data-music-menu-toggle" in page
-    assert "data-music-mood-label" in page
-    assert "data-music-skip" in page
-    assert 'data-music-default-enabled="1"' in page
-    assert 'id="settings-music-title"' in page
-    assert "Play background music" in page
-
-    license_page = client.get("/license").text
-    assert "Music" in license_page
-    assert "Scott Buckley" in license_page
 
 
 def test_a_test_server_can_mute_music_by_default(

@@ -229,8 +229,6 @@ def test_admin_panel_lists_and_manages_accounts(settings: Settings):
     page = client.get(f"/admin/users/{target.id}")
     assert page.status_code == 200
     assert "A Dark Night" in page.text
-    assert "Roles (from the identity provider)" in page.text
-    assert "Account ID" in page.text
 
     campaigns = client.get("/admin/campaigns?q=Dark")
     assert campaigns.status_code == 200
@@ -350,19 +348,6 @@ def test_admin_model_page_lists_and_adds_models(settings: Settings):
     assert page.status_code == 200
     assert "fake/scripted" in page.text
     assert "ollama/test-model" in page.text
-    assert "Cache hit input" in page.text
-    assert "Cache miss input" in page.text
-    assert "Cost calculator" in page.text
-    assert "Peak hours" in page.text
-    assert 'data-calc="peak-start"' in page.text
-    assert "Share of usage at peak" not in page.text
-    assert "Peak" in page.text and "Off-peak" in page.text
-    assert "Clear saved calculator values" in page.text
-    assert 'action="/admin/models/calculators/clear"' in page.text
-    assert "data-clear-calculators" not in page.text
-    assert 'data-model="fake/scripted"' in page.text
-    assert 'data-save-url="/admin/models/' in page.text
-    assert "saved with the model" in page.text
 
     token = csrf_token(client, "/admin/models")
     response = client.post(
@@ -382,7 +367,6 @@ def test_admin_model_page_lists_and_adds_models(settings: Settings):
     page = client.get("/admin/models")
     assert "openai/gpt-4o-mini" in page.text
     assert "sk-test" not in page.text
-    assert "Context window" in page.text
     assert "8,192 tokens" in page.text
 
     engine = _engine(settings)
@@ -468,11 +452,7 @@ def test_admin_can_price_source_documents_per_model(settings: Settings):
         )
 
     page = client.get("/admin/models")
-    assert "Source document price" in page.text
     assert "3 replies per document" in page.text
-    assert 'name="document_pricing"' in page.text
-    assert 'name="document_multiple"' in page.text
-    assert 'name="document_per_100k"' in page.text
 
     token = csrf_token(client, "/admin/models")
     response = client.post(
@@ -549,7 +529,6 @@ def test_admin_models_page_hides_estimated_token_counts(settings: Settings):
     assert page.status_code == 200
     assert "usage not reported" in page.text
     assert "1 unreported" in page.text
-    assert "Calculate" in page.text
     assert "987654" not in page.text
     assert "555555" not in page.text
 

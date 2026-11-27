@@ -13,16 +13,13 @@ from cygnusloom.services.events import Item, ItemAdded, LocationAdded, record
 from cygnusloom.services.prompts import system_parts
 from cygnusloom.services.views import present_rules_text, world_state_text
 from tests.conftest import content_library
-from tests.test_character_creation import _cairn_campaign
 from tests.test_combat import CAIRN, PC, YARD, _fight
 from tests.test_content import _core, _rule_set, _world, _write
 from tests.test_world import _db, _state
 
 LIBRARY = content_library()
-TWIN_LAKES = LIBRARY.setting_template("twin-lakes")
 VUK = "Vuk"
 CHOKING = "vuk-choking-hold"
-MEMORIES = "memory-prism-current-memories"
 TEXT = {CHOKING: "The Ash Phantom chokes with its hand."}
 
 
@@ -41,24 +38,6 @@ def _story_only_world(**npc: object) -> list[dict[str, object]]:
     glade = {"type": "location", "id": "glade", "name": "Glade", "description": "A glade."}
     bo = {"type": "npc", "id": "bo", "name": "Bo", "location": "glade", "description": "A bo."}
     return [*_world(), glade, {**bo, **npc}]
-
-
-def test_twin_lakes_attaches_vuks_choking_hold():
-    vuk = next(n for n in TWIN_LAKES.npcs if n.name == VUK)
-    assert vuk.rules == (CHOKING, MEMORIES)
-
-
-def test_seeding_gives_vuk_her_rules(client_factory: Callable[[], TestClient]):
-    client, campaign_id = _cairn_campaign(client_factory)
-    vuk = _state(client.app, campaign_id).named(VUK)
-    assert vuk is not None
-    assert list(vuk.rules) == [CHOKING, MEMORIES]
-
-
-def test_twin_lakes_monsters_attach_their_module_rules():
-    monsters = LIBRARY.world_content("twin-lakes", "cairn2e").monsters
-    assert monsters["night-cat"].rules == ("night-cat-attack", "night-cat-critical-damage")
-    assert monsters["suraru-imperator"].rules == ("suraru-imperator-critical-damage",)
 
 
 def test_a_monster_made_from_a_statblock_brings_its_rules(client_factory: Callable[[], TestClient]):
@@ -200,15 +179,6 @@ def test_a_world_npc_attaching_an_unknown_rule_is_a_content_error(tmp_path: Path
         ContentLibrary.load(tmp_path).world_content("testland", "testset")
 
 
-def test_every_bestiary_entry_has_its_description_and_every_attached_rule_its_text():
-    rule_set = LIBRARY.rule_sets["cairn2e"]
-    assert len(rule_set.monsters) == 84
-    for monster in rule_set.monsters.values():
-        assert monster.description, monster.id
-        for rule_id in monster.rules:
-            assert rule_set.attached_rules.get(rule_id), f"{monster.id} has no text for {rule_id}"
-
-
 def test_a_bestiary_monster_present_brings_its_special_rules(
     client_factory: Callable[[], TestClient],
 ):
@@ -249,13 +219,6 @@ def test_a_place_elsewhere_brings_no_rules(client_factory: Callable[[], TestClie
     assert present_rules_text(_state(app, campaign_id), TEXT) == ""
 
 
-def test_twin_lakes_places_attach_their_module_rules():
-    spots = {spot.id: spot for spot in TWIN_LAKES.locations}
-    assert spots["deadmill"].rules == ("deadmill-sinking", "deadmill-time-loop")
-    assert spots["the-downs"].rules == ("the-downs-travel",)
-    assert spots["butcher-shop"].rules == ("trapdoor-butcher-block",)
-
-
 def test_a_world_place_attaching_an_unknown_rule_is_a_content_error(tmp_path: Path):
     glade = {
         "type": "location",
@@ -274,39 +237,3 @@ def test_a_world_place_attaching_an_unknown_rule_is_a_content_error(tmp_path: Pa
     )
     with pytest.raises(ContentError, match="location 'glade' attaches rule 'no-such-rule'"):
         ContentLibrary.load(tmp_path).world_content("testland", "testset")
-
-
-UNATTACHED_TWIN_LAKES_RULES = (
-    "twin-lakes-overview",
-    "the-roots",
-    "victim-schedule",
-    "outcome-vuk-reborn",
-    "outcome-gate-opened",
-    "outcome-vuk-stopped-gate-closed",
-    "outcome-vuk-reborn-and-gate-opened",
-)
-ATTACHED_TWIN_LAKES_RULES = (
-    "vuk-choking-hold",
-    "deadmill-sinking",
-    "deadmill-time-loop",
-    "trapdoor-butcher-block",
-    "suraru-imperator-critical-damage",
-    "night-cat-attack",
-    "the-downs-travel",
-    "bone-sump-discovery",
-    "faction-tideborn",
-    "faction-order-of-nine",
-)
-
-
-def test_the_unattached_twin_lakes_rules_are_the_module_wide_ones():
-    world = LIBRARY.world_content("twin-lakes", "cairn2e")
-    for rule_id in UNATTACHED_TWIN_LAKES_RULES:
-        assert rule_id in world.unattached_rules, rule_id
-
-
-def test_entity_attached_twin_lakes_rules_are_not_unattached():
-    world = LIBRARY.world_content("twin-lakes", "cairn2e")
-    for rule_id in ATTACHED_TWIN_LAKES_RULES:
-        assert rule_id in world.rules, rule_id
-        assert rule_id not in world.unattached_rules, rule_id

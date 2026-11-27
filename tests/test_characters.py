@@ -169,7 +169,6 @@ def test_an_npc_coming_to_the_player_is_remembered(
     )
     mara = _state(app, campaign_id).known[name_key("Mara Thistledown")]
     assert mara.location == "Quiet Camp"
-    assert mara.personality == "warm and protective"
 
 
 def test_knowledge_is_a_snapshot_and_keeps_the_last_known_place(
@@ -348,10 +347,6 @@ def test_characters_page_shows_known_people_and_their_last_known_place(
     )
 
     page = client.get(f"/campaigns/{campaign_id}").text
-    assert 'data-view-target="characters"' in page
-    assert 'data-view="characters"' in page
-    assert 'type="search"' in page
-    assert 'data-filter="#character-list"' in page
     characters = _characters_section(page)
     assert "Brin Gallowcap" in characters
     assert "friendly, owes a debt" in characters

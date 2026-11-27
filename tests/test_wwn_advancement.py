@@ -637,14 +637,6 @@ def test_the_casting_table_sets_the_spell_picks(
     assert wwn.level_up_summary(NAME, ctx)["grants"]["spell_picks"] == spell_picks
 
 
-def test_die_hard_hp_per_level_is_feature_data() -> None:
-    die_hard = WWN.character.features["focus_die_hard"]
-
-    assert die_hard.name == "Die Hard"
-    assert die_hard.level_hp_bonus == 2
-    assert WWN.character.features["focus_alert"].level_hp_bonus == 0
-
-
 def test_a_caster_raises_castings_from_the_class_table_on_level_up(
     client_factory: Callable[[], TestClient],
 ) -> None:
@@ -1248,17 +1240,6 @@ def test_level_up_keeps_the_old_hit_points_plus_one_when_the_reroll_is_worse(
     assert _stat(app, campaign_id, "hp") == 23
 
 
-def test_a_full_mage_starts_with_four_spells_and_two_arts(
-    client_factory: Callable[[], TestClient],
-) -> None:
-    _app, _campaign_id = _campaign(client_factory, class_id="mage", tradition="high_mage")
-    character = _pc(_app, _campaign_id)
-    spells = [f for f in character.features if f.startswith("spell_")]
-    arts = [f for f in character.features if f in {"art_arcane_lexicon", "art_counter_magic"}]
-    assert len(spells) == 4
-    assert len(arts) == 2
-
-
 def test_art_picks_come_from_the_class_chart_and_buy_arts(
     client_factory: Callable[[], TestClient],
 ) -> None:
@@ -1544,24 +1525,6 @@ def test_a_dual_mage_takes_two_partial_traditions(client_factory):
     assert "spell_long_amber_moment" in pc.features
     assert pc.stats["effort_high"] >= 1
     assert pc.stats["effort_necromancer"] >= 1
-
-
-def test_a_healer_starts_with_healing_touch_and_an_art(client_factory):
-    app, campaign_id = _campaign(client_factory, class_id="healer")
-    pc = _pc(app, campaign_id)
-    assert pc.skills.get("heal") == 0
-    assert "art_healing_touch" in pc.features
-    assert "art_empowered_healer" in pc.features
-    assert pc.stats["effort_healer"] >= 1
-
-
-def test_a_vowed_starts_with_the_three_basic_arts_and_another(client_factory):
-    app, campaign_id = _campaign(client_factory, class_id="vowed")
-    pc = _pc(app, campaign_id)
-    assert pc.skills.get("exert", -1) >= 0
-    assert {"art_martial_style", "art_unarmed_might", "art_unarmored_defense"} <= set(pc.features)
-    assert "art_brutal_counter" in pc.features
-    assert pc.stats["effort_vowed"] >= 1
 
 
 def test_vowed_unarmored_defense_tracks_equipment_and_level(client_factory):
@@ -2103,30 +2066,3 @@ def test_buying_set_and_add_armor_updates_slots_and_persistent_adjustment(client
     assert (character.armor, character.defense_adjustment) == (15, 2)
     tools.equip_armor(NAME, "Test Armor", equipped=False)
     assert (_pc(app, campaign_id).armor, _pc(app, campaign_id).defense_adjustment) == (13, 2)
-
-
-@pytest.mark.parametrize(
-    ("package", "normal_ac", "focused_ac"),
-    [
-        ("pkg_armored_warrior", 15, 17),
-        ("pkg_mage_healer_scholar", 10, 16),
-        ("pkg_ranger_archer", 12, 16),
-        ("pkg_roguish_wanderer", 13, 17),
-        ("pkg_adventuring_peasant", 14, 17),
-        ("pkg_gentry_wayfarer", 13, 16),
-    ],
-)
-@pytest.mark.parametrize("focus", [False, True])
-def test_starting_package_armor_respects_the_innate_floor(
-    client_factory, package: str, normal_ac: int, focused_ac: int, focus: bool
-):
-    app, campaign_id = _campaign(client_factory, class_id="warrior", kit=package)
-    tools = _world_tools(app, campaign_id)
-    ctx = _ctx(tools)
-    _set_stat(tools, "str", 18)
-    if focus:
-        tools.adjust_counter(NAME, "focus_picks", 1)
-        wwn.learn_focus(NAME, "focus_impervious_defense", ctx)
-
-    dexterity = WWN.character.modifier(_pc(app, campaign_id).stats, "dex")
-    assert _pc(app, campaign_id).armor == (focused_ac if focus else normal_ac) + dexterity

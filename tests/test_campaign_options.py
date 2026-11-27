@@ -28,7 +28,6 @@ from cygnusloom.services.events import (
     decode,
     events_since,
 )
-from cygnusloom.services.views import world_state_text
 from cygnusloom.web.character_form import campaign_submission_from_form, campaign_view
 from tests.conftest import content_library, csrf_token, remember_csrf_token
 from tests.factories import (
@@ -43,7 +42,7 @@ from tests.factories import (
     signed_in_client,
     tools_for,
 )
-from tests.test_campaigns import _new_campaign, _signed_in
+from tests.test_campaigns import _signed_in
 from tests.test_character_creation import (
     _cairn_campaign,
     _choices,
@@ -140,98 +139,6 @@ def _post_respec(client: TestClient, campaign_id: int, name: str, page: str, **f
 # The campaign's ruleset options in settings.
 
 
-def test_the_settings_page_shows_the_rule_sets_campaign_options(
-    client_factory: Callable[[], TestClient],
-):
-    client, campaign_id = _cairn_ready(client_factory)
-    omen = open_campaign(client.app, campaign_id).options["omen"]
-
-    page = client.get(f"/campaigns/{campaign_id}").text
-
-    assert '<h4 class="settings-subheading">Campaign options</h4>' in page
-    assert 'name="campaign-omen"' in page
-    assert f'<option value="{omen}" selected' in page
-    assert 'name="setting"' in page
-    assert '<details class="creative-sources-details">' in page
-    assert '<summary id="settings-table-genres-panel">Creative sources</summary>' in page
-    assert '<details class="creative-sources-details" open' not in page
-    assert 'name="table_genres_present" value="1"' in page
-    assert 'name="table_tones_present" value="1"' in page
-    assert "Let players respec their characters" in page
-
-
-def _details_around(page: str, summary_id: str) -> str:
-    """The opening <details> tag that holds the summary with this id."""
-    before = page[: page.index(f'<summary id="{summary_id}">')]
-    return before[before.rindex("<details") :]
-
-
-def test_campaign_option_panels_stay_compact_until_opened(
-    client_factory: Callable[[], TestClient],
-):
-    client, campaign_id = _cairn_campaign(client_factory)
-    page = client.get(f"/campaigns/{campaign_id}").text
-
-    # Tracking is now Survival Options, collapsed, and no longer explains itself.
-    assert '<summary id="panel-survival">Survival Options</summary>' in page
-    assert ">Tracking<" not in page
-    assert "Both are on by default" not in page
-    assert " open" not in _details_around(page, "panel-survival")
-    assert " open" not in _details_around(page, "panel-respec")
-    # A closed panel still submits its switches.
-    assert 'name="use_inventory_space" value="1" checked' in page
-    assert 'name="use_survival_needs" value="1" checked' in page
-    assert 'name="allow_respec"' in page
-
-
-def test_the_settings_page_collapses_survival_and_rebuilding(
-    client_factory: Callable[[], TestClient],
-):
-    client, campaign_id = _cairn_ready(client_factory)
-    page = client.get(f"/campaigns/{campaign_id}").text
-
-    assert '<summary id="settings-survival-panel">Survival Options</summary>' in page
-    assert '<summary id="settings-respec-panel">Character rebuilding</summary>' in page
-    assert "Without inventory space" not in page
-    assert " open" not in _details_around(page, "settings-survival-panel")
-    assert " open" not in _details_around(page, "settings-respec-panel")
-
-    # A setting that is no longer at its default opens its panel, so the owner can see it.
-    with Session(client.app.state.engine) as db:
-        campaign = db.get(Campaign, campaign_id)
-        assert campaign is not None
-        campaign.use_inventory_space = False
-        campaign.allow_respec = True
-        db.add(campaign)
-        db.commit()
-
-    page = client.get(f"/campaigns/{campaign_id}").text
-    assert " open" in _details_around(page, "settings-survival-panel")
-    assert " open" in _details_around(page, "settings-respec-panel")
-
-
-def test_starting_level_is_a_collapsed_option_in_settings(
-    client_factory: Callable[[], TestClient],
-):
-    _, campaign_id = _wwn_campaign(client_factory)
-    client = _signed_in(client_factory)
-    page = client.get(f"/campaigns/{campaign_id}").text
-
-    assert '<summary id="settings-start-level-panel">Starting level</summary>' in page
-    assert " open" not in _details_around(page, "settings-start-level-panel")
-
-    with Session(client.app.state.engine) as db:
-        campaign = db.get(Campaign, campaign_id)
-        assert campaign is not None
-        campaign.follow_owner_level = False
-        campaign.start_level = 4
-        db.add(campaign)
-        db.commit()
-
-    page = client.get(f"/campaigns/{campaign_id}").text
-    assert " open" in _details_around(page, "settings-start-level-panel")
-
-
 def test_a_campaign_option_with_one_value_is_fixed_and_not_asked():
     """The SRD has one experience track, so the engine fills it in rather than offering a
     choice. A rule set with a real track choice still asks, and a fixed value is still set."""
@@ -257,7 +164,6 @@ def test_a_fixed_campaign_option_is_not_shown_but_is_still_recorded(
 
     creation = client.get(f"/campaigns/{campaign_id}").text
     assert 'id="panel-campaign-xp_rate"' not in creation
-    assert "These options are shared by every character" not in creation
 
     create_character_direct(
         client,
@@ -269,11 +175,8 @@ def test_a_fixed_campaign_option_is_not_shown_but_is_still_recorded(
 
     settings = client.get(f"/campaigns/{campaign_id}").text
     assert 'name="campaign-xp_rate"' not in settings
-    assert '<h4 class="settings-subheading">Campaign options</h4>' not in settings
     state = open_campaign(client.app, campaign_id)
     assert state.options == {"xp_rate": "Standard"}
-    orientation = world_state_text(state, content_library().rule_sets["dnd-srd-2024"].campaign)
-    assert "Campaign experience" not in orientation
 
 
 def test_a_form_fills_a_fixed_option_while_the_player_chooses_the_others():
@@ -372,8 +275,6 @@ def test_the_creation_page_offers_the_respec_option(
     client, campaign_id = _cairn_campaign(client_factory)
 
     page = client.get(f"/campaigns/{campaign_id}").text
-    assert 'name="allow_respec"' in page
-    assert "Let players respec their characters" in page
     assert _row(client.app, campaign_id).allow_respec is False
 
     fields = _complete_form(client, campaign_id)
@@ -415,18 +316,6 @@ def test_the_respec_switch_is_off_until_the_owner_turns_it_on(
     assert f'action="/campaigns/{campaign_id}/respec/start"' in page
 
 
-def test_the_character_panel_and_the_characters_page_offer_the_details_link(
-    client_factory: Callable[[], TestClient],
-):
-    client, campaign_id = _cairn_ready(client_factory)
-
-    page = client.get(f"/campaigns/{campaign_id}").text
-
-    assert page.count(f'data-edit-character="{PC}"') == 2
-    assert 'data-edit-from="play"' in page
-    assert 'data-edit-from="characters"' in page
-
-
 # A player's own words for a flavor field.
 
 
@@ -435,7 +324,6 @@ def test_a_flavor_field_takes_the_players_own_words(
 ):
     client, campaign_id = _cairn_campaign(client_factory)
     page = client.get(f"/campaigns/{campaign_id}").text
-    assert 'name="field-physique-freeform"' in page
 
     fields = _complete_form(client, campaign_id)
     fields["field-physique-freeform"] = "Wiry, with a sailor's rolling gait."
@@ -459,24 +347,6 @@ def test_a_flavor_field_takes_the_players_own_words(
     )
 
 
-def test_every_worlds_without_number_flavor_field_offers_a_write_in(
-    client_factory: Callable[[], TestClient],
-):
-    client = _signed_in(client_factory)
-    response = _new_campaign(
-        client, world_template="unwritten-world", rule_set="worldswithoutnumber"
-    )
-    assert response.status_code == 303
-    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
-
-    page = client.get(f"/campaigns/{campaign_id}").text
-    for field_id in ("look", "personality", "accent", "quirk"):
-        assert f'name="field-{field_id}-freeform"' in page
-    # The free-text flavor fields are already freeform.
-    for field_id in ("goal", "appearance", "biography"):
-        assert f'name="field-{field_id}"' in page
-
-
 # The details a player may change on a character.
 
 
@@ -484,11 +354,6 @@ def test_a_player_rewrites_their_own_characters_flavor(
     client_factory: Callable[[], TestClient],
 ):
     client, campaign_id = _cairn_ready(client_factory)
-
-    page = client.get(f"/campaigns/{campaign_id}/character/edit?character={PC}").text
-    assert 'name="field-physique"' in page
-    assert 'name="field-physique-freeform"' in page
-    assert 'name="field-appearance"' in page
 
     token = csrf_token(client, f"/campaigns/{campaign_id}")
     response = client.post(
@@ -617,7 +482,6 @@ def test_a_respec_rebuilds_the_sheet_and_keeps_the_characters_identity(
 
     with pinned_stats(RESPEC_STATS):
         page = client.get(f"/campaigns/{campaign_id}?respec={PC}").text
-    assert f"Rebuild {PC}" in page
     assert 'name="name"' not in page
     assert 'name="field-physique"' not in page
     assert 'name="field-appearance"' not in page

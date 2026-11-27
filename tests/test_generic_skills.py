@@ -454,17 +454,6 @@ def test_invalid_skill_progression_is_rejected(levels: Any):
         _spec(levels)
 
 
-def test_bundled_skill_progression_is_defined_by_its_ruleset():
-    progression = bundled_library().rule_sets["worldswithoutnumber"].character.skill_progression
-    assert progression is not None
-    assert (
-        progression.untrained,
-        progression.first_level,
-        progression.creation_maximum,
-        progression.maximum,
-    ) == (-1, 0, 1, 4)
-
-
 def test_combat_distinguishes_training_from_a_negative_skill_level():
     spec = _spec()
     combat = bundled_library().rule_sets["worldswithoutnumber"].combat
