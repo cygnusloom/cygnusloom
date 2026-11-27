@@ -634,6 +634,7 @@
       "param": "roll",
       "dice": "1d20",
       "details": "The engine adds your spell attack bonus.",
+      "precheck": "spell_attack_check",
       "character_param": "name"
     }
   },

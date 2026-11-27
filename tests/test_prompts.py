@@ -21,6 +21,11 @@ from tests.factories import rules_for
 CAIRN = rules_for("cairn2e")
 
 
+def test_dnd_tells_the_gm_that_a_hostile_spell_is_an_encounter_action():
+    prompt = state_instruction(rules_for("dnd-srd-2024"))
+    assert "A spell aimed at a hostile creature is an encounter action" in prompt
+
+
 def test_a_rule_set_without_prompt_fragments_gets_the_generic_loop_text_alone():
     prompt = state_instruction(rules_for())
     assert prompt.startswith(STATE_INSTRUCTION)
