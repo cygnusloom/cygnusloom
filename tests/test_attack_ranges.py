@@ -152,6 +152,30 @@ def test_a_wall_blocks_the_line_of_sight_until_it_is_cleared(client_factory):
     assert result["range"]["feet"] == 15
 
 
+def test_a_blocked_shot_names_a_nearby_cell_with_a_clear_line(client_factory):
+    """The refusal says where the line runs and where it is clear, so the GM can move the
+    attacker instead of repeating the same blocked shot."""
+    _app, _campaign_id, tools = _range_fight(client_factory)
+    _foe(tools, hp=20, armor=20)
+    _make_room(tools)
+    tools.give_item(PC, BOW)
+    _place(tools, PC, 0, 0)
+    _place(tools, FOE, 0, 3)
+    tools.set_map_cells(RANGE_MAP, [{"column": 0, "row": 1, "object": "wall"}])
+    take_turn(tools, PC)
+
+    with pytest.raises(InvalidInput) as refused:
+        tools.player_attack(FOE, BOW, attack_roll=20, damage_roll=2)
+    message = str(refused.value)
+    assert "from column 0, row 0 to column 0, row 3" in message
+    assert "the line is clear from column 1, row 1" in message
+
+    # The named cell really clears the line.
+    _place(tools, PC, 1, 1)
+    result = tools.player_attack(FOE, BOW, attack_roll=20, damage_roll=2)
+    assert result["target"] == FOE
+
+
 def test_an_npc_reach_attack_is_measured_and_refused_out_of_reach(client_factory):
     app, campaign_id, tools = _range_fight(client_factory)
     tools.create_monster(

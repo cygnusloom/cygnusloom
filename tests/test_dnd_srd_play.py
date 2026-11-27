@@ -7,6 +7,8 @@ advancement page after an experience award.
 
 from __future__ import annotations
 
+import asyncio
+import json
 from collections.abc import Callable
 from dataclasses import replace
 from typing import Any
@@ -17,11 +19,13 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
 from cygnusloom.db.models import Event
+from cygnusloom.llm.base import ToolRequest
 from cygnusloom.rules import dnd_srd_2024
 from cygnusloom.services import encounters
 from cygnusloom.services import level_up as level_up_service
 from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.events import ChatGM, EncounterTurnEnded, decode, load_state, record
+from cygnusloom.services.tools import Ask, RollAnswer, ToolRun, run_tool
 
 from .factories import (
     Rolls,
@@ -300,6 +304,98 @@ def test_a_gm_played_hirelings_spell_waits_for_its_turn(
         "Foe"
     )
     assert tools.harm_character("Foe", "hp", 1, "Hesta's Sacred Flame")["taken"] == 1
+
+
+def test_adjusting_the_order_starts_the_turn_it_names(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    """An order correction that makes a GM-played hireling the acting character begins her
+    turn, so the adjustment cannot slip her spell in before the turn starts."""
+    from .test_hireling_turns import _set_flag, _turn_events
+
+    client, campaign_id, ctx = _campaign(client_factory)
+    app = client.app
+    tools = tools_for(app, campaign_id, rule_set="dnd-srd-2024")
+    tools.create_location("Cave", "A low cave.")
+    tools.move_actor("Rook", "Cave")
+    tools.hire_hireling(
+        "Hesta",
+        "Rook",
+        0,
+        "A dwarf cleric, steady with a mace and a bright holy symbol.",
+        character={
+            "templates": {"species": "human", "background": "soldier", "class": "cleric"},
+            "stats": {"str": 12, "dex": 10, "con": 13, "int": 10, "wis": 15, "cha": 11},
+            "feature_choices": {"background-asi-soldier:scores": ["str", "dex", "con"]},
+        },
+    )
+    _set_flag(app, campaign_id, True)
+    dnd_srd_2024.learn_spell("Hesta", "spell-sacred-flame", ctx)
+    tools.create_encounter_map("Cave Yard", "Cave", 12, 12, "Open stone.")
+    tools.start_encounter("Cave Yard")
+    tools.create_monster("Foe", "Cave", template="monster-ogre")
+    for name in ("Hesta", "Rook", "Foe"):
+        assert tools.add_participant(name)["added"] == name
+    initiative = replace(ctx, world=replace(ctx.world, rng=Rolls(20, 1, 1)))
+    assert dnd_srd_2024.roll_initiative(initiative)["order"][0] == "Hesta"
+    with pytest.raises(InvalidInput, match="no one is taking a turn"):
+        dnd_srd_2024.cast_spell("Hesta", "spell-sacred-flame", ctx)
+
+    # A correction names Hesta as the one acting. That begins her turn rather than only
+    # setting the current name, so the encounter records its start and the GM plays it.
+    adjusted = tools.adjust_encounter_order(["Hesta", "Rook", "Foe"], current="Hesta")
+    assert adjusted["current"] == "Hesta"
+    with Session(app.state.engine) as db:
+        state = load_state(db, campaign_id)
+    assert state.encounter is not None
+    assert state.encounter.acting == "Hesta"
+    assert state.encounter.gm_played is True
+    assert state.turn is not None and state.turn.actor == "Hesta"
+    assert [event.gm_played for event in _turn_events(app, campaign_id, "Hesta")] == [True]
+
+    # Her turn is running now, so her spell and its save resolve.
+    cast = dnd_srd_2024.cast_spell("Hesta", "spell-sacred-flame", ctx)
+    assert cast["spell"] == "Sacred Flame"
+    assert dnd_srd_2024.roll_save("Foe", "dex", 15, "Hesta's Sacred Flame", ctx)["character"] == (
+        "Foe"
+    )
+
+
+def test_a_player_attack_prompts_for_the_players_own_d20(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    """The player rolls a weapon attack's d20; the engine adds the bonuses and rolls damage."""
+    client, campaign_id, ctx = _campaign(client_factory)
+    _fight(client, campaign_id)
+    initiative = replace(ctx, world=replace(ctx.world, rng=Rolls(20, 1)))
+    assert dnd_srd_2024.roll_initiative(initiative)["order"][0] == "Rook"
+    with Session(client.app.state.engine) as db:
+        encounters.begin_turn(db, campaign_id, "Rook")
+
+    tools = rules_for("dnd-srd-2024")
+    request = ToolRequest(
+        id="call-1",
+        name="player_attack",
+        arguments=json.dumps(
+            {
+                "prompt": "Roll your greatsword attack against the goblin.",
+                "target": "Foe",
+                "weapon": "Greatsword",
+            }
+        ),
+    )
+    ask = asyncio.run(run_tool(tools.tool_calls, request, None, ctx))
+    assert isinstance(ask, Ask)
+    assert ask.dice == "1d20"
+    assert "greatsword" in ask.details.casefold()
+
+    run = asyncio.run(run_tool(tools.tool_calls, request, RollAnswer(total=18), ctx))
+    assert isinstance(run, ToolRun)
+    result = json.loads(run.output)
+    assert result["target"] == "Foe"
+    struck = _struck_events(client.app, campaign_id)[-1]
+    assert struck.hit is True
+    assert struck.hit_breakdown["rolls"] == [18]
 
 
 def test_awarding_experience_reaches_the_advancement_page(

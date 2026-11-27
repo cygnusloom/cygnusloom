@@ -182,6 +182,10 @@ def _band_text(bands: Mapping[str, int | None]) -> str:
     )
 
 
+# How far from the attacker a cleared line is searched for the hint in a sight refusal.
+SIGHT_HINT_CELLS = 3
+
+
 def _require_sight(
     state: CampaignState,
     encounter: Encounter,
@@ -189,7 +193,9 @@ def _require_sight(
     end: tuple[int, int],
     blockers: frozenset[str],
 ) -> None:
-    """Refuse an attack when an intermediate cell holds a sight-blocking object."""
+    """Refuse an attack when an intermediate cell holds a sight-blocking object. The refusal
+    names where the line runs and a nearby cell with a clear line, so the GM can move the
+    attacker instead of trying the same shot again."""
     if not blockers:
         return
     entry = _map_named(state, encounter)
@@ -199,10 +205,51 @@ def _require_sight(
         mark = entry.marks.get((column, row))
         if mark is not None and mark.object in blockers:
             name = mark.object.replace("-", " ")
+            hint = _clear_line_hint(entry, encounter, start, end, blockers)
             raise InvalidInput(
-                f"the {name} at column {column}, row {row} blocks the line of sight; move to a "
-                "clear line with place_participant first"
+                f"the {name} at column {column}, row {row} blocks the line of sight from "
+                f"column {start[0]}, row {start[1]} to column {end[0]}, row {end[1]}; move "
+                f"around it with place_participant first{hint}"
             )
+
+
+def _clear_line_hint(
+    entry: EncounterMap,
+    encounter: Encounter,
+    start: tuple[int, int],
+    end: tuple[int, int],
+    blockers: frozenset[str],
+) -> str:
+    """A short hint naming up to two cells near the attacker with a clear line to the target.
+    The nearest candidates come first; occupied cells, cells holding a sight blocker, and the
+    cells themselves are skipped, so the suggestion is a place the attacker can stand."""
+    occupied = set(encounter.cells.values())
+    candidates: list[tuple[int, int, int]] = []
+    for column in range(
+        max(0, start[0] - SIGHT_HINT_CELLS), min(entry.columns, start[0] + SIGHT_HINT_CELLS + 1)
+    ):
+        for row in range(
+            max(0, start[1] - SIGHT_HINT_CELLS), min(entry.rows, start[1] + SIGHT_HINT_CELLS + 1)
+        ):
+            cell = (column, row)
+            if cell == start or cell == end or cell in occupied:
+                continue
+            mark = entry.marks.get(cell)
+            if mark is not None and mark.object in blockers:
+                continue
+            if any(
+                (other := entry.marks.get((block_column, block_row))) is not None
+                and other.object in blockers
+                for block_column, block_row in _line_cells(cell, end)
+            ):
+                continue
+            distance = max(abs(column - start[0]), abs(row - start[1]))
+            candidates.append((distance, column, row))
+    if not candidates:
+        return ""
+    candidates.sort()
+    places = " or ".join(f"column {column}, row {row}" for _, column, row in candidates[:2])
+    return f"; the line is clear from {places}"
 
 
 def _line_cells(start: tuple[int, int], end: tuple[int, int]) -> list[tuple[int, int]]:

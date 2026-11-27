@@ -639,6 +639,32 @@
   },
   {
     "type": "tool_call",
+    "id": "player_attack",
+    "extends": "core:tool_call/player_attack",
+    "description": "Ask the player to roll a player character's attack against a target, then resolve the hit. The player rolls the d20 only; the engine adds the proficiency bonus, the weapon's ability modifier, and any situational modifier, then rolls the weapon's damage. Use it when the player says what they attack with, the target is in the encounter, and it is that player character's turn; an attack outside their turn, or after the character has used the turn's attacks, is refused unless force is true. When the player orders a different character to attack, such as a hireling, and it is not that character's turn, do not call this tool for them: say plainly that they hold until their turn. On an encounter map, the weapon's reach or range and a clear line of sight are enforced; move the character with place_participant first when the attack is refused for distance.",
+    "player_input": {
+      "dice": "1d20",
+      "param": "attack_roll",
+      "details": "{weapon} against {target}: roll 1d20 only. The engine adds your attack bonus and ability modifier, then rolls damage.",
+      "precheck": "player_attack_check",
+      "character_param": "character"
+    },
+    "parameters": {
+      "properties": {
+        "prompt": {
+          "type": "string",
+          "description": "What the player is asked to roll, such as 'Roll your longsword attack against the goblin.'"
+        }
+      },
+      "required": [
+        "target",
+        "weapon",
+        "prompt"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
     "id": "resolve_hazard",
     "python_module": "dnd_srd_2024",
     "function": "resolve_hazard",
