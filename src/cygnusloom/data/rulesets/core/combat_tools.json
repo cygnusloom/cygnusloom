@@ -300,7 +300,7 @@
     "type": "tool_call",
     "id": "harm_character",
     "requires": ["combat"],
-    "description": "Harm a character from a hazard such as a fall, poison, fire, or a sprung trap, in or out of an encounter. Narrate what hurt them. Use it only for harm that does not come from an attack; an attack's harm goes through attack or player_attack.",
+    "description": "Harm a character from a hazard such as a fall, poison, fire, or a sprung trap, in or out of an encounter. Narrate what hurt them. Use it only for harm that does not come from an attack; an attack's harm goes through attack or player_attack. During an encounter, harm to an NPC waits for a turn; pass force true when the story must break the order, or resolve a hazard with resolve_hazard.",
     "parameters": {
       "properties": {
         "amount": {
@@ -309,6 +309,11 @@
         },
         "cause": {
           "type": "string"
+        },
+        "force": {
+          "default": false,
+          "description": "Apply the harm outside the turn order when the story needs it. Set it only when the story insists.",
+          "type": "boolean"
         },
         "name": {
           "type": "string"
@@ -389,6 +394,11 @@
         "cause": {
           "description": "What did the healing, such as a spell or art.",
           "type": "string"
+        },
+        "force": {
+          "default": false,
+          "description": "Apply the healing outside the turn order when the story needs it. Set it only when the story insists.",
+          "type": "boolean"
         },
         "name": {
           "description": "The character to heal.",
@@ -673,9 +683,14 @@
     "type": "tool_call",
     "id": "roll_save",
     "requires": ["combat"],
-    "description": "Roll a save for a character. The engine rolls the die and compares it to the stat, and records the result. A failure does not defeat the character; apply what the save costs yourself.",
+    "description": "Roll a save for a character. The engine rolls the die and compares it to the stat, and records the result. A failure does not defeat the character; apply what the save costs yourself. During an encounter, a save caused by someone's action belongs to a turn; pass force true when the story must break the order.",
     "parameters": {
       "properties": {
+        "force": {
+          "default": false,
+          "description": "Roll the save outside the turn order when the story needs it. Set it only when the story insists.",
+          "type": "boolean"
+        },
         "name": {
           "type": "string",
           "description": "The name of the character or NPC."

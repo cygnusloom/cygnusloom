@@ -345,7 +345,14 @@ class CoreWorld(Protocol):
 
     def adjust_counter(self, character: str, counter: str, change: int) -> dict[str, Any]: ...
 
-    def add_condition(self, name: str, condition: str, cause: str) -> dict[str, Any]: ...
+    def add_condition(
+        self,
+        name: str,
+        condition: str,
+        cause: str,
+        hazard: bool = False,
+        force: bool = False,
+    ) -> dict[str, Any]: ...
 
     def end_condition(self, name: str, condition: str, how: str) -> dict[str, Any]: ...
 
@@ -544,10 +551,29 @@ class World(CoreWorld, Protocol):
     ) -> dict[str, Any]: ...
 
     def heal_character(
-        self, name: str, amount: int, stat: str | None = None, cause: str = ""
+        self,
+        name: str,
+        amount: int,
+        stat: str | None = None,
+        cause: str = "",
+        force: bool = False,
     ) -> dict[str, Any]: ...
 
-    def harm_character(self, name: str, stat: str, amount: int, cause: str) -> dict[str, Any]: ...
+    def harm_character(
+        self,
+        name: str,
+        stat: str,
+        amount: int,
+        cause: str,
+        hazard: bool = False,
+        force: bool = False,
+    ) -> dict[str, Any]: ...
+
+    def require_turn(self, character: str, action: str = "act", force: bool = False) -> None:
+        """Refuse an action by a character who has no turn in the encounter."""
+
+    def require_effect_turn(self, name: str, action: str = "affect", force: bool = False) -> None:
+        """Refuse an effect on an NPC while no encounter turn is running."""
 
     def retreat(self, name: str, safe: bool) -> dict[str, Any]: ...
 
