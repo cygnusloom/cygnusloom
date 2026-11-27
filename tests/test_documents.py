@@ -180,6 +180,23 @@ def test_an_unreadable_file_is_refused():
         documents.prepare("broken.pdf", b"%PDF-1.4 this is not a real PDF")
 
 
+def test_the_source_limits_are_one_gigabyte_and_one_hundred_million_characters():
+    assert documents.MAX_DOCUMENT_BYTES == 1024**3
+    assert documents.MAX_DOCUMENT_CHARACTERS == 100_000_000
+
+
+def test_a_file_over_the_size_limit_is_refused(monkeypatch):
+    monkeypatch.setattr(documents, "MAX_DOCUMENT_BYTES", 1024 * 1024)
+    with pytest.raises(InvalidInput, match="larger than 1 MB"):
+        documents.prepare("adventure.txt", b"word " * (1024 * 1024 // 5 + 1))
+
+
+def test_text_over_the_character_limit_is_refused(monkeypatch):
+    monkeypatch.setattr(documents, "MAX_DOCUMENT_CHARACTERS", 200)
+    with pytest.raises(InvalidInput, match="more than 200 characters"):
+        documents.prepare("adventure.txt", b"word " * 100)
+
+
 def test_a_file_name_cannot_carry_a_path_or_prompt_lines():
     assert documents.document_name("../../adventure.md") == "adventure.md"
     assert (

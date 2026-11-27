@@ -33,8 +33,8 @@ from cygnusloom.services.common import InvalidInput, session_scope
 
 # A module is a whole book, so the upload cap is generous. The stored-text cap keeps one file
 # from dominating the database, the prompt budget, and every search.
-MAX_DOCUMENT_BYTES = 64 * 1024 * 1024
-MAX_DOCUMENT_CHARACTERS = 2_000_000
+MAX_DOCUMENT_BYTES = 1024 * 1024 * 1024
+MAX_DOCUMENT_CHARACTERS = 100_000_000
 MAX_PDF_PAGES = 3000
 MAX_SECTIONS = 400
 # A section index is part of a tool result, so a book with hundreds of headings still gets a
@@ -151,11 +151,28 @@ def prepare(filename: str, data: bytes) -> DocumentText:
     if not data:
         raise InvalidInput("that file is empty")
     if len(data) > MAX_DOCUMENT_BYTES:
-        limit = MAX_DOCUMENT_BYTES // (1024 * 1024)
-        raise InvalidInput(f"that file is larger than {limit} MB")
+        raise InvalidInput(f"that file is larger than {_size_limit()}")
     if data[:5] == b"%PDF-":
         return _prepare_pdf(filename, data)
     return _prepare_text(filename, data)
+
+
+def _size_limit() -> str:
+    """The upload cap in its largest whole unit, for the refusal message."""
+    for unit, size in (("GB", 1024**3), ("MB", 1024**2), ("KB", 1024)):
+        if MAX_DOCUMENT_BYTES % size == 0:
+            return f"{MAX_DOCUMENT_BYTES // size} {unit}"
+    return f"{MAX_DOCUMENT_BYTES:,} bytes"
+
+
+def _check_characters(text: str) -> None:
+    """Refuse overlong text before indexing it, since a file at the byte cap may hold many
+    times more characters than the stored-text cap allows."""
+    if len(text) > MAX_DOCUMENT_CHARACTERS:
+        raise InvalidInput(
+            f"that file has more than {MAX_DOCUMENT_CHARACTERS:,} characters of text; "
+            "split it into smaller files"
+        )
 
 
 def _prepare_pdf(filename: str, data: bytes) -> DocumentText:
@@ -252,6 +269,7 @@ def _prepare_text(filename: str, data: bytes) -> DocumentText:
     text = _decode(data).replace("\r\n", "\n").replace("\r", "\n").replace("\x0c", "\n").strip()
     if len(text) < 100:
         raise InvalidInput("that file has almost no readable text")
+    _check_characters(text)
     return _finish(document_kind(filename), text, _sections_from_text(text))
 
 
@@ -346,11 +364,7 @@ def _finish(
     title: str = "",
     pages: int = 0,
 ) -> DocumentText:
-    if len(text) > MAX_DOCUMENT_CHARACTERS:
-        raise InvalidInput(
-            f"that file has more than {MAX_DOCUMENT_CHARACTERS:,} characters of text; "
-            "split it into smaller files"
-        )
+    _check_characters(text)
     kept: list[DocumentSection] = []
     seen: set[tuple[str, int]] = set()
     for section in sections:
