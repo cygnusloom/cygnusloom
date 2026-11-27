@@ -190,6 +190,7 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <textarea name="content" rows="3" required maxlength="8000" placeholder="{{ ('Add credits to continue' if credits_blocked and not single_player else ('Level up first' if advancement_due else (waiting_for if waiting_for else ('Answer the GM above first' if pending else 'Message')))) }}"{% if pending or advancement_due or composer_blocked or credits_blocked %} disabled{% endif %}>{{ draft }}</textarea>
             <div class="composer-actions">
+              <button type="button" class="scene-toggle" data-side-toggle aria-pressed="false" aria-controls="side-panel">Scene &amp; Character</button>
               <div class="composer-tools">
                 {% if credit_price > 0 and not credits_exempt and not single_player %}
                 <a class="credit-meter" href="/credits" aria-label="Credit balance" title="Credit balance against this model's price of {{ credit_price }} credits per reply. Need more credits?">
@@ -208,7 +209,7 @@
           </form>
         </section>
 
-        <aside class="side{% if encounter %} in-encounter{% endif %}">
+        <aside class="side{% if encounter %} in-encounter{% endif %}" id="side-panel">
           {% include "campaign_map.html" %}
 
           <section class="tabs-panel">

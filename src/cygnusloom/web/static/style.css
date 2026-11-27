@@ -264,6 +264,8 @@ label.check input { width: auto; margin: 0; }
 .composer-actions { display: flex; flex-direction: column; gap: 0.5rem; }
 .composer-actions button[type="submit"] { flex: 1 1 auto; }
 .composer-tools { display: flex; align-items: center; gap: 0.5rem; justify-content: flex-end; }
+/* Phones mirror the Send button with the way into the map and character drawer. */
+.scene-toggle { display: none; }
 .context-meter, .credit-meter { display: flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; white-space: nowrap; }
 .context-meter meter, .credit-meter meter { width: 5rem; height: 0.6rem; }
 .model-options { display: flex; flex-direction: column; gap: 0.5rem; margin: 0; padding: 0; border: 0; }
@@ -1314,18 +1316,37 @@ main > .card + .card, main > .card + .admin-grid, main > .admin-grid + .card { m
   nav a, nav button { white-space: nowrap; }
   nav button { padding: 0.3rem 0.55rem; }
 
-  /* A campaign fills the phone screen. The top bar stays one scrollable row instead of wrapping
-     into three, and the chat header, composer, and message cards tighten up so the transcript
-     keeps most of the height. */
-  body.workspace-page .topbar { flex-wrap: nowrap; gap: 0.5rem; padding: 0.3rem 0.6rem; }
-  body.workspace-page .topbar .brand { font-size: 0.85rem; }
-  /* The menu is only on screen while open, so its links may wrap and grow the bar taller
-     instead of hiding behind a sideways scroll. */
-  body.workspace-page .topbar nav {
-    flex: 1 1 auto; min-width: 0; flex-wrap: wrap; justify-content: flex-start;
-    gap: 0.2rem 0.8rem; font-size: 0.8rem;
+  /* The open menu is a panel above the bottom bar rather than a squeezed top bar: the brand
+     keeps its own row and every link is a full tile, so nothing overlaps and each target is
+     easy to hit. */
+  body.workspace-page.menu-open .topbar {
+    flex-wrap: wrap; align-items: center; gap: 0.35rem 0.5rem;
+    padding: 0.5rem 0.6rem 0.6rem;
+    max-height: calc(100dvh - var(--mobile-bar) - env(safe-area-inset-bottom));
+    overflow-y: auto;
   }
-  body.workspace-page .topbar nav button { padding: 0.1rem 0; }
+  body.workspace-page.menu-open .topbar .topbar-left { flex: 1 1 100%; }
+  body.workspace-page.menu-open .topbar .brand { font-size: 0.95rem; }
+  body.workspace-page.menu-open .topbar nav {
+    flex: 1 1 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+    align-items: stretch; gap: 0.3rem;
+    padding-top: 0.45rem; border-top: 1px solid var(--border); font-size: 0.9rem;
+  }
+  body.workspace-page.menu-open .topbar nav > a,
+  body.workspace-page.menu-open .topbar nav > form > button {
+    display: flex; align-items: center; width: 100%; min-height: 2.5rem; margin: 0;
+    padding: 0.35rem 0.6rem; background: var(--field); color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px; font-weight: 600; text-decoration: none;
+  }
+  body.workspace-page.menu-open .topbar nav > form { display: block; margin: 0; }
+  body.workspace-page.menu-open .topbar nav > form > button { cursor: pointer; }
+  body.workspace-page.menu-open .topbar nav > .tag { align-self: center; padding: 0.2rem 0.1rem; }
+  body.workspace-page.menu-open .topbar nav > a:hover,
+  body.workspace-page.menu-open .topbar nav > a:focus-visible,
+  body.workspace-page.menu-open .topbar nav > form > button:hover,
+  body.workspace-page.menu-open .topbar nav > form > button:focus-visible {
+    border-color: var(--accent); color: var(--accent);
+  }
 
   .map-panel { justify-content: flex-start; }
 
@@ -1392,6 +1413,16 @@ main > .card + .card, main > .card + .admin-grid, main > .admin-grid + .card { m
   .composer-actions { flex-direction: row; align-items: center; justify-content: space-between; gap: 0.35rem; }
   .composer-tools { flex: 1 1 auto; gap: 0.4rem; }
   .composer-actions button[type="submit"] { flex: 0 0 auto; min-width: 5.25rem; padding-block: 0.45rem; }
+  /* The Scene & Character button shares the action row with Send without adding a row: the
+     meters drop their numbers, and their bar and title still show the reading. */
+  .scene-toggle {
+    display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto;
+    min-height: 2.4rem; padding: 0.3rem 0.55rem; font-size: 0.78rem; font-weight: 600;
+    line-height: 1.15; white-space: nowrap;
+    background: var(--field); color: var(--text); border-color: var(--border);
+  }
+  .scene-toggle:hover, .scene-toggle:focus-visible { border-color: var(--accent); color: var(--accent); }
+  .context-meter .muted, .credit-meter .muted { display: none; }
   .context-meter, .credit-meter { font-size: 0.68rem; }
   .context-meter meter, .credit-meter meter { width: 3.5rem; }
   .pending-prompt form { flex-wrap: wrap; }
