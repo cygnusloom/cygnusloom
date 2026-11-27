@@ -23,6 +23,7 @@ from cygnusloom.services.attacks import (
     modifier_name,
     rolls_text,
 )
+from cygnusloom.services.campaign_switches import gm_plays_hirelings
 from cygnusloom.services.combat.constants import NO_UNSKILLED_PENALTY
 from cygnusloom.services.combat.damage import (
     Damage,
@@ -42,6 +43,7 @@ from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.conditions import active_conditions, condition_roll_mode
 from cygnusloom.services.encounters import (
     _participant,
+    acting_error,
 )
 from cygnusloom.services.events import (
     NPC_KIND,
@@ -1717,9 +1719,7 @@ def _prepare_player_attack(
         and encounter.gm_played
         and name_key(encounter.acting or "") == name_key(pc.name)
     ):
-        raise InvalidInput(
-            f"the GM plays {pc.name}'s turn; use hireling_attack for their attack"
-        )
+        raise InvalidInput(f"the GM plays {pc.name}'s turn; use hireling_attack for their attack")
     override = mastery.strip().casefold()
     if override and override not in MASTERY_PROPERTIES:
         raise InvalidInput(f"there is no weapon mastery property named {mastery!r}")
@@ -1727,7 +1727,10 @@ def _prepare_player_attack(
         # The engine waits for the player's own die when harm overflowed, so the fight pauses
         # until the GM asks for it rather than letting the character act while reeling.
         raise InvalidInput(f"{pc.name} must make their {pc.save_due} save first; call player_save")
-    _require_attack(state, pc, combat, force, extra=extra)
+    gm_hireling = bool(pc.hireling and gm_plays_hirelings(db, campaign_id))
+    _require_attack(
+        state, pc, combat, force, extra=extra, player_control=not (gm_played or gm_hireling)
+    )
     if pc.grappled_by and name_key(weapon) not in combat.unarmed_names:
         raise InvalidInput(f"{pc.name} is grappled and can only make unarmed attacks")
     if pc.surprised_turns > 0:
@@ -1951,15 +1954,17 @@ def _require_attack(
     force: bool,
     *,
     extra: str = "",
+    player_control: bool = False,
 ) -> None:
     """Refuse an attack outside the actor's turn, or after the turn's attack actions are spent.
     The limit comes from the rule set's combat, so a rule set that grants more attack actions
     per turn works without engine changes. `force` is the story override the GM may use when
     the player insists. An extra attack is checked against its own once-per-turn rule instead
-    of the attack-action budget."""
+    of the attack-action budget. `player_control` says the player takes this character's turns,
+    which lets the next-up character act in the reply that begins the encounter."""
     if combat.mode == "moves":
         return
-    _require_turn(state, actor, force)
+    _require_turn(state, actor, force, player_control=player_control)
     if force or extra:
         return
     encounter = state.encounter
@@ -1986,33 +1991,20 @@ def _require_attack(
     )
 
 
-def _require_turn(state: CampaignState, actor: Character, force: bool) -> None:
+def _require_turn(
+    state: CampaignState, actor: Character, force: bool, *, player_control: bool = False
+) -> None:
     """Refuse an attack the attacker has no turn for. An encounter runs on turns: a player
-    character's turn starts automatically, an NPC's starts when the player presses Start, and a
-    turn ends when the player ends it or, for an NPC, when the GM's reply finishes. That makes a
-    turn the only time an actor may strike, so an NPC cannot cut in ahead of its place in the
-    order. `force` lets the GM resolve an action the story needs outside the order, such as an
-    ambush that takes the party unawares."""
-    encounter = state.encounter
-    if force or encounter is None:
+    character's turn starts automatically, an NPC's or a GM-played hireling's starts when the
+    player presses Start, and a turn ends when the player ends it or, for an NPC, when the GM's
+    reply finishes. That makes a turn the only time an actor may strike, so nobody can cut in
+    ahead of their place in the order. `force` lets the GM resolve an action the story needs
+    outside the order, such as an ambush that takes the party unawares."""
+    if force:
         return
-    if encounter.acting is None:
-        # A player character whose turn is next may act before that turn is opened. Side
-        # initiative settles the order with nobody acting, and the player should not have to
-        # press Start for their own character.
-        upcoming = encounter.order[encounter.up] if encounter.up < len(encounter.order) else ""
-        if actor.kind == PC_KIND and upcoming and name_key(upcoming) == name_key(actor.name):
-            return
-        raise InvalidInput(
-            f"no one is taking a turn, so {actor.name} cannot attack: begin the next turn "
-            "first, or pass force true when the story needs an action outside the turn order"
-        )
-    if name_key(encounter.acting) != name_key(actor.name):
-        raise InvalidInput(
-            f"it is {encounter.acting}'s turn, not {actor.name}'s: {actor.name} holds until "
-            "their own turn; the player presses End your turn to pass it, or pass force true "
-            "when the story needs an action outside the turn order"
-        )
+    error = acting_error(state, actor.name, player_control=player_control, action="attack")
+    if error is not None:
+        raise InvalidInput(error)
 
 
 def _weapon_name(weapon: str) -> str:

@@ -1595,6 +1595,78 @@ def gm_plays(state: CampaignState, name: str, hireling_turns: bool) -> bool:
     )
 
 
+def player_plays(state: CampaignState, name: str, hireling_turns: bool) -> bool:
+    """Whether the player takes this character's turns: a player character, or a hireling whose
+    turns the campaign still gives to the player."""
+    return not gm_plays(state, name, hireling_turns)
+
+
+def acting_error(
+    state: CampaignState,
+    name: str,
+    *,
+    player_control: bool,
+    action: str = "act",
+) -> str | None:
+    """Why this character cannot act in the encounter now, or None when they may. An encounter
+    runs on turns, so only the character whose turn is running acts. A player-controlled
+    character whose turn is next may act while the reply that begins the encounter is still
+    running, because the player's own turn opens when that reply finishes; a GM-played
+    character waits for the player to press Start."""
+    encounter = state.encounter
+    if encounter is None:
+        return None
+    if encounter.acting is None:
+        upcoming = encounter.order[encounter.up] if encounter.up < len(encounter.order) else ""
+        if player_control and upcoming and name_key(upcoming) == name_key(name):
+            return None
+        return (
+            f"no one is taking a turn, so {name} cannot {action}: begin the next turn first "
+            "(the player presses Start), or pass force true when the story needs an action "
+            "outside the turn order"
+        )
+    if name_key(encounter.acting) != name_key(name):
+        return (
+            f"it is {encounter.acting}'s turn, not {name}'s: {name} holds until their own "
+            "turn; the player presses End your turn to pass it, or pass force true when the "
+            "story needs an action outside the turn order"
+        )
+    return None
+
+
+def effect_error(
+    state: CampaignState,
+    name: str,
+    *,
+    hireling_turns: bool,
+    action: str = "affect",
+) -> str | None:
+    """Why an effect cannot land on this encounter participant now, or None when it may. Harm,
+    a condition, or another effect that changes an NPC belongs to someone's turn: with nobody
+    acting, the action that would cause it has not had its turn begun, so it waits. A hazard on
+    NPCs is resolved with resolve_hazard, which does not go through this check. A
+    player-controlled character whose turn is next may be resolving their own action in the
+    reply that begins the encounter."""
+    encounter = state.encounter
+    if encounter is None:
+        return None
+    character = state.characters.get(name_key(name))
+    if character is None or character.kind == PC_KIND:
+        return None
+    if name_key(name) not in {name_key(entry) for entry in encounter.order}:
+        return None
+    if encounter.acting is not None:
+        return None
+    upcoming = encounter.order[encounter.up] if encounter.up < len(encounter.order) else ""
+    if upcoming and player_plays(state, upcoming, hireling_turns):
+        return None
+    return (
+        f"no one is taking a turn, so nothing can {action} {character.name} yet: begin the "
+        "next turn first (the player presses Start) or pass force true when the story needs it; "
+        "a hazard on an NPC is resolved with resolve_hazard"
+    )
+
+
 def awaiting_initiative(state: CampaignState) -> list[str]:
     """The display names of the player characters who must still roll for initiative."""
     encounter = state.encounter

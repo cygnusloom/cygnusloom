@@ -189,6 +189,11 @@
           ],
           "default": "normal",
           "description": "Advantage or disadvantage on the save."
+        },
+        "force": {
+          "type": "boolean",
+          "default": false,
+          "description": "Roll the save outside the turn order when the story needs it. Set it only when the story insists."
         }
       },
       "required": [
@@ -277,6 +282,11 @@
           "type": "boolean",
           "default": false,
           "description": "Cast the ritual version: 10 minutes, no slot, no upcasting. The spell must have the Ritual tag."
+        },
+        "force": {
+          "type": "boolean",
+          "default": false,
+          "description": "Cast outside the turn order when the story needs it. Set it only when the story insists."
         }
       },
       "required": [
@@ -442,6 +452,11 @@
         "cause": {
           "type": "string",
           "description": "What the resource is spent on."
+        },
+        "force": {
+          "type": "boolean",
+          "default": false,
+          "description": "Spend the resource outside the turn order when the story needs it. Set it only when the story insists."
         }
       },
       "required": [
@@ -469,6 +484,11 @@
         "cause": {
           "type": "string",
           "description": "What the feature is being used for."
+        },
+        "force": {
+          "type": "boolean",
+          "default": false,
+          "description": "Use the feature outside the turn order when the story needs it. Set it only when the story insists."
         }
       },
       "required": [
@@ -596,6 +616,11 @@
           ],
           "default": "normal",
           "description": "Advantage or disadvantage on the attack roll."
+        },
+        "force": {
+          "type": "boolean",
+          "default": false,
+          "description": "Cast the spell attack outside the turn order when the story needs it. Set it only when the story insists."
         }
       },
       "required": [

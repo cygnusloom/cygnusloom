@@ -1784,12 +1784,14 @@ def roll_save(
     ctx: ToolContext,
     roll: int = 0,
     roll_mode: str = "normal",
+    force: bool = False,
 ) -> dict[str, Any]:
     """Roll an ability save against a DC, or take the player's roll, and record it."""
     spec = ctx.world.character
     stat_id = _ability_id(stat)
     difficulty = whole_number(dc, "dc", 1, 40)
     found = _read_character(name, ctx)
+    ctx.world.require_effect_turn(found.name, "roll a save for", force=force)
     bonus = _save_bonus(found, spec, require_progression(ctx.world), stat_id)
     bonus += condition_modifier(found, getattr(ctx.world, "conditions", None), "save")
     if roll_mode == "normal":
@@ -2350,7 +2352,7 @@ def resolve_hazard(
                 "passed": passed,
             }
         if (not save or not passed) and condition:
-            ctx.world.add_condition(found.name, condition, f"{reason}: {hazard}")
+            ctx.world.add_condition(found.name, condition, f"{reason}: {hazard}", hazard=True)
             result["condition"] = condition
         if damage and (not save or not passed or half_on_save):
             rolled = (
@@ -2360,7 +2362,9 @@ def resolve_hazard(
             )
             taken = rolled // 2 if save and passed and half_on_save else rolled
             if taken:
-                ctx.world.harm_character(found.name, "hp", taken, f"{reason}: {hazard}")
+                ctx.world.harm_character(
+                    found.name, "hp", taken, f"{reason}: {hazard}", hazard=True
+                )
             result["damage"] = taken
         results.append(result)
     return {"hazard": hazard, "results": results}
@@ -2373,6 +2377,7 @@ def spell_attack(
     ctx: ToolContext,
     roll: int = 0,
     roll_mode: str = "normal",
+    force: bool = False,
 ) -> dict[str, Any]:
     """Roll a spell attack: d20 plus proficiency bonus and the class's spellcasting ability
     modifier against the target's Armor Class. Use this for Fire Bolt, Guiding Bolt, Eldritch
@@ -2384,6 +2389,7 @@ def spell_attack(
     _require_conscious(found)
     _require_able_to_cast(found)
     feature = _find_spell(spec, spell)
+    ctx.world.require_turn(found.name, f"attack with {feature.name}", force=force)
     rules = _class_rules(found, progression)
     if rules.casting == "none":
         raise InvalidInput(f"{found.name}'s class cannot cast spells")
@@ -2439,7 +2445,12 @@ def spell_attack(
 
 
 def use_class_resource(
-    character: str, resource: str, ctx: ToolContext, amount: int = 1, cause: str = ""
+    character: str,
+    resource: str,
+    ctx: ToolContext,
+    amount: int = 1,
+    cause: str = "",
+    force: bool = False,
 ) -> dict[str, Any]:
     """Spend uses from a class resource pool, such as Rages, Focus Points, or Sorcery Points."""
     spec = ctx.world.character
@@ -2449,6 +2460,7 @@ def use_class_resource(
         raise InvalidInput("resource must be one of: " + ", ".join(sorted(RESOURCE_COUNTERS)))
     if resource not in spec.counters or resource not in found.counters:
         raise InvalidInput(f"{found.name} has no {resource} pool")
+    ctx.world.require_turn(found.name, f"spend {resource}", force=force)
     spent = whole_number(amount, "amount", 1, 100)
     if int(found.counters.get(resource, 0)) < spent:
         raise InvalidInput(f"{found.name} has no {resource} uses left")
@@ -2462,7 +2474,9 @@ def use_class_resource(
     }
 
 
-def use_feature(character: str, feature: str, ctx: ToolContext, cause: str = "") -> dict[str, Any]:
+def use_feature(
+    character: str, feature: str, ctx: ToolContext, cause: str = "", force: bool = False
+) -> dict[str, Any]:
     """Use a class or species feature, spending its resource counter and turn resource."""
     spec = ctx.world.character
     found = _read_character(character, ctx)
@@ -2483,7 +2497,7 @@ def use_feature(character: str, feature: str, ctx: ToolContext, cause: str = "")
     remaining: int | None = None
     if source.resource_counter and int(found.counters.get(source.resource_counter, 0)) < 1:
         raise InvalidInput(f"{found.name} has no {source.resource_counter.replace('_', ' ')} left")
-    _spend_turn_resource(found, source, ctx, cause=cause or f"using {source.name}")
+    _spend_turn_resource(found, source, ctx, cause=cause or f"using {source.name}", force=force)
     if source.resource_counter:
         changed = ctx.world.adjust_counter(character, source.resource_counter, -1)
         remaining = int(changed["value"])
@@ -2530,6 +2544,7 @@ def cast_spell(
     ctx: ToolContext,
     slot_level: int = 0,
     ritual: bool = False,
+    force: bool = False,
 ) -> dict[str, Any]:
     """Cast a known spell, spending a slot of the chosen level or the spell's own. A prepared
     spell with the Ritual tag can be cast as a ritual instead, taking 10 minutes and no slot."""
@@ -2547,7 +2562,7 @@ def cast_spell(
     if rank == 0:
         if ritual:
             raise InvalidInput(f"{feature.name} is a cantrip, not a ritual")
-        _spend_cast_resource(found, feature, ctx)
+        _spend_cast_resource(found, feature, ctx, force=force)
         return _cast_result(found, feature, 0, ctx, spec, rules)
     # A wizard's Ritual Adept casts an unprepared ritual straight from the spellbook.
     adept_ritual = ritual and rules.id == "wizard" and is_ritual
@@ -2585,7 +2600,7 @@ def cast_spell(
         free_feature = _free_cast_feature(found, spec, feature.id)
         free_used = [str(item) for item in found.marks.get(FREE_CAST_MARK) or []]
         if free_feature is not None and feature.id not in free_used:
-            _spend_cast_resource(found, feature, ctx)
+            _spend_cast_resource(found, feature, ctx, force=force)
 
             def mark_free(hc: HookContext) -> None:
                 hc.set_mark(
@@ -2600,7 +2615,7 @@ def cast_spell(
         # Magic Initiate's level 1 spell can be cast once without a slot between long rests.
         magic_spells = found.feature_choices.get("feat-magic-initiate:spell", [])
         if feature.id in magic_spells and found.marks.get(MAGIC_INITIATE_MARK) != feature.id:
-            _spend_cast_resource(found, feature, ctx)
+            _spend_cast_resource(found, feature, ctx, force=force)
 
             def mark(hc: HookContext) -> None:
                 hc.set_mark(
@@ -2615,7 +2630,7 @@ def cast_spell(
         raise InvalidInput(
             f"{found.name} has no spell slot of level {chosen_slot} or higher available"
         )
-    _spend_cast_resource(found, feature, ctx)
+    _spend_cast_resource(found, feature, ctx, force=force)
     if pact_used:
         ctx.world.adjust_counter(name, "pact_slots", -1)
         _set_concentration(ctx, found, feature, spec)
@@ -2828,11 +2843,12 @@ def _require_able_to_cast(found: Any) -> None:
 
 
 def _spend_turn_resource(
-    found: Any, feature: Feature, ctx: ToolContext, *, cause: str = ""
+    found: Any, feature: Feature, ctx: ToolContext, *, cause: str = "", force: bool = False
 ) -> None:
     """Spend a feature's turn resource when the character can spend it. An action or bonus
     action is spent on the character's own turn; a reaction is spent on any creature's turn,
-    including another creature's."""
+    including another creature's. A character who has no turn for an action or bonus action is
+    refused, so a spell or feature cannot resolve before its owner's turn is begun."""
     if not feature.turn_resource:
         return
 
@@ -2849,15 +2865,23 @@ def _spend_turn_resource(
                 found.name, "reaction", cause=cause or f"using {feature.name}"
             )
         return
+    if force:
+        return
     if acting is not None and name_key(str(acting)) == name_key(found.name):
         ctx.world.use_turn_resource(  # type: ignore[attr-defined]
             found.name, feature.turn_resource, cause=cause or f"using {feature.name}"
         )
+        return
+    ctx.world.require_turn(  # type: ignore[attr-defined]
+        found.name, f"use {feature.name}"
+    )
 
 
-def _spend_cast_resource(found: Any, feature: Feature, ctx: ToolContext) -> None:
+def _spend_cast_resource(
+    found: Any, feature: Feature, ctx: ToolContext, *, force: bool = False
+) -> None:
     """Spend a spell's Action, Bonus Action, or Reaction when the caster is taking a turn."""
-    _spend_turn_resource(found, feature, ctx, cause=f"casting {feature.name}")
+    _spend_turn_resource(found, feature, ctx, cause=f"casting {feature.name}", force=force)
 
 
 def _free_cast_feature(found: Any, spec: CharacterSpec, spell_id: str) -> Feature | None:
