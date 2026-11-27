@@ -807,6 +807,7 @@ def test_total_defense_turns_aside_shock_until_the_next_turn(client_factory):
     app, campaign_id, tools = _fight(client_factory)
     _foe(tools, hp=20, attack_bonus=3, shock=2, shock_ac=13)
     tools.set_armor(PC, 13)
+    take_turn(tools, PC)
     tools.total_defense(PC)
     foe = _character(app, campaign_id, FOE)
     d20 = _roll_for_total(12, _hit_bonus(foe, "attack_bonus"))
@@ -818,6 +819,19 @@ def test_total_defense_turns_aside_shock_until_the_next_turn(client_factory):
     assert result["harm"] == {}
     [event] = _struck(app, campaign_id)
     assert (event.hit, event.shock) == (False, 0)
+
+
+def test_total_defense_is_refused_after_the_turns_attack(client_factory):
+    """A Main action is spent once, so an attack already made this turn stops total defense."""
+    app, campaign_id, tools = _fight(client_factory)
+    _foe(tools, hp=20)
+    tools.give_item(PC, LONG_SWORD)
+    take_turn(tools, PC)
+
+    tools.player_attack(FOE, LONG_SWORD, attack_roll=20, damage_roll=1)
+
+    with pytest.raises(InvalidInput, match="already attacked this turn"):
+        tools.total_defense(PC)
 
 
 def test_a_natural_one_always_misses_and_a_natural_twenty_always_hits(client_factory):
@@ -1720,6 +1734,7 @@ def test_total_defense_adds_its_bonus_until_the_next_turn(client_factory):
     _foe(tools, hp=20)
     before = _pc(app, campaign_id)
 
+    take_turn(tools, PC)
     result = tools.total_defense(PC)
     assert result["bonus"] == 2
     guarding = _pc(app, campaign_id)

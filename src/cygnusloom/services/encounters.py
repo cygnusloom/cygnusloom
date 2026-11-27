@@ -49,6 +49,7 @@ from cygnusloom.services.events import (
     EncounterStarted,
     EncounterTurnBegun,
     EncounterTurnEnded,
+    EncounterTurnSkipped,
     InitiativeSettled,
     MapCellsChanged,
     MapCreated,
@@ -1747,6 +1748,25 @@ def begin_turn(db: Session, campaign_id: int, name: str, *, gm_only: bool = Fals
         raise InvalidInput("the GM is still answering; wait for the reply to finish")
     if not encounter.order:
         raise InvalidInput("there is no one in the encounter to take a turn")
+    if all(
+        out_of_fight(state.characters[name_key(name)])
+        for name in encounter.order
+        if name_key(name) in state.characters
+    ):
+        raise InvalidInput("there is no one in the encounter who can take a turn")
+    # A defeated participant can still sit at the next place in the order until the GM
+    # removes them. Pass it over instead of opening a turn for someone who cannot act.
+    while encounter.up < len(encounter.order):
+        upcoming = state.characters.get(name_key(encounter.order[encounter.up]))
+        if upcoming is not None and not out_of_fight(upcoming):
+            break
+        name_to_skip = upcoming.name if upcoming is not None else encounter.order[encounter.up]
+        record(db, campaign_id, EncounterTurnSkipped(name=name_to_skip))
+        db.commit()
+        state = load_state(db, campaign_id)
+        encounter = _encounter(state)
+    if encounter.up >= len(encounter.order):
+        raise InvalidInput("there is no one in the encounter who can take a turn")
     character = state.characters[name_key(encounter.order[encounter.up])]
     if name_key(name) != name_key(character.name):
         raise InvalidInput(f"it is {character.name}'s turn next, not {name}'s")

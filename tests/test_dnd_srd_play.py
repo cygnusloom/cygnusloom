@@ -428,6 +428,8 @@ def test_a_spell_attack_needs_an_encounter(
     tools.create_monster("Foe", "Cave", template="monster-goblin-warrior")
     with pytest.raises(InvalidInput, match="start an encounter before making a spell attack"):
         dnd_srd_2024.spell_attack("Wren", "fire-bolt", "Foe", ctx, roll=15)
+    with pytest.raises(InvalidInput, match="start an encounter before making a spell attack"):
+        tools.spell_attack_check("Wren", spell="fire-bolt", target="Foe")
 
 
 def test_a_spell_attack_spends_the_first_turn_action(
@@ -455,8 +457,60 @@ def test_a_spell_attack_spends_the_first_turn_action(
     state = _state(client.app, campaign_id)
     assert state.encounter is not None and state.encounter.acting == "Wren"
     assert state.encounter.actions_used == 1
-    with pytest.raises(InvalidInput, match="no action left"):
+    assert state.encounter.attacked == 1
+    with pytest.raises(InvalidInput, match="already attacked this turn"):
+        tools.spell_attack_check("Wren", spell="fire-bolt", target="Foe")
+    with pytest.raises(InvalidInput, match="already attacked this turn"):
         dnd_srd_2024.spell_attack("Wren", "fire-bolt", "Foe", ctx, roll=15)
+
+
+def test_a_defeated_participant_is_skipped_when_their_turn_is_next(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    """A dead NPC left in the order does not get a Start button or an empty turn."""
+    from cygnusloom.services.events import CharacterDied
+
+    client, campaign_id, ctx = _campaign(client_factory)
+    tools, _ = _fight(client, campaign_id)
+    initiative = replace(ctx, world=replace(ctx.world, rng=Rolls(1, 20)))
+    assert dnd_srd_2024.roll_initiative(initiative)["order"][0] == "Foe"
+    with Session(client.app.state.engine) as db:
+        record(db, campaign_id, CharacterDied(name="Foe", cause="the test"))
+        db.commit()
+
+    with Session(client.app.state.engine) as db:
+        encounters.begin_turn(db, campaign_id, "Rook")
+
+    state = _state(client.app, campaign_id)
+    assert state.encounter is not None
+    assert state.encounter.acting == "Rook"
+    with Session(client.app.state.engine) as db:
+        rows = db.exec(
+            select(Event).where(Event.campaign_id == campaign_id).order_by(Event.seq)
+        )
+        kinds = [decode(row).kind for row in rows]
+    assert "encounter.turn_skipped" in kinds
+    assert "encounter.turn_begun" in kinds
+
+
+def test_a_forced_out_of_turn_attack_is_charged_on_the_strikers_turn(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    """A story-override strike before the striker's turn spends that turn's attack."""
+    from tests.turns import take_turn
+
+    client, campaign_id, ctx = _campaign(client_factory)
+    tools, _ = _fight(client, campaign_id)
+    initiative = replace(ctx, world=replace(ctx.world, rng=Rolls(1, 20)))
+    assert dnd_srd_2024.roll_initiative(initiative)["order"][0] == "Foe"
+
+    tools.player_attack("Foe", "Greatsword", attack_roll=20, damage_roll=7, force=True)
+    take_turn(tools, "Rook")
+
+    state = _state(client.app, campaign_id)
+    assert state.encounter is not None and state.encounter.acting == "Rook"
+    assert state.encounter.actions_used == 1
+    assert state.encounter.attacked == 1
 
 
 def test_awarding_experience_reaches_the_advancement_page(

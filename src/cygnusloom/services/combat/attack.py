@@ -1664,6 +1664,19 @@ def player_attack_check(
     )
 
 
+def require_attack(
+    state: CampaignState,
+    actor: Character,
+    combat: CombatRules,
+    force: bool = False,
+    *,
+    player_control: bool = False,
+) -> None:
+    """Refuse an attack action the way the attack tools do, without rolling: outside the
+    actor's turn, or after the turn's attack actions are spent."""
+    _require_attack(state, actor, combat, force, player_control=player_control)
+
+
 @dataclass(frozen=True)
 class _PreparedAttack:
     """A player attack that passed every check: who strikes whom with what, before any dice."""

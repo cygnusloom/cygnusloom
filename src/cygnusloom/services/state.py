@@ -773,6 +773,9 @@ class Encounter:
     # Actions and bonus actions spent this turn. They reset when the turn begins.
     actions_used: int = 0
     bonus_actions_used: int = 0
+    # Attack actions a forced, out-of-turn strike spends when the striker's own turn opens.
+    # Keys are name_key, and the count is added to that turn's attack budget.
+    pending_attacks: dict[str, int] = field(default_factory=dict)
     # Reactions each participant spent this round, by name_key. A reaction may be spent on any
     # creature's turn, so it is counted per creature rather than for the encounter; every count
     # clears when a new round begins.
@@ -1230,6 +1233,18 @@ def _counts_toward_turn(encounter: Encounter, state: CampaignState, name: str) -
         return name_key(encounter.acting) == name_key(name)
     character = state.characters.get(name_key(name))
     return character is not None and character.kind == PC_KIND and _is_up_next(encounter, name)
+
+
+def _count_attack_action(encounter: Encounter, state: CampaignState, name: str) -> bool:
+    """Count one attack action for the acting (or next-up player) participant. A forced action
+    by anyone else does not spend this turn's budget."""
+    if not _counts_toward_turn(encounter, state, name):
+        return False
+    first_attack = encounter.attacked == 0
+    encounter.attacked += 1
+    if first_attack:
+        encounter.actions_used += 1
+    return True
 
 
 def _sits_out_first_round(encounter: Encounter, character: Character) -> bool:

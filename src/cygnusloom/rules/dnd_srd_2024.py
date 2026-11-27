@@ -35,6 +35,7 @@ from cygnusloom.services.events import (
     ClassLevelsChanged,
     CounterChanged,
     EffectNoted,
+    EncounterAttacked,
     FeatureLearned,
     HitDicePoolsSet,
     InitiativeSettled,
@@ -2416,9 +2417,7 @@ def spell_attack(
             raise InvalidInput(
                 "start an encounter before making a spell attack at a creature"
             )
-        ctx.world.use_turn_resource(
-            found.name, "action", cause=f"casting {feature.name}"
-        )
+        ctx.world.require_attack(found.name)
     mode = _roll_mode(roll_mode)
     if roll:
         natural = whole_number(roll, "roll", 1, 20)
@@ -2453,6 +2452,16 @@ def spell_attack(
                 bonus=bonus,
                 total=total,
                 target_ac=struck.armor,
+                hit=hit,
+            ),
+        )
+        record(
+            db,
+            campaign_id,
+            EncounterAttacked(
+                name=found.name,
+                weapon=feature.name,
+                target=struck.name,
                 hit=hit,
             ),
         )

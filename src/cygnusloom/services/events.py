@@ -67,6 +67,7 @@ from cygnusloom.services.state import (  # noqa: F401
     Vehicle,
     WorldMapStyle,
     WorldObject,
+    _count_attack_action,
     _counts_toward_turn,
     _is_up_next,
     _next_round,
@@ -3052,6 +3053,12 @@ class EncounterTurnBegun(GameEvent):
             # With no acting character the turn is opening after a reply that may already have
             # spent the next player character's action, and that action stays spent.
             _reset_turn_budget(encounter)
+        pending = getattr(encounter, "pending_attacks", None)
+        if pending is not None:
+            spent = pending.pop(name_key(character.name), 0)
+            if spent:
+                encounter.attacked += spent
+                encounter.actions_used += spent
         if encounter.gm_played and state.turn is None:
             state.turn = Turn(opener=event_id, text=self.instruction, actor=character.name)
         elif state.turn is not None:
@@ -3092,23 +3099,29 @@ class EncounterAttacked(GameEvent):
         if encounter is None:
             return
         # A player character may attack while their turn is next but not yet opened. That is
-        # still their action, so it counts; a forced strike during someone else's turn does not.
-        if _counts_toward_turn(encounter, state, self.name):
-            if self.extra:
-                encounter.extra_attacks.append(self.extra)
-                if self.bonus_action:
-                    encounter.bonus_actions_used += 1
-                return
-            if self.weapon:
-                encounter.attacked_with.append(name_key(self.weapon))
-                if self.hit:
-                    encounter.hit_with.append(name_key(self.weapon))
-                    if self.target:
-                        encounter.hit_targets.append(name_key(self.target))
-            first_attack = encounter.attacked == 0
-            encounter.attacked += 1
-            if first_attack:
-                encounter.actions_used += 1
+        # still their action, so it counts; a forced strike during someone else's turn does not
+        # spend the current turn, but it follows the striker into their own next turn.
+        if not _counts_toward_turn(encounter, state, self.name):
+            if not self.extra:
+                key = name_key(self.name)
+                pending = getattr(encounter, "pending_attacks", None)
+                if pending is None:
+                    pending = {}
+                    encounter.pending_attacks = pending
+                pending[key] = pending.get(key, 0) + 1
+            return
+        if self.extra:
+            encounter.extra_attacks.append(self.extra)
+            if self.bonus_action:
+                encounter.bonus_actions_used += 1
+            return
+        if self.weapon:
+            encounter.attacked_with.append(name_key(self.weapon))
+            if self.hit:
+                encounter.hit_with.append(name_key(self.weapon))
+                if self.target:
+                    encounter.hit_targets.append(name_key(self.target))
+        _count_attack_action(encounter, state, self.name)
 
     def render(self) -> str:
         return f"{self.name} attacks."
@@ -3168,6 +3181,35 @@ class EncounterTurnEnded(GameEvent):
 
     def render(self) -> str:
         return f"{self.name}'s turn ends."
+
+
+@dataclass(frozen=True)
+class EncounterTurnSkipped(GameEvent):
+    """A participant who is out of the fight is passed over before their turn opens. The
+    engine records this when the start button would otherwise open a turn for a defeated,
+    fled, or surrendered character."""
+
+    kind: ClassVar[str] = "encounter.turn_skipped"
+    hidden: ClassVar[bool] = True
+
+    name: str
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        encounter = state.encounter
+        if encounter is None or encounter.acting is not None:
+            return
+        if encounter.up >= len(encounter.order):
+            return
+        if name_key(encounter.order[encounter.up]) != name_key(self.name):
+            return
+        encounter.up += 1
+        if encounter.up >= len(encounter.order):
+            _next_round(encounter, state)
+        _skip_defeated(encounter, state)
+
+    def render(self) -> str | None:
+        return None
+
 
 
 @dataclass(frozen=True)
@@ -3554,6 +3596,9 @@ class TotalDefenseTaken(GameEvent):
         character.total_defense_armor = character.armor
         character.total_defense = True
         character.armor += self.bonus
+        encounter = state.encounter
+        if encounter is not None:
+            _count_attack_action(encounter, state, self.name)
 
     def render(self) -> str:
         return f"{self.name} takes total defense; armor rises by {self.bonus} until the next turn."

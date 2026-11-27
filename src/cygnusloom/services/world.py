@@ -2743,6 +2743,64 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin, DocumentToolsMixin):
         with session_scope(self.engine) as db:
             self._guard_effect(db, name, action, force=force)
 
+    def require_attack(self, character: str, force: bool = False) -> None:
+        """Refuse an attack action outside the character's turn, or after the turn's attack
+        actions are spent, without rolling anything."""
+        with session_scope(self.engine) as db:
+            state = load_state(db, self.campaign_id)
+            actor = state.characters.get(name_key(character))
+            if actor is None:
+                raise InvalidInput(f"there is no character named {character!r}")
+            gm_played = encounters.gm_plays(
+                state,
+                actor.name,
+                gm_plays_hirelings(db, self.campaign_id),
+            )
+            combat.require_attack(
+                state,
+                actor,
+                self._rules(),
+                force,
+                player_control=not gm_played,
+            )
+
+    def spell_attack_check(
+        self,
+        name: str,
+        spell: str = "",
+        target: str = "",
+        roll_mode: str = "normal",
+        force: bool = False,
+    ) -> None:
+        """Refuse a spell attack before its roll prompt: outside an encounter, outside the
+        caster's turn, or after the turn's attack action is spent. The spell itself is
+        validated by the attack once the player rolls."""
+        if force:
+            return
+        with session_scope(self.engine) as db:
+            state = load_state(db, self.campaign_id)
+            caster = state.characters.get(name_key(name))
+            if caster is None:
+                raise InvalidInput(f"there is no character named {name!r}")
+            if state.encounter is None:
+                raise InvalidInput(
+                    "start an encounter before making a spell attack at a creature"
+                )
+            if target and name_key(target) not in state.characters:
+                raise InvalidInput(f"there is no character named {target!r}")
+            gm_played = encounters.gm_plays(
+                state,
+                caster.name,
+                gm_plays_hirelings(db, self.campaign_id),
+            )
+            combat.require_attack(
+                state,
+                caster,
+                self._rules(),
+                False,
+                player_control=not gm_played,
+            )
+
     def _guard_effect(
         self, db: Session, name: str, action: str, *, hazard: bool = False, force: bool = False
     ) -> None:
@@ -3278,6 +3336,16 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin, DocumentToolsMixin):
                 raise InvalidInput(f"there is no character named {name!r}")
             if state.encounter is None:
                 raise InvalidInput("total defense is only used in an encounter")
+            combat.require_attack(
+                state,
+                character,
+                rules,
+                player_control=not encounters.gm_plays(
+                    state,
+                    character.name,
+                    gm_plays_hirelings(db, self.campaign_id),
+                ),
+            )
             record(
                 db,
                 self.campaign_id,
