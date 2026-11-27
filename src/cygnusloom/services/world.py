@@ -378,9 +378,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin, DocumentToolsMixin):
             record(
                 db,
                 self.campaign_id,
-                DiceRolled(
-                    dice=formula, values=values, total=total, reason=why, secret=secret
-                ),
+                DiceRolled(dice=formula, values=values, total=total, reason=why, secret=secret),
             )
             db.commit()
         result = {"dice": formula, "values": values, "total": total, "reason": why}
@@ -759,8 +757,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin, DocumentToolsMixin):
                 (
                     entry
                     for entry in catalogue.values()
-                    if same_item_name(entry.name, item)
-                    or alias_key(entry.id) == alias_key(item)
+                    if same_item_name(entry.name, item) or alias_key(entry.id) == alias_key(item)
                 ),
                 None,
             )
@@ -1455,15 +1452,11 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin, DocumentToolsMixin):
 
     def damage_base(self, site: str, amount: int = 1, cause: str = "") -> dict[str, Any]:
         with session_scope(self.engine) as db:
-            return improvements_service.damage_base(
-                db, self.campaign_id, site, amount, cause=cause
-            )
+            return improvements_service.damage_base(db, self.campaign_id, site, amount, cause=cause)
 
     def repair_base(self, site: str, amount: int = 1, cause: str = "") -> dict[str, Any]:
         with session_scope(self.engine) as db:
-            return improvements_service.repair_base(
-                db, self.campaign_id, site, amount, cause=cause
-            )
+            return improvements_service.repair_base(db, self.campaign_id, site, amount, cause=cause)
 
     def list_improvements(self, site: str = "") -> dict[str, Any]:
         with session_scope(self.engine) as db:
@@ -1484,7 +1477,9 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin, DocumentToolsMixin):
             db.commit()
             return {"name": character.name, "agenda": agenda}
 
-    def train_skill(self, character: str, skill: str, ticks: int = 1, cause: str = "") -> dict[str, Any]:
+    def train_skill(
+        self, character: str, skill: str, ticks: int = 1, cause: str = ""
+    ) -> dict[str, Any]:
         """Add practice ticks to a skill outside a move, such as during downtime."""
         with session_scope(self.engine) as db:
             if skill not in self.character.skills:
@@ -1530,9 +1525,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin, DocumentToolsMixin):
             actor = state.characters.get(name_key(character))
             if actor is None:
                 raise InvalidInput(f"there is no character named {character!r}")
-            held = next(
-                (item for item in actor.items if same_item_name(item.name, weapon)), None
-            )
+            held = next((item for item in actor.items if same_item_name(item.name, weapon)), None)
             if held is None:
                 raise InvalidInput(f"{actor.name} carries no {weapon!r}")
             if not held.capacity:
@@ -2783,9 +2776,7 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin, DocumentToolsMixin):
             if caster is None:
                 raise InvalidInput(f"there is no character named {name!r}")
             if state.encounter is None:
-                raise InvalidInput(
-                    "start an encounter before making a spell attack at a creature"
-                )
+                raise InvalidInput("start an encounter before making a spell attack at a creature")
             if target and name_key(target) not in state.characters:
                 raise InvalidInput(f"there is no character named {target!r}")
             gm_played = encounters.gm_plays(

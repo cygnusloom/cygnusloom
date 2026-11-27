@@ -1416,9 +1416,7 @@ class LocationUpdated(GameEvent):
             icon=self.icon if self.icon_changed else before.icon,
             summary=self.summary if self.summary_changed else before.summary,
             majority_species=(
-                self.majority_species
-                if self.majority_species_changed
-                else before.majority_species
+                self.majority_species if self.majority_species_changed else before.majority_species
             ),
             fight_day=None if self.description != before.description else before.fight_day,
         )
@@ -2950,9 +2948,9 @@ class ParticipantLeft(GameEvent):
             tokens = dict(entry.tokens)
             tokens[key] = cell
             state.maps[name_key(encounter.map)] = replace(entry, tokens=tokens)
-        held_budget = (
-            encounter.acting is not None and name_key(encounter.acting) == key
-        ) or (encounter.acting is None and _is_up_next(encounter, self.name))
+        held_budget = (encounter.acting is not None and name_key(encounter.acting) == key) or (
+            encounter.acting is None and _is_up_next(encounter, self.name)
+        )
         del encounter.order[index]
         encounter.cells.pop(key, None)
         encounter.sides.pop(key, None)
@@ -3211,7 +3209,6 @@ class EncounterTurnSkipped(GameEvent):
         return None
 
 
-
 @dataclass(frozen=True)
 class InitiativeRolled(GameEvent):
     """A player character's initiative save. Passing acts before the opponents and failing
@@ -3342,9 +3339,7 @@ class EncounterOrderAdjusted(GameEvent):
         encounter = state.encounter
         if encounter is None:
             return
-        previous_next = (
-            encounter.order[encounter.up] if encounter.up < len(encounter.order) else ""
-        )
+        previous_next = encounter.order[encounter.up] if encounter.up < len(encounter.order) else ""
         encounter.order = list(self.order)
         if self.current:
             character = state.characters[name_key(self.current)]
@@ -5129,13 +5124,12 @@ class CheckMade(GameEvent):
             # Drop the target rather than mark the line hidden: the player rolled these dice and
             # may see their own total and outcome, but not what they were measured against.
             breakdown = {
-                key: value for key, value in breakdown.items() if key != "target" and key != "target_label"
+                key: value
+                for key, value in breakdown.items()
+                if key != "target" and key != "target_label"
             }
         if breakdown:
-            text = (
-                f"{self.name} makes {article} {label}: "
-                f"{breakdown_text(breakdown)} and {result}"
-            )
+            text = f"{self.name} makes {article} {label}: {breakdown_text(breakdown)} and {result}"
             if self.cause and not self.secret:
                 text = f"{text} ({self.cause})"
             if self.reaction:

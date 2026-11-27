@@ -377,7 +377,12 @@
           "description": "The current choice to retrain for choice, when the pick allows retraining on a rest. Leave it out to add a new choice."
         }
       },
-      "required": ["name", "feature", "pick", "choice"]
+      "required": [
+        "name",
+        "feature",
+        "pick",
+        "choice"
+      ]
     }
   },
   {

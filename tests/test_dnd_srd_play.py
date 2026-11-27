@@ -513,9 +513,7 @@ def test_a_defeated_participant_is_skipped_when_their_turn_is_next(
     assert state.encounter is not None
     assert state.encounter.acting == "Rook"
     with Session(client.app.state.engine) as db:
-        rows = db.exec(
-            select(Event).where(Event.campaign_id == campaign_id).order_by(Event.seq)
-        )
+        rows = db.exec(select(Event).where(Event.campaign_id == campaign_id).order_by(Event.seq))
         kinds = [decode(row).kind for row in rows]
     assert "encounter.turn_skipped" in kinds
     assert "encounter.turn_begun" in kinds

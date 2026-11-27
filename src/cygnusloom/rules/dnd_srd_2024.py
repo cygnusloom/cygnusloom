@@ -2410,13 +2410,9 @@ def spell_attack(
     if struck.name == found.name:
         raise InvalidInput("a spell attack needs a target other than the caster")
     if not force:
-        in_encounter = ctx.world.with_hook_context(
-            lambda hc: hc.state().encounter is not None
-        )
+        in_encounter = ctx.world.with_hook_context(lambda hc: hc.state().encounter is not None)
         if not in_encounter:
-            raise InvalidInput(
-                "start an encounter before making a spell attack at a creature"
-            )
+            raise InvalidInput("start an encounter before making a spell attack at a creature")
         ctx.world.require_attack(found.name)
     mode = _roll_mode(roll_mode)
     if roll:
