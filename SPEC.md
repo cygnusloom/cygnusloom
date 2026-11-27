@@ -29,7 +29,7 @@ Whenever the player needs to roll, the game stops and asks, like a real GM. The 
 # Encounters
 Encounters slow time so actions resolve by the rules, usually for combat. Turn order comes from the ruleset's initiative: side initiative keeps each side together; individual initiative keeps each character's order. The order is fixed for the encounter. A player starts an NPC's turn and the GM runs it; the player's own turn starts automatically and they end it. A GM-played hireling's turn also waits for Start.
 
-The engine tracks the acting character's attacks, movement, and reactions. Attacks use melee reach, ranged bands, and line of sight; an out-of-range or blocked attack is refused. Hazards, traps, morale, conditions, death saves, and concentration are engine-resolved where supported. The GM may adjust the order only for a held action, a side's order, surprise, or a correction. Not every ruleset uses encounters.
+The engine tracks the acting character's attacks, movement, and reactions. Attacks use melee reach, ranged bands, and line of sight; an out-of-range or blocked attack is refused. Hazards, traps, morale, conditions, death saves, and concentration are engine-resolved where supported. The GM may adjust the order only for a held action, a side's order, surprise, or a correction. An encounter is a scene with stakes: each side wants something and acts on it, and the fight can end by flight, capture, a bargain, or an objective, not only by a wipe. Not every ruleset uses encounters.
 
 # AI Game Master - Cygnus
 Cygnus is the AI GM. It keeps the game on track, follows the rules, and allows no inconsistency. The story belongs to the players, so Cygnus changes the story or scene if they insist.
@@ -44,7 +44,9 @@ The world is places, regions, roads, peoples, and factions. The GM uses tools to
 Time moves in parts, hours, or days. Travel can be overland, a journey, wilderness, a dungeon, or a city route, depending on the ruleset. Rests, food and water, survival, and named progress clocks follow the ruleset. Places can be searched for loot, danger, and clues; sites, shelter, and projects are tracked where the ruleset uses them.
 
 # Story and Memory
-The event log is the record. The GM keeps notes, NPC knowledge, storylines, a journal, and speech. A storyline records the live question, its forces, and its pressure; the GM keeps them current and searches them before inventing. Summaries compress old turns. A player can edit the latest GM reply and roll the campaign back.
+The event log is the record. The GM keeps notes, NPC knowledge, storylines, a journal, and speech. Summaries compress old turns. A player can edit the latest GM reply and roll the campaign back.
+
+A storyline is a live situation, not a plot: one question, forces that want things and act without the player, and pressure that escalates from a visible sign to a consequence to an irreversible change. A scene shows a visible conflict, stakes, and at least two real choices, and ends on a choice or a fresh complication. Anything the player must learn has three clues in different places, and every node offers more than one way onward. One situation is focused and up to two more stay active; answering the question resolves it. The GM keeps these fields current and searches them before inventing.
 
 Modules and creative tables give the GM starting material and new places, people, and complications. The GM rolls them before inventing when it needs a new direction.
 
