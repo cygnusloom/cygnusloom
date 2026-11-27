@@ -1684,6 +1684,9 @@ class CombatRules:
     # How many of a surprised character's turns are lost. Zero when the rule set has no
     # surprise rule.
     surprise_turns: int = 0
+    # The initiative roll mode a surprise marker applies, such as "disadvantage" in D&D.
+    # Empty when surprise costs turns instead, as in Worlds Without Number.
+    surprise_initiative: str = ""
     # How many attack actions a combatant may take in one turn. A statblock's multiattack is one
     # attack action, so its attacks per action all resolve inside this budget. Defaults to the
     # common one-attack-per-turn rule. A rule set module may vary it by character.
@@ -5933,6 +5936,7 @@ def _load_combat(
             "dual_wield_hit_penalty",
             "dual_wield_damage_bonus",
             "surprise_turns",
+            "surprise_initiative",
             "attacks_per_turn",
             "actions_per_turn",
             "bonus_actions_per_turn",
@@ -6086,6 +6090,7 @@ def _load_combat(
             else 0
         ),
         surprise_turns=_optional_whole(data, "surprise_turns", label) or 0,
+        surprise_initiative=_load_surprise_initiative(data, label),
         attacks_per_turn=(
             _whole(data, "attacks_per_turn", label, 1) if "attacks_per_turn" in data else 1
         ),
@@ -6155,6 +6160,14 @@ def _load_initiative(
     if tie not in ("party", "foes"):
         raise ContentError(f"{initiative_label}: 'tie' must be party or foes")
     return InitiativeRules(die=die, bonus_stat=bonus_stat, side=side, tie=tie)
+
+
+def _load_surprise_initiative(data: Mapping[str, Any], label: str) -> str:
+    """The initiative roll mode a surprise marker applies. Empty when surprise costs turns."""
+    value = data.get("surprise_initiative", "")
+    if value not in ("", "disadvantage"):
+        raise ContentError(f"{label}: 'surprise_initiative' must be 'disadvantage' or empty")
+    return str(value)
 
 
 def _choice(

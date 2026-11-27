@@ -3301,18 +3301,40 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin, DocumentToolsMixin):
             return {"character": character.name}
 
     def surprise(self, name: str) -> dict[str, Any]:
-        """Mark a character as surprised; they lose the configured number of turns."""
+        """Mark a character as surprised. The rule set decides what surprise does: it either
+        costs turns or changes the character's initiative roll."""
         rules = self._rules()
-        if rules.surprise_turns <= 0:
+        if rules.surprise_turns <= 0 and not rules.surprise_initiative:
             raise InvalidInput("this rule set has no surprise rule")
         with session_scope(self.engine) as db:
             state = load_state(db, self.campaign_id)
             character = state.characters.get(name_key(name))
             if character is None:
                 raise InvalidInput(f"there is no character named {name!r}")
-            record(db, self.campaign_id, Surprised(name=character.name, turns=rules.surprise_turns))
+            if (
+                rules.surprise_initiative
+                and state.encounter is not None
+                and state.encounter.settled
+            ):
+                raise InvalidInput(
+                    "initiative is already set; mark a surprised combatant before it is rolled"
+                )
+            record(
+                db,
+                self.campaign_id,
+                Surprised(
+                    name=character.name,
+                    turns=rules.surprise_turns,
+                    initiative=rules.surprise_initiative,
+                ),
+            )
             db.commit()
-            return {"character": character.name, "turns": rules.surprise_turns}
+            result: dict[str, Any] = {"character": character.name}
+            if rules.surprise_turns:
+                result["turns"] = rules.surprise_turns
+            if rules.surprise_initiative:
+                result["initiative"] = rules.surprise_initiative
+            return result
 
     def total_defense(self, name: str) -> dict[str, Any]:
         """Spend a Main action on total defense. The configured bonus lasts until the

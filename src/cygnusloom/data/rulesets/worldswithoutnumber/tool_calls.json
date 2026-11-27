@@ -380,7 +380,7 @@
   {
     "type": "tool_call",
     "id": "surprise",
-    "description": "Mark a character or side as surprised. A surprised character loses their next turn and cannot attack until that turn passes. Use it when an ambush succeeds and the defenders did not notice the attackers.",
+    "description": "Mark a character as surprised. A surprised character loses their next turn and cannot attack until that turn passes. Use it when an ambush succeeds and the defenders did not notice the attackers.",
     "parameters": {
       "properties": {
         "name": {

@@ -2175,8 +2175,10 @@ def award_xp(character: str, amount: int, ctx: ToolContext, cause: str = "") -> 
 
 def roll_initiative(ctx: ToolContext) -> dict[str, Any]:
     """Roll initiative for every combatant: d20 plus Dexterity, highest total first. A bestiary
-    NPC keeps the initiative bonus printed in its statblock when one was stored. Records the
-    order before the first turn, so no player has to roll a separate initiative save."""
+    NPC keeps the initiative bonus printed in its statblock when one was stored. A character
+    marked surprised, or one whose conditions impose initiative Disadvantage, rolls with
+    Disadvantage; conditions granting Advantage roll with Advantage. Records the order before
+    the first turn, so no player has to roll a separate initiative save."""
 
     def action(hc: HookContext) -> dict[str, Any]:
         state = hc.state()
@@ -2192,6 +2194,7 @@ def roll_initiative(ctx: ToolContext) -> dict[str, Any]:
         if not encounter.order:
             raise InvalidInput("there is no one in the encounter to roll initiative for")
         rolls: list[dict[str, Any]] = []
+        conditions = getattr(ctx.world, "conditions", {})
         for name in encounter.order:
             character = state.characters.get(name_key(name))
             if character is None:
@@ -2201,7 +2204,8 @@ def roll_initiative(ctx: ToolContext) -> dict[str, Any]:
                 getattr(ctx.world, "monsters", {}),
                 getattr(ctx.world, "features", {}),
             )
-            roll = ctx.world.rng.randint(1, 20)
+            mode = _initiative_roll_mode(character, conditions)
+            _dice, roll = roll_mode_values("1d20", ctx.world.rng, mode=mode)
             rolls.append(
                 {
                     "name": character.name,
@@ -2210,6 +2214,7 @@ def roll_initiative(ctx: ToolContext) -> dict[str, Any]:
                     "bonus": bonus,
                     "bonus_label": "Initiative",
                     "total": roll + bonus,
+                    "roll_mode": mode,
                 }
             )
         if not rolls:
@@ -2256,6 +2261,24 @@ def _initiative_bonus(character: Any, monsters: Any = None, features: Any = None
         if getattr(feature, "initiative_proficient", False):
             bonus += proficiency_bonus(_stored_level(character))
     return bonus
+
+
+def _initiative_roll_mode(character: Any, conditions: Mapping[str, Any] | None) -> str:
+    """Initiative's roll mode: the rule set's surprise marker and the character's conditions
+    combine, and opposing Advantage and Disadvantage cancel, as the d20 rules do."""
+    modes: list[str] = []
+    if conditions:
+        mode = condition_roll_mode(character, conditions, "initiative")
+        if mode != "normal":
+            modes.append(mode)
+    surprise = str(getattr(character, "surprised_initiative", "") or "")
+    if surprise:
+        modes.append(surprise)
+    if "advantage" in modes and "disadvantage" in modes:
+        return "normal"
+    if "advantage" in modes:
+        return "advantage"
+    return "disadvantage" if "disadvantage" in modes else "normal"
 
 
 def attacks_per_turn(character: Any) -> int:

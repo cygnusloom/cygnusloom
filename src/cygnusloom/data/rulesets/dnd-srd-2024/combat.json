@@ -78,6 +78,7 @@
     "heal_clears_defeat": true,
     "rest_requires_positive_hp": true,
     "stabilize_without_clock": true,
+    "surprise_initiative": "disadvantage",
     "unarmed": {
       "damage": "1d1",
       "names": [

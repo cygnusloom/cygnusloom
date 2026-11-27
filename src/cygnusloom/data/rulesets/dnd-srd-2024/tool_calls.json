@@ -554,10 +554,26 @@
   },
   {
     "type": "tool_call",
+    "id": "surprise",
+    "description": "Mark a combatant as surprised before initiative is rolled. In D&D, surprise gives Disadvantage on the Initiative roll and nothing else: no turn is lost and there is no separate surprise round. Use it when an ambusher starts combat while hidden from a foe who is unaware combat is starting.",
+    "parameters": {
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the surprised combatant."
+        }
+      },
+      "required": [
+        "name"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
     "id": "roll_initiative",
     "python_module": "dnd_srd_2024",
     "function": "roll_initiative",
-    "description": "Roll initiative for every combatant once all participants have joined: 1d20 plus Dexterity, highest first. Call it before the first turn; the engine records the order and the rolls."
+    "description": "Roll initiative for every combatant once all participants have joined: 1d20 plus Dexterity, highest first, with Disadvantage for anyone marked surprised before this call. Call it before the first turn; the engine records the order and the rolls."
   },
   {
     "type": "tool_call",

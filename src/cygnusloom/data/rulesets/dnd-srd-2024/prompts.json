@@ -68,7 +68,7 @@
   {
     "type": "prompt",
     "id": "encounter_initiative",
-    "text": "D&D initiative is rolled per character: each combatant rolls 1d20 plus its Dexterity modifier, and the highest total acts first. Add every combatant, then call roll_initiative once before the first turn. The engine keeps the rolled order."
+    "text": "D&D initiative is rolled per character: each combatant rolls 1d20 plus its Dexterity modifier, and the highest total acts first. Mark an ambushed combatant with surprise before you call roll_initiative; surprise gives Disadvantage on that roll and nothing else, with no lost turn and no separate surprise round. An Incapacitated combatant also has Disadvantage and an Invisible one has Advantage. Add every combatant, then call roll_initiative once before the first turn. The engine keeps the rolled order."
   },
   {
     "type": "prompt",

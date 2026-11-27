@@ -394,6 +394,9 @@ class Character:
     total_defense_armor: int = 0
     # Turns lost to surprise. Each EncounterTurnEnded for this character consumes one.
     surprised_turns: int = 0
+    # The initiative roll mode a surprise marker applies, such as "disadvantage". It lasts until
+    # initiative is settled or the encounter ends.
+    surprised_initiative: str = ""
     # Grappling links two characters. `grappling` is the character held, and `grappled_by` is
     # the holder. Both carry the rule set's grappled condition.
     grappling: str = ""
