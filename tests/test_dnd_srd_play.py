@@ -416,6 +416,49 @@ def test_an_action_before_the_encounter_is_not_charged_to_its_first_turn(
     assert state.encounter.attacked == 0
 
 
+def test_a_spell_attack_needs_an_encounter(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    """A spell attack at a creature is a combat action, so it waits for an encounter."""
+    from .test_dnd_srd import _prepared_wizard
+
+    client, campaign_id, ctx = _prepared_wizard(app, client_factory)
+    tools = tools_for(client.app, campaign_id, rule_set="dnd-srd-2024")
+    tools.create_location("Cave", "A low cave.")
+    tools.create_monster("Foe", "Cave", template="monster-goblin-warrior")
+    with pytest.raises(InvalidInput, match="start an encounter before making a spell attack"):
+        dnd_srd_2024.spell_attack("Wren", "fire-bolt", "Foe", ctx, roll=15)
+
+
+def test_a_spell_attack_spends_the_first_turn_action(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    """The Fire Bolt that opens a fight spends the caster's first turn action."""
+    from .test_dnd_srd import _prepared_wizard
+
+    client, campaign_id, ctx = _prepared_wizard(app, client_factory)
+    close_opening(client, campaign_id)
+    tools = tools_for(client.app, campaign_id, rule_set="dnd-srd-2024")
+    tools.create_location("Cave", "A low cave.")
+    tools.move_actor("Wren", "Cave")
+    tools.create_encounter_map("Cave Yard", "Cave", 12, 12, "Open stone.")
+    tools.start_encounter("Cave Yard")
+    tools.create_monster("Foe", "Cave", template="monster-ogre")
+    for name in ("Wren", "Foe"):
+        assert tools.add_participant(name)["added"] == name
+    initiative = replace(ctx, world=replace(ctx.world, rng=Rolls(20, 1)))
+    assert dnd_srd_2024.roll_initiative(initiative)["order"][0] == "Wren"
+
+    dnd_srd_2024.spell_attack("Wren", "fire-bolt", "Foe", ctx, roll=15)
+    with Session(client.app.state.engine) as db:
+        encounters.begin_turn(db, campaign_id, "Wren")
+    state = _state(client.app, campaign_id)
+    assert state.encounter is not None and state.encounter.acting == "Wren"
+    assert state.encounter.actions_used == 1
+    with pytest.raises(InvalidInput, match="no action left"):
+        dnd_srd_2024.spell_attack("Wren", "fire-bolt", "Foe", ctx, roll=15)
+
+
 def test_awarding_experience_reaches_the_advancement_page(
     app: FastAPI, client_factory: Callable[[], TestClient]
 ) -> None:
@@ -524,7 +567,7 @@ def test_spell_attacks_use_the_spell_attack_bonus(
     tools = tools_for(client.app, campaign_id, rule_set="dnd-srd-2024")
     tools.create_location("Cave", "A low cave.")
     tools.create_monster("Foe", "Cave", template="monster-goblin-warrior")
-    result = dnd_srd_2024.spell_attack("Wren", "fire-bolt", "Foe", ctx, roll=15)
+    result = dnd_srd_2024.spell_attack("Wren", "fire-bolt", "Foe", ctx, roll=15, force=True)
     assert result["bonus"] == 5  # Int 16 (+3) and PB +2
     assert result["total"] == 20
     assert result["hit"] is True

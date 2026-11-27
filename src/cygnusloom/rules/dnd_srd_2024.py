@@ -35,7 +35,6 @@ from cygnusloom.services.events import (
     ClassLevelsChanged,
     CounterChanged,
     EffectNoted,
-    EncounterAttacked,
     FeatureLearned,
     HitDicePoolsSet,
     InitiativeSettled,
@@ -2409,6 +2408,17 @@ def spell_attack(
     struck = _read_character(target, ctx)
     if struck.name == found.name:
         raise InvalidInput("a spell attack needs a target other than the caster")
+    if not force:
+        in_encounter = ctx.world.with_hook_context(
+            lambda hc: hc.state().encounter is not None
+        )
+        if not in_encounter:
+            raise InvalidInput(
+                "start an encounter before making a spell attack at a creature"
+            )
+        ctx.world.use_turn_resource(
+            found.name, "action", cause=f"casting {feature.name}"
+        )
     mode = _roll_mode(roll_mode)
     if roll:
         natural = whole_number(roll, "roll", 1, 20)
@@ -2446,7 +2456,6 @@ def spell_attack(
                 hit=hit,
             ),
         )
-        record(db, campaign_id, EncounterAttacked(name=found.name))
         db.commit()
         return result
 
