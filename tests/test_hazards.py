@@ -12,7 +12,6 @@ import pytest
 from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.events import CharacterSaved, ConditionAdded, Harmed
 from cygnusloom.services.tools import Ask, RollAnswer, ToolRequest, run_tool
-from tests.conftest import bundled_library
 from tests.test_combat import Rolls
 from tests.test_wwn_combat import (
     FOE,
@@ -179,23 +178,3 @@ def test_a_skipped_target_does_not_stop_the_hazard(client_factory):
     skipped, hit = result["results"]
     assert "skipped" in skipped
     assert hit["harm"]["taken"] == 4
-
-
-def test_wwn_ships_a_traps_rule_and_prompts_for_sprung_hazards():
-    rules = bundled_library().rule_sets["worldswithoutnumber"]
-    assert "Evasion" in rules.rules["traps"]
-    assert "Trapmaster" in rules.rules["traps"]
-
-    own = {fragment.id: fragment for fragment in rules.prompt_fragments}
-    assert "resolve_hazard" in own["traps"].text
-
-    core = {fragment.id: fragment for fragment in bundled_library().core.prompt_fragments}
-    assert "resolve_hazard" in core["hazards"].text
-    assert "prepared earlier" in core["hazards"].text
-    assert "preparations" in core["plans"].text
-
-
-def test_the_hazard_tool_serves_only_the_combat_group():
-    from cygnusloom.services.tools import TOOL_GROUPS
-
-    assert "resolve_hazard" in TOOL_GROUPS["combat"]

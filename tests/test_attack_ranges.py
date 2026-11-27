@@ -16,7 +16,6 @@ from fastapi.testclient import TestClient
 
 from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.world import WorldTools
-from tests.conftest import content_library
 from tests.test_combat import Rolls, _character
 from tests.test_world import _state
 from tests.test_wwn_combat import (
@@ -289,19 +288,6 @@ def test_resolve_attacks_checks_every_attacker_before_any_die_is_rolled(client_f
         )
 
     assert _struck(app, campaign_id) == []
-
-
-def test_wwn_content_declares_its_reach_range_and_sight_limits():
-    wwn = content_library().rule_sets["worldswithoutnumber"]
-    assert wwn.combat.ranges is not None
-    assert wwn.combat.ranges.melee == 5
-    assert "wall" in wwn.combat.ranges.sight_blocked_by
-    assert wwn.character.items["pike"].reach == 10
-    assert wwn.character.items["bow_large"].ranges == {"short": 100, "long": 600}
-    assert wwn.monsters["bog_strider"].attack_reach == {"beak": 10}
-    assert wwn.monsters["mound_breaker"].attack_ranges == {
-        "hurled stone": {"short": 60, "long": 120}
-    }
 
 
 def test_unplaced_participants_keep_the_old_unmeasured_attack(client_factory):

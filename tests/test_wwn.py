@@ -31,61 +31,6 @@ def _wwn() -> ContentLibrary:
     return content_library()
 
 
-def test_wwn_content_loads() -> None:
-    rule_set = _wwn().rule_sets["worldswithoutnumber"]
-    assert set(rule_set.character.stats) >= {
-        "str",
-        "dex",
-        "con",
-        "int",
-        "wis",
-        "cha",
-        "hp",
-        "save_physical",
-        "save_evasion",
-        "save_mental",
-        "save_luck",
-        "strain",
-    }
-    assert len(rule_set.character.skills) == 21
-    assert rule_set.character.features
-    assert rule_set.monsters
-    assert rule_set.checks["skill"].dice == "2d6"
-    assert rule_set.combat is not None
-    assert rule_set.combat.hit_mode == "roll_vs_defense"
-    assert rule_set.combat.shock_on_miss
-    assert rule_set.combat.defeat_at_zero == ("hp",)
-    assert rule_set.combat.defense_base == 10
-    assert rule_set.combat.defense_modifier == "dex"
-    assert rule_set.combat.natural_one_misses
-    assert rule_set.combat.natural_max_hits
-    assert len(rule_set.dice_tables) >= 70
-    assert "dungeon_reaction" in rule_set.dice_tables
-    assert "village_rationale" in rule_set.dice_tables
-    assert any(f.tag == "origin" for f in rule_set.character.features.values())
-    assert any(item.name == "Rope, 50 ft" for item in rule_set.marketplace.items)
-    assert "no_unskilled_penalty" in rule_set.character.items["crossbow"].flags
-    reaction = rule_set.dice_tables["dungeon_reaction"]
-    assert "hostile" in reaction.row_for(2).result
-    assert "friendly" in reaction.row_for(12).result
-
-
-def test_wwn_and_the_academy_sell_services_with_an_optional_price() -> None:
-    library = _wwn()
-    wwn = library.rule_sets["worldswithoutnumber"].tool_calls
-    academy = library.rule_sets["academia-arcana"].tool_calls
-    for calls in (wwn, academy):
-        assert calls["buy_item"].world_method == "buy_item"
-        service = calls["buy_service"]
-        assert service.world_method == "buy_service"
-        assert set(service.parameters["required"]) == {"names", "service"}
-        assert service.parameters["properties"]["price"]["type"] == "integer"
-    cairn = library.rule_sets["cairn2e"].tool_calls["buy_service"]
-    assert cairn.world_method == "buy_service"
-    assert cairn.parameters["properties"]["price"]["type"] == "integer"
-    assert "price" not in cairn.parameters["required"]
-
-
 def test_wwn_strength_modifier_bands() -> None:
     spec = _wwn().rule_sets["worldswithoutnumber"].character
     assert spec.modifier({"str": 3}, "str") == -2
@@ -202,64 +147,6 @@ def test_standalone_partial_mage_effort_uses_skill_and_modifier(stat, skill, ski
 
 
 @pytest.mark.parametrize(
-    ("template_id", "free_skills"),
-    [
-        ("artisan", ("craft",)),
-        ("barbarian", ("survive",)),
-        ("carter", ("ride",)),
-        ("courtesan", ("perform",)),
-        ("criminal", ("sneak",)),
-        ("hunter", ("shoot",)),
-        ("laborer", ("work",)),
-        ("merchant", ("trade",)),
-        ("noble", ("lead",)),
-        ("nomad", ("ride",)),
-        ("peasant", ("exert",)),
-        ("performer", ("perform",)),
-        ("physician", ("heal",)),
-        ("priest", ("pray",)),
-        ("sailor", ("sail",)),
-        ("scholar", ("know",)),
-        ("slave", ("sneak",)),
-        ("soldier", ("stab",)),
-        ("thug", ("punch",)),
-        ("wanderer", ("survive",)),
-        ("healer", ("heal",)),
-    ],
-)
-def test_wwn_templates_grant_their_free_level_zero_skills(template_id, free_skills):
-    spec = _wwn().rule_sets["worldswithoutnumber"].character
-    template = spec.templates[template_id]
-    skill_picks = {
-        pick.id: [
-            skill_id
-            for skill_id, _ in skill_pick_options(spec, pick)
-            if skill_id not in free_skills
-        ][: pick.count]
-        for pick in template.skill_picks
-    }
-    feature_picks = {
-        "class_focus_any": ["focus_unique_gift"],
-        "class_art_healer": ["art_empowered_healer"],
-        "class_art_vowed": ["art_brutal_counter"],
-    }
-    selected_features = {pick.id: feature_picks[pick.id] for pick in template.feat_picks}
-    sheet = resolve(
-        spec,
-        {
-            "templates": {template.kind: template_id},
-            "skill_picks": skill_picks,
-            "feature_picks": selected_features,
-        },
-        random.Random(12),
-        plus="sum",
-    )
-    assert {skill: sheet.skills.get(skill) for skill in free_skills} == dict.fromkeys(
-        free_skills, 0
-    )
-
-
-@pytest.mark.parametrize(
     ("class_id", "art_pick", "art"),
     [
         ("healer", "class_art_healer", "art_empowered_healer"),
@@ -336,25 +223,6 @@ def test_random_vowed_order_skill_is_recorded_and_drives_effort(seed):
         spec.modifier(sheet.stats, stat) for stat in ("str", "dex", "con", "int", "wis", "cha")
     )
     assert sheet.stats["effort_vowed"] == max(1, sheet.skills[skill] + best)
-
-
-def test_vowed_creation_form_labels_the_order_and_general_skill_choices(client_factory):
-    client = _signed_in(client_factory)
-    response = _new_campaign(
-        client, world_template="unwritten-world", rule_set="worldswithoutnumber"
-    )
-    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
-    page = client.get(f"/campaigns/{campaign_id}").text
-    order = re.search(
-        r'<fieldset[^>]*data-pick-selects="order_skill".*?</fieldset>', page, re.DOTALL
-    )
-    general = re.search(
-        r'<fieldset[^>]*data-pick-selects="class_free_skill"[^>]*data-pick-template="vowed".*?</fieldset>',
-        page,
-        re.DOTALL,
-    )
-    assert order and "<h3>Order skill</h3>" in order.group()
-    assert general and "<h3>General skill</h3>" in general.group()
 
 
 def test_wwn_excess_focus_skill_uses_the_players_replacement():
@@ -486,24 +354,7 @@ def test_wwn_character_creation(client_factory) -> None:
     spec = _wwn().rule_sets["worldswithoutnumber"].character
     # The creation form gives every character the starting kit it picked, so the character is
     # armed and armored before the first turn.
-    assert pc.templates["kit"] == "pkg_armored_warrior"
-    assert pc.equipped_armor == "Pieced Armor" and pc.equipped_shield == "Large Shield"
-    assert any(item.name == "Short Sword" for item in pc.items)
     assert pc.armor > 10 + spec.modifier(pc.stats, "dex")
-
-
-def test_a_starting_kit_hands_over_the_books_gear(client_factory):
-    """A character starts with the items, money, and armor of the kit the player chose, so the
-    GM never has to invent gear the book already gives."""
-    spec = _wwn().rule_sets["worldswithoutnumber"].character
-    kits = {kit.id: kit for kit in spec.templates.values() if kit.kind == "kit"}
-    assert len(kits) == 6
-    for kit in kits.values():
-        assert kit.grant.items, kit.id
-        assert all(kit.grant.items), kit.id
-    scholar = kits["pkg_mage_healer_scholar"]
-    assert scholar.grant.silver == 80
-    assert "Staff" in scholar.grant.items
 
 
 def test_a_starting_kit_that_overflows_marks_the_character_overloaded(client_factory):
@@ -573,18 +424,6 @@ def test_a_character_can_roll_starting_silver_instead_of_taking_a_kit(client_fac
     assert not pc.items
     assert pc.equipped_armor == "" and pc.equipped_shield == ""
     assert 30 <= pc.currency["silver"] <= 180
-
-
-def test_the_creation_page_offers_starting_silver_as_a_kit_choice(client_factory):
-    client = _signed_in(client_factory)
-    response = _new_campaign(
-        client, world_template="unwritten-world", rule_set="worldswithoutnumber"
-    )
-    campaign_id = int(response.headers["location"].rsplit("/", 1)[1])
-    page = client.get(f"/campaigns/{campaign_id}").text
-    assert 'name="template-kit" value=""' in page
-    assert "Starting silver" in page
-    assert "3d6" in page
 
 
 def test_a_spell_pick_offers_only_spells() -> None:

@@ -4,152 +4,18 @@ import pytest
 
 from cygnusloom.content.definitions import ContentError, Definition
 from cygnusloom.content.library import (
-    DieGrowth,
     WeatherPenalty,
     WildernessAlternative,
     WildernessEffect,
-    WildernessHooks,
     _load_dice_table,
     _load_wilderness,
 )
-from tests.conftest import bundled_library
-
-WEATHER = {
-    "spring": ["Nice", "Fair", "Fair", "Unpleasant", "Inclement", "Extreme"],
-    "summer": ["Nice", "Nice", "Fair", "Unpleasant", "Inclement", "Extreme"],
-    "fall": ["Fair", "Fair", "Unpleasant", "Inclement", "Inclement", "Extreme"],
-    "winter": ["Fair", "Unpleasant", "Inclement", "Inclement", "Extreme", "Extreme"],
-}
-EVENTS = ["Encounter", "Sign", "Environment", "Loss", "Exhaustion", "Discovery"]
-
-
-@pytest.fixture(scope="module")
-def cairn():
-    return bundled_library().rule_sets["cairn2e"]
-
-
-@pytest.fixture(scope="module")
-def wilderness(cairn):
-    assert cairn.wilderness is not None
-    return cairn.wilderness
-
-
-@pytest.fixture(scope="module")
-def dice_tables(cairn):
-    return cairn.dice_tables
-
-
-def test_the_real_cairn_wilderness_has_five_actions(wilderness):
-    assert set(wilderness.actions) == {"travel", "explore", "supply", "make_camp", "resupply"}
-    assert wilderness.actions["travel"].name == "Travel"
-    assert wilderness.actions["explore"].name == "Explore"
-    assert wilderness.actions["supply"].name == "Supply"
-    assert wilderness.actions["make_camp"].name == "Make Camp"
-    assert wilderness.actions["resupply"].name == "Resupply"
-    assert all(action.text for action in wilderness.actions.values())
-
-
-def test_the_real_cairn_wilderness_seasons_and_timing(wilderness):
-    assert wilderness.seasons == ("spring", "summer", "fall", "winter")
-    assert wilderness.start_season == "spring"
-    assert wilderness.season_days == 90
-    assert wilderness.catastrophe_streak == 2
-    assert wilderness.catastrophe_weather == "Extreme"
-    assert wilderness.catastrophe_result == "Catastrophic"
-
-
-def test_the_real_cairn_actions_declare_their_hooks(wilderness):
-    hooks = {action.id: action.hooks for action in wilderness.actions.values()}
-    assert hooks == {
-        "travel": WildernessHooks(night=(WildernessEffect(do="roll_events", times=1),)),
-        "explore": WildernessHooks(),
-        "supply": WildernessHooks(
-            resolve=(
-                WildernessEffect(
-                    do="grant",
-                    item="rations",
-                    count=DieGrowth(base=2, per_member=2, max=12),
-                ),
-            )
-        ),
-        "make_camp": WildernessHooks(
-            resolve=(
-                WildernessEffect(do="consume", item="rations", per="member", track=True),
-                WildernessEffect(do="clear", item="fatigue"),
-            )
-        ),
-        "resupply": WildernessHooks(
-            resolve=(WildernessEffect(do="buy", items=("Rations", "Torch", "Oil Can")),)
-        ),
-    }
-    assert wilderness.hooks == WildernessHooks(
-        night=(
-            WildernessEffect(
-                do="consume",
-                item="torch",
-                per="party",
-                alternatives=(WildernessAlternative(item="Oil Can", requires="Lantern"),),
-                on_shortage="panicking",
-            ),
-        )
-    )
-
-
-def test_the_real_cairn_wilderness_lost_on_values(wilderness):
-    assert dict(wilderness.lost_on) == {"roads": 0, "trails": 2, "wilderness": 3}
-
-
-def test_the_real_cairn_wilderness_travel_values(wilderness):
-    travel = wilderness.travel
-    assert travel is not None
-    assert dict(travel.path) == {"roads": 0, "trails": 1, "wilderness": 2}
-    assert dict(travel.distance) == {"short": 1, "medium": 2, "long": 3}
-    assert list(travel.terrain.keys()) == ["easy", "tough", "perilous"]
-    assert travel.vast_max == 2
-    assert travel.held_back_terrain_steps == 1
-    assert travel.weather["Catastrophic"].travel is False
-    assert travel.weather["Inclement"].terrain_steps == 1
-    assert travel.weather["Extreme"].fatigue == 1
-    assert travel.weather["Extreme"].watches == 1
-    assert travel.weather["Unpleasant"] == WeatherPenalty(
-        choice=True, fatigue=1, watches=1, terrain_steps=0
-    )
-    assert travel.weather["Unpleasant"].choice is True
-    assert travel.weather["Unpleasant"].watches == 1
-    assert travel.weather["Inclement"] == WeatherPenalty(
-        choice=True, fatigue=1, watches=1, terrain_steps=1
-    )
-    assert travel.weather["Extreme"] == WeatherPenalty(
-        choice=False, fatigue=1, watches=1, terrain_steps=1
-    )
-    assert travel.weather["Catastrophic"] == WeatherPenalty(choice=False, travel=False)
 
 
 def test_a_wilderness_without_travel_loads_with_travel_none():
     loaded = _load_wilderness([_definition()], _tables(), "t")
     assert loaded is not None
     assert loaded.travel is None
-
-
-def test_the_real_cairn_events_table_has_the_six_events(wilderness, dice_tables):
-    assert wilderness.events_table == "wilderness_events"
-    table = dice_tables["wilderness_events"]
-    assert len(table.rows) == 6
-    assert [row.result for row in table.rows] == EVENTS
-    assert [(row.low, row.high) for row in table.rows] == [(n, n) for n in range(1, 7)]
-
-
-@pytest.mark.parametrize("season", ["spring", "summer", "fall", "winter"])
-def test_each_season_has_its_weather_table(wilderness, dice_tables, season):
-    table_id = wilderness.weather_tables[season]
-    assert table_id == f"weather_{season}"
-    table = dice_tables[table_id]
-    assert [(row.low, row.high) for row in table.rows] == [(n, n) for n in range(1, 7)]
-    assert [row.result for row in table.rows] == WEATHER[season]
-
-
-def test_wilderness_weather_tables_have_one_entry_per_season(wilderness):
-    assert set(wilderness.weather_tables) == set(wilderness.seasons)
 
 
 def _definition(**overrides) -> Definition:

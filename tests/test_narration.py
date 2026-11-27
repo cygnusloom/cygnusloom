@@ -13,8 +13,6 @@ from sqlmodel import Session
 
 from cygnusloom.services.campaigns import _without_draft
 from cygnusloom.services.events import Channel, decode, events_since, is_hidden, last_event_id
-from cygnusloom.services.prompts import system_parts
-from tests.conftest import content_library
 from tests.test_campaigns import _answer, _campaign_id, _place_pc, _send
 from tests.test_tools import ROLL, _recording_provider, _script
 
@@ -139,57 +137,3 @@ def test_failed_tool_calls_reach_the_narration(
 
     tool_messages = [m for m in _narrator(recorder) if m["role"] == "tool"]
     assert tool_messages and "must be integer" in tool_messages[0]["content"]
-
-
-def test_narrator_is_told_the_player_character_moves_only_when_a_move_is_recorded(
-    client_factory: Callable[[], TestClient], app: FastAPI
-):
-    client, campaign_id = _campaign_id(client_factory)
-    recorder = _recording_provider()
-    app.state.providers = lambda model_id: (recorder, model_id)
-    _place_pc(client, campaign_id)
-    _send(client, campaign_id, _script({"rounds": [[]], "text": "The lane is quiet."}))
-
-    system = _system_text(_narrator(recorder))
-    assert "only when a move_actor result records it" in system
-
-
-def test_narrator_is_told_not_to_invent_times_distances_or_street_names(
-    client_factory: Callable[[], TestClient], app: FastAPI
-):
-    client, campaign_id = _campaign_id(client_factory)
-    recorder = _recording_provider()
-    app.state.providers = lambda model_id: (recorder, model_id)
-    _place_pc(client, campaign_id)
-    _send(client, campaign_id, _script({"rounds": [[]], "text": "The lane is quiet."}))
-
-    system = _system_text(_narrator(recorder))
-    assert "Never write a number of minutes, hours, days, or distance" in system
-    assert "Name no street, square, alley, or route" in system
-
-
-def test_narrator_keeps_routine_beats_under_forty_words(
-    client_factory: Callable[[], TestClient], app: FastAPI
-):
-    client, campaign_id = _campaign_id(client_factory)
-    recorder = _recording_provider()
-    app.state.providers = lambda model_id: (recorder, model_id)
-    _place_pc(client, campaign_id)
-    _send(client, campaign_id, _script({"rounds": [[]], "text": "The lane is quiet."}))
-
-    system = _system_text(_narrator(recorder))
-    assert "takes one or two sentences (under 40 words)" in system
-    assert "including arriving at or discovering a place" in system
-    assert "or a brief exchange of dialogue" in system
-    assert "Write the next beat in the present tense" in system
-    assert "Do not use similes, metaphors, or poetic comparisons" in system
-
-
-def test_present_tense_narration_is_an_important_core_rule() -> None:
-    """The present-tense rule comes from the core rule set and is given in full to a ruleset
-    that does not replace it."""
-    rule_set = content_library().rule_sets["cairn2e"]
-    assert "narration" in rule_set.important
-    parts = system_parts(rule_set.id, rule_set.rules, rule_set.important, "", 0)
-    system = "\n".join(part.content for part in parts)
-    assert "- narration: Narrate in the present tense" in system

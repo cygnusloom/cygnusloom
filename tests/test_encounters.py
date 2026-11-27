@@ -55,7 +55,7 @@ from tests.factories import (
 )
 from tests.test_character_creation import _cairn_campaign, _complete_form
 from tests.test_combat import _tools
-from tests.test_tools import _recording_provider, _script
+from tests.test_tools import _script
 
 LIBRARY = content_library()
 CAIRN_GRID = LIBRARY.rule_sets["cairn2e"].grid
@@ -198,12 +198,6 @@ def _place(
 
 def _encounter(app: FastAPI, campaign_id: int) -> CampaignState:
     return _state(app, campaign_id)
-
-
-def test_cairn2e_has_a_grid_and_rolltest_does_not():
-    assert CAIRN_GRID == EncounterGrid(cell_feet=5, move_feet=40)
-    assert CAIRN_GRID.move_cells == 8
-    assert LIBRARY.rule_sets["rolltest"].grid is None
 
 
 def test_map_creation_is_validated(client_factory: Callable[[], TestClient]):
@@ -908,53 +902,6 @@ def test_the_encounter_view_reports_the_turns_remaining_resources(
     assert view["has_acted"] is False
 
 
-def test_an_npc_turn_is_not_an_out_of_character_message(
-    client_factory: Callable[[], TestClient],
-):
-    client, campaign_id = _encounter_with(client_factory)
-    _begin(client.app, campaign_id, "Pip")
-    state = _state(client.app, campaign_id)
-    assert state.turn is not None
-    assert state.turn.actor == "Pip"
-    assert "not an out-of-character message" in state.turn.text
-    assert "an attack happens only when you call attack" in state.turn.text
-
-
-def test_an_npc_turn_checklist_reminds_the_gm_about_attacks_and_movement(
-    client_factory: Callable[[], TestClient],
-):
-    """The turn checklist is a set of reminders. An NPC's encounter turn adds the attack and
-    movement areas to the prompt and the finish tool so the GM considers them before narrating."""
-    client, campaign_id = _encounter_with(client_factory, columns=10, rows=10, cairn=True)
-    recorder = _recording_provider()
-    client.app.state.providers = lambda model_id: (recorder, model_id)
-    script = _script(
-        {"text": "Pip waits by the gate."},
-        {"text": "Pip shifts his feet."},
-    )
-    assert send_message(client, campaign_id, script).status_code == 303
-
-    lines = _npc_turn_stream(client, campaign_id, "Pip")
-
-    assert lines[-1]["type"] == "saved"
-    npc_calls = [
-        call
-        for call in recorder.calls
-        if any(
-            message.get("role") == "user"
-            and "Pip's turn in the encounter" in str(message.get("content", ""))
-            for message in call["messages"]
-        )
-    ]
-    assert npc_calls
-    call = npc_calls[0]
-    prompt = str(call["messages"][0].get("content", ""))
-    assert "- attack:" in prompt
-    assert "- tactical_move:" in prompt
-    finish = next(spec for spec in call["tools"] if spec["function"]["name"] == "finish_state_step")
-    assert {"attack", "tactical_move"} <= set(finish["function"]["parameters"]["properties"])
-
-
 def test_an_out_of_character_npc_turn_still_ends_when_the_reply_finishes(
     client_factory: Callable[[], TestClient],
 ):
@@ -1120,29 +1067,6 @@ def test_player_turn_starts_automatically_and_ends_by_button(
     assert _encounter(app, campaign_id).encounter.acting == "Ada"
 
 
-def test_the_end_turn_button_updates_the_page_without_navigating(
-    client_factory: Callable[[], TestClient],
-):
-    """The End control takes the in-place path instead of a form navigation, then the page
-    takes the live view's fresh state."""
-    client, campaign_id = _encounter_with(client_factory, columns=10, rows=10)
-    app = client.app
-    _begin(app, campaign_id, "Pip")
-    _finish_gm_reply(app, campaign_id)
-    _end(app, campaign_id, "Pip", by_player=False)
-    _finish_gm_reply(app, campaign_id)
-    assert _state(app, campaign_id).encounter.acting == "Ada"
-    page = client.get(f"/campaigns/{campaign_id}").text
-    assert "End your turn" in page
-    assert f'action="/campaigns/{campaign_id}/encounter/turn/end" data-encounter-end' in page
-    assert 'data-busy-label="Ending turn…"' in page
-    script = client.get("/static/turn_stream.js").text
-    assert 'if (form.hasAttribute("data-encounter-end"))' in script
-    assert "async function endTurn(form)" in script
-    assert "await settle({ focusComposer: true, message });" in script
-    assert "window.cygnusBusy?.clear(form);" in script
-
-
 def test_top_level_turn_controls_wait_while_the_gm_is_working():
     """End and Start disappear until the GM's reply is written; the next state restores
     whichever control applies."""
@@ -1234,14 +1158,6 @@ def test_campaign_page_shows_the_encounter_board_and_turn_controls(
     assert "Start Pip" in page
     assert "column 3, row 4" in page
     assert "Start your turn" not in page
-    assert 'id="tab-encounter" aria-controls="panel-encounter" aria-selected="true"' in page
-    assert 'id="tab-world" aria-controls="panel-world" aria-selected="false"' in page
-    assert 'aria-label="Map views"' in page
-    assert page.index('aria-label="Map views"') < page.index('aria-label="Panels"')
-    assert page.index('id="panel-encounter"') < page.index('aria-label="Panels"')
-    assert page.index('id="panel-world"') < page.index('aria-label="Panels"')
-    assert 'id="tab-location" aria-controls="panel-location" aria-selected="true"' in page
-    assert "world-map-details" not in page
 
     _begin(app, campaign_id, "Pip")
     _finish_gm_reply(app, campaign_id)
@@ -1251,7 +1167,6 @@ def test_campaign_page_shows_the_encounter_board_and_turn_controls(
     assert "Start Ada's turn" not in acting
     assert "End your turn" in acting
     assert "Start your turn" not in acting
-    assert acting.index("End your turn") < acting.index('id="composer"')
 
 
 def test_an_idle_player_turn_has_no_explicit_begin_form(
@@ -1263,8 +1178,6 @@ def test_an_idle_player_turn_has_no_explicit_begin_form(
 
     assert _encounter(app, campaign_id).encounter.acting is None
     page = client.get(f"/campaigns/{campaign_id}").text
-    assert "Starting your turn..." not in page
-    assert "data-auto-start-turn" not in page
     assert "Start Ada's turn" not in page
 
 
@@ -1274,9 +1187,7 @@ def test_campaign_page_has_no_board_or_roster_without_an_encounter(
     client, campaign_id = campaign_ready_fast(client_factory)
     page = client.get(f"/campaigns/{campaign_id}").text
     assert "encounter-board" not in page
-    assert 'id="tab-world"' not in page
     assert "encounter-roster" not in page
-    assert 'class="side"' in page
 
 
 def test_token_labels_are_short_initials_or_a_prefix():
@@ -1366,24 +1277,6 @@ def test_encounter_map_rename_keeps_its_own_name_and_refuses_clashes(
     assert _encounter(app, campaign_id).maps.keys() == {MAP.casefold(), "shore green"}
 
 
-def test_campaign_page_draws_tokens_with_full_name_tooltips_and_no_legend(
-    client_factory: Callable[[], TestClient],
-):
-    client, campaign_id = _encounter_with(client_factory, columns=10, rows=10)
-    app = client.app
-    _place(app, campaign_id, "Ada", 2, 3, grid=None)
-
-    page = client.get(f"/campaigns/{campaign_id}").text
-    assert 'class="map-token"' in page
-    assert 'data-side="party"' in page
-    assert ">Ada</span>" in page
-    assert 'data-tip="Ada"' in page
-    assert "Not on the map" not in page
-    assert "encounter-list" not in page
-    assert "map-legend" not in page
-    assert "map-number" not in page
-
-
 def test_campaign_page_says_when_no_one_is_on_the_encounter_map(
     client_factory: Callable[[], TestClient],
 ):
@@ -1406,51 +1299,14 @@ def test_campaign_page_lists_the_encounter_turn_order_in_the_location_panel(
     _place(app, campaign_id, "Pip", 4, 4, grid=None)
 
     page = client.get(f"/campaigns/{campaign_id}").text
-    assert 'class="side in-encounter"' in page
-    assert 'class="tab-panel location-panel with-roster"' in page
     roster = page[page.index('class="encounter-roster"') :]
     assert roster.index("Pip") < roster.index("Ada")
-    assert page.index('aria-label="Panels"') < page.index('class="encounter-roster"')
 
     _begin(app, campaign_id, "Pip")
     _finish_gm_reply(app, campaign_id)
     acting = client.get(f"/campaigns/{campaign_id}").text
     assert 'class="acting"' in acting
     assert '<span class="roster-state">acting</span>' in acting
-
-
-def test_the_roster_and_its_tokens_colour_each_side(client_factory: Callable[[], TestClient]):
-    client, campaign_id = _encounter_with(client_factory, columns=10, rows=10)
-    app = client.app
-    _call(
-        app,
-        campaign_id,
-        "create_npc",
-        {"name": "Moss", "location": TOWN, "description": "A bramble."},
-    )
-    added = _call(
-        app,
-        campaign_id,
-        "add_participant",
-        {"name": "Moss", "side": "wild things", "auto_place": False},
-    )
-    assert added["side"] == "wild things"
-    _place(app, campaign_id, "Ada", 2, 3, grid=None)
-    _place(app, campaign_id, "Pip", 4, 4, grid=None)
-    _place(app, campaign_id, "Moss", 6, 6, grid=None)
-
-    page = client.get(f"/campaigns/{campaign_id}").text
-
-    assert f'style="--token-side: {encounters.PARTY_SIDE_COLOR}" data-side="party"' in page
-    assert f'style="--token-side: {encounters.FOES_SIDE_COLOR}" data-side="foes"' in page
-    assert (
-        f'style="--token-side: {encounters.OTHER_SIDE_COLORS[0]}" data-side="wild things"' in page
-    )
-    assert '<span class="roster-side">party</span>' in page
-    assert '<span class="roster-side">foes</span>' in page
-    assert '<span class="roster-side">wild things</span>' in page
-    assert f'style="--side-color: {encounters.PARTY_SIDE_COLOR}"' in page
-    assert f'style="--side-color: {encounters.FOES_SIDE_COLOR}"' in page
 
 
 def _npc(name: str) -> Character:

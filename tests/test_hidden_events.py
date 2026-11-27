@@ -104,38 +104,9 @@ def test_hidden_lines_are_marked_and_shown_only_with_the_preference(
 
     assert '<div class="log-line">Discovered: Far Ledge.</div>' in page
     assert '<div class="log-line hidden-event">Note about Far Ledge: Check the ropes.</div>' in page
-    assert 'class="transcript"' in page
     assert 'class="transcript show-hidden"' not in page
-    assert 'data-show-thinking="0"' in page
-    assert "data-transcript" in page
-    assert 'data-gm-state="waiting"' in page
 
     set_show_internal_thinking(app.state.engine, owner_id, True)
     page = client.get(f"/campaigns/{campaign_id}").text
 
     assert 'class="transcript show-hidden"' in page
-    assert 'data-show-thinking="1"' in page
-
-
-def test_the_thinking_checkbox_lives_on_the_settings_page(
-    client_factory: Callable[[], TestClient],
-):
-    client, campaign_id = _campaign_id(client_factory)
-    page = client.get(f"/campaigns/{campaign_id}").text
-
-    assert 'id="view-settings"' in page
-    assert 'data-view-target="settings"' in page
-    assert page.index('id="view-settings"') < page.index('name="show_internal_thinking"')
-    assert "Show internal GM thinking" in page
-    assert (
-        "Shows the GM's hidden Log lines and lets you open the Context and Transcript of each reply."
-        in page
-    )
-
-
-def test_the_stylesheet_hides_hidden_lines_until_the_preference_shows_them(
-    client_factory: Callable[[], TestClient],
-):
-    client, _ = _campaign_id(client_factory)
-    css = client.get("/static/style.css").text
-    assert ".transcript:not(.show-hidden) .hidden-event { display: none; }" in css

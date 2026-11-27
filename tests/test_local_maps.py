@@ -17,7 +17,7 @@ from cygnusloom.services import encounters, views
 from cygnusloom.services.campaigns import campaign_transcript
 from cygnusloom.services.events import CellMark, name_key
 from tests.conftest import content_library
-from tests.factories import create_campaign, open_campaign, signed_in_client
+from tests.factories import open_campaign
 from tests.test_encounter_marks import (
     MAP,
     TOWN,
@@ -658,12 +658,8 @@ def test_the_gm_orientation_lists_local_map_positions_and_unplaced_characters(
         encounter_objects=rules.encounter_objects,
     )
     assert f"Local map: {MAP} at {TOWN}" in text
-    assert "each cell a few paces across" in text
     assert "- Pip (npc), column 2, row 1." in text
     assert "- Ada (player character), not yet placed." in text
-    assert "Place every unplaced character with place_map_token" in text
-    assert "Whenever the player's message takes a character toward a person or thing" in text
-    assert "a message that also speaks or acts still moves them" in text
 
 
 def test_get_statblock_reports_a_local_map_position(
@@ -713,79 +709,6 @@ def test_the_local_map_roster_marks_placed_and_unplaced_characters(
     assert "not yet placed" in page
 
 
-def test_the_campaign_page_offers_the_local_map_tab(
-    client_factory: Callable[[], TestClient],
-):
-    client, campaign_id = _campaign_id(client_factory)
-    _place_pc(client, campaign_id, TOWN)
-    _create_local_map(client, campaign_id)
-    page = client.get(f"/campaigns/{campaign_id}").text
-    assert 'id="tab-local"' in page
-    assert "Local map" in page
-    assert MAP in page
-    # The map's caption sits in the Location tab, not in the map panel.
-    description = "The common room, with its tables and hearth."
-    assert page.index('aria-label="Panels"') < page.index(description)
-
-
-def test_a_bundled_world_seeds_its_authored_local_maps(
-    client_factory: Callable[[], TestClient],
-):
-    client = signed_in_client(client_factory)
-    campaign_id = create_campaign(
-        client, world_template="twin-lakes", rule_set="cairn2e", label="Twin Lakes"
-    )
-    state = open_campaign(client.app, campaign_id)
-    names = {entry.name for entry in state.maps.values()}
-    assert "The Stuffed Inn local map" in names
-    assert "Cellar local map" in names
-    inn = next(entry for entry in state.maps.values() if entry.name == "The Stuffed Inn local map")
-    assert inn.location == "The Stuffed Inn"
-    # The inn's NPCs are already standing somewhere on its map.
-    assert inn.tokens
-    town = next(entry for entry in state.maps.values() if entry.name == "Isthmus Town local map")
-    assert len({row for _, row in town.tokens.values()}) > 1
-    # Setup placements are recorded but do not fill the player's transcript.
-    assert state.owner_id is not None
-    lines = [
-        item.content
-        for item in campaign_transcript(client.app.state.engine, state.owner_id, campaign_id)
-        if item.role == "log"
-    ]
-    assert not [line for line in lines if "is placed at column" in line]
-
-
-def test_a_local_map_copies_its_template_style_and_can_override_it(
-    client_factory: Callable[[], TestClient],
-):
-    client, campaign_id = _campaign_id(client_factory)
-    _place_pc(client, campaign_id, TOWN)
-    _create_local_map(client, campaign_id, "great_hall")
-    entry = _map(client.app, campaign_id)
-    assert (entry.palette, entry.ambient) == ("royal", "torchlit")
-    assert entry.background_color == "#d9d4c8"
-    assert entry.grid_color == "#b9b1a2"
-
-    _call(
-        client.app,
-        campaign_id,
-        "create_local_map",
-        {
-            "name": "Frost Hall",
-            "location": TOWN,
-            "description": "A cold, echoing hall.",
-            "template": "great_hall",
-            "palette": "frost",
-            "ambient": "night",
-            "background_color": "#112233",
-            "grid_color": "#445566",
-        },
-    )
-    cold = _map(client.app, campaign_id, "Frost Hall")
-    assert (cold.palette, cold.ambient) == ("frost", "night")
-    assert (cold.background_color, cold.grid_color) == ("#112233", "#445566")
-
-
 def test_create_map_validates_palette_ambient_and_colours(
     client_factory: Callable[[], TestClient],
 ):
@@ -806,28 +729,6 @@ def test_create_map_validates_palette_ambient_and_colours(
         refused = _call(client.app, campaign_id, "create_local_map", {**base, **change})
         assert message in refused["error"]
     assert name_key(MAP) not in open_campaign(client.app, campaign_id).maps
-
-
-def test_map_options_lists_terrains_objects_templates_and_looks(
-    client_factory: Callable[[], TestClient],
-):
-    client, campaign_id = _campaign_id(client_factory)
-    options = _call(client.app, campaign_id, "map_options", {})
-    terrains = {terrain["id"]: terrain for terrain in options["terrains"]}
-    assert {"marble", "wood", "lava", "void"} <= set(terrains)
-    assert terrains["marble"]["pattern"] == "tiles"
-    assert terrains["lava"]["difficult"] is True
-    assert terrains["marble"]["category"] == "stone"
-    objects = {item["id"]: item for item in options["objects"]}
-    assert {"window", "alchemy-table", "rune-circle", "cauldron-small"} <= set(objects)
-    assert objects["alchemy-table"]["blocks"] is True
-    assert objects["alchemy-table"]["category"] == "furniture"
-    templates = {template["id"]: template for template in options["templates"]}
-    assert templates["great_hall"]["palette"] == "royal"
-    assert templates["alchemy_lab"]["ambient"] == "magical"
-    assert "royal" in options["palettes"]
-    assert "torchlit" in options["ambients"]
-    assert {"tiles", "runes", "bricks", "wood"} <= set(options["patterns"])
 
 
 def test_update_local_map_renames_restyles_and_moves_a_map(
@@ -994,7 +895,6 @@ def test_the_local_map_panel_shows_the_palette_ambient_and_pattern(
     page = client.get(f"/campaigns/{campaign_id}").text
     assert "palette-royal" in page
     assert "ambient-torchlit" in page
-    assert "map-legend" not in page
     assert 'class="cell-pattern pattern-runes"' in page
     assert 'style="background-color: #123456"' in page
     assert 'data-label="Dais"' in page

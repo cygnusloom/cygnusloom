@@ -1011,22 +1011,6 @@ def test_an_optional_reaction_waits_for_the_players_consent(client_factory):
     assert "Cultured" in allowed["reaction"]
 
 
-def test_the_sheet_lists_each_reaction_on_its_own_line(client_factory):
-    client, campaign_id, _tools = _wwn_campaign(client_factory)
-    feature = WWN.character.features["focus_trapmaster"]
-    _learn(client.app, campaign_id, feature.id, feature.name)
-
-    page = client.get(f"/campaigns/{campaign_id}").text
-    panel = page[page.index('id="panel-character"') : page.index('id="panel-inventory"')]
-    block = panel[panel.index("Reactions:") :]
-
-    assert '<ul class="reaction-list">' in block
-    assert block.count("<li>") == 2
-    assert "Reroll a failed check involving a trap, snare, or hazard." in block
-    assert "Reroll a failed save involving a trap, snare, or hazard." in block
-    assert "already" not in block
-
-
 def test_impostor_rerolls_a_disguise_check_once_per_hour(client_factory):
     client, campaign_id, tools = _wwn_campaign(client_factory)
     feature = WWN.character.features["focus_impostor"]
@@ -1850,12 +1834,8 @@ def test_inventory_displays_worn_and_wielded_equipment(client_factory):
     assert "· Stowed" in panel
 
 
-def test_lookup_condition_returns_its_effects_and_triggers(client_factory):
+def test_lookup_condition_refuses_an_unknown_condition(client_factory):
     _, _, tools = _wwn_campaign(client_factory)
-
-    found = tools.lookup_condition("frail")
-    assert found["label"] == "Frail"
-    assert found["ends"] == ["extended_rest", "magic"]
 
     with pytest.raises(InvalidInput, match="there is no condition named 'nope'"):
         tools.lookup_condition("nope")

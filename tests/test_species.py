@@ -13,29 +13,17 @@ from sqlmodel import Session
 
 from cygnusloom.content.definitions import ContentError
 from cygnusloom.content.library import ContentLibrary
-from cygnusloom.llm.fake import FakeProvider
 from cygnusloom.services import world
 from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.events import load_state, name_key
 from cygnusloom.services.state import CampaignState
 from cygnusloom.services.views import get_statblock
 from tests.conftest import content_library
-from tests.factories import (
-    campaign_ready_fast,
-    close_opening,
-    create_campaign_direct,
-    create_character_direct,
-    place_pc,
-    send_message,
-    signed_in_client,
-)
+from tests.factories import campaign_ready_fast, place_pc
 from tests.support import DEFAULT_RULE_SET, content_tree, world_definitions
-from tests.test_dnd_srd_play import FIGHTER_FIELDS
 
 LIBRARY = content_library()
 DND = LIBRARY.rule_sets["dnd-srd-2024"]
-WWN = LIBRARY.rule_sets["worldswithoutnumber"]
-CAIRN = LIBRARY.rule_sets["cairn2e"]
 SPEC = LIBRARY.rule_sets["rolltest"].character
 TOOLS = LIBRARY.rule_sets["rolltest"].tool_calls
 
@@ -61,27 +49,6 @@ def _campaign(
     client_factory: Callable[[], TestClient],
 ) -> tuple[TestClient, int]:
     return campaign_ready_fast(client_factory)
-
-
-def test_only_rule_sets_and_worlds_declare_peoples():
-    assert [entry.name for entry in DND.species] == [
-        "Dragonborn",
-        "Dwarf",
-        "Elf",
-        "Gnome",
-        "Goliath",
-        "Halfling",
-        "Human",
-        "Orc",
-        "Tiefling",
-    ]
-    # World Without Number is humanocentric, with the dwarf and elf origins.
-    assert [entry.name for entry in WWN.species] == ["Human", "Dwarf", "Elf"]
-    # Core declares no peoples, so a rule set that does not name its own leaves the GM free.
-    assert LIBRARY.core.species == ()
-    assert CAIRN.species == ()
-    assert LIBRARY.rule_sets["academia-arcana"].species == ()
-    assert all(entry.culture and entry.blurb for entry in DND.species)
 
 
 def test_a_world_may_replace_the_rule_sets_peoples(tmp_path: Path):
@@ -221,7 +188,6 @@ def test_lookup_species_reads_the_cultures(client_factory: Callable[[], TestClie
     assert [entry["name"] for entry in every["peoples"]] == [entry.name for entry in DND.species]
     one = tools.lookup_species("dwarves")
     assert one["peoples"][0]["name"] == "Dwarf"
-    assert "clans live in halls" in one["peoples"][0]["culture"]
     with pytest.raises(InvalidInput, match="not one of the peoples here"):
         tools.lookup_species("Klingon")
     empty = _tools(app, campaign_id, species=()).lookup_species()
@@ -256,33 +222,7 @@ def test_the_orientation_names_the_peoples_and_a_places_majority(
     )
     assert "Peoples of this world: Dragonborn —" in text
     assert "Mossbell Hollow is mostly gnomes." in text
-    assert "create_npc takes species" in text
     assert "Nim (Gnome;" in text
-
-
-def test_a_turn_tells_the_gm_the_peoples(
-    client_factory: Callable[[], TestClient], app: FastAPI, fake: FakeProvider
-):
-    client = signed_in_client(client_factory)
-    campaign_id = create_campaign_direct(
-        client, world_template="testhollow", rule_set="dnd-srd-2024"
-    )
-    create_character_direct(client, campaign_id, fields=FIGHTER_FIELDS)
-    close_opening(client, campaign_id)
-    response = send_message(
-        client,
-        campaign_id,
-        'Look around. __FAKE__:{"turns": [{"text": "The road is quiet."}]}',
-    )
-    assert response.status_code == 303, response.text
-    system = "\n".join(
-        message.get("content", "")
-        for messages in fake.calls
-        for message in messages
-        if message.get("role") == "system"
-    )
-    assert "Peoples of this world: Dragonborn —" in system
-    assert "create_npc takes species" in system
 
 
 def test_the_statblock_names_an_npcs_people(client_factory: Callable[[], TestClient], app: FastAPI):

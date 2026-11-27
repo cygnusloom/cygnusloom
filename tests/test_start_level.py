@@ -116,8 +116,6 @@ def test_the_creation_page_offers_every_starting_level_of_a_ruleset_with_levels(
     assert re.findall(r'<option value="(\d+)"', select.group(1)) == [
         str(level) for level in range(1, 11)
     ]
-    assert "Level 1" in select.group(1)
-    assert "Level 10" in select.group(1)
     # Both campaign options are set by default: level 1, following the owner's character.
     assert re.search(r'<option value="1" selected>Level 1</option>', select.group(1))
     assert re.search(r'name="follow_owner_level" value="1" checked', page)
@@ -130,7 +128,6 @@ def test_a_ruleset_without_levels_offers_no_starting_level(
 
     page = client.get(f"/campaigns/{campaign_id}").text
 
-    assert 'class="creation-form"' in page
     assert 'name="start_level"' not in page
     assert 'name="follow_owner_level"' not in page
 

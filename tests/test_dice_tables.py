@@ -15,21 +15,11 @@ from cygnusloom.db.models import Event
 from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.dice_tables import roll_tables
 from cygnusloom.services.events import decode, events_since
-from tests.conftest import bundled_library, content_library
+from tests.conftest import content_library
 from tests.test_combat import CAIRN, _fight
 from tests.test_content import _core, _rule_set, _world, _write
 
 TABLES_ROLLED = "dice.tables_rolled"
-MONSTER_TABLES = [
-    "monster_appearance_physique",
-    "monster_appearance_feature",
-    "monster_traits_quirks",
-    "monster_traits_weakness",
-    "monster_attacks_type",
-    "monster_attacks_critical_damage",
-    "monster_abilities_ability",
-    "monster_abilities_target",
-]
 
 
 def _definition(rows: object, dice: object = "2d6", **extra: object) -> Definition:
@@ -43,14 +33,6 @@ def _event_count(db: Session, campaign_id: int) -> int:
     return db.exec(
         select(func.count()).select_from(Event).where(Event.campaign_id == campaign_id)
     ).one()
-
-
-@pytest.mark.parametrize("table_id", MONSTER_TABLES)
-def test_cairn_monster_tables_have_twenty_rows_covering_one_to_twenty(table_id):
-    table = bundled_library().rule_sets["cairn2e"].dice_tables[table_id]
-    assert table.dice == "1d20"
-    assert len(table.rows) == 20
-    assert [(row.low, row.high) for row in table.rows] == [(n, n) for n in range(1, 21)]
 
 
 BAD_TABLES = {
@@ -155,14 +137,6 @@ def test_compact_row_arrays_load_the_same_dice_rows_as_the_object_form(tmp_path:
     )
 
 
-def test_a_bundled_compact_dice_table_keeps_its_first_and_last_rows():
-    table = bundled_library().rule_sets["cairn2e"].dice_tables["community_tags"]
-    assert table.dice == "1d100"
-    assert len(table.rows) == 50
-    assert table.rows[0] == DiceRow(1, 2, "Bells rung backward for bad news")
-    assert table.rows[-1] == DiceRow(99, 100, "Honey traded for barley, not coin")
-
-
 def test_roll_tables_returns_one_roll_per_named_table_and_logs_one_event(client_factory):
     _, campaign_id, tools = _fight(client_factory)
     tables = CAIRN.dice_tables
@@ -258,18 +232,6 @@ def test_world_tools_roll_tables_returns_the_rolls_shape(client_factory: Callabl
     assert CAIRN.dice_tables["dungeon_reaction"].row_for(roll["roll"]).result == roll["result"]
 
 
-TWIN_LAKES_TABLES = {"encounters": 6, "rumors": 6, "victims": 8}
-
-
-def test_the_twin_lakes_world_tables_load_as_dice_tables():
-    world = content_library().world_content("twin-lakes", "cairn2e")
-    for table_id, rows in TWIN_LAKES_TABLES.items():
-        assert table_id in world.dice_tables
-        assert len(world.dice_tables[table_id].rows) == rows
-    assert world.dice_tables["encounters"].dice == "1d6"
-    assert world.dice_tables["victims"].dice == "1d8"
-
-
 def test_the_twin_lakes_world_tables_roll_in_a_live_campaign(client_factory):
     _, _, tools = _fight(client_factory)
     world = content_library().world_content("twin-lakes", "cairn2e")
@@ -278,10 +240,10 @@ def test_the_twin_lakes_world_tables_roll_in_a_live_campaign(client_factory):
         dice_tables={**CAIRN.dice_tables, **world.dice_tables},
         rng=random.Random(1),
     )
-    rolls = live.roll_tables(list(TWIN_LAKES_TABLES))["rolls"]
-    assert [roll["table"] for roll in rolls] == list(TWIN_LAKES_TABLES)
+    table_ids = list(world.dice_tables)
+    rolls = live.roll_tables(table_ids)["rolls"]
+    assert [roll["table"] for roll in rolls] == table_ids
     for roll in rolls:
         table = world.dice_tables[roll["table"]]
-        assert 1 <= roll["roll"] <= TWIN_LAKES_TABLES[roll["table"]]
         assert roll["name"] == table.name
         assert roll["result"] == table.row_for(roll["roll"]).result

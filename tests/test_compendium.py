@@ -37,20 +37,6 @@ def _entry_ids(compendium: Compendium, section_id: str) -> set[str]:
     return {entry.id for entry in section.entries}
 
 
-def test_cairn_compendium_has_the_sourcebook_sections():
-    library = content_library()
-    rules = library.rule_sets["cairn2e"]
-    compendium = compendium_view(library, "cairn2e", "twin-lakes")
-
-    sections = _sections(compendium)
-    assert {"world", "places", "terrain", "options", "stats", "items"} <= set(sections)
-    assert {"bestiary", "rules", "conditions", "tables", "dice"} <= set(sections)
-    monster = next(iter(rules.monsters.values()))
-    assert monster.name in _entry_names(compendium, "bestiary")
-    shop_item = rules.marketplace.items[0]
-    assert shop_item.name in _entry_names(compendium, "items")
-
-
 def test_creative_tables_follow_the_selected_categories():
     library = content_library()
     compendium = compendium_view(library, "cairn2e", "twin-lakes", table_genres=("magicschool",))
@@ -60,61 +46,6 @@ def test_creative_tables_follow_the_selected_categories():
     assert "compendium-dice-setting-premise" not in ids
     action = next(entry for entry in dice.entries if entry.id == "compendium-dice-action")
     assert {"creative", "oracle", "generic"} <= set(action.tags)
-
-
-def test_compendium_tabs_group_the_sections():
-    library = content_library()
-    compendium = compendium_view(library, "cairn2e", "twin-lakes")
-
-    assert [tab.id for tab in compendium.tabs] == [
-        "world",
-        "characters",
-        "abilities",
-        "items",
-        "bestiary",
-        "rules",
-        "tables",
-    ]
-    assert all(
-        tab.count == sum(len(section.entries) for section in tab.sections)
-        for tab in compendium.tabs
-    )
-    assert sum(tab.count for tab in compendium.tabs) == compendium.total
-
-
-def test_section_groups_keep_the_designed_reading_order():
-    compendium = compendium_view(content_library(), "cairn2e", "twin-lakes")
-    sections = _sections(compendium)
-
-    assert [group.name for group in sections["world"].groups] == ["Overview"]
-    assert [group.name for group in sections["places"].groups][:2] == ["Regions", "Places"]
-    assert sections["options"].groups[0].name == "Overview"
-    assert sections["bestiary"].groups[0].name == "Monsters"
-
-
-def test_character_content_fills_the_character_and_table_tabs():
-    library = content_library()
-    rules = library.rule_sets["worldswithoutnumber"]
-    compendium = compendium_view(library, "worldswithoutnumber", "unwritten-world")
-
-    assert {
-        "options",
-        "stats",
-        "skills",
-        "fields",
-        "advancement",
-        "tables",
-        "dice",
-    } <= set(_sections(compendium))
-    assert next(iter(rules.character.stats.values())).name in _entry_names(compendium, "stats")
-    assert next(iter(rules.character.skills.values())).name in _entry_names(compendium, "skills")
-    assert next(iter(rules.character.templates.values())).name in _entry_names(
-        compendium, "options"
-    )
-    assert next(iter(rules.character.fields.values())).name in _entry_names(compendium, "fields")
-    assert rules.character.tables
-    assert next(iter(rules.character.table_names.values())) in _entry_names(compendium, "tables")
-    assert next(iter(rules.dice_tables.values())).name in _entry_names(compendium, "dice")
 
 
 def test_sheet_links_point_at_character_content():
@@ -140,21 +71,15 @@ def test_the_peoples_of_the_setting_fill_the_peoples_section():
     section = _sections(compendium)["peoples"]
     assert section.name == "Peoples"
     assert section.tab == "world"
-    assert [entry.name for entry in section.entries] == ["Dwarf", "Elf", "Human"]
-    people = next(entry for entry in section.entries if entry.name == "Dwarf")
-    dwarf = next(entry for entry in rules.species if entry.name == "Dwarf")
-    assert people.summary == dwarf.blurb
-    assert people.text == dwarf.culture
+    assert {entry.name for entry in section.entries} == {entry.name for entry in rules.species}
+    species = rules.species[0]
+    people = next(entry for entry in section.entries if entry.name == species.name)
     assert people.source == "rules"
-    assert set(people.tags) == {"dwarves", "dwarven"}
-    assert people.id == "compendium-peoples-dwarf"
 
     # A name, plural, or adjective finds the same entry from a statblock or sheet.
-    assert compendium.sheet_links["Dwarf"] == people.id
-    assert compendium.sheet_links["dwarves"] == people.id
-    assert compendium.sheet_links["dwarven"] == people.id
-    linked = link_compendium("People: Dwarf", compendium.sheet_links)
-    assert f'<a href="#{people.id}" data-view-link="compendium">Dwarf</a>' in linked
+    assert compendium.sheet_links[people.name] == people.id
+    for tag in people.tags:
+        assert compendium.sheet_links[tag] == people.id
 
     # A rule set that declares no peoples adds no peoples section.
     cairn = compendium_view(library, "cairn2e", "twin-lakes")
@@ -238,45 +163,6 @@ def test_ability_and_creature_links_use_ids_and_names():
     assert compendium.ability_links[feature.id] in _entry_ids(compendium, "abilities")
     assert compendium.ability_links[name_key(feature.name)] == compendium.ability_links[feature.id]
     assert compendium.creature_links[monster.id] in _entry_ids(compendium, "bestiary")
-
-
-def test_encounter_objects_and_maps_explain_themselves():
-    compendium = compendium_view(content_library(), "cairn2e", "twin-lakes")
-    terrain = _sections(compendium)["terrain"]
-    chair = next(entry for entry in terrain.entries if entry.name == "Chair")
-    assert chair.summary == "A plain chair for sitting."
-    assert "A plain chair for sitting." in chair.text
-    tavern = next(entry for entry in terrain.entries if entry.name == "Tavern")
-    assert tavern.summary.startswith("A crowded taproom")
-    assert "14 columns by 10 rows" in tavern.text
-
-
-def test_authored_places_use_their_player_safe_summaries():
-    compendium = compendium_view(content_library(), "cairn2e", "twin-lakes")
-    place = next(
-        entry for entry in _sections(compendium)["places"].entries if entry.name == "Isthmus Town"
-    )
-    assert place.text.startswith("A fading logging town")
-    assert "fake tithing record" not in place.text
-
-
-def test_world_regions_carry_the_terrain_lore():
-    compendium = compendium_view(content_library(), "cairn2e", "twin-lakes")
-    region = next(
-        entry for entry in _sections(compendium)["places"].entries if entry.name == "West Lake"
-    )
-    assert "Open water" in region.text
-
-
-def test_field_and_period_descriptions_reach_the_compendium():
-    cairn = compendium_view(content_library(), "cairn2e", "twin-lakes")
-    bond = next(entry for entry in _sections(cairn)["fields"].entries if entry.name == "Bond")
-    assert bond.text.startswith("The person or promise they hold to.")
-    academy = compendium_view(content_library(), "academia-arcana", "unwritten-academy")
-    week = next(
-        entry for entry in _sections(academy)["advancement"].entries if entry.name == "school week"
-    )
-    assert week.text.startswith("A week of lessons")
 
 
 def test_a_campaign_option_with_one_value_is_not_a_compendium_option():

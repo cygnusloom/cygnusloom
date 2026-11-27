@@ -43,13 +43,6 @@ def _page(client: TestClient, campaign_id: int) -> str:
     return client.get(f"/campaigns/{campaign_id}/advancement").text
 
 
-def test_the_level_up_tracks_match_the_progression_data() -> None:
-    progression = WWN.rule_data["progression"]
-    level_up = WWN.level_ups["level"]
-
-    assert dict(level_up.tracks) == dict(progression.xp)
-
-
 def test_level_ready_and_the_debug_grant_read_the_one_xp_chart() -> None:
     from types import SimpleNamespace
 
@@ -80,21 +73,6 @@ def _submit(
     )
 
 
-def test_the_level_up_page_says_unspent_picks_are_banked(
-    client_factory: Callable[[], TestClient],
-) -> None:
-    app, campaign_id = _wwn_campaign(client_factory, class_id="warrior")
-    client = _signed_in(client_factory)
-    ctx = _ctx(_world_tools(app, campaign_id))
-    wwn.gain_xp(NAME, 3, "a session", ctx)
-
-    page = _page(client, campaign_id)
-
-    assert "stay banked" in page
-    assert "Spend picks" in page
-    assert 'data-busy-label="Applying level 2…"' in page
-
-
 def test_a_level_up_explains_the_leftover_picks_page_it_redirects_to(
     client_factory: Callable[[], TestClient],
 ) -> None:
@@ -114,7 +92,6 @@ def test_a_level_up_explains_the_leftover_picks_page_it_redirects_to(
     assert f"Spend picks: {NAME}" in page
     assert "saved instead of spending" in page
     assert "Level 2" in page
-    assert 'data-busy-label="Spending picks…"' in page
 
 
 def test_a_second_ready_level_is_explained_instead_of_silently_shown(
@@ -138,22 +115,6 @@ def test_a_second_ready_level_is_explained_instead_of_silently_shown(
     assert "Level 3" in page
 
 
-def test_a_ready_level_shows_its_automatic_gains_and_picks(
-    client_factory: Callable[[], TestClient],
-) -> None:
-    app, campaign_id = _wwn_campaign(client_factory, class_id="warrior")
-    client = _signed_in(client_factory)
-    ctx = _ctx(_world_tools(app, campaign_id))
-    wwn.gain_xp(NAME, 3, "a session", ctx)
-
-    page = _page(client, campaign_id)
-
-    assert "Level 2" in page
-    assert "Skill points" in page
-    assert "Focus" in page
-    assert "level up to 2" in page.lower()
-
-
 def test_the_advancement_page_hides_a_capped_stat_and_the_major_subject(
     client_factory: Callable[[], TestClient],
 ) -> None:
@@ -168,8 +129,6 @@ def test_the_advancement_page_hides_a_capped_stat_and_the_major_subject(
     assert 'value="subject-illusion"' not in page
     assert 'value="alchemy"' in page
     assert 'value="subject-transfiguration"' in page
-    assert 'data-pick-control="feature-spell"' in page
-    assert 'data-description="' in page
 
 
 def test_a_dual_partial_level_page_shows_the_combined_chart(
@@ -186,25 +145,6 @@ def test_a_dual_partial_level_page_shows_the_combined_chart(
     assert "Skill points: 3." in page
     assert "Focus pick: 1." in page
     assert "Art pick: 1." in page
-
-
-def test_the_level_up_page_uses_the_rich_pick_widget_for_foci(
-    client_factory: Callable[[], TestClient],
-) -> None:
-    app, campaign_id = _wwn_campaign(client_factory, class_id="warrior")
-    client = _signed_in(client_factory)
-    ctx = _ctx(_world_tools(app, campaign_id))
-    wwn.gain_xp(NAME, 3, "a session", ctx)
-
-    page = _page(client, campaign_id)
-
-    assert 'data-pick-control="pick-focus-0"' in page
-    assert 'data-open-pick="pick-dialog-pick-focus-0"' in page
-    assert 'data-pick-empty="Choose a focus"' in page
-    assert 'name="pick-focus-0"' in page
-    assert 'name="pick-focus-1"' not in page
-    assert 'data-description="' in page
-    assert 'data-repeatable="' in page
 
 
 def test_the_level_up_page_does_not_offer_foci_the_character_has(

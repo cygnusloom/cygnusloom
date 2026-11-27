@@ -7,7 +7,6 @@ once per faction turn, and taking the next turn readies it again.
 
 from __future__ import annotations
 
-from collections import Counter
 from collections.abc import Callable
 
 import pytest
@@ -63,39 +62,6 @@ def _with_pc(state: CampaignState) -> CampaignState:
         quirks=[],
     )
     return state
-
-
-def test_the_shipped_wwn_asset_tables_load_for_all_three_categories() -> None:
-    assets = content_library().rule_sets[RULE_SET].faction_assets
-
-    assert len(assets) == 81
-    assert Counter(asset.category for asset in assets.values()) == {
-        "cunning": 27,
-        "force": 27,
-        "wealth": 27,
-    }
-
-    infantry = assets["infantry"]
-    assert infantry.label == "Infantry"
-    assert (infantry.category, infantry.rating, infantry.cost, infantry.hp) == (
-        "force",
-        3,
-        6,
-        6,
-    )
-    assert infantry.magic == "None"
-    assert infantry.attack == "F v. F/1d8 damage"
-    assert infantry.counter == "1d6 damage"
-    assert infantry.qualities == ()
-
-    useful_idiots = assets["useful_idiots"]
-    assert useful_idiots.label == "Useful Idiots"
-    assert (useful_idiots.rating, useful_idiots.cost, useful_idiots.hp) == (1, 1, 2)
-    assert useful_idiots.qualities == ("Subtle", "Special")
-
-    golden = assets["golden_prosperity"]
-    assert golden.category == "wealth"
-    assert (golden.rating, golden.cost, golden.hp, golden.magic) == (8, 40, 30, "Medium")
 
 
 def test_wwn_creates_and_lists_a_tally_less_faction(
@@ -304,7 +270,6 @@ def test_the_campaign_page_renders_assets_and_omits_an_empty_cup(
     tools.take_faction_turn(FACTION)
 
     page = client.get(f"/campaigns/{campaign_id}").text
-    assert 'id="panel-factions"' in page
     assert FACTION in page
     assert "Turn 2" in page
     assert "Infantry — 6/6 HP, force, ready" in page

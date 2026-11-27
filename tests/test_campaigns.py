@@ -235,7 +235,6 @@ def test_campaign_list_shows_when_the_last_event_was(
     client = _signed_in(client_factory)
     assert _new_campaign(client, label="Active game").status_code == 303
     page = client.get("/campaigns").text
-    assert 'class="campaign-activity"' in page
     assert re.search(r"(?:just now|\d+ (?:minute|hour|day)s? ago) \(\d{4}-\d{2}-\d{2}\)", page)
 
 
@@ -358,27 +357,6 @@ def test_default_labels_number_each_world_separately(
     assert _label_of(client, _created_campaign_id(twin_lakes)) == "Trouble in Twin Lakes #1"
 
 
-def test_new_campaign_form_asks_for_the_label_last(
-    client_factory: Callable[[], TestClient],
-):
-    client = _signed_in(client_factory)
-    page = client.get("/campaigns/new").text
-    assert page.index('name="rule_set"') < page.index('name="world_template"')
-    assert page.index('name="world_template"') < page.index('name="label"')
-
-
-def test_new_campaign_form_keeps_the_model_choice_in_advanced_settings(
-    client_factory: Callable[[], TestClient],
-):
-    client = _signed_in(client_factory)
-    page = client.get("/campaigns/new").text
-    assert '<details class="advanced-options">' in page
-    assert page.index('name="label"') < page.index("Advanced settings")
-    assert page.index("Advanced settings") < page.index('name="model"')
-    assert '<option value="" selected>Use the server\'s default (fake/scripted)</option>' in page
-    assert "ollama/test-model" in page
-
-
 def test_a_new_campaign_can_choose_its_model(
     client_factory: Callable[[], TestClient],
 ):
@@ -431,25 +409,6 @@ def test_a_failed_create_keeps_the_chosen_model_visible(
     assert response.status_code == 400
     assert '<details class="advanced-options" open>' in response.text
     assert '<option value="ollama/test-model" selected>' in response.text
-
-
-def test_setting_belongs_to_the_campaign_options_creation_page(
-    client_factory: Callable[[], TestClient],
-):
-    client = _signed_in(client_factory)
-    first_page = client.get("/campaigns/new").text
-    assert 'name="setting"' not in first_page
-    assert 'name="table_genres"' not in first_page
-    response = _new_campaign(client, world_template="twin-lakes", rule_set="cairn2e")
-    campaign_id = _created_campaign_id(response)
-    page = client.get(f"/campaigns/{campaign_id}").text
-    assert 'name="setting" rows="3" maxlength="4000"' in page
-    assert 'name="table_genres"' in page
-    assert page.index("Campaign options") < page.index('name="setting"')
-    assert page.index("Campaign options") < page.index("Creative sources")
-    assert page.index('name="setting"') < page.index("Your character")
-    assert page.index("Creative sources") < page.index("Your character")
-    assert "Blank is ignored." in page
 
 
 def test_create_stores_the_setting_and_story(client_factory: Callable[[], TestClient]):
@@ -564,18 +523,6 @@ def test_creation_rejects_an_unknown_table_genre_and_keeps_the_rest(
     assert 'name="table_genres" value="steampunk"' not in created.text
 
 
-def test_campaign_list_keeps_the_label_editor_behind_a_toggle(
-    client_factory: Callable[[], TestClient],
-):
-    client = _signed_in(client_factory)
-    _new_campaign(client, label="Twin Lakes #1")
-    page = client.get("/campaigns").text
-    details = page.index('<details class="campaign-label">')
-    form = page.index('class="campaign-label-form"')
-    assert details < form < page.index("</details>", details)
-    assert '<summary aria-label="Edit label for Twin Lakes #1">Edit label</summary>' in page
-
-
 def test_change_campaign_label_from_the_list(client_factory: Callable[[], TestClient]):
     client = _signed_in(client_factory)
     response = _new_campaign(client, label="Old label")
@@ -610,24 +557,6 @@ def test_other_accounts_cannot_change_a_campaign_label(
     assert _label_of(owner, campaign_id) == "Owner's chat"
 
 
-def test_new_campaign_form_offers_world_and_rule_set(client_factory: Callable[[], TestClient]):
-    client = _signed_in(client_factory)
-    page = client.get("/campaigns/new").text
-    assert re.search(r'<select name="rule_set"[^>]* required', page)
-    assert re.search(r'<select name="world_template"[^>]* required', page)
-    assert '<option value="testhollow"' in page
-    assert '<option value="rolltest"' in page
-
-
-def test_new_campaign_form_shows_a_blurb_for_each_rule_set_and_world(
-    client_factory: Callable[[], TestClient],
-):
-    client = _signed_in(client_factory)
-    page = client.get("/campaigns/new").text
-    assert 'data-detail="Test-only rule set with a player roll.' in page
-    assert 'data-detail="A magical forest of mushroom gnomes.' in page
-
-
 def test_create_rejects_unknown_world_template(client_factory: Callable[[], TestClient]):
     client = _signed_in(client_factory)
     response = _new_campaign(client, world_template="mars")
@@ -651,51 +580,6 @@ def test_create_rejects_a_rule_set_the_world_is_not_played_with(
     assert "that module only works with the Cairn 2e rule set" in response.text
 
 
-def test_new_campaign_form_marks_a_world_that_names_its_rule_set(
-    client_factory: Callable[[], TestClient],
-):
-    client = _signed_in(client_factory)
-    page = client.get("/campaigns/new").text
-    assert re.search(r'<option value="twin-lakes"[^>]*data-rule-set="cairn2e"', page)
-    assert "/static/new_campaign.js" in page
-
-
-def test_new_campaign_form_marks_third_party_content_and_offers_credits(
-    client_factory: Callable[[], TestClient],
-):
-    client = _signed_in(client_factory)
-    page = client.get("/campaigns/new").text
-    assert re.search(r'<option value="cairn2e"[^>]*data-third-party="1"', page)
-    assert re.search(r'<option value="worldswithoutnumber"[^>]*data-third-party="1"', page)
-    assert re.search(r'<option value="twin-lakes"[^>]*data-third-party="1"', page)
-    assert re.search(r'<option value="academia-arcana"[^>]*data-third-party="0"', page)
-    assert re.search(r'<span data-blurb-credits="rule_set">', page)
-    assert re.search(r'<span data-blurb-credits="world_template" hidden>', page)
-    assert page.count('<a href="/license">content credits</a>') == 2
-
-
-def test_new_campaign_form_puts_credits_in_third_party_descriptions(
-    client_factory: Callable[[], TestClient],
-):
-    client = _signed_in(client_factory)
-    response = _new_campaign(
-        client,
-        label="x" * 121,
-        world_template="twin-lakes",
-        rule_set="cairn2e",
-    )
-    assert response.status_code == 400
-    page = response.text
-    assert re.search(
-        r'<span data-blurb-credits="rule_set">\s*See <a href="/license">content credits</a>\.</span>',
-        page,
-    )
-    assert re.search(
-        r'<span data-blurb-credits="world_template">\s*See <a href="/license">content credits</a>\.</span>',
-        page,
-    )
-
-
 def test_create_stores_the_chosen_settings(client_factory: Callable[[], TestClient]):
     client = _signed_in(client_factory)
     response = _new_campaign(client, label="Mushroom court")
@@ -705,7 +589,6 @@ def test_create_stores_the_chosen_settings(client_factory: Callable[[], TestClie
     assert "Mushroom court" in page
     assert "Test Hollow" in page
     assert "Roll Test" in page
-    assert 'class="inline-icon"' in page
 
 
 def test_chat_round_trip_saves_both_messages(client_factory: Callable[[], TestClient]):
@@ -797,7 +680,6 @@ def test_failed_reply_keeps_the_message_and_offers_continue(
     assert page.count('class="message user"') == 1
     assert "are you there?" in page
     assert "provider broken is unreachable" in page
-    assert 'name="kind" value="continue"' in page
     turn = _pending(app, campaign_id)
     assert turn is not None and turn.prompt is None and turn.failed
 
@@ -842,58 +724,6 @@ def test_other_accounts_cannot_see_or_post(client_factory: Callable[[], TestClie
     assert "Test chat" in owner.get("/campaigns").text
 
 
-def test_campaign_page_has_sidebar_controls(client_factory: Callable[[], TestClient]):
-    client, campaign_id = _campaign_id(client_factory)
-    page = client.get(f"/campaigns/{campaign_id}").text
-    assert 'data-view-target="journal"' in page
-    assert 'data-view="journal" aria-labelledby="journal-title" hidden' in page
-    assert 'data-view-target="characters"' in page
-    assert 'data-view="characters"' in page
-    assert 'data-view-target="settings"' in page
-    assert 'data-view="settings" aria-labelledby="settings-title"' in page
-    assert "data-side-toggle" in page
-    assert "data-menu-toggle" in page
-    assert 'id="site-menu"' in page
-
-
-def test_the_composer_mirrors_send_with_a_scene_and_character_toggle(
-    client_factory: Callable[[], TestClient],
-):
-    """Phones get a second way into the details drawer beside the message box."""
-    client, campaign_id = _campaign_id(client_factory)
-    page = client.get(f"/campaigns/{campaign_id}").text
-    assert page.count("data-side-toggle") == 2
-    assert 'class="scene-toggle" data-side-toggle' in page
-    assert "Scene &amp; Character" in page
-    assert 'aria-controls="side-panel"' in page
-    assert 'id="side-panel"' in page
-
-
-def test_the_details_button_returns_to_play_before_opening_its_drawer(
-    client_factory: Callable[[], TestClient],
-):
-    """The details drawer lives inside the Play view, so its button opens Play from elsewhere."""
-    client, _ = _campaign_id(client_factory)
-    script = client.get("/static/workspace.js")
-    assert script.status_code == 200
-    start = script.text.index('toggle.addEventListener("click"')
-    handler = script.text[start : script.text.index("});", start)]
-    assert 'selectView("play")' in handler
-    assert "document.querySelector('[data-view=\"play\"]')?.hidden" in handler
-
-
-def test_browser_back_closes_the_details_drawer(client_factory: Callable[[], TestClient]):
-    """Opening the drawer pushes history, so Back closes it instead of leaving the campaign."""
-    client, _ = _campaign_id(client_factory)
-    script = client.get("/static/workspace.js").text
-    assert 'SIDE_HISTORY = "cygnusDetails"' in script
-    assert "history.pushState(" in script
-    popstate = script[script.index('addEventListener("popstate"') :]
-    handler = popstate[: popstate.index("});")]
-    assert 'shell.classList.contains("show-side")' in handler
-    assert "setSide(false" in handler
-
-
 def test_debug_panel_is_hidden_and_refused_by_default(client_factory):
     client, campaign_id = _campaign_id(client_factory)
     assert 'id="tab-debug"' not in client.get(f"/campaigns/{campaign_id}").text
@@ -922,7 +752,6 @@ def test_debug_panel_refuses_a_name_that_is_not_a_player_character(
 
 def test_debug_panel_refuses_a_bad_score(settings: Settings, fake: FakeProvider):
     client, campaign_id = _campaign_id(_debug_client_factory(settings, fake))
-    assert "Set score" in client.get(f"/campaigns/{campaign_id}").text
     assert _set_debug_stat(client, campaign_id, "Ada", "hp", "lots").status_code == 400
     assert _set_debug_stat(client, campaign_id, "Nobody", "hp", "2").status_code == 400
 

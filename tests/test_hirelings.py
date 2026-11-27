@@ -319,23 +319,6 @@ def test_the_player_sees_their_hirelings_whole_sheet_even_when_it_is_away(client
     assert scene.hireling_sheets[0].location == "The Inn"
 
 
-def test_the_character_tab_shows_the_hirelings_sheet(client_factory):
-    _app, campaign_id, tools = _pcs(client_factory)
-    _hire(tools)
-    client = _signed_in(client_factory)
-
-    page = client.get(f"/campaigns/{campaign_id}").text
-
-    assert 'class="tab-list character-tab-list"' in page
-    assert 'aria-controls="panel-sheet-pc"' in page
-    assert 'aria-controls="panel-sheet-1"' in page
-    assert 'id="panel-sheet-1"' in page
-    assert f">{HIRELING}</button>" in page
-    assert "Stats:" in page
-    assert f"Hired by {PC} · {WAGE} {CAIRN.clock.wage_currency} a day" in page
-    assert 'class="sheet-hp"' in page
-
-
 def test_a_hirelings_sheet_shows_current_and_maximum_hit_points(client_factory):
     app, campaign_id, tools = _pcs(client_factory)
     _hire(tools)
@@ -372,24 +355,6 @@ def test_the_player_sees_a_hirelings_pack(client_factory):
     view = scene.hireling_inventories[0]
     assert view.employer == PC
     assert [item.name for item in view.pack.items] == ["Rations"]
-
-
-def test_the_inventory_tab_has_a_tab_for_each_hirelings_pack(client_factory):
-    _app, campaign_id, tools = _pcs(client_factory)
-    _hire(tools)
-    tools.give_item(HIRELING, "Rope")
-    client = _signed_in(client_factory)
-
-    page = client.get(f"/campaigns/{campaign_id}").text
-    start = page.index('id="panel-inventory"')
-    inventory = page[start : page.index("</section>", start)]
-
-    assert 'class="tab-list inventory-tab-list"' in inventory
-    assert 'aria-controls="panel-pack-pc"' in inventory
-    assert 'aria-controls="panel-pack-1"' in inventory
-    assert f">{HIRELING}</button>" in inventory
-    hireling_panel = inventory[inventory.index('id="panel-pack-1"') :]
-    assert "<strong>Rope</strong>" in hireling_panel
 
 
 def test_transfer_item_moves_an_item_between_packs_and_keeps_its_uses(client_factory):

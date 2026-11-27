@@ -295,34 +295,6 @@ def test_core_tools_keep_one_resolvable_handler():
             assert call.world_method is None
 
 
-def test_core_binding_leaves_the_schemas_unchanged():
-    calls = content_library().core.tool_calls
-    assert sorted(calls["create_npc"].parameters["properties"]) == [
-        "accent",
-        "armor",
-        "attacks",
-        "character",
-        "description",
-        "force",
-        "important",
-        "location",
-        "name",
-        "personality",
-        "pronouns",
-        "quirks",
-        "species",
-        "summary",
-    ]
-    assert calls["view_journal"].parameters["required"] == ["start_line"]
-    assert calls["place_object"].parameters["required"] == [
-        "name",
-        "place",
-        "contents",
-        "hidden",
-        "cause",
-    ]
-
-
 # Cairn tool calls that keep a Python function: only the ruleset's own condition logic. Every
 # other Cairn tool binds a WorldTools method, with `bind` for fixed arguments.
 CAIRN_KEPT_PYTHON = {

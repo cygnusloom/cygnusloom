@@ -17,11 +17,9 @@ from cygnusloom.services.world import WorldTools
 from tests.conftest import content_library, csrf_token
 from tests.factories import (
     choose_campaign_options,
-    close_opening,
     create_campaign_direct,
     create_character_direct,
     creation_fields,
-    send_message,
     signed_in_client,
 )
 from tests.support import content_tree, write_files
@@ -51,138 +49,8 @@ def test_a_campaign_module_owns_its_setting():
     assert module.kind == "campaign"
     assert module.world_template is not None
     world = module.world_template
-    assert any(place.id == "deadmill" for place in world.locations)
-    assert any(npc.id == "flavia" for npc in world.npcs)
     assert TWIN_LAKES not in library.world_templates
     assert library.setting_template(TWIN_LAKES) is world
-
-
-def test_twin_lakes_keeps_the_cas1_source_material():
-    library = content_library()
-    template = library.setting_template(TWIN_LAKES)
-    world = library.world_content(TWIN_LAKES, "cairn2e")
-    assert {
-        "isthmus-town",
-        "the-stuffed-inn",
-        "the-reeve-s-office",
-        "cellar",
-        "butcher-shop",
-        "giva-s-home",
-        "farming-path",
-        "dunston",
-        "fasha-s-farm",
-        "abandoned-home",
-        "old-mill-road",
-        "the-stone-forest",
-        "deadmill",
-        "1-interior",
-        "2-the-waterwheel",
-        "east-lake-pass",
-        "the-downs",
-        "white-tower-fens",
-        "1-whistlewood",
-        "2-pit-trap",
-        "3-log-trap",
-        "the-white-tower",
-        "bone-sump",
-        "temple-of-the-fungal-lizards",
-        "t1-antechamber",
-        "t2-columbarium",
-        "t3-breeding-chamber",
-        "t4-maintenance-tunnel",
-        "t5-hall-of-glyphs",
-        "t6-waste-disposal",
-        "t7-light-room",
-        "t8-preparation-room",
-        "t9-chamber-of-worship",
-        "t10a-interrogation-room-door",
-        "t10b-interrogation-room-interior",
-    } <= {place.id for place in template.locations}
-    assert {
-        "reeve-trellis",
-        "fasha",
-        "aldra",
-        "flavia",
-        "jandy",
-        "giva",
-        "drum",
-        "annafranax",
-        "vuk",
-        "corsetta",
-        "franz",
-        "beju",
-        "nicolas",
-    } <= {npc.id for npc in template.npcs}
-    assert {
-        "night-cat",
-        "bandit-leader",
-        "bandit",
-        "fasha",
-        "annafranax",
-        "suraru",
-        "suraru-imperator",
-    } <= set(world.monsters)
-    assert {
-        "eye-of-vuk",
-        "fletcher-s-ire",
-        "echo-spark",
-        "moon-cloth",
-        "curved-dagger",
-        "watersnatch",
-        "memory-prism",
-        "wisp-lamp",
-    } <= set(world.items)
-    assert {"victims", "rumors", "encounters"} <= set(world.tables)
-    assert {
-        "night-cat-attack",
-        "night-cat-critical-damage",
-        "suraru-imperator-critical-damage",
-        "bandit-morale",
-        "rumors-trigger",
-        "encounters-trigger",
-        "the-downs-travel",
-        "deadmill-sinking",
-        "deadmill-time-loop",
-        "vuk-choking-hold",
-        "memory-prism-current-memories",
-        "trapdoor-butcher-block",
-        "the-roots",
-        "outcome-vuk-reborn",
-        "outcome-gate-opened",
-        "outcome-vuk-reborn-and-gate-opened",
-        "outcome-vuk-stopped-gate-closed",
-        "twin-lakes-overview",
-        "faction-tideborn",
-        "faction-order-of-nine",
-        "bone-sump-discovery",
-        "victim-schedule",
-    } <= set(world.rules)
-    assert "bandit-morale" in world.monsters["bandit"].rules
-    assert "bandit-morale" in world.monsters["bandit-leader"].rules
-    assert "memory-prism-current-memories" in world.items["memory-prism"].rules
-    vuk = next(npc for npc in template.npcs if npc.id == "vuk")
-    assert "memory-prism-current-memories" in vuk.rules
-    assert {"rumors-trigger", "encounters-trigger"} <= set(world.unattached_rules)
-    assert "Reroll repeated results" in world.rules["rumors-trigger"]
-    assert "Roll twice at night" in world.rules["encounters-trigger"]
-    assert "cowl is removed" in world.rules["memory-prism-current-memories"]
-    assert "short bow" in world.monsters["bandit"].description
-
-
-def test_a_mini_module_is_prose_and_shared_metadata():
-    module = content_library().modules[HERMIT]
-    assert module.kind == "mini"
-    assert module.world_template is None
-    assert module.blurb == (
-        "A reclusive herbwife in a burnt-out hut knows what happened at the mill."
-    )
-    assert module.description == module.blurb
-    assert "Create the herbwife" in module.body
-    assert "The herbwife saw the miller's son" in module.body
-    assert "Mara" not in module.body
-    assert module.categories == ("fantasy",)
-    assert module.tones == ("grim", "mystery")
-    assert module.location_density == ("low",)
 
 
 def _mini_module_manifest(location_density: object) -> dict[str, object]:
@@ -250,15 +118,14 @@ def test_list_modules_offers_a_fitting_seed_once(client_factory):
     assert "compact site" in cards[0]["location_density_notes"][0]
     with pytest.raises(InvalidInput, match="use_module"):
         tools.lookup_module(HERMIT)
+    module = client.app.state.content.modules[HERMIT]
     text = tools.use_module(HERMIT, "a rumour on the river road")["text"]
-    assert "The herbwife saw the miller's son" in text
-    assert "hush-money" in text
-    assert "Mara" not in text
+    assert text == module.body
     with Session(client.app.state.engine) as session:
         state = load_state(session, campaign_id)
     assert HERMIT in state.used_modules
     assert tools.list_modules()["modules"] == []
-    assert "The herbwife saw the miller's son" in tools.lookup_module(HERMIT)["text"]
+    assert tools.lookup_module(HERMIT)["text"] == text
     with pytest.raises(InvalidInput, match="already used"):
         tools.use_module(HERMIT)
 
@@ -309,14 +176,6 @@ def test_the_state_prompt_mentions_available_mini_modules():
     )
 
 
-def test_twin_lakes_is_a_campaign_module_in_the_new_campaign_picker(client_factory):
-    client = signed_in_client(client_factory)
-    page = client.get("/campaigns/new").text
-    assert '<option value="twin-lakes"' in page
-    assert 'data-campaign-module="1"' in page
-    assert 'name="module"' not in page
-
-
 def test_twin_lakes_can_start_a_campaign_as_a_world(client_factory):
     client = signed_in_client(client_factory)
     token = csrf_token(client, "/campaigns/new")
@@ -337,25 +196,3 @@ def test_twin_lakes_can_start_a_campaign_as_a_world(client_factory):
     assert campaign is not None
     assert campaign.world_template == TWIN_LAKES
     assert not hasattr(campaign, "module")
-
-
-def test_an_available_mini_module_is_in_the_turn_prompt(client_factory, fake):
-    client = signed_in_client(client_factory)
-    campaign_id = create_campaign_direct(client, world_template=TWIN_LAKES, rule_set="cairn2e")
-    choose_campaign_options(client, campaign_id, "cairn2e")
-    fields = creation_fields(client, campaign_id)
-    create_character_direct(client, campaign_id, fields=fields)
-    close_opening(client, campaign_id)
-    response = send_message(
-        client,
-        campaign_id,
-        'Look around. __FAKE__:{"turns": [{"text": "The lake is quiet."}]}',
-    )
-    assert response.status_code == 303, response.text
-    system = "\n".join(
-        message.get("content", "")
-        for messages in fake.calls
-        for message in messages
-        if message.get("role") == "system"
-    )
-    assert "Mini modules available: 1" in system

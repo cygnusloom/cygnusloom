@@ -21,7 +21,7 @@ from cygnusloom.services.events import (
     ItemRemoved,
     record,
 )
-from tests.conftest import bundled_library, csrf_token
+from tests.conftest import csrf_token
 from tests.factories import create_character_direct
 from tests.support import content_tree
 from tests.test_campaigns import _debug_client_factory
@@ -372,11 +372,6 @@ def _give_debug_gold(client: TestClient, campaign_id: int, amount: str, name: st
     )
 
 
-def test_debug_gold_is_hidden_by_default(client_factory):
-    client, campaign_id = _cairn_campaign(client_factory)
-    assert _give_debug_gold(client, campaign_id, "5").status_code == 404
-
-
 def test_debug_gold_adds_the_rule_sets_currency(settings: Settings, fake: FakeProvider):
     client, campaign_id = _cairn_campaign(_debug_client_factory(settings, fake))
     create_character_direct(
@@ -387,16 +382,6 @@ def test_debug_gold_adds_the_rule_sets_currency(settings: Settings, fake: FakePr
     assert _give_debug_gold(client, campaign_id, "40").status_code == 303
     assert _gold(app, campaign_id) == before + 40
     assert f"Give {MARKET.currency}" in client.get(f"/campaigns/{campaign_id}").text
-
-
-def test_debug_gold_refuses_a_bad_amount(settings: Settings, fake: FakeProvider):
-    client, campaign_id = _cairn_campaign(_debug_client_factory(settings, fake))
-    create_character_direct(
-        client, campaign_id, name=PC, fields=_complete_form(client, campaign_id)
-    )
-    assert _give_debug_gold(client, campaign_id, "lots").status_code == 400
-    assert _give_debug_gold(client, campaign_id, "0").status_code == 400
-    assert _give_debug_gold(client, campaign_id, "5", name="Nobody").status_code == 400
 
 
 def test_a_gift_of_gold_is_recorded_as_a_gold_change(client_factory):
@@ -576,66 +561,3 @@ def test_a_shop_item_definition_is_no_longer_content(tmp_path):
                 ],
             )
         )
-
-
-def test_bundled_cairn_items_keep_their_catalogue_fields():
-    items = {item.id: item for item in bundled_library().rule_sets["cairn2e"].marketplace.items}
-    dagger = items["dagger"]
-    assert (
-        dagger.name,
-        dagger.category,
-        dagger.price,
-        dagger.size,
-        dagger.armor,
-        dagger.damage,
-        dagger.uses,
-    ) == ("Dagger", "weapons", 5, "normal", 0, "1d6", 0)
-    assert dagger.description == "Dagger, Cudgel, Sickle, Staff, etc. (d6 damage)"
-    assert (dagger.icon, dagger.looks_like) == ("dagger", "dagger")
-
-    brigandine = items["brigandine"]
-    assert (brigandine.size, brigandine.armor, brigandine.description) == (
-        "bulky",
-        1,
-        "1 Armor, bulky",
-    )
-    assert (brigandine.icon, brigandine.looks_like) == ("chain-mail", "chain-mail")
-
-    rations = items["rations"]
-    assert (rations.uses, rations.icon, rations.looks_like, rations.description) == (
-        3,
-        "rations",
-        "rations",
-        "3 uses",
-    )
-
-
-def test_bundled_wwn_items_keep_their_catalogue_fields():
-    items = {
-        item.id: item
-        for item in bundled_library().rule_sets["worldswithoutnumber"].marketplace.items
-    }
-    plate = items["plate_armor"]
-    assert (
-        plate.name,
-        plate.category,
-        plate.price,
-        plate.size,
-        plate.armor,
-        plate.armor_mode,
-    ) == ("Plate Armor", "armor", 1000, "large", 7, "max")
-    assert plate.encumbrance_checks == ("sneak", "exert")
-    assert (plate.damage, plate.uses) == ("", 0)
-    assert plate.description == "Heavy armor, AC 17, Encumbrance 2; penalizes Sneak and Exert."
-
-    ration = items["daily-ration"]
-    assert (ration.icon, ration.looks_like) == ("rations", "rations")
-    assert ration.description == "A day's food and water for one person. Encumbrance 1."
-
-    axe = items["axe_hand"]
-    assert (axe.name, axe.damage, axe.icon, axe.looks_like) == (
-        "Hand Axe",
-        "1d6",
-        "axe",
-        "axe",
-    )

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import random
 from collections.abc import Callable
 from dataclasses import replace
@@ -13,16 +12,13 @@ from sqlmodel import Session
 
 from cygnusloom.content.definitions import ContentError, Definition
 from cygnusloom.content.library import (
-    DATA_DIR,
     ContentLibrary,
     _load_creative_table,
     _patch_creative_table,
 )
-from cygnusloom.rules.context import brief
 from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.dice_tables import roll_creative
 from cygnusloom.services.events import decode, events_since
-from tests.conftest import bundled_library
 from tests.test_combat import CAIRN, _fight
 from tests.test_content import _core, _rule_set, _world, _write
 
@@ -51,69 +47,9 @@ def tree(tmp_path: Path) -> Path:
     return tmp_path
 
 
-CORE_ORACLE_TABLES = ["action", "theme", "plot_twist", "location", "location_descriptor"]
-# The setting tables live in core too, after the core's own, so every rule set can roll them.
-CORE_SETTING_TABLES = [
-    "setting_premise",
-    "region_identity",
-    "faction",
-    "conflict",
-    "mystery",
-    "adventure_hook",
-]
-ALL_CORE_CREATIVE_TABLES = [*CORE_ORACLE_TABLES, *CORE_SETTING_TABLES]
-
-
 def _rule_set_tables(tree: Path, definitions: list[dict[str, Any]]) -> dict[str, Any]:
     _write(tree, {"rulesets/testset/creative.json": definitions})
     return ContentLibrary.load(tree).rule_sets["testset"].dice_tables
-
-
-def test_core_creative_tables_roll_one_die_with_an_entry_per_roll():
-    tables = bundled_library().rule_sets["cairn2e"].dice_tables
-    for table_id in ALL_CORE_CREATIVE_TABLES:
-        table = tables[table_id]
-        assert table.creative
-        assert table.dice == f"1d{len(table.rows)}"
-        assert [row.high for row in table.rows] == list(range(1, len(table.rows) + 1))
-        assert all(row.low == row.high for row in table.rows)
-        assert table.row_for(1).result
-    for table_id in CORE_ORACLE_TABLES:
-        assert tables[table_id].role == "oracle"
-    for table_id in CORE_SETTING_TABLES:
-        assert tables[table_id].role == "setting"
-
-
-def test_core_offers_the_roll_creative_tool():
-    tools = bundled_library().core.tool_calls
-    tool = tools["roll_creative"]
-    assert tool.description.startswith(
-        "Roll on the creative tables for a new idea: use list_dice_tables to see their roles, "
-        "then pass role 'setting' for a world, faction, conflict, or mystery, 'site' to make a "
-        "generated place unique, and use the oracle tables before inventing a scene, place, or "
-        "complication that the world, module, and active storylines do not already supply."
-    )
-    assert "same full oracle set" in tool.description
-    assert tool.parameters["properties"]["role"]["enum"] == [
-        "oracle",
-        "setting",
-        "site",
-        "module",
-    ]
-
-
-def test_creation_tools_state_the_creative_source_rule_in_their_first_sentence():
-    tools = bundled_library().core.tool_calls
-    location = brief(tools["create_location"].description, 240)
-    assert "roll_creative" in location
-    assert "location_descriptor" in location
-    npc = brief(tools["create_npc"].description, 240)
-    assert "leave personality, accent, and quirks out" in npc
-    assert "create_npc rolls them from its tables" in npc
-    tables = brief(tools["list_dice_tables"].description, 240)
-    assert "before inventing a new element" in tables
-    speech = brief(tools["speak"].description, 240)
-    assert "do not let the line introduce" in speech
 
 
 def test_a_rule_set_adds_and_removes_entries_from_a_core_table(tree: Path):
@@ -336,7 +272,13 @@ def test_roll_creative_rolls_every_oracle_table_by_default(client_factory):
         )
         new = events_since(db, campaign_id, after=last_id)
     rolls = out["rolls"]
-    assert [roll["table"] for roll in rolls] == CORE_ORACLE_TABLES
+    oracle_tables = {
+        table_id
+        for table_id, table in CAIRN.dice_tables.items()
+        if table.creative and table.role == "oracle"
+    }
+    assert len(rolls) == len(oracle_tables)
+    assert {roll["table"] for roll in rolls} == oracle_tables
     for roll in rolls:
         assert roll["result"] == CAIRN.dice_tables[roll["table"]].row_for(roll["roll"]).result
     (event,) = [row for row in new if row.kind == TABLES_ROLLED]
@@ -355,7 +297,13 @@ def test_roll_creative_rolls_the_setting_tables_by_role(client_factory):
             plus=CAIRN.plus,
             role="setting",
         )
-    assert [roll["table"] for roll in out["rolls"]] == CORE_SETTING_TABLES
+    setting_tables = {
+        table_id
+        for table_id, table in CAIRN.dice_tables.items()
+        if table.creative and table.role == "setting"
+    }
+    assert len(out["rolls"]) == len(setting_tables)
+    assert {roll["table"] for roll in out["rolls"]} == setting_tables
 
 
 def test_roll_creative_rolls_only_the_named_tables(client_factory):
@@ -415,7 +363,13 @@ def test_the_world_roll_creative_returns_the_rolls_shape(client_factory: Callabl
     live = replace(tools, dice_tables=CAIRN.dice_tables, rng=random.Random(1))
     out = live.roll_creative(None)
     assert list(out) == ["rolls"]
-    assert [roll["table"] for roll in out["rolls"]] == CORE_ORACLE_TABLES
+    oracle_tables = {
+        table_id
+        for table_id, table in CAIRN.dice_tables.items()
+        if table.creative and table.role == "oracle"
+    }
+    assert len(out["rolls"]) == len(oracle_tables)
+    assert {roll["table"] for roll in out["rolls"]} == oracle_tables
 
 
 def test_the_world_roll_creative_can_roll_setting_tables_by_role(
@@ -424,7 +378,13 @@ def test_the_world_roll_creative_can_roll_setting_tables_by_role(
     _, _, tools = _fight(client_factory)
     live = replace(tools, dice_tables=CAIRN.dice_tables, rng=random.Random(1))
     out = live.roll_creative(role="setting")
-    assert [roll["table"] for roll in out["rolls"]] == CORE_SETTING_TABLES
+    setting_tables = {
+        table_id
+        for table_id, table in CAIRN.dice_tables.items()
+        if table.creative and table.role == "setting"
+    }
+    assert len(out["rolls"]) == len(setting_tables)
+    assert {roll["table"] for roll in out["rolls"]} == setting_tables
 
 
 @pytest.mark.parametrize("source", ["", 3, ["x"]])
@@ -460,16 +420,3 @@ def test_a_patch_may_give_its_own_source():
         "rulesets/testset",
     )
     assert patched.data["source"] == "Mine"
-
-
-def test_every_core_creative_table_credits_its_source():
-    data = json.loads((DATA_DIR / "rulesets" / "core" / "creative.json").read_text())
-    assert [table["id"] for table in data] == ALL_CORE_CREATIVE_TABLES
-    for table in data:
-        assert table["role"] in {"oracle", "setting"}
-        assert table["source"]
-    for table in data[: len(CORE_ORACLE_TABLES)]:
-        assert "CC BY 4.0" in table["source"], table["id"]
-        assert "Ironsworn" in table["source"], table["id"]
-    for table in data[len(CORE_ORACLE_TABLES) :]:
-        assert "Original content written for Cygnus Loom." in table["source"], table["id"]

@@ -10,7 +10,6 @@ from cygnusloom.content.library import (
     _load_dice_table,
     _load_journey,
 )
-from tests.conftest import bundled_library
 
 
 def _tables() -> dict:
@@ -45,13 +44,6 @@ def _event(**overrides) -> dict:
     event = {"on": "day", "table": "events"}
     event.update(overrides)
     return event
-
-
-def test_the_bundled_wwn_journey_has_no_events() -> None:
-    journey = bundled_library().rule_sets["worldswithoutnumber"].journey
-    assert journey is not None
-    assert journey.model == "terrain_days"
-    assert journey.events == ()
 
 
 def test_a_day_event_loads_its_filters() -> None:

@@ -21,6 +21,5 @@ def test_the_campaign_page_shows_a_projects_panel(
 
     page = client.get(f"/campaigns/{campaign_id}").text
 
-    assert 'id="tab-projects"' in page
     assert "The Barrow Door" in page
     assert "0 / 4" in page

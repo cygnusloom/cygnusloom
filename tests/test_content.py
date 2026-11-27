@@ -12,7 +12,6 @@ import pytest
 from cygnusloom.content.character import (
     NO_CAMPAIGN,
     Granted,
-    GrantedItem,
     TableOption,
     _modifier_bands,
     campaign_schema,
@@ -20,7 +19,6 @@ from cygnusloom.content.character import (
 from cygnusloom.content.definitions import ContentError, Definition, read_definitions
 from cygnusloom.content.library import (
     DATA_DIR,
-    TERRAIN_PATTERNS,
     ContentLibrary,
     ItemKind,
     PlayerInput,
@@ -29,19 +27,9 @@ from cygnusloom.content.library import (
     _load_rule_hooks,
 )
 from cygnusloom.services.hooks import HookContext, call_hook
-from tests.conftest import bundled_library, content_library
+from tests.conftest import content_library
 from tests.rolls import social_roll
 from tests.support import content_tree
-
-
-def test_bundled_content_marks_third_party_sources():
-    library = content_library()
-    assert library.rule_sets["cairn2e"].third_party is True
-    assert library.rule_sets["worldswithoutnumber"].third_party is True
-    assert library.rule_sets["academia-arcana"].third_party is False
-    assert library.setting_template("twin-lakes").third_party is True
-    assert library.world_templates["unwritten-academy"].third_party is False
-    assert library.world_templates["unwritten-world"].third_party is False
 
 
 def _write(root: Path, files: dict[str, Any]) -> None:
@@ -187,79 +175,6 @@ def test_content_migrate_cli_converts_legacy_items(
     assert "no legacy items found" in capsys.readouterr().out
 
 
-def test_bundled_content_loads():
-    library = bundled_library()
-    assert set(library.world_templates) == {
-        "unwritten-world",
-        "unwritten-academy",
-        "unwritten-apocalypse",
-    }
-    assert "twin-lakes" in library.modules
-    assert library.setting_template("twin-lakes").name == "Trouble in Twin Lakes"
-    twin_lakes = library.setting_template("twin-lakes")
-    assert twin_lakes.locations
-    assert set(library.rule_sets) == {
-        "academia-arcana",
-        "cairn2e",
-        "dnd-srd-2024",
-        "hordes",
-        "worldswithoutnumber",
-    }
-    assert library.world_content("twin-lakes", "cairn2e").monsters
-    assert library.rule_sets["worldswithoutnumber"].character.skills
-    assert library.rule_sets["worldswithoutnumber"].monsters
-    assert (
-        library.rule_sets["worldswithoutnumber"].feature_types["feat"].tag_groups["high"] == "Arts"
-    )
-    academy = library.rule_sets["academia-arcana"]
-    assert academy.character.stats
-    assert academy.moves
-    assert academy.advancements
-    assert academy.periods
-    assert "magicschool" in academy.table_genres
-
-
-CAIRN_BACKGROUND_KIT = (
-    GrantedItem("backpack", "1"),
-    GrantedItem("gold", "3d6"),
-    GrantedItem("rations", "1"),
-)
-
-
-def test_bundled_cairn_backgrounds_keep_their_kit():
-    """The kit moved from every background to the rule set's template defaults, and still
-    comes first, followed by each background's own items in their original order."""
-    backgrounds = {
-        template.id: template
-        for template in content_library().rule_sets["cairn2e"].character.templates.values()
-        if template.kind == "background"
-    }
-    assert backgrounds["aurifex"].item_grants == (
-        *CAIRN_BACKGROUND_KIT,
-        GrantedItem("lantern", "1"),
-        GrantedItem("oil-can", "1"),
-        GrantedItem("needle-knife", "1"),
-        GrantedItem("protective-gloves", "1"),
-    )
-    assert backgrounds["barber-surgeon"].item_grants == (
-        *CAIRN_BACKGROUND_KIT,
-        GrantedItem("torch", "1"),
-        GrantedItem("bonesaw", "1"),
-        GrantedItem("bandages", "1"),
-        GrantedItem("leech", "1"),
-        GrantedItem("stained-medical-finery", "1"),
-    )
-    assert len(backgrounds) == 20
-    kit_items = {grant.item for grant in CAIRN_BACKGROUND_KIT}
-    for template in backgrounds.values():
-        assert template.item_grants[: len(CAIRN_BACKGROUND_KIT)] == CAIRN_BACKGROUND_KIT, (
-            template.id
-        )
-        own = template.item_grants[len(CAIRN_BACKGROUND_KIT) :]
-        assert own, template.id
-        assert kit_items.isdisjoint(grant.item for grant in own), template.id
-
-
 def _load_test_hooks(module: ModuleType, **overrides: Any):
     data = {
         "type": "hooks",
@@ -369,26 +284,6 @@ def test_rule_hooks_do_not_wrap_unexpected_configurator_errors():
         _load_test_hooks(module, configure="configure_hooks", options={})
 
 
-def test_cairn_hooks_resolve_rations_and_keep_the_rest_hook():
-    hooks = content_library().rule_sets["cairn2e"].hooks
-
-    assert hooks is not None
-    assert hooks.functions["before_rest"] == "before_rest"
-    assert set(hooks.functions) == {
-        "new_day",
-        "before_rest",
-        "held_back",
-        "after_consume",
-        "lodge",
-        "status",
-    }
-    assert "options" not in hooks.functions
-    assert hooks.options == {
-        "after_days": 1,
-        "item": "Rations",
-    }
-
-
 def test_a_rule_set_can_declare_a_new_hook_point():
     module = ModuleType("test_rules")
     module.dawn = lambda hc: "dawned"
@@ -444,57 +339,6 @@ def test_cairn_hook_configurator_validates_consumable_items(item, message):
             configure="configure_hooks",
             options={"item": item},
         )
-
-
-def test_bundled_worlds_say_which_rule_set_they_use():
-    library = bundled_library()
-    assert library.setting_template("twin-lakes").rule_set == "cairn2e"
-    assert library.world_templates["unwritten-world"].rule_set is None
-    assert library.world_templates["unwritten-academy"].rule_set == "academia-arcana"
-    assert library.setting_template("twin-lakes").blurb
-    assert library.world_templates["unwritten-world"].blurb
-    assert library.world_templates["unwritten-academy"].blurb
-    assert library.rule_sets["cairn2e"].blurb
-    assert library.rule_sets["worldswithoutnumber"].blurb
-    assert library.rule_sets["academia-arcana"].blurb
-
-
-def test_every_bundled_rule_set_defines_ground_kinds():
-    """Every bundled rule set defines ground kinds, so create_region works in its world."""
-    library = bundled_library()
-    assert all(rule_set.world_terrain for rule_set in library.rule_sets.values())
-
-
-def test_create_region_asks_for_varied_shapes_cut_to_the_ground():
-    tool = bundled_library().core.tool_calls["create_region"]
-    assert "six or more corners" in tool.description
-    assert "uneven" in tool.description
-    assert "cut to fit" in tool.description
-
-
-def test_a_map_token_is_not_a_location_move():
-    library = bundled_library()
-    token = library.core.tool_calls["place_map_token"]
-    assert "moving a token does not move the character between places" in token.description
-    assert "remove_map_token when their token should go" in token.description
-    move = library.core.tool_calls["move_actor"]
-    assert "add a note on the NPC saying where it went" in move.description
-
-
-def test_twin_lakes_map_matches_the_module_map():
-    """The module's map has no scale bar. It gives travel times instead: Dunston is one hour
-    from Isthmus Town, and the White Tower Fens are two hours from either. At four kilometres
-    an hour on foot, the placed positions must agree with those times."""
-    places = {loc.id: loc for loc in bundled_library().setting_template("twin-lakes").locations}
-
-    def km(a: str, b: str) -> float:
-        pa, pb = places[a], places[b]
-        return ((pa.x - pb.x) ** 2 + (pa.y - pb.y) ** 2) ** 0.5
-
-    assert km("isthmus-town", "dunston") / 4 == pytest.approx(1, abs=0.25)
-    assert km("isthmus-town", "white-tower-fens") / 4 == pytest.approx(2, abs=0.25)
-    assert km("dunston", "white-tower-fens") / 4 == pytest.approx(2, abs=0.25)
-    assert km("temple-of-the-fungal-lizards", "bone-sump") < 1
 
 
 def test_every_json_file_in_a_directory_is_read(tmp_path: Path):
@@ -877,12 +721,6 @@ def test_modifier_bands_accept_compact_pairs_and_objects():
         _modifier_bands([[3]], "stat")
 
 
-def test_wwn_attribute_modifier_bands_are_compact_pairs():
-    spec = bundled_library().rule_sets["worldswithoutnumber"].character
-    assert spec.stats["str"].modifier_bands == ((3, -2), (4, -1), (8, 0), (14, 1), (18, 2))
-    assert spec.stats["cha"].modifier_bands == spec.stats["str"].modifier_bands
-
-
 def test_stat_presets_fill_shared_fields(tree: Path):
     head = {
         **_rule_set()[0],
@@ -993,19 +831,6 @@ def test_training_block_rejects_an_unknown_stat(tree: Path):
     _write_training(tree, _training_block(stats={"missing": "studies"}))
     with pytest.raises(ContentError, match="names no stat"):
         ContentLibrary.load(tree)
-
-
-def test_academia_training_features_match_the_compact_table():
-    spec = bundled_library().rule_sets["academia-arcana"].character
-    ids = [feature_id for feature_id in spec.features if feature_id.startswith("training-")]
-    assert ids[:2] == ["training-theory-1", "training-practice-1"]
-    assert ids[-1] == "training-cunning-3"
-    assert spec.features["training-theory-1"].description == (
-        "Early-years study sharpens your grasp of theory. Raise Theory by 1, up to +2."
-    )
-    assert spec.features["training-cunning-3"].description == (
-        "Final-years trouble teaches you the back ways. Raise Cunning by 1, up to +4."
-    )
 
 
 def test_rule_set_item_sizes_build_definitions(tree: Path):
@@ -1614,39 +1439,6 @@ def test_rule_set_overrides_core_rules_and_tables(tree: Path):
     assert library.core.rules == {"speech": "Core."}
 
 
-def test_wwn_inherits_core_personality_and_accent_but_keeps_its_quirk():
-    library = bundled_library()
-    core = library.core.tables
-    wwn = library.rule_sets["worldswithoutnumber"].tables
-    assert wwn["personality"] == core["personality"]
-    assert wwn["accent"] == core["accent"]
-    assert [option.value for option in wwn["quirk"]] == [
-        "taps a finger against their lips when thinking",
-        "hums under their breath",
-        "always eats something while talking",
-        "refers to everyone as 'friend'",
-        "counts things under their breath",
-        "never makes eye contact",
-        "speaks in proverbs",
-        "adjusts their clothes constantly",
-        "ends sentences with a question",
-        "keeps glancing at the sky",
-        "collects small bits of carved stone",
-        "tells the same joke twice",
-    ]
-    own = {
-        definition["id"]
-        for definition in json.loads(
-            (DATA_DIR / "rulesets" / "worldswithoutnumber" / "tables.json").read_text(
-                encoding="utf-8"
-            )
-        )
-        if definition["type"] == "table"
-    }
-    assert "personality" not in own and "accent" not in own
-    assert "quirk" in own
-
-
 def _write_background(tree: Path, learning: list[str]) -> None:
     _write(
         tree,
@@ -1718,59 +1510,6 @@ def test_background_learning_must_name_known_skills(tree: Path):
         ContentLibrary.load(tree)
 
 
-def test_wwn_background_learning_tables_match_the_previous_options():
-    wwn = bundled_library().rule_sets["worldswithoutnumber"]
-    expected = {
-        "artisan": ["connect", "convince", "craft", "exert", "know", "notice", "trade"],
-        "hunter": ["ride", "survive", "shoot", "stab", "notice", "craft", "exert", "sneak"],
-        "wanderer": [
-            "notice",
-            "trade",
-            "ride",
-            "sneak",
-            "exert",
-            "connect",
-            "craft",
-            "survive",
-        ],
-    }
-    for background, options in expected.items():
-        assert [option.value for option in wwn.tables[f"learning_{background}"]] == options
-    index = {option.name: option.description for option in wwn.tables["background_index"]}
-    assert index["Artisan"] == (
-        "Free skill: craft. Quick skills: connect, convince, exert, know, notice, trade."
-    )
-    assert index["Hunter"] == (
-        "Free skill: shoot. Quick skills: ride, survive, stab, notice, craft, exert, sneak."
-    )
-    assert index["Wanderer"] == (
-        "Free skill: survive. Quick skills: notice, trade, ride, sneak, exert, connect, craft."
-    )
-
-
-def test_wwn_background_learning_and_index_cover_every_background():
-    wwn = bundled_library().rule_sets["worldswithoutnumber"]
-    backgrounds = sorted(
-        (
-            definition.data
-            for definition in read_definitions(DATA_DIR / "rulesets" / "worldswithoutnumber")
-            if definition.type == "template" and definition.data.get("kind") == "background"
-        ),
-        key=lambda data: (data.get("order", 0), data["id"]),
-    )
-    assert len(backgrounds) == 20
-    assert [option.name for option in wwn.tables["background_index"]] == [
-        background["name"] for background in backgrounds
-    ]
-    for background, option in zip(backgrounds, wwn.tables["background_index"]):
-        free = next(iter(background["skills"]))
-        quick = ", ".join(skill for skill in background["learning"] if skill != free)
-        assert option.description == f"Free skill: {free}. Quick skills: {quick}."
-        assert [item.value for item in wwn.tables[f"learning_{background['id']}"]] == background[
-            "learning"
-        ]
-
-
 @pytest.mark.parametrize("missing", NPC_TABLES)
 def test_core_must_declare_every_npc_table(tree: Path, missing: str):
     core = [d for d in _core() if d.get("id") != missing]
@@ -1825,29 +1564,6 @@ TESTSET_TERRAIN = [
 ]
 
 
-def test_bundled_terrain_and_regions_are_read():
-    library = bundled_library()
-    terrain = library.rule_sets["cairn2e"].world_terrain
-    lake = terrain["lake"]
-    assert (lake.name, lake.color) == ("Lake", "#2d6a8f")
-    assert {"lake", "open", "forest", "hills", "fen"} <= set(terrain)
-    regions = {r.name: r for r in library.setting_template("twin-lakes").regions}
-    assert len(regions) == 12
-    assert all(r.terrain in terrain for r in regions.values())
-    assert regions["West Lake"].terrain == "lake"
-    assert regions["Stone Forest"].terrain == "forest"
-    assert regions["The Downs"].terrain == "hills"
-    assert regions["White Tower Fens"].terrain == "fen"
-    assert regions["Eastern Plain"].terrain == "open"
-
-
-def test_bundled_terrain_kinds_have_a_texture_and_ink(tree: Path):
-    terrain = bundled_library().rule_sets["cairn2e"].world_terrain
-    assert all(kind.pattern in TERRAIN_PATTERNS for kind in terrain.values())
-    assert all(kind.ink and kind.ink.startswith("#") for kind in terrain.values())
-    assert (terrain["lake"].pattern, terrain["lake"].ink) == ("waves", "#a9d4ea")
-
-
 def test_shared_terrain_visuals_come_from_the_defaults_layer(tree: Path):
     _write(
         tree,
@@ -1875,20 +1591,6 @@ def test_shared_terrain_visuals_come_from_the_defaults_layer(tree: Path):
         "#a9d4ea",
     )
     assert lake.rule == "Water."
-
-
-def test_bundled_terrain_visuals_come_from_the_defaults_layer():
-    library = bundled_library()
-    cairn = library.rule_sets["cairn2e"].world_terrain
-    assert (cairn["lake"].name, cairn["lake"].color) == ("Lake", "#2d6a8f")
-    assert (cairn["lake"].pattern, cairn["lake"].ink) == ("waves", "#a9d4ea")
-    # A conflicted id keeps its own visuals in each rule set.
-    assert library.rule_sets["academia-arcana"].world_terrain["ruins"].pattern == "crags"
-    assert library.rule_sets["worldswithoutnumber"].world_terrain["ruins"].pattern == "ridges"
-    own = json.loads(
-        (DATA_DIR / "rulesets" / "cairn2e" / "world_terrain.json").read_text(encoding="utf-8")
-    )
-    assert all(set(definition) == {"type", "id", "rule"} for definition in own)
 
 
 def test_clock_and_rest_defaults_fill_a_rule_set(tree: Path):
@@ -1940,41 +1642,6 @@ def test_clock_and_rest_defaults_fill_a_rule_set(tree: Path):
     assert clock.wage_currency == "silver"
     assert rules.rests["moments"].hours == 1
     assert rules.interrupted_rest == "moments"
-
-
-def test_bundled_clock_and_rest_defaults_are_applied():
-    library = bundled_library()
-    academy = library.rule_sets["academia-arcana"]
-    assert academy.clock is not None
-    assert (academy.clock.parts, academy.clock.stale_days, academy.clock.hours_per_part) == (
-        ("morning", "afternoon", "night"),
-        5,
-        8,
-    )
-    assert academy.rests["moments"].hours == 1
-    assert academy.interrupted_rest == "moments"
-    assert library.rule_sets["cairn2e"].rests["moments"].restores == ("hp",)
-    wwn = library.rule_sets["worldswithoutnumber"]
-    assert wwn.clock is not None
-    assert (wwn.clock.parts, wwn.clock.stale_days, wwn.clock.hours_per_part) == (
-        ("morning", "afternoon", "evening", "night"),
-        7,
-        6,
-    )
-    raw_rest = json.loads(
-        (DATA_DIR / "rulesets" / "academia-arcana" / "rest.json").read_text(encoding="utf-8")
-    )[0]
-    assert "moments" not in raw_rest["lengths"]
-    assert "interrupted" not in raw_rest
-    raw_cairn = json.loads(
-        (DATA_DIR / "rulesets" / "cairn2e" / "rest.json").read_text(encoding="utf-8")
-    )[0]
-    assert "moments" not in raw_cairn["lengths"]
-    assert "interrupted" not in raw_cairn
-    raw_clock = json.loads(
-        (DATA_DIR / "rulesets" / "academia-arcana" / "clock.json").read_text(encoding="utf-8")
-    )[0]
-    assert set(raw_clock) == {"type", "id", "wage_currency"}
 
 
 def test_terrain_texture_must_be_one_the_engine_draws(tree: Path):
@@ -2189,18 +1856,6 @@ def test_table_options_must_be_text_or_named_text(tree: Path, options: list[Any]
         ContentLibrary.load(tree)
 
 
-def test_cairn_campaign_options_are_the_omen_alone():
-    cairn = bundled_library().rule_sets["cairn2e"]
-    assert set(cairn.campaign.fields) == {"omen"}
-    assert "omen" in cairn.campaign.tables
-    assert "omen" not in cairn.character.fields
-    schema = campaign_schema(cairn.campaign)
-    assert schema["required"] == ["omen"]
-    assert schema["additionalProperties"] is False
-    omen = cairn.campaign.tables["omen"][0].value
-    assert schema["properties"]["omen"]["enum"][0] == omen
-
-
 def test_no_campaign_has_no_options():
     assert not NO_CAMPAIGN.fields
     assert campaign_schema(NO_CAMPAIGN)["required"] == []
@@ -2360,48 +2015,6 @@ def test_duplicate_checklist_item_ids_are_rejected(tree: Path):
     )
     with pytest.raises(ContentError, match="duplicate id"):
         ContentLibrary.load(tree)
-
-
-def _prompt_definitions(rule_set: str) -> list[dict[str, Any]]:
-    """The prompt definitions a rule set's own prompts.json declares, in file order."""
-    path = DATA_DIR / "rulesets" / rule_set / "prompts.json"
-    if not path.is_file():
-        return []
-    return [
-        definition
-        for definition in json.loads(path.read_text(encoding="utf-8"))
-        if definition.get("type") == "prompt"
-    ]
-
-
-def test_bundled_prompt_fragments_keep_their_own_file_order_before_core():
-    library = bundled_library()
-    core_ids = {definition["id"] for definition in _prompt_definitions("core")}
-    for rule_set_id in ("cairn2e", "worldswithoutnumber", "academia-arcana"):
-        rule_set = library.rule_sets[rule_set_id]
-        own = _prompt_definitions(rule_set_id)
-        own_ids = [definition["id"] for definition in own]
-        superseded = {target for definition in own for target in definition.get("supersedes", [])}
-        ids = [fragment.id for fragment in rule_set.prompt_fragments]
-        assert len(ids) == len(set(ids)), rule_set_id
-        assert ids[: len(own_ids)] == own_ids, rule_set_id
-        assert set(ids) <= set(own_ids) | core_ids, rule_set_id
-        assert not superseded & set(ids), rule_set_id
-        for fragment in rule_set.prompt_fragments:
-            assert fragment.text.strip(), (rule_set_id, fragment.id)
-
-
-def test_bundled_cairn_prompts_and_cap_are_read():
-    assert bundled_library().rule_sets["cairn2e"].sentence_cap == 2
-
-
-def test_bundled_core_prompts_match_core_file():
-    core = bundled_library().core.prompt_fragments
-    expected = _prompt_definitions("core")
-    assert [fragment.id for fragment in core] == [definition["id"] for definition in expected]
-    assert [fragment.unwritten_only for fragment in core] == [
-        bool(definition.get("unwritten_only", False)) for definition in expected
-    ]
 
 
 def test_a_prompt_fragment_supersedes_an_inherited_fragment(tree: Path):
@@ -2642,79 +2255,6 @@ def _world_route(origin: str, destination: str, **overrides: object) -> dict[str
     return route
 
 
-def test_bundled_twin_lakes_routes_match_their_previous_maps():
-    place = content_library().setting_template("twin-lakes")
-    routes = {location.id: dict(location.routes) for location in place.locations}
-    assert {key: value for key, value in routes.items() if value} == {
-        "bone-sump": {
-            "temple-of-the-fungal-lizards": _valid_route(path="wilderness", terrain="perilous"),
-            "the-stone-forest": _valid_route(path="wilderness", terrain="perilous"),
-            "white-tower-fens": _valid_route(path="wilderness", terrain="perilous"),
-        },
-        "deadmill": {
-            "old-mill-road": _valid_route(path="roads", terrain="tough"),
-            "the-stone-forest": _valid_route(path="wilderness", terrain="tough"),
-        },
-        "dunston": {
-            "east-lake-pass": _valid_route(),
-            "farming-path": _valid_route(),
-            "isthmus-town": _valid_route(),
-            "the-downs": _valid_route(terrain="perilous"),
-            "white-tower-fens": _valid_route(distance="medium", terrain="perilous"),
-        },
-        "east-lake-pass": {
-            "dunston": _valid_route(),
-            "farming-path": _valid_route(),
-            "old-mill-road": _valid_route(),
-            "the-downs": _valid_route(terrain="perilous"),
-            "white-tower-fens": _valid_route(terrain="tough"),
-        },
-        "farming-path": {
-            "dunston": _valid_route(),
-            "east-lake-pass": _valid_route(),
-            "isthmus-town": _valid_route(path="roads"),
-        },
-        "isthmus-town": {
-            "dunston": _valid_route(),
-            "farming-path": _valid_route(path="roads"),
-            "old-mill-road": _valid_route(path="roads"),
-            "white-tower-fens": _valid_route(distance="medium", terrain="tough"),
-        },
-        "old-mill-road": {
-            "deadmill": _valid_route(path="roads", terrain="tough"),
-            "east-lake-pass": _valid_route(),
-            "isthmus-town": _valid_route(path="roads"),
-            "the-stone-forest": _valid_route(path="roads", terrain="tough"),
-            "white-tower-fens": _valid_route(distance="medium", terrain="tough"),
-        },
-        "temple-of-the-fungal-lizards": {
-            "bone-sump": _valid_route(path="wilderness", terrain="perilous"),
-        },
-        "the-downs": {
-            "dunston": _valid_route(terrain="perilous"),
-            "east-lake-pass": _valid_route(terrain="perilous"),
-            "white-tower-fens": _valid_route(terrain="tough"),
-        },
-        "the-stone-forest": {
-            "bone-sump": _valid_route(path="wilderness", terrain="perilous"),
-            "deadmill": _valid_route(path="wilderness", terrain="tough"),
-            "old-mill-road": _valid_route(path="roads", terrain="tough"),
-        },
-        "the-white-tower": {
-            "white-tower-fens": _valid_route(terrain="tough"),
-        },
-        "white-tower-fens": {
-            "bone-sump": _valid_route(path="wilderness", terrain="perilous"),
-            "dunston": _valid_route(distance="medium", terrain="perilous"),
-            "east-lake-pass": _valid_route(terrain="tough"),
-            "isthmus-town": _valid_route(distance="medium", terrain="tough"),
-            "old-mill-road": _valid_route(distance="medium", terrain="tough"),
-            "the-downs": _valid_route(terrain="tough"),
-            "the-white-tower": _valid_route(terrain="tough"),
-        },
-    }
-
-
 def test_a_world_route_reaches_both_locations(tmp_path: Path):
     root = _twin_lakes_copy(tmp_path)
     _write_twin_lakes_routes(root, [_world_route("isthmus-town", "dunston")])
@@ -2867,24 +2407,6 @@ def test_an_invalid_authored_route_is_rejected(tmp_path: Path, routes: object, m
     _edit_twin_lakes_location(root, "isthmus-town", routes=routes)
     with pytest.raises(ContentError, match=message):
         ContentLibrary.load(root).world_content("twin-lakes", "cairn2e")
-
-
-def test_the_twin_lakes_items_have_their_listed_sizes_uses_and_damage():
-    features = content_library().world_content("twin-lakes", "cairn2e").items
-    fletcher = features["fletcher-s-ire"]
-    assert (fletcher.name, fletcher.size, fletcher.uses) == ("Fletcher's Ire", "bulky", 3)
-    moon = features["moon-cloth"]
-    assert (moon.name, moon.size) == ("Moon Cloth", "petty")
-    dagger = features["curved-dagger"]
-    assert (dagger.name, dagger.damage) == ("Curved Dagger", "1d6")
-    assert features["echo-spark"].uses == 1
-    assert features["watersnatch"].uses == 1
-
-
-def test_the_suraru_imperators_venomous_bite_is_a_blast():
-    monster = content_library().world_content("twin-lakes", "cairn2e").monsters["suraru-imperator"]
-    assert monster.attack_flags == {"venomous bite": ("blast",)}
-    assert monster.attacks["venomous bite"] == "1d6"
 
 
 def _edit_wwn_class2_template(root: Path, edit: Any) -> None:

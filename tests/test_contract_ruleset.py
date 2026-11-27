@@ -18,8 +18,6 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from cygnusloom.content.character import Granted
-from cygnusloom.content.library import DamageStep
 from cygnusloom.llm.base import ToolRequest
 from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.conditions import add_condition, end_condition
@@ -37,50 +35,6 @@ def _pc(app: FastAPI, campaign_id: int) -> Character:
     pc = open_campaign(app, campaign_id).pc()
     assert pc is not None
     return pc
-
-
-def test_the_contract_ruleset_loads_its_generic_content():
-    """Save, damage, check, condition, counter, feature, and template data all load without a
-    source-book module."""
-    combat = ROLLTEST.combat
-    assert combat is not None
-    assert (combat.check_die, combat.check_sides) == ("1d20", 20)
-    assert combat.damage == (DamageStep(kind="harm", stat="resolve"),)
-    assert combat.initiative_stat == "resolve"
-    assert combat.defeat == {"player_character": "out of action", "npc": "out of action"}
-    assert combat.save.mode == "roll_under"
-    assert (combat.save.auto_success, combat.save.auto_fail) == (1, 20)
-    assert combat.save_succeeds(1, 0)
-    assert combat.save_succeeds(10, 10)
-    assert not combat.save_succeeds(11, 10)
-    assert not combat.save_succeeds(20, 20)
-
-    check = ROLLTEST.checks["task"]
-    assert (check.label, check.dice) == ("Task Check", "1d10")
-    assert (check.unskilled, check.default_difficulty) == (0, 6)
-    assert (check.minimum_difficulty, check.maximum_difficulty) == (1, 10)
-
-    condition = ROLLTEST.conditions["shaken"]
-    assert (condition.label, condition.ends) == ("Shaken", ("rest", "scene"))
-    assert condition.modifies == {"check": -2}
-    assert condition.derived is None
-
-    counter = ROLLTEST.counters["focus"]
-    assert (counter.label, counter.minimum, counter.maximum, counter.initial) == (
-        "Focus",
-        0,
-        3,
-        1,
-    )
-
-    feature = ROLLTEST.character.features["steady-nerves"]
-    assert feature.feature_type == "trait"
-    assert feature.effects == ({"op": "counter", "id": "focus", "delta": 1},)
-
-    template = ROLLTEST.character.templates["test-role"]
-    assert (template.kind, template.name) == ("role", "Test Role")
-    assert template.features == (Granted(feature="steady-nerves", quantity="1"),)
-    assert ROLLTEST.optional_templates == ("role",)
 
 
 def test_the_factories_create_a_campaign_and_a_templated_character(

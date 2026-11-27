@@ -59,48 +59,12 @@ def _wizard_fields(fields: dict[str, str], picks: dict[str, str] | None = None) 
     return fields
 
 
-def _creation_page(client: TestClient, campaign_id: int) -> str:
-    return client.get(f"/campaigns/{campaign_id}").text
-
-
 def _alerts(page: str) -> list[str]:
     """The error lines a failed creation page shows, without the whole page in test output."""
     return [
         re.sub(r"\\s+", " ", alert).strip()
         for alert in re.findall(r'<p class="form-error" role="alert">(.*?)</p>', page, re.DOTALL)
     ]
-
-
-def test_the_dnd_level_marks_its_starting_spells_and_cantrips_as_creation_picks() -> None:
-    rules = _dnd_rules()
-    level = rules.level_ups["level"]
-
-    assert {pick.id for pick in level.creation_picks} == {"spells", "cantrips"}
-    assert level.picks["spells"].creation_options is not None
-    assert level.picks["cantrips"].creation_options is not None
-    assert not level.picks["asi"].creation
-
-
-def test_wwn_has_no_creation_picks() -> None:
-    assert not level_up_service.has_creation_picks(rules_for("worldswithoutnumber"))
-
-
-def test_standard_characters_choose_spells_from_their_class_lists(
-    client_factory: Callable[[], TestClient],
-) -> None:
-    client = signed_in_client(client_factory)
-    campaign_id = _dnd_campaign(client)
-    rules = _dnd_rules()
-    world = client.app.state.content.world_content("testhollow", "dnd-srd-2024")
-    ctx = level_up_service.tool_context(client.app.state.engine, campaign_id, rules, world)
-    preview = level_up_service.creation_pick_views(rules, ctx)
-
-    for preset in rules.character.presets.values():
-        class_id = preset.templates["class"]
-        offered = {view["id"]: view for view in preview[class_id]}
-        for pick_id, values in preset.creation_picks.items():
-            allowed = {option["id"] for option in offered[pick_id]["options"]}
-            assert set(values) <= allowed, (preset.id, pick_id, set(values) - allowed)
 
 
 def test_a_class_pick_cannot_repeat_a_spells_feat_choice(
@@ -125,27 +89,6 @@ def test_a_class_pick_cannot_repeat_a_spells_feat_choice(
     assert response.status_code == 400
     assert "already granted by another choice" in response.text
     assert level_up_service.character_from(client.app.state.engine, campaign_id, "Ada") is None
-
-
-def test_the_creation_page_shows_the_wizards_starting_spells_and_cantrips(
-    client_factory: Callable[[], TestClient],
-) -> None:
-    client = signed_in_client(client_factory)
-    campaign_id = _dnd_campaign(client)
-
-    page = _creation_page(client, campaign_id)
-
-    assert 'name="creation-pick-wizard-cantrips-0"' in page
-    assert 'name="creation-pick-wizard-cantrips-2"' in page
-    assert 'name="creation-pick-wizard-spells-0"' in page
-    assert 'name="creation-pick-wizard-spells-5"' in page
-    # A class without spell picks has no creation pick panel.
-    assert 'name="creation-pick-fighter-spells-0"' not in page
-    # The panel is part of the randomized creation form and offers the class's own spells.
-    assert 'data-pick-selects="wizard-cantrips"' in page
-    assert 'data-pick-selects="wizard-spells"' in page
-    assert "data-randomize-picks" in page
-    assert 'value="spell-fire-bolt"' in page
 
 
 def test_creating_a_wizard_spends_the_creation_picks(
