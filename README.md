@@ -1,85 +1,81 @@
 # Cygnus Loom
 
-[Cygnus Loom](https://cygnusloom.com) is a web-based RPG with an AI game master. Create a campaign, choose a world and rule set, and play through chat with characters, maps, and a journal.
+[Cygnus Loom](https://cygnusloom.com) is a web-based RPG with an AI game master.
 
-## Play the desktop app
+You can play pre-made adventures, upload your own campaign modules, or have the AI GM generate a world for you.
 
-Download `CygnusLoom.exe` (Windows) or `CygnusLoom` (Linux) from
+Cygnus Loom supports several rulesets, including the basic [Worlds Without Number](https://www.drivethrurpg.com/en/product/348809/worlds-without-number-free-edition) rules and [SRD 5.2.1 (5E compatible)](https://www.dndbeyond.com/srd) rules.
+
+Campaigns use a combination of random table generation, AI GM creativity, and injected human-written modules and scenarios to ensure that each campaign is unique and varied, avoiding AI regression to the average.
+
+## How to Play
+
+There's a few options to play Cygnus Loom.
+
+### On your computer
+You can use the Cygnus Loom desktop app, which bundles every part of Cygnus Loom into an easy to use executable. Download `CygnusLoom.exe` (Windows) or `CygnusLoom` (Linux) from
 [Releases](https://github.com/cygnusloom/cygnusloom/releases), run it, and follow the setup
-wizard. Everything runs on your machine: the app creates a local SQLite database, signs you in
-as the local administrator, and asks for one language model. There is no identity provider,
-Docker, or Python install.
+wizard.
 
-The same window is a client for Cygnus Loom servers on other machines. Under **Play on a
-server** on the main menu, add a server by its address (for example `https://table.example.com`) or paste an
-Authentik invitation link. Connecting shows the server's own campaigns and accounts in the same
-window; a **Return to my device** button in the top bar and the campaign sidebar returns to your
-local campaigns. You can sign in on the server's embedded login pages, or choose **Log in with
-browser** to finish the sign-in in your usual browser and hand the session back to the app.
+You will need an AI model to plug in to the AI GM harness. We recommend [DeepSeek Flash](https://platform.deepseek.com), but any OpenAI-compatible model will work; including locally hosted models.
 
-Server sign-ins live in the app window's cookie jar on this device. Passwords are entered only
-on the identity provider's page; Cygnus Loom never stores them. Remote addresses must use HTTPS;
-plain HTTP is accepted only for this machine.
+### On a server, anywhere
+Currently there is no official server hosting Cygnus Loom. Playing on a server is as simple as connecting to a hosted server. You can play from your PC or any mobile device. You can either connect from your browser, or connect from within the Cygnus Loom desktop app.
 
-- Data lives in `%LOCALAPPDATA%\CygnusLoom` on Windows and
-  `${XDG_DATA_HOME:-~/.local/share}/cygnusloom` on Linux. The server list lives in
-  `servers.json` beside the database. Each run writes its server output, page console messages,
-  and Qt errors to its own file in `logs/` beside the database; the newest ten runs are kept,
-  and the same lines are printed when the app is started from a terminal.
-- If a page's renderer process stops, the window reloads it automatically. A page that keeps
-  stopping stays on a **Reload the page** bar, and **Ctrl+R** or **F5** reloads at any time.
-- The wizard offers free local models (Ollama, LM Studio), hosted providers (DeepSeek, OpenAI,
-  OpenRouter), any other OpenAI-compatible endpoint, and a scripted demo.
-- Run it from a checkout with `uv run --extra desktop cygnusloom play`.
-- Build the one-file app with `uv sync --group build` and
-  `uv run pyinstaller packaging/cygnusloom.spec`. The
-  [desktop workflow](.github/workflows/desktop.yml) builds both platforms on version tags.
-- The Linux binary needs glibc 2.35 or newer (Ubuntu 22.04 and later). QtWebEngine is bundled,
-  so no system webview or browser is required.
+On a server you can share a link to your campaign, and other people on the same server that you invite can join your campaign. They'll see the same world and campaign, experience the same AI GM, and you can play the story out together.
 
-Campaigns can be exported to a single `.json.zst` file from the campaign list or the campaign's
-settings dialog, and imported on another machine or server. The file is zstandard-compressed
-JSON, so a long campaign's log stays small. The file contains the campaign
-configuration and its complete event log, including characters, maps, notes, objects, the
-journal, and any pending turn. Imports also read the uncompressed `.json` files older versions
-exported. Import creates a new campaign for the signed-in account; if the
-exported model is not configured on the target server, the default model is used instead.
+When you play on a server, the server owner provides the AI models, and play is pay-as-you-go using credit balances that can be topped-up. Cygnus Loom tries to optimize AI use, so the AI GM is as inexpensive as possible.
 
-## Play with other people
+#### Hosting a server
+To host a server, check out the code and use the docker configuration for the default Authentik + Cygnus Loom setup:
 
-A campaign belongs to one account, and the owner can share it from the Players tab. Each share
-creates a join link; the owner can deactivate links at any time, and players who already joined
-stay at the table. Every player makes their own character, and the AI GM sees everyone who
-joins and brings them into the story. Out of combat, any player can send the next message. In
-an encounter, a player acts for their own character on that character's turn, and only that
-player can answer its prompts. Every player's page follows the campaign live through a
-server-sent event stream, so a turn one player starts appears for the whole table without a
-reload. The owner can remove a player and choose whether that player's character leaves the
-story or stays as a shared, unclaimed part.
+You need Docker with the Compose plugin and two hostnames pointing at the server: one for Cygnus Loom and one for Authentik. nginx terminates TLS in front of both.
 
-Every account has a display name, seeded from the identity provider or generated from random
-words with a four-digit number. A player can change it on the Account page. Other players and
-the GM see only that display name; email addresses stay private to administrators.
+```sh
+git clone https://github.com/cygnusloom/cygnusloom.git
+cd cygnusloom
+./scripts/install.sh --domain cygnusloom.example.com
+```
 
-## Credits
+The installer asks for the Authentik hostname and an admin email, writes `.env` with generated
+secrets, and starts the stack on `127.0.0.1:21872` (app) and `127.0.0.1:21873` (Authentik). Copy
+`deploy/nginx/cygnusloom.conf` into your nginx configuration, replace the hostnames and
+certificate paths, and reload nginx.
 
-Each account has a credit balance. An administrator sets a flat price per AI GM reply on every
-model under **Admin > Models**, and the campaign owner pays that price when a reply is saved.
-The price is shown in the campaign's model picker; the local account in the desktop app hides all
-credit information because that account is always exempt. Administrators and members of the
-`cygnusloom-credit-exempt` group are also exempt; a server administrator adds an account to that
-group in Authentik. Only campaigns the exempt account owns are exempt. A debug campaign can force
-charges to test the flow. Payment is not integrated: an administrator grants credits by setting
-an account's balance on its admin page.
+For a machine with no DNS names, use the HTTP-only override instead:
 
-The models page also shows measured token use per model (input, cached input, output, reasoning,
-and estimated calls) so an administrator can choose a fair reply price. A provider that does not
-report usage is estimated at about four characters per token. Streamed usage requests can be
-turned off per model for OpenAI-compatible servers that reject the `stream_options` field.
+```sh
+python3 scripts/setup_env.py --domain localhost --idp-domain idp.localhost
+docker compose -f compose.yaml -f compose.local.yaml up -d --build
+```
 
-## Local development
+Initial setup for the admin username and password you will use:
 
-Requires Python 3.12+, [uv](https://docs.astral.sh/uv/), and OpenSSL:
+Sign in to Authentik as `akadmin`, using `AUTHENTIK_BOOTSTRAP_PASSWORD` from `.env`, and change
+the password. Add `akadmin` to the `cygnusloom-admins` group, then sign in at
+`https://<your-app-domain>/login` and add at least one model under **Admin → Models**.
+
+In the hosted server, there are a few special roles you can assign in Authentik:
+
+* `cygnusloom-admins` — administrators: manage models, credits, and accounts.
+* `cygnusloom-credit-exempt` — campaigns they own use AI replies without spending credits.
+* `cygnusloom-players` — ordinary players, including everyone who joins through an invite link.
+
+To backup or upgrade your Cygnus Loom server:
+
+```sh
+./scripts/backup.sh   # dumps both databases into backups/
+./scripts/update.sh   # backs up, pulls, rebuilds, restarts; migrations run on start
+```
+
+### Exporting and Importing Campaigns
+Campaigns are portable between servers or between your own computer and any other server. You can export campaigns from within Cygnus Loom and import them in another Cygnus Loom instance, retaining all the play history, world information, characters, and other campaign details.
+
+## Develop
+
+Contributions are always welcome! To get started building and running Cygnus Loom locally you will need [uv](https://docs.astral.sh/uv/).
+
+You can launch a local server:
 
 ```sh
 uv sync
@@ -87,82 +83,39 @@ export CYGNUSLOOM_LLM_DEEPSEEK_API_KEY="<your-key>"  # from platform.deepseek.co
 CYGNUSLOOM_SECRET_KEY="$(openssl rand -hex 32)" \
 CYGNUSLOOM_TEST_LOGIN=1 \
 CYGNUSLOOM_TEST_LOGIN_ADMIN=1 \
-CYGNUSLOOM_LLM_PROVIDERS=deepseek/deepseek-chat \
-CYGNUSLOOM_LLM_DEFAULT_MODEL=deepseek/deepseek-chat \
+CYGNUSLOOM_LLM_PROVIDERS=deepseek/deepseek-flash \
+CYGNUSLOOM_LLM_DEFAULT_MODEL=deepseek/deepseek-flash \
 CYGNUSLOOM_LLM_DEEPSEEK_BASE_URL=https://api.deepseek.com/v1 \
 uv run uvicorn --factory cygnusloom.web.app:app_from_env --reload
 ```
 
-Open http://127.0.0.1:8000, use the development login, and create a campaign. These variables seed a fresh database only; the admin panel is authoritative afterwards, so manage existing models under **Admin > Models**. Keep a stable `CYGNUSLOOM_SECRET_KEY` across restarts: it encrypts model API keys.
-
-The GM prompt trades detail for tokens through two optional settings. The defaults keep the
-smallest useful prompt; the fuller modes are available for comparison and debugging:
-
-- `CYGNUSLOOM_TOOL_SCHEMA_MODE=brief` (default), or `compact`, `summary`, `full`. The engine
-always validates against the authored schema; the mode changes only what the model is shown.
-- `CYGNUSLOOM_RULE_INFO_MODE=brief` (default), or `index`, `full`. `index` lists rule ids and
-asks the GM to read the rule with `lookup_rule`; `brief` gives one-line summaries and the
-important rules in full.
-
-
-Run checks with `uv run python scripts/test.py` and `uv run ruff check`. The test runner sizes
-its worker pool from the CPU and memory free at the moment (at least two workers when the
-machine can hold them), never takes more than half of either (swap excluded), and enforces
-those ceilings where the operating system allows it. A run that hangs is stopped after 30
-minutes; set `CYGNUSLOOM_TEST_TIMEOUT` to change that limit, or to 0 to remove it. A bare
-`pytest` run is refused unless `CYGNUSLOOM_TEST_SETTINGS=1` is set; CI sets that marker and
-runs `pytest -n auto` without limits because its runner is dedicated to the job.
-
-## Using DeepSeek
-
-DeepSeek serves an OpenAI-compatible chat completions API, so it plugs in as a normal provider. Create an API key at [platform.deepseek.com](https://platform.deepseek.com) and export it in your shell (or put the export in your shell profile); never commit your key to the repository or paste it into [.env.example](.env.example).
-
-- `deepseek-flash` is the usual model. Switch by changing `CYGNUSLOOM_LLM_PROVIDERS` and `CYGNUSLOOM_LLM_DEFAULT_MODEL`.
-- The base URL is always `https://api.deepseek.com/v1`; `CYGNUSLOOM_LLM_DEEPSEEK_API_KEY` and `CYGNUSLOOM_LLM_DEEPSEEK_BASE_URL` follow the `CYGNUSLOOM_LLM_<NAME>_*` convention for any OpenAI-compatible provider.
-- For the Docker deployment, add the same model under **Admin > Models** after signing in; the API key is stored encrypted with `CYGNUSLOOM_SECRET_KEY` in the database, not in `.env`.
-
-## Docker deployment
-
-Requires Docker Compose, Python 3, two hostnames, and an HTTPS reverse proxy. The stack includes Postgres and Authentik, but not a language model or TLS proxy.
+or the local desktop app:
 
 ```sh
-./scripts/install.sh \
-  --domain cygnusloom.example.com \
-  --idp-domain idp.example.com \
-  --email you@example.com
+uv run --extra desktop cygnusloom play
 ```
 
-Configure nginx for both hostnames using the [nginx guide](deploy/nginx/README.md). Sign in to Authentik as `akadmin` using the bootstrap password in `.env`, add the account to `cygnusloom-admins`, then sign in to Cygnus Loom and add a model under **Admin > Models**. See the [Authentik guide](deploy/authentik/README.md) for user setup and troubleshooting. Server administrators can create single-use invitation links in Authentik for invite-only player accounts; the guide has the steps.
+### Unit tests and formatting
 
-For a local Docker test without DNS or TLS:
+Run the suite through its own runner, which sizes the worker pool to this machine and sets the
+required test settings:
 
 ```sh
-python3 scripts/setup_env.py --domain localhost --idp-domain idp.localhost
-docker compose -f compose.yaml -f compose.local.yaml up -d --build
+uv run python scripts/test.py
 ```
 
-Open http://localhost:21872 and follow the same Authentik and model setup. This HTTP setup is for a local machine or trusted network only; the override exposes Authentik on all interfaces.
-
-## Maintenance
-
-- `./scripts/update.sh` backs up, updates, rebuilds, and checks the deployment; use `--no-pull` when deploying copied files.
-- `./scripts/backup.sh` backs up the databases to `backups/`.
-- Never run `docker compose down -v` unless you intend to delete the database volumes.
-
-Configuration examples are in [.env.example](.env.example). Worlds, modules, and rule sets live in [src/cygnusloom/data](src/cygnusloom/data); each is discovered by its identifying entry (`world`, `module`, or `rule_set`) in a folder, and the file names and nesting inside that folder do not matter. Treat content as trusted code because it can import Python modules. Check a content tree with `uv run cygnusloom content validate` (add `--all-pairs` or `--strict` for broader checks).
+Format changed files with `uv run ruff format <paths>`. CI runs `uv run ruff check .`.
 
 ## License
 
 Cygnus Loom is Copyright (C) 2026 Cygnus Loom contributors and is free software under the
 [GNU Affero General Public License, version 3 or later](LICENSE). It comes with no warranty.
 
-The AGPL covers network use: a modified version offered to others over a network must offer them
-its Corresponding Source. The app shows these terms, with a link to the source, in the footer of
-every page and on its `/license` page, and serves the license text itself at `/license.txt`, so a
-deployment needs no other host for it. A fork that serves its own code should point the `Source`
-entry under `[project.urls]` in `pyproject.toml` at that code.
-
 ## Content credits
 
 The rule sets and worlds bundled with the engine keep their own licenses; [CREDITS.md](CREDITS.md)
 lists them. The app serves the same list on its `/license` page.
+
+## Human written README
+
+This README file shall be written by humans. AI agents shall not change this file unless explicitly directed.

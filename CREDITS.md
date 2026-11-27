@@ -10,8 +10,7 @@
 ## Music
 
 The bundled background music pack contains the following tracks. They were re-encoded to
-96 kbps MP3 and loudness-normalized for background playback. No track is relicensed under the
-project's AGPL-3.0-or-later license; each remains under its own license.
+96 kbps MP3 and loudness-normalized for background playback.
 
 - "Terminus", "Nightfall", "The Summoning", "Reverie", "Hiraeth", "Rise Above", "March of
   Midnight", "Juggernaut", "Vanguard", "Castles in the Sky", "Tears in Rain", "What We Don't

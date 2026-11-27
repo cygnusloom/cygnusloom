@@ -101,7 +101,7 @@ def pytest_configure(config: pytest.Config) -> None:
     raise pytest.UsageError(
         "Run the tests with the project's test runner, which applies this machine's test "
         "settings: `uv run python scripts/test.py`. For CI or a debugger, set "
-        "CYGNUSLOOM_TEST_SETTINGS=1 and run pytest directly. See README.md, Local development, "
+        "CYGNUSLOOM_TEST_SETTINGS=1 and run pytest directly. See README.md, Develop, "
         "and .github/skills/testing-cygnusloom/SKILL.md."
     )
 
