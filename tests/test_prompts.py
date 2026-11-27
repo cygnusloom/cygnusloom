@@ -434,6 +434,7 @@ def test_narration_separates_beats_and_dialogue_into_paragraphs():
     assert "never put the whole turn in one block" in text
     assert "Give each line its own paragraph" in text
     assert "Never put dialogue in block quotes, bullet points, labels" in text
+    assert "name the speaker in the sentence that introduces each quoted line" in text
 
 
 def test_speech_instruction_falls_back_to_digits_above_the_word_table():
@@ -481,7 +482,8 @@ def test_core_owns_the_encounter_start_policy():
     assert "start the encounter" in core.text
     assert "add every combatant" in core.text
     assert "settle initiative" in core.text
-    assert "The action that started the fight is not such an exception" in core.text
+    assert "An action the player declared before the fight is not part of the first turn" in core.text
+    assert "resolve it before you start the encounter" in core.text
 
 
 def test_each_combat_ruleset_adds_only_its_own_initiative_rule():

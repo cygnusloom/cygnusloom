@@ -417,6 +417,26 @@ def test_a_next_up_players_resource_is_spent_when_the_turn_opens(
     assert state.encounter.actions_used == 1
 
 
+def test_an_action_before_the_encounter_is_not_charged_to_its_first_turn(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    """An action resolved before the fight starts is outside the encounter's turn budget."""
+    client, campaign_id, ctx = _campaign(client_factory, fields=WIZARD_FIELDS)
+    dnd_srd_2024.learn_spell("Rook", "spell-light", ctx)
+    cast = dnd_srd_2024.cast_spell("Rook", "spell-light", ctx)
+    assert cast["spell"] == "Light"
+
+    _fight(client, campaign_id)
+    initiative = replace(ctx, world=replace(ctx.world, rng=Rolls(20, 1)))
+    assert dnd_srd_2024.roll_initiative(initiative)["order"][0] == "Rook"
+    with Session(client.app.state.engine) as db:
+        encounters.begin_turn(db, campaign_id, "Rook")
+    state = _state(client.app, campaign_id)
+    assert state.encounter is not None and state.encounter.acting == "Rook"
+    assert state.encounter.actions_used == 0
+    assert state.encounter.attacked == 0
+
+
 def test_awarding_experience_reaches_the_advancement_page(
     app: FastAPI, client_factory: Callable[[], TestClient]
 ) -> None:
