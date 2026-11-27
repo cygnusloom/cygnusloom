@@ -471,7 +471,7 @@ def test_a_defeated_participant_is_skipped_when_their_turn_is_next(
     from cygnusloom.services.events import CharacterDied
 
     client, campaign_id, ctx = _campaign(client_factory)
-    tools, _ = _fight(client, campaign_id)
+    _tools, _ = _fight(client, campaign_id)
     initiative = replace(ctx, world=replace(ctx.world, rng=Rolls(1, 20)))
     assert dnd_srd_2024.roll_initiative(initiative)["order"][0] == "Foe"
     with Session(client.app.state.engine) as db:
