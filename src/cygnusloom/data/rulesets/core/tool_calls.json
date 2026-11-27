@@ -1447,12 +1447,12 @@
         "conditions"
       ]
     },
-    "description": "Give a player character a stored condition the story has put on them, such as a fright, a curse, or an injury. Name the condition by its id, and give the cause in the story.",
+    "description": "Give a character a stored condition the story has put on them, such as a fright, a curse, or an injury. Name the condition by its id, and give the cause in the story. During an encounter, a condition on an NPC waits for a turn; pass force true when the story must break the order.",
     "parameters": {
       "properties": {
         "name": {
           "type": "string",
-          "description": "The name of the player character."
+          "description": "The name of the character."
         },
         "condition": {
           "type": "string",
@@ -1461,6 +1461,11 @@
         "cause": {
           "type": "string",
           "description": "What in the story gave the condition."
+        },
+        "force": {
+          "type": "boolean",
+          "default": false,
+          "description": "Apply the condition outside the turn order when the story needs it. Set it only when the story insists."
         }
       },
       "required": [

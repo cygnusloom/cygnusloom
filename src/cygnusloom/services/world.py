@@ -2339,9 +2339,11 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin, DocumentToolsMixin):
         use_optional: bool = True,
         player_rolls_reaction: bool = False,
         modifier: int = 0,
+        force: bool = False,
     ) -> dict[str, Any]:
         stat = magic_service.save_stat_id(self.character, stat)
         with session_scope(self.engine) as db:
+            self._guard_effect(db, name, "roll a save for", force=force)
             return magic_service.roll_save(
                 db,
                 self.campaign_id,
@@ -2715,6 +2717,48 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin, DocumentToolsMixin):
                 character,
                 gm_plays_hirelings(db, self.campaign_id),
             )
+
+    def require_turn(self, character: str, action: str = "act", force: bool = False) -> None:
+        """Refuse an action by a character who has no turn in the encounter. An encounter runs
+        on turns, so only the character whose turn is running acts; a player-controlled
+        character whose turn is next may act in the reply that begins the encounter, while a
+        GM-played character waits for the player to press Start. `force` is the story override
+        for an action that must happen outside the order."""
+        if force:
+            return
+        with session_scope(self.engine) as db:
+            state = load_state(db, self.campaign_id)
+            gm_played = encounters.gm_plays(
+                state, character, gm_plays_hirelings(db, self.campaign_id)
+            )
+            error = encounters.acting_error(
+                state, character, player_control=not gm_played, action=action
+            )
+            if error is not None:
+                raise InvalidInput(error)
+
+    def require_effect_turn(self, name: str, action: str = "affect", force: bool = False) -> None:
+        """Refuse an effect that changes an NPC's encounter state while no turn is running.
+        `force` is the story override for an effect that must land outside the order."""
+        with session_scope(self.engine) as db:
+            self._guard_effect(db, name, action, force=force)
+
+    def _guard_effect(
+        self, db: Session, name: str, action: str, *, hazard: bool = False, force: bool = False
+    ) -> None:
+        """Refuse an effect that changes an NPC's encounter state while no turn is running.
+        `hazard` marks harm the engine resolved through a hazard, which may land outside a
+        turn. `force` is the GM's story override."""
+        if hazard or force:
+            return
+        error = encounters.effect_error(
+            load_state(db, self.campaign_id),
+            name,
+            hireling_turns=gm_plays_hirelings(db, self.campaign_id),
+            action=action,
+        )
+        if error is not None:
+            raise InvalidInput(error)
 
     def hireling_attack(
         self,
@@ -3324,19 +3368,34 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin, DocumentToolsMixin):
             )
 
     def heal_character(
-        self, name: str, amount: int, stat: str | None = None, cause: str = ""
+        self,
+        name: str,
+        amount: int,
+        stat: str | None = None,
+        cause: str = "",
+        force: bool = False,
     ) -> dict[str, Any]:
         if stat is None:
             if self.combat is None or self.combat.healing_stat is None:
                 raise InvalidInput("this rule set has no default healing stat")
             stat = self.combat.healing_stat
         with session_scope(self.engine) as db:
+            self._guard_effect(db, name, "heal", force=force)
             return combat.heal_character(
                 db, self.campaign_id, name, stat, amount, cause, self.combat
             )
 
-    def harm_character(self, name: str, stat: str, amount: int, cause: str) -> dict[str, Any]:
+    def harm_character(
+        self,
+        name: str,
+        stat: str,
+        amount: int,
+        cause: str,
+        hazard: bool = False,
+        force: bool = False,
+    ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
+            self._guard_effect(db, name, "harm", hazard=hazard, force=force)
             return combat.harm_character(
                 db,
                 self.campaign_id,
@@ -3389,8 +3448,16 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin, DocumentToolsMixin):
         with session_scope(self.engine) as db:
             return combat.set_debug_stat(db, self.campaign_id, name, stat, remaining)
 
-    def add_condition(self, name: str, condition: str, cause: str) -> dict[str, Any]:
+    def add_condition(
+        self,
+        name: str,
+        condition: str,
+        cause: str,
+        hazard: bool = False,
+        force: bool = False,
+    ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
+            self._guard_effect(db, name, "add a condition to", hazard=hazard, force=force)
             return add_condition(
                 db, self.campaign_id, name, condition, cause, self.conditions, self.combat
             )

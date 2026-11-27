@@ -1931,6 +1931,14 @@ def _encounter_lines(
         if not view["has_acted"]:
             line += " No attack or movement has been recorded for them yet this turn."
         lines.append(line)
+    elif not view["awaiting_initiative"] and not (view["side_initiative"] and not view["settled"]):
+        upcoming = next((who for who in view["participants"] if who["next"]), None)
+        if upcoming is not None:
+            lines.append(
+                f"No one is taking a turn; {upcoming['name']} is next. The player presses "
+                "Start for an NPC or a GM-played hireling; a player character's own turn starts "
+                "on its own, and nobody acts before their turn begins."
+            )
     if not view["participants"]:
         lines.append("No participants yet.")
     acting_cell = next(

@@ -646,6 +646,48 @@ def test_a_next_up_player_character_may_attack_while_none_is_acting(
     assert result["target"] == "Bo"
 
 
+def test_an_effect_on_an_npc_waits_for_a_turn_and_force_allows_it(
+    client_factory: Callable[[], TestClient],
+):
+    """Nothing changes an NPC's encounter state between turns. A save, harm, or condition
+    belongs to someone's turn; the GM can still force one the story needs outside the order."""
+    client, campaign_id = _encounter_with(client_factory, cairn=True)
+    app = client.app
+    tools = _tools(app, campaign_id)
+    tools.create_monster(
+        "Hound",
+        TOWN,
+        description="A lean hound.",
+        stats={"hp": 6, "str": 10, "dex": 10, "wil": 10},
+        armor=0,
+        attacks=[{"name": "Bite", "dice": "1d6"}],
+    )
+    assert tools.add_participant("Hound")["added"] == "Hound"
+
+    # Play Pip's and Ada's turns so the hound is next with nobody acting.
+    _begin(app, campaign_id, "Pip")
+    _end(app, campaign_id, "Pip", by_player=False)
+    _finish_gm_reply(app, campaign_id)
+    if _encounter(app, campaign_id).encounter.acting is None:
+        _begin(app, campaign_id, "Ada")
+    _end(app, campaign_id, "Ada", by_player=True)
+    _finish_gm_reply(app, campaign_id)
+    state = _encounter(app, campaign_id).encounter
+    assert state is not None and state.acting is None
+    assert state.order[state.up] == "Hound"
+
+    with pytest.raises(InvalidInput, match="no one is taking a turn"):
+        tools.roll_save("Hound", "dex", "a spell")
+    with pytest.raises(InvalidInput, match="no one is taking a turn"):
+        tools.harm_character("Hound", "str", 1, "a spell")
+    with pytest.raises(InvalidInput, match="no one is taking a turn"):
+        tools.add_condition("Hound", "prone", "a spell")
+
+    # The GM's story override lets the effect land outside the order.
+    harmed = tools.harm_character("Hound", "str", 1, "a spell", force=True)
+    assert harmed["taken"] == 1
+
+
 def test_guards_protect_participants_maps_and_locations(client_factory: Callable[[], TestClient]):
     client, campaign_id = _encounter_with(client_factory, columns=20, rows=20)
     app = client.app

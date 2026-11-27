@@ -241,6 +241,67 @@ def test_an_old_individual_initiative_record_still_shows_its_d20() -> None:
     assert "Nib: 1d20 19 +1 bonus = 20" in text
 
 
+def test_a_gm_played_hirelings_spell_waits_for_its_turn(
+    client_factory: Callable[[], TestClient],
+) -> None:
+    """A hireling whose turns the GM plays acts only on its own turn. Before the player presses
+    Start, the engine refuses its save, its spell, and the harm the spell would cause. Once the
+    turn begins they all resolve, and force lets the story break the order."""
+    from .test_hireling_turns import _set_flag
+
+    client, campaign_id, ctx = _campaign(client_factory)
+    app = client.app
+    tools = tools_for(app, campaign_id, rule_set="dnd-srd-2024")
+    tools.create_location("Cave", "A low cave.")
+    tools.move_actor("Rook", "Cave")
+    tools.hire_hireling(
+        "Hesta",
+        "Rook",
+        0,
+        "A dwarf cleric, steady with a mace and a bright holy symbol.",
+        character={
+            "templates": {"species": "human", "background": "soldier", "class": "cleric"},
+            "stats": {"str": 12, "dex": 10, "con": 13, "int": 10, "wis": 15, "cha": 11},
+            "feature_choices": {"background-asi-soldier:scores": ["str", "dex", "con"]},
+        },
+    )
+    _set_flag(app, campaign_id, True)
+    dnd_srd_2024.learn_spell("Hesta", "spell-sacred-flame", ctx)
+    tools.create_encounter_map("Cave Yard", "Cave", 12, 12, "Open stone.")
+    tools.start_encounter("Cave Yard")
+    tools.create_monster("Foe", "Cave", template="monster-ogre")
+    for name in ("Hesta", "Rook", "Foe"):
+        assert tools.add_participant(name)["added"] == name
+    # Hesta wins initiative and is first in the order, with nobody taking a turn.
+    initiative = replace(ctx, world=replace(ctx.world, rng=Rolls(20, 1, 1)))
+    assert dnd_srd_2024.roll_initiative(initiative)["order"][0] == "Hesta"
+
+    with pytest.raises(InvalidInput, match="no one is taking a turn"):
+        dnd_srd_2024.cast_spell("Hesta", "spell-sacred-flame", ctx)
+    with pytest.raises(InvalidInput, match="no one is taking a turn"):
+        dnd_srd_2024.roll_save("Foe", "dex", 15, "Hesta's Sacred Flame", ctx)
+    with pytest.raises(InvalidInput, match="no one is taking a turn"):
+        tools.harm_character("Foe", "hp", 1, "Hesta's Sacred Flame")
+    with pytest.raises(InvalidInput, match="no one is taking a turn"):
+        tools.player_attack("Foe", "Mace", character="Hesta")
+
+    # The GM may force an effect outside the order when the story needs it.
+    forced = tools.harm_character("Foe", "hp", 1, "Hesta's Sacred Flame", force=True)
+    assert forced["taken"] == 1
+    saved = dnd_srd_2024.roll_save("Foe", "dex", 15, "Hesta's Sacred Flame", ctx, force=True)
+    assert saved["character"] == "Foe"
+
+    # The player presses Start, and now her turn is running.
+    with Session(app.state.engine) as db:
+        encounters.begin_turn(db, campaign_id, "Hesta")
+    cast = dnd_srd_2024.cast_spell("Hesta", "spell-sacred-flame", ctx)
+    assert cast["spell"] == "Sacred Flame"
+    assert dnd_srd_2024.roll_save("Foe", "dex", 15, "Hesta's Sacred Flame", ctx)["character"] == (
+        "Foe"
+    )
+    assert tools.harm_character("Foe", "hp", 1, "Hesta's Sacred Flame")["taken"] == 1
+
+
 def test_awarding_experience_reaches_the_advancement_page(
     app: FastAPI, client_factory: Callable[[], TestClient]
 ) -> None:
