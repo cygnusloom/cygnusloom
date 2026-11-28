@@ -1368,6 +1368,7 @@ def create_npc(
     pronouns: str | None = None,
     important: bool = False,
     species: str = "",
+    template: str | None = None,
 ) -> dict[str, Any]:
     state = load_state(db, campaign_id)
     name = bounded_text(name, "name", MAX_NAME)
@@ -1377,11 +1378,25 @@ def create_npc(
         check_choices(spec, character or {})
     except CharacterError as error:
         raise InvalidInput(str(error)) from error
-    base = None if force else _statblock_named(monsters, name)
-    if base is not None:
+    # An explicit template lets a named monster use a published statblock. A name that matches
+    # one still works, so `Goblin` needs no template; `Grub` does.
+    base: MonsterTemplate | None = None
+    wanted = (template or "").strip()
+    if wanted:
+        base = monsters.get(wanted) or _statblock_named(monsters, wanted)
+        if base is None:
+            raise InvalidInput(
+                f"there is no bestiary statblock {template!r}; search_monster lists them"
+            )
         if (character or {}).get("stats"):
             raise InvalidInput(_statblock_conflict(base, spec))
         character = {**(character or {}), "stats": dict(base.stats)}
+    elif not force:
+        base = _statblock_named(monsters, name)
+        if base is not None:
+            if (character or {}).get("stats"):
+                raise InvalidInput(_statblock_conflict(base, spec))
+            character = {**(character or {}), "stats": dict(base.stats)}
     if hp_tier is not None:
         character = _with_hp_tier(
             character, hp_tier, npc_hp, npc_hp_stat, statblock=base is not None

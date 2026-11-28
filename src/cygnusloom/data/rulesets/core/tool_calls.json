@@ -284,7 +284,7 @@
     "id": "create_npc",
     "character_options": true,
     "npc_hp_tier": true,
-    "description": "Add an NPC to the campaign and place them at an existing location; leave personality, accent, and quirks out so create_npc rolls them from its tables, and pass only a trait the player or an earlier record already fixes. Do not infer a trait from the NPC's role or the scene. Give character options, such as appearance or biography, only when the story calls for them; anything left out is rolled or left blank. A name that matches a published statblock, such as a creature in the source material, takes that statblock's stats, armor, and attacks, so leave the stats out of the character options. Give armor and attacks when the NPC is meant to fight; this arms them in the same call, so a whole band can be created before stage_encounter. Give summary when the player has met them and should see a brief entry on the Characters page. Names must be unique among locations and NPCs. A new NPC takes the place's majority people; give species from the world state's peoples only for a traveler, settler, or exile of another people.",
+    "description": "Add an NPC at an existing location; for a monster, pass its bestiary statblock id as template (search_monster lists ids) so it takes that statblock's hit points, armor, and attacks. Leave personality, accent, and quirks out so create_npc rolls them from its tables, and pass only a trait the player or an earlier record already fixes. Do not infer a trait from the NPC's role or the scene. Give character options, such as appearance or biography, only when the story calls for them; anything left out is rolled or left blank. A name that matches a published statblock, such as a creature in the source material, takes that statblock's stats, armor, and attacks, so leave the stats out of the character options. Give armor and attacks when the NPC is meant to fight; this arms them in the same call, so a whole band can be created before stage_encounter. Give summary when the player has met them and should see a brief entry on the Characters page. Names must be unique among locations and NPCs. A new NPC takes the place's majority people; give species from the world state's peoples only for a traveler, settler, or exile of another people.",
     "parameters": {
       "properties": {
         "name": {
@@ -298,6 +298,10 @@
         "description": {
           "type": "string",
           "description": "Who the NPC is: appearance, role, and what they are doing. This is your own record and may hold secrets the player has not learned; the player never sees it. Use update_npc_knowledge for what the player can see."
+        },
+        "template": {
+          "type": "string",
+          "description": "Optional. A bestiary statblock id from search_monster. The NPC takes its hit points, saves, armor, and attacks; leave out character stats."
         },
         "summary": {
           "type": "string",
@@ -2942,7 +2946,7 @@
     "type": "tool_call",
     "id": "search_monster",
     "lookup": true,
-    "description": "Find monster statblocks in the Cairn bestiary by words in their name, id, or description. Every word in the query must appear. Each result gives the statblock's stats, armor, and attacks, which create_monster can use as a template.",
+    "description": "Find bestiary statblocks by words in their name, id, or description. Every word in the query must appear. Each result gives the statblock's stats, armor, and attacks, which create_monster or create_npc can use as a template.",
     "parameters": {
       "properties": {
         "query": {

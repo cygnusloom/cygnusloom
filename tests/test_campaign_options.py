@@ -23,10 +23,12 @@ from cygnusloom.db.models import Campaign
 from cygnusloom.services import campaign_files
 from cygnusloom.services.common import InvalidInput
 from cygnusloom.services.events import (
+    CampaignOptionsChosen,
     CharacterFieldSet,
     CharacterRespecced,
     decode,
     events_since,
+    record,
 )
 from cygnusloom.web.character_form import campaign_submission_from_form, campaign_view
 from tests.conftest import content_library, csrf_token, remember_csrf_token
@@ -141,13 +143,18 @@ def _post_respec(client: TestClient, campaign_id: int, name: str, page: str, **f
 
 def test_a_campaign_option_with_one_value_is_fixed_and_not_asked():
     """The SRD has one experience track, so the engine fills it in rather than offering a
-    choice. A rule set with a real track choice still asks, and a fixed value is still set."""
+    choice. Its leveling method is a real choice and starts on Experience. A rule set with a
+    real track choice still asks, and a fixed value is still set."""
     dnd = content_library().rule_sets["dnd-srd-2024"].campaign
     xp = dnd.fields["xp_rate"]
 
-    assert campaign_view(dnd)["choice_fields"] == []
+    assert [field.id for field in dnd.choice_fields()] == ["leveling"]
+    assert campaign_view(dnd)["choice_fields"][0]["value"] == "Experience"
     assert dnd.fixed_value(xp) == "Standard"
-    assert campaign_submission_from_form(dnd, FormData([])) == {"xp_rate": "Standard"}
+    assert campaign_submission_from_form(dnd, FormData([])) == {
+        "xp_rate": "Standard",
+        "leveling": "Experience",
+    }
 
     wwn = content_library().rule_sets["worldswithoutnumber"].campaign
     assert [field.id for field in wwn.choice_fields()] == ["xp_rate"]
@@ -164,6 +171,7 @@ def test_a_fixed_campaign_option_is_not_shown_but_is_still_recorded(
 
     creation = client.get(f"/campaigns/{campaign_id}").text
     assert 'id="panel-campaign-xp_rate"' not in creation
+    assert 'id="panel-campaign-leveling"' in creation
 
     create_character_direct(
         client,
@@ -175,8 +183,56 @@ def test_a_fixed_campaign_option_is_not_shown_but_is_still_recorded(
 
     settings = client.get(f"/campaigns/{campaign_id}").text
     assert 'name="campaign-xp_rate"' not in settings
+    assert 'name="campaign-leveling"' in settings
     state = open_campaign(client.app, campaign_id)
-    assert state.options == {"xp_rate": "Standard"}
+    assert state.options == {"xp_rate": "Standard", "leveling": "Experience"}
+
+
+def test_the_owner_can_switch_the_leveling_method(
+    client_factory: Callable[[], TestClient],
+):
+    client = signed_in_client(client_factory)
+    campaign_id = create_campaign_direct(
+        client, world_template="testhollow", rule_set="dnd-srd-2024"
+    )
+    create_character_direct(client, campaign_id, name="Rook", fields=FIGHTER_FIELDS)
+    close_opening(client, campaign_id)
+
+    settings = client.get(f"/campaigns/{campaign_id}").text
+    assert 'name="campaign-leveling"' in settings
+    assert open_campaign(client.app, campaign_id).options["leveling"] == "Experience"
+
+    response = _post_settings(
+        client,
+        campaign_id,
+        **_settings_form(client, campaign_id, **{"campaign-leveling": "Milestone"}),
+    )
+
+    assert response.status_code == 303
+    assert open_campaign(client.app, campaign_id).options == {
+        "xp_rate": "Standard",
+        "leveling": "Milestone",
+    }
+
+
+def test_an_older_campaign_shows_the_leveling_default_in_settings(
+    client_factory: Callable[[], TestClient],
+):
+    client = signed_in_client(client_factory)
+    campaign_id = create_campaign_direct(
+        client, world_template="testhollow", rule_set="dnd-srd-2024"
+    )
+    create_character_direct(client, campaign_id, name="Rook", fields=FIGHTER_FIELDS)
+    close_opening(client, campaign_id)
+    with Session(client.app.state.engine) as db:
+        record(db, campaign_id, CampaignOptionsChosen(options={"xp_rate": "Standard"}))
+        db.commit()
+
+    settings = client.get(f"/campaigns/{campaign_id}").text
+
+    assert 'name="campaign-leveling"' in settings
+    assert '<option value="Experience" selected' in settings
+    assert '<option value="Milestone" selected' not in settings
 
 
 def test_a_form_fills_a_fixed_option_while_the_player_chooses_the_others():

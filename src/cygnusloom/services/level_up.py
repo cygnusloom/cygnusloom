@@ -94,16 +94,11 @@ def level_ready(
     rules: LevelUpRules,
     counters: Mapping[str, Any],
 ) -> bool:
-    """Whether the character's XP has reached the next level's threshold."""
-    level = pc.counters.get(rules.level_counter, counters[rules.level_counter].initial)
-    if not isinstance(level, int) or level >= rules.max_level:
-        return False
-    rate = state.options.get(rules.rate_option) or next(iter(rules.tracks))
-    track = rules.tracks.get(rate)
-    if track is None:
-        rate = next(iter(rules.tracks))
-        track = rules.tracks[rate]
-    return pc.counters.get(rules.xp_counter, counters[rules.xp_counter].initial) >= track[level]
+    """Whether the character has reached the next level's threshold. This is true in milestone
+    mode too once the GM has granted the milestone, because that grant fills the experience to
+    the threshold and the player takes the level on the same page."""
+    progress = rules.progress(state.options, pc.counters, counters)
+    return progress.next_xp is not None and progress.xp >= progress.next_xp
 
 
 def advancement_due(state: Any, rule_set: RuleSet, pc: Character | None = None) -> bool:
@@ -501,6 +496,8 @@ def page_view(
                 **summary,
                 "feature_choices": _new_feature_choice_views(rule_set, summary),
             }
+            if level_rules.progress(state.options, pc.counters, rule_set.counters).milestone:
+                summary["milestone"] = True
             grants = {
                 str(counter): int(points) for counter, points in summary.get("grants", {}).items()
             }

@@ -147,7 +147,7 @@
       if (boundTabLists.has(list)) return;
       boundTabLists.add(list);
       const tabs = Array.from(list.querySelectorAll('[role="tab"]'));
-      const select = (tab, focus = true) => {
+      const select = (tab, focus = true, chosen = false) => {
         for (const other of tabs) {
           const selected = other === tab;
           other.setAttribute("aria-selected", String(selected));
@@ -155,13 +155,18 @@
           const panel = document.getElementById(other.getAttribute("aria-controls"));
           if (panel) panel.hidden = !selected;
         }
+        // A character sub-tab the player picked by hand survives a live refresh. The server's
+        // default (the character taking its turn) wins again when that default changes.
+        if (chosen && list.hasAttribute("data-character-tabs")) {
+          list.dataset.chosenCharacter = tab.dataset.character || "";
+        }
         if (focus) tab.focus();
         else tab.scrollIntoView({ block: "nearest", inline: "nearest" });
       };
       list.selectTab = select;
 
       tabs.forEach((tab, index) => {
-        on(tab, "tab-click", "click", () => select(tab));
+        on(tab, "tab-click", "click", () => select(tab, true, true));
         on(tab, "tab-key", "keydown", (event) => {
           const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
           if (step === undefined) return;
@@ -171,7 +176,7 @@
           while (tabs[next].hidden && next !== index) {
             next = (next + step + tabs.length) % tabs.length;
           }
-          select(tabs[next]);
+          select(tabs[next], true, true);
         });
       });
 

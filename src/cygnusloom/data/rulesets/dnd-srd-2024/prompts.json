@@ -57,13 +57,13 @@
     "type": "prompt",
     "id": "level_up_choices",
     "step": "state",
-    "text": "Award experience with award_xp for a defeated encounter, a completed quest, or a milestone. When a character has enough experience, the player takes the level on the advancement page. Hit points, the proficiency bonus, spell slots, and class features arrive automatically; the page then offers the level's spells, Ability Score Improvement or feat, fighting style, subclass, and expertise. Never apply a level or choose a player's feat, spell, or subclass for them; the player makes those choices."
+    "text": "Leveling follows the campaign's Leveling option. With Experience, award experience with award_xp for overcoming challenges of any kind: a defeated encounter, a completed quest, a social victory, exploration, or a milestone. With Milestone, do not award experience; when the party completes a significant goal, call milestone_level for each player character who should advance. When a character has enough experience, the player takes the level on the advancement page. Hit points, the proficiency bonus, spell slots, and class features arrive automatically; the page then offers the level's spells, Ability Score Improvement or feat, fighting style, subclass, and expertise. Never apply a level or choose a player's feat, spell, or subclass for them; the player makes those choices."
   },
   {
     "type": "prompt",
     "id": "npc_statblocks",
     "step": "state",
-    "text": "An NPC built from a bestiary entry already has its attacks, armor, and hit points. When you invent an NPC, give them sensible ability scores, hit points, and at least one attack with create_npc or update_npc; an NPC with no attacks can only stand there. Use the monster's own attack names and dice from its statblock, and never invent a bonus the statblock does not give."
+    "text": "Use the published statblock for every published creature: search_monster finds it, and create_monster or create_npc with template set to its id gives the creature that statblock's hit points, saves, armor, and attacks. An NPC given only ability scores has 1 hit point, so never rebuild a monster that way. For an invented NPC with no bestiary entry, pass hp_tier (average, hardier, serious, elite, or heroic) instead of trying to set hit points in character.stats. Use the monster's own attack names and dice from its statblock, and never invent a bonus the statblock does not give."
   },
   {
     "type": "prompt",

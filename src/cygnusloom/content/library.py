@@ -1303,6 +1303,26 @@ class LevelUpPick:
 
 
 @dataclass(frozen=True)
+class LevelProgress:
+    """Where a character stands on its level track: the level it has, the experience it holds,
+    and the experience its next level needs. `milestone` is true when the campaign lets the GM
+    call each level instead of counting experience. None of the experience numbers are shown to
+    the player in that mode."""
+
+    level: int
+    xp: int
+    next_xp: int | None
+    rate: str
+    milestone: bool
+    max_level: int
+
+    @property
+    def to_next(self) -> int | None:
+        """How much experience is still needed, or None at the highest level."""
+        return None if self.next_xp is None else max(0, self.next_xp - self.xp)
+
+
+@dataclass(frozen=True)
 class LevelUpRules:
     """A level progression a rule set defines in its JSON.
 
@@ -1329,6 +1349,43 @@ class LevelUpRules:
     # hooks take the chosen class id; the plain hooks remain for single-class characters.
     apply_level_class: Callable[..., Any] | None = None
     summary_class: Callable[..., Any] | None = None
+    # A campaign option that chooses between experience and milestone leveling, and the option
+    # value that means milestone. Empty when the rule set only counts experience.
+    leveling_option: str = ""
+    milestone_value: str = ""
+
+    def progress(
+        self,
+        options: Mapping[str, Any],
+        held: Mapping[str, int],
+        counters: Mapping[str, CounterRules],
+    ) -> LevelProgress:
+        """The character's level and experience against the campaign's chosen track. A campaign
+        with no stored leveling option, including one made before the option existed, counts
+        experience."""
+        level = held.get(self.level_counter, counters[self.level_counter].initial)
+        if not isinstance(level, int):
+            level = counters[self.level_counter].initial
+        xp = held.get(self.xp_counter, counters[self.xp_counter].initial)
+        if not isinstance(xp, int):
+            xp = counters[self.xp_counter].initial
+        rate = str(options.get(self.rate_option) or "") or next(iter(self.tracks))
+        track = self.tracks.get(rate)
+        if track is None:
+            rate = next(iter(self.tracks))
+            track = self.tracks[rate]
+        next_xp = track[level] if 1 <= level < len(track) else None
+        milestone = bool(self.leveling_option) and (
+            options.get(self.leveling_option) == self.milestone_value
+        )
+        return LevelProgress(
+            level=level,
+            xp=xp,
+            next_xp=next_xp,
+            rate=rate,
+            milestone=milestone,
+            max_level=len(track),
+        )
 
     @property
     def creation_picks(self) -> tuple[LevelUpPick, ...]:
@@ -4411,6 +4468,7 @@ CHARACTER_DEFINITION_KEYS: Mapping[str, frozenset[str]] = {
             "restricted_by",
             "knows",
             "flavor",
+            "default",
         }
     ),
     "template": frozenset(
@@ -8897,6 +8955,8 @@ def _load_level_ups(
                 "summary_class",
                 "picks",
                 "template_kinds",
+                "leveling_option",
+                "milestone_value",
             },
             label,
         )
@@ -8948,6 +9008,22 @@ def _load_level_ups(
             raise ContentError(
                 f"{label}: template_kinds names unknown template kinds {unknown_kinds!r}"
             )
+        leveling_option = _optional_text(definition.data, "leveling_option", label) or ""
+        milestone_value = _optional_text(definition.data, "milestone_value", label) or ""
+        if leveling_option:
+            field = campaign.fields.get(leveling_option)
+            if field is None:
+                raise ContentError(
+                    f"{label}: leveling_option names no campaign option ({leveling_option!r})"
+                )
+            values = {option.value for option in campaign.table_options(field)}
+            if milestone_value not in values:
+                raise ContentError(
+                    f"{label}: milestone_value {milestone_value!r} is not an option of "
+                    f"{leveling_option!r}"
+                )
+        elif milestone_value:
+            raise ContentError(f"{label}: milestone_value needs a leveling_option")
         loaded[definition.id] = LevelUpRules(
             id=definition.id,
             label=required_text(definition.data, "label", label),
@@ -8963,6 +9039,8 @@ def _load_level_ups(
             template_kinds=template_kinds,
             apply_level_class=apply_level_class,
             summary_class=summary_class,
+            leveling_option=leveling_option,
+            milestone_value=milestone_value,
         )
     return loaded
 

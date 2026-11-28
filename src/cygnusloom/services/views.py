@@ -33,6 +33,8 @@ from cygnusloom.content.library import (
     Hooks,
     HousekeepingRules,
     InventoryRules,
+    LevelProgress,
+    LevelUpRules,
     MonsterTemplate,
     RelationRules,
     RoadKind,
@@ -284,6 +286,9 @@ class SceneView:
     # The player character's own sheet, and the sheets of every hireling the player plays for.
     pc_sheet: CharacterSheetView | None = None
     hireling_sheets: tuple[CharacterSheetView, ...] = ()
+    # The controlled hireling whose encounter turn is running, if any. The Character and
+    # Inventory panels open on that hireling's tab instead of the player character's.
+    acting_hireling: str = ""
     # Campaign progress clocks, vehicles, and shelter improvements, when the rule set or the
     # campaign has them. Hidden entries stay out of the player's view.
     clocks: tuple[CampaignClock, ...] = ()
@@ -1166,6 +1171,7 @@ def scene_view(
     wage_currency: str = "",
     hp_stat: str | None = None,
     hooks: Hooks | None = None,
+    level_up: LevelUpRules | None = None,
 ) -> SceneView:
     """The player's view. It shows only what is at the player character's location, including any
     hirelings there, and everyone the player has met. The pack shows the player character's items
@@ -1192,7 +1198,12 @@ def scene_view(
     if pc is not None:
         points = hit_points(pc, hp_stat)
         sections = {
-            **_sheet_sections(spec, sheet, sheet_entries),
+            **_sheet_sections(
+                spec,
+                sheet,
+                sheet_entries,
+                _level_progress(level_up, state.options, pc, counters),
+            ),
             **_sheet_ability_sections(spec, pc, ability_entries),
         }
         pc_sheet = CharacterSheetView(
@@ -1234,6 +1245,19 @@ def scene_view(
         sheet_entries,
         wage_currency=wage_currency,
         hp_stat=hp_stat,
+        level_up=level_up,
+        options=state.options,
+    )
+    # A hireling taking its encounter turn opens the Character and Inventory panels on its own
+    # tab. Only a hireling this viewer plays for is eligible; an NPC turn leaves the PC's tab up.
+    acting = state.encounter.acting if state.encounter is not None else None
+    acting_hireling = next(
+        (
+            hireling.name
+            for hireling in controlled
+            if acting is not None and name_key(hireling.name) == name_key(acting)
+        ),
+        "",
     )
     hireling_inventories: tuple[CharacterInventoryView, ...] = ()
     if inventory is not None:
@@ -1264,6 +1288,7 @@ def scene_view(
         sheet_links=sheet_entries,
         pc_sheet=pc_sheet,
         hireling_sheets=hireling_sheets,
+        acting_hireling=acting_hireling,
         clocks=tuple(clock for clock in state.campaign_clocks.values() if clock.visible),
         threats_here=tuple(
             sorted(
@@ -1324,13 +1349,14 @@ def world_state_text(
     if pc is None:
         return ""
     multiplayer = len(pcs) > 1
-    # A campaign option with only one value is fixed, not a choice, so it is not reported.
-    offered = {field.id for field in campaign.offered_fields()}
-    lines = [
-        f"Campaign {campaign.fields[field_id].name.lower()}: {value}."
-        for field_id, value in state.options.items()
-        if field_id in offered
-    ]
+    # A campaign option with only one value is fixed, not a choice, so it is not reported. An
+    # option the log does not name yet takes its declared default, so an older campaign still
+    # tells the GM which leveling method it uses.
+    lines = []
+    for option_field in campaign.offered_fields():
+        value = state.options.get(option_field.id) or option_field.default
+        if value:
+            lines.append(f"Campaign {option_field.name.lower()}: {value}.")
     if multiplayer:
         lines.append(
             "Several players share this campaign. Each player message names the character it "
@@ -2386,6 +2412,8 @@ def _hireling_sheets(
     *,
     wage_currency: str = "",
     hp_stat: str | None = None,
+    level_up: LevelUpRules | None = None,
+    options: Mapping[str, Any] | None = None,
 ) -> tuple[CharacterSheetView, ...]:
     """Every hireling's sheet, with the same detail as the player's own sheet."""
     sheets = []
@@ -2395,7 +2423,12 @@ def _hireling_sheets(
             lines += _status_lines(character, conditions, None, None, None)
         points = hit_points(character, hp_stat)
         sections = {
-            **_sheet_sections(spec, lines, sheet_entries),
+            **_sheet_sections(
+                spec,
+                lines,
+                sheet_entries,
+                _level_progress(level_up, options or {}, character, counters),
+            ),
             **_sheet_ability_sections(spec, character, ability_entries),
         }
         sheets.append(
@@ -2536,10 +2569,23 @@ def _sheet_text(spec: CharacterSpec, character: Character, *, include_fields: bo
     return text
 
 
+def _level_progress(
+    level_up: LevelUpRules | None,
+    options: Mapping[str, Any],
+    character: Character,
+    counters: Mapping[str, CounterRules] | None,
+) -> LevelProgress | None:
+    """The character's level progress, or None when the rule set has no levels."""
+    if level_up is None or counters is None:
+        return None
+    return level_up.progress(options, character.counters, counters)
+
+
 def _sheet_sections(
     spec: CharacterSpec,
     lines: Sequence[str],
     sheet_entries: Mapping[str, str],
+    level_progress: LevelProgress | None = None,
 ) -> dict[str, Any]:
     """Split the sheet text into the compact sections the play view renders. The text lines
     stay the complete record used by statblocks; this only decides what a player sees first."""
@@ -2606,7 +2652,27 @@ def _sheet_sections(
                 amount = int(value)
             except ValueError:
                 continue
-            if counter_id in ("level", "xp"):
+            if counter_id == "xp" and level_progress is not None:
+                # Show what the next level needs; the bare total does not say how close it is.
+                if level_progress.milestone:
+                    identity.append(("Leveling", "Milestone (the GM decides)"))
+                elif level_progress.next_xp is None:
+                    identity.append((label, f"{amount:,} (highest level)"))
+                elif amount >= level_progress.next_xp:
+                    identity.append(
+                        (label, f"{amount:,} / {level_progress.next_xp:,} (level ready)")
+                    )
+                else:
+                    identity.append(
+                        (
+                            label,
+                            (
+                                f"{amount:,} / {level_progress.next_xp:,} "
+                                f"({level_progress.to_next:,} to go)"
+                            ),
+                        )
+                    )
+            elif counter_id in ("level", "xp"):
                 identity.append((label, value))
             elif not counter_id.startswith("slot_"):
                 # Harm has its own pips track on the sheet, so it is not repeated as a chip.

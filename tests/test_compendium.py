@@ -167,11 +167,13 @@ def test_ability_and_creature_links_use_ids_and_names():
 
 def test_a_campaign_option_with_one_value_is_not_a_compendium_option():
     """The SRD's one experience track is fixed, so the compendium does not list it as an
-    option or a table. A rule set whose track is a real choice keeps listing it."""
+    option or a table. Its leveling method is a real choice and is listed, as is a rule set
+    whose experience track is a real choice."""
     library = content_library()
     dnd = compendium_view(library, "dnd-srd-2024", "testhollow")
-    assert "Experience" not in _entry_names(dnd, "fields")
+    assert "Leveling" in _entry_names(dnd, "fields")
     assert "Xp Rate" not in _entry_names(dnd, "tables")
+    assert "Leveling" in _entry_names(dnd, "tables")
     wwn = compendium_view(library, "worldswithoutnumber", "unwritten-world")
     assert "Experience Track" in _entry_names(wwn, "fields")
 

@@ -591,7 +591,7 @@
     "id": "award_xp",
     "python_module": "dnd_srd_2024",
     "function": "award_xp",
-    "description": "Award experience points for a defeated encounter, a completed quest, or a milestone. The player takes the level on the advancement page when the total reaches the next threshold.",
+    "description": "Award experience points in an Experience-leveling campaign for any challenge overcome, not only combat: a defeated encounter, a completed quest, a social victory, exploration, or a milestone. The player takes the level on the advancement page when the total reaches the next threshold.",
     "parameters": {
       "properties": {
         "character": {
@@ -613,6 +613,26 @@
         "character",
         "amount"
       ]
+    }
+  },
+  {
+    "type": "tool_call",
+    "id": "milestone_level",
+    "python_module": "dnd_srd_2024",
+    "function": "milestone_level",
+    "description": "Advance a player character at a milestone in a Milestone-leveling campaign. The engine grants enough experience to reach the next level and the player makes the level's choices on the advancement page.",
+    "parameters": {
+      "properties": {
+        "character": {
+          "type": "string",
+          "description": "The player character who advances."
+        },
+        "cause": {
+          "type": "string",
+          "description": "What the party achieved, in a few words."
+        }
+      },
+      "required": ["character"]
     }
   },
   {

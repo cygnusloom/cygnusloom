@@ -760,6 +760,8 @@ class Field:
     restriction: Restriction | None = None
     knows: str | None = None
     flavor: bool = False
+    # The option a form starts on when no value is stored. Empty means the player must choose.
+    default: str = ""
 
 
 @dataclass(frozen=True)
@@ -2962,6 +2964,13 @@ def _field(definition: Definition, tables: Mapping[str, object], kind: str, temp
     flavor = definition.data.get("flavor", False)
     if not isinstance(flavor, bool):
         raise ContentError(f"{label}: 'flavor' must be true or false")
+    default = definition.data.get("default", "")
+    if not isinstance(default, str):
+        raise ContentError(f"{label}: 'default' must be text")
+    if default:
+        options = tables.get(table, ()) if table is not None else ()
+        if default not in {option.value for option in options}:
+            raise ContentError(f"{label}: 'default' is not one of its table's options")
     return Field(
         id=definition.id,
         name=required_text(definition.data, "name", label),
@@ -2971,6 +2980,7 @@ def _field(definition: Definition, tables: Mapping[str, object], kind: str, temp
         restriction=_restriction(definition.data.get("restricted_by"), label),
         knows=knows,
         flavor=flavor,
+        default=default,
     )
 
 
