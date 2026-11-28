@@ -36,6 +36,8 @@ Cygnus is the AI GM. It keeps the game on track, follows the rules, and allows n
 
 A turn runs in stages: a state/tool step, narration, a review that can retract it, a journal, and speech. Speech writes NPC dialogue. The GM changes state only through tools; the engine refuses illegal calls and says what to do instead. A force option covers story-only exceptions. The review retracts narration that contradicts the log.
 
+An impossible action is refused whole. If any part of what the player declares cannot happen — a target beyond a spell's range or outside its area, an item not carried, a place not reachable — Cygnus says plainly that it cannot happen, why, and what would work instead, and nothing is applied: no dice, slot, action, item, harm, condition, or note. The engine checks a spell's named targets against its range and area before the cast spends anything. A refused action is not a failed attempt, and the player can restate it. Cygnus answers questions about whether an action is possible the same way, before trying anything.
+
 The opening has its own prompt and retry; out-of-character replies do not advance the game. A checklist reminds the GM to cover characters, cast, notes, storylines, time, rules, encounters, maps, market, and the rest. The GM can roll secretly, prompt a player, and roll for hirelings it plays. Context is summarized as it grows; a turn keeps running if the player navigates away, and the page catches up live. The GM uses an OpenAI-compatible, streamed model; a server offers a catalog, and the desktop setup takes the player's own model.
 
 # World, Time, and Travel

@@ -1441,6 +1441,29 @@
   },
   {
     "type": "tool_call",
+    "id": "refuse_action",
+    "python_module": "core",
+    "function": "refuse_action",
+    "description": "Refuse the player's action whole when any part of it cannot happen, before you change anything: nothing about it is done or spent, with no roll, slot, action, item, harm, condition, or note. Never do the part that can happen and then undo it. Use this for an action the player is trying; when they only ask whether something is possible, answer in your reply without changing anything.",
+    "parameters": {
+      "properties": {
+        "action": {
+          "type": "string",
+          "description": "The action the player asked for, in a few words."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Why it cannot happen and what would work instead, plainly: the distance, the rule, or what is missing."
+        }
+      },
+      "required": [
+        "action",
+        "reason"
+      ]
+    }
+  },
+  {
+    "type": "tool_call",
     "id": "add_condition",
     "enabled_by": {
       "social": [

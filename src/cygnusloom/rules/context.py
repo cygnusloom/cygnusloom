@@ -248,10 +248,24 @@ class CoreWorld(Protocol):
 
     def end_npc_turn(self, name: str) -> dict[str, Any]: ...
 
+    def cell_feet(self) -> int | None:
+        """The rule set's encounter cell size in feet, or None when its encounters have no
+        grid. Rule-set modules use it to measure spell targets the way attacks are measured."""
+
     def gm_plays(self, character: str) -> bool:
         """Whether the GM plays this character for its rolls: any NPC, or a hireling whose
         turns the campaign gives to the GM. A tool that would ask the player to roll for such
         a character has the engine roll instead."""
+
+    def refuse_action(
+        self, action: str, reason: str, read_only: Sequence[str] = ()
+    ) -> dict[str, Any]:
+        """Record that the player's action could not happen as stated; nothing about it is done
+        or spent, and the narration tells the player why. A turn that already changed the world
+        refuses the refusal."""
+
+    def turn_refused(self) -> bool:
+        """Whether the open turn recorded a refusal, so no change may be made for that action."""
 
     def add_note(self, text: str, subject: str | None = None) -> dict[str, Any]: ...
 

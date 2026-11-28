@@ -24,6 +24,7 @@ from cygnusloom.content.definitions import ContentError
 from cygnusloom.content.library import LevelGrants
 from cygnusloom.rules.context import ToolContext
 from cygnusloom.rules.dice import ROLL_MODES, is_formula, roll_mode_values, roll_total
+from cygnusloom.services import spell_targets
 from cygnusloom.services.common import InvalidInput, whole_number
 from cygnusloom.services.conditions import condition_modifier, condition_roll_mode
 from cygnusloom.services.events import (
@@ -2432,6 +2433,7 @@ def spell_attack(
     struck = _read_character(target, ctx)
     if struck.name == found.name:
         raise InvalidInput("a spell attack needs a target other than the caster")
+    _check_spell_targets(found, feature, [struck.name], "", ctx)
     if not force:
         in_encounter = ctx.world.with_hook_context(lambda hc: hc.state().encounter is not None)
         if not in_encounter:
@@ -2591,9 +2593,12 @@ def cast_spell(
     slot_level: int = 0,
     ritual: bool = False,
     force: bool = False,
+    targets: Sequence[str] = (),
+    center: str = "",
 ) -> dict[str, Any]:
     """Cast a known spell, spending a slot of the chosen level or the spell's own. A prepared
-    spell with the Ritual tag can be cast as a ritual instead, taking 10 minutes and no slot."""
+    spell with the Ritual tag can be cast as a ritual instead, taking 10 minutes and no slot.
+    Every named target is measured against the spell's range and area before anything is spent."""
     progression = require_progression(ctx.world)
     spec = ctx.world.character
     found = _read_character(name, ctx)
@@ -2602,6 +2607,7 @@ def cast_spell(
     feature = _find_spell(spec, spell)
     if not _knows_spell(found, feature, progression):
         raise InvalidInput(f"{found.name} does not know {feature.name}")
+    _check_spell_targets(found, feature, targets, center, ctx)
     rank = feature.rank
     rules = _spell_class_rules(found, feature, progression)
     is_ritual = "| ritual" in (feature.description or "").casefold()
@@ -3144,6 +3150,18 @@ def _find_spell(spec: CharacterSpec, spell: str) -> Feature:
     if len(matches) > 1:
         raise InvalidInput(f"{spell!r} is ambiguous; give the spell id")
     return matches[0]
+
+
+def _check_spell_targets(
+    found: Any, feature: Feature, targets: Sequence[str], center: str, ctx: ToolContext
+) -> None:
+    """Refuse a cast whose named target is out of range or outside the spell's area before a
+    slot, action, or concentration is spent."""
+    names = [str(target).strip() for target in targets if str(target).strip()]
+    if not names:
+        return
+    state, cell_feet = ctx.world.with_hook_context(lambda hc: (hc.state(), ctx.world.cell_feet()))
+    spell_targets.check_targets(state, cell_feet, found, feature, names, center)
 
 
 # --- rest hook ----------------------------------------------------------------------------

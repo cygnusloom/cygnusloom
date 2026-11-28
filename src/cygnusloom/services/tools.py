@@ -574,6 +574,15 @@ def find_tool(tool_calls: Mapping[str, ToolCall], name: str) -> ToolCall | None:
     return next((t for t in tool_calls.values() if t.name == name), None)
 
 
+_REFUSAL_SAFE_TOOLS = frozenset({"ooc", "speak", "set_music", "roll_dice", "refuse_action"})
+
+
+def _allowed_after_refusal(tool: ToolCall) -> bool:
+    """Whether a tool may run after the turn recorded a refusal. Lookups, the journal and review
+    steps, dialogue, music, dice, and the refusal itself change nothing for the refused action."""
+    return tool.lookup or tool.journal_step or tool.review_step or tool.name in _REFUSAL_SAFE_TOOLS
+
+
 async def run_tool(
     tool_calls: Mapping[str, ToolCall],
     request: ToolRequest,
@@ -597,6 +606,16 @@ async def run_tool(
     problem = check_arguments(tool.parameters, arguments)
     if problem:
         return ToolRun(_error(problem), None)
+    if ctx is not None and not _allowed_after_refusal(tool):
+        refused = getattr(ctx.world, "turn_refused", None)
+        if refused is not None and refused():
+            return ToolRun(
+                _error(
+                    "the player's action was refused this turn, so nothing about it is done; "
+                    "make no change for it and let the player restate the action"
+                ),
+                None,
+            )
     if tool.player_input is None:
         return await _call(tool, arguments, ctx)
     character_param = tool.player_input.character_param

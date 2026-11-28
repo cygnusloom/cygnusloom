@@ -2207,6 +2207,28 @@ class OocStarted(GameEvent):
 
 
 @dataclass(frozen=True)
+class ActionRefused(GameEvent):
+    """The player's declared action could not happen as stated, so none of it happened. The log
+    line tells the narration what to say and the player why; nothing else is changed."""
+
+    kind: ClassVar[str] = "turn.action_refused"
+
+    action: str
+    reason: str
+    alternative: str = ""
+
+    def apply(self, state: CampaignState, event_id: int) -> None:
+        if state.turn is not None:
+            state.turn.refused = True
+
+    def render(self) -> str:
+        text = f"Refused: {self.action} did not happen. {self.reason}"
+        if self.alternative:
+            text += f" What would work: {self.alternative}"
+        return text
+
+
+@dataclass(frozen=True)
 class PromptShown(GameEvent):
     """The open turn is waiting for the player to roll or type a reply. A prompt with `choices`
     is a move band's cost the player picks after the roll; `move`, `band`, `roll`, and `total`
