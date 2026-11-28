@@ -394,7 +394,7 @@ def campaign_view(spec: CampaignSpec, values: Mapping[str, Any] | None = None) -
             "id": field.id,
             "name": field.name,
             "description": field.description,
-            "value": current.get(field.id, ""),
+            "value": current.get(field.id, "") or field.default,
             "options": _option_views(spec, spec.table_options(field)),
         }
         for field in spec.choice_fields()
@@ -421,6 +421,8 @@ def campaign_submission_from_form(spec: CampaignSpec, form: FormData) -> dict[st
             options[field.id] = fixed
             continue
         value = form_text(form, CAMPAIGN_PREFIX + field.id)
+        if not value:
+            value = field.default
         if not value and len(spec.tables[field.table]) == 1:
             value = spec.tables[field.table][0].value
         if not value:

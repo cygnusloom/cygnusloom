@@ -889,6 +889,15 @@ def test_an_npc_named_after_a_statblock_takes_its_stats(client_factory):
     assert npc.stats == {"hp": 5, "str": 11, "dex": 14, "wil": 5}
 
 
+def test_an_npc_can_start_from_a_bestiary_template(client_factory):
+    app, campaign_id, tools = _fight(client_factory)
+    result = tools.create_npc("Rex", YARD, "A lean hound.", template="blink-dog")
+    assert result["statblock"] == "blink-dog"
+    npc = _state(app, campaign_id).characters["rex"]
+    assert npc.stats == {"hp": 5, "str": 11, "dex": 14, "wil": 5}
+    assert npc.attacks == {"bite": "1d6"}
+
+
 def test_a_world_npc_linked_to_a_statblock_is_seeded_with_its_stats(client_factory):
     client, campaign_id = _cairn_campaign(client_factory)
     fasha = _character(client.app, campaign_id, "Fasha")

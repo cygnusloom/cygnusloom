@@ -164,6 +164,31 @@ def test_the_gm_can_hand_itself_the_hirelings_turns(
     assert any('"hireling_turns"' in result for result in results)
 
 
+def test_the_character_and_inventory_panels_open_on_the_hireling_taking_its_turn(
+    client_factory: Callable[[], TestClient],
+):
+    client, campaign_id = _fight_with_hireling(client_factory, gm_plays=False)
+    app = client.app
+    _begin(app, campaign_id, PC)
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert 'aria-selected="true" data-character="Mara"' in page
+
+    _end(app, campaign_id, PC, by_player=True)
+    state = _state(app, campaign_id)
+    assert state.encounter is not None
+    assert state.encounter.acting == HIRELING
+
+    page = client.get(f"/campaigns/{campaign_id}").text
+    assert f'data-character-tabs="character" data-default-character="{HIRELING}"' in page
+    assert f'data-character-tabs="inventory" data-default-character="{HIRELING}"' in page
+    assert f'aria-selected="true" data-character="{HIRELING}"' in page
+    assert 'aria-selected="false" tabindex="-1" data-character="Mara"' in page
+    assert 'id="panel-sheet-pc" role="tabpanel" aria-labelledby="tab-sheet-pc" hidden' in page
+    assert 'id="panel-sheet-1" aria-labelledby="tab-sheet-1" hidden' not in page
+    assert 'id="panel-pack-pc" role="tabpanel" aria-labelledby="tab-pack-pc" hidden' in page
+    assert 'id="panel-pack-1" aria-labelledby="tab-pack-1" hidden' not in page
+
+
 def test_a_gm_played_hireling_turn_waits_for_start_and_the_gm_ends_it(
     client_factory: Callable[[], TestClient],
 ):

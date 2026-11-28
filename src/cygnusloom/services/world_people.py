@@ -48,6 +48,7 @@ class PeopleMixin:
         attacks: Sequence[Mapping[str, Any]] | None = None,
         summary: str | None = None,
         species: str | None = None,
+        template: str | None = None,
     ) -> dict[str, Any]:
         with session_scope(self.engine) as db:
             people = ""
@@ -81,6 +82,7 @@ class PeopleMixin:
                 pronouns=pronouns,
                 important=important,
                 species=people,
+                template=template,
             )
             if result["statblock"] is None:
                 self._initialize_generated_defense(db, name)

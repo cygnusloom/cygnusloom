@@ -103,6 +103,29 @@
     ]
   },
   {
+    "type": "campaign_field",
+    "id": "leveling",
+    "name": "Leveling",
+    "description": "How characters gain levels. Experience is the SRD's default; milestone lets the GM decide when the party advances.",
+    "table": "leveling",
+    "default": "Experience"
+  },
+  {
+    "type": "table",
+    "id": "leveling",
+    "name": "Leveling",
+    "options": [
+      {
+        "name": "Experience",
+        "description": "Award experience points for overcoming challenges; a character levels up when the total reaches the SRD's character advancement threshold."
+      },
+      {
+        "name": "Milestone",
+        "description": "The GM calls a level when the party completes a significant goal; experience points are not counted."
+      }
+    ]
+  },
+  {
     "type": "table",
     "id": "skills_barbarian",
     "options": [

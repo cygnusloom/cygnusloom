@@ -79,7 +79,11 @@ def test_a_single_option_campaign_field_is_fixed_without_a_click():
     fields = {field["id"]: field for field in campaign_view(spec, {})["choice_fields"]}
 
     assert "xp_rate" not in fields
-    assert campaign_submission_from_form(spec, FormData()) == {"xp_rate": "Standard"}
+    assert fields["leveling"]["value"] == "Experience"
+    assert campaign_submission_from_form(spec, FormData()) == {
+        "xp_rate": "Standard",
+        "leveling": "Experience",
+    }
 
 
 def test_creation_accepts_a_freely_arranged_standard_array(
@@ -1017,6 +1021,45 @@ def test_a_bestiary_monster_is_created_from_its_statblock(
     assert goblin.attacks["Shortbow"] == "1d6+2"
     save = dnd_srd_2024.roll_save("Goblin", "dex", 10, "a test", _ctx, roll=1)
     assert save["bonus"] == 2
+
+
+def test_an_npc_can_start_from_a_bestiary_template(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    client, campaign_id, _ctx = _wizard(app, client_factory)
+    tools = tools_for(client.app, campaign_id, rule_set="dnd-srd-2024")
+    tools.create_location("Cave Mouth", "A low cave in a mossy hill.")
+
+    result = tools.create_npc(
+        "Grub", "Cave Mouth", "A goblin sentry.", template="monster-goblin-warrior"
+    )
+
+    assert result["statblock"] == "monster-goblin-warrior"
+    goblin = character_named(app, campaign_id, "Grub")
+    assert goblin.stats["hp"] == 10
+    assert goblin.stats["attack_bonus"] == 4
+    assert goblin.armor == 15
+    assert goblin.attacks["Scimitar"] == "1d6+2"
+    assert goblin.creature == "Goblin Warrior"
+
+
+def test_an_npc_template_refuses_stats_and_unknown_templates(
+    app: FastAPI, client_factory: Callable[[], TestClient]
+) -> None:
+    client, campaign_id, _ctx = _wizard(app, client_factory)
+    tools = tools_for(client.app, campaign_id, rule_set="dnd-srd-2024")
+    tools.create_location("Cave Mouth", "A low cave in a mossy hill.")
+
+    with pytest.raises(InvalidInput, match="published statblock"):
+        tools.create_npc(
+            "Grub",
+            "Cave Mouth",
+            "A goblin sentry.",
+            template="monster-goblin-warrior",
+            character={"stats": {"str": 10}},
+        )
+    with pytest.raises(InvalidInput, match="no bestiary statblock"):
+        tools.create_npc("Grub", "Cave Mouth", "A goblin sentry.", template="not-a-thing")
 
 
 def _standard_stats() -> dict[str, str]:

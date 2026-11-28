@@ -328,6 +328,17 @@
     const selectedTabs = Array.from(
       document.querySelectorAll('[role="tab"][aria-selected="true"]'),
       (tab) => tab.id,
+    ).filter(
+      // Character and Inventory sub-tabs follow the server's character default instead.
+      (id) => !document.getElementById(id)?.closest("[data-character-tabs]"),
+    );
+    const characterTabs = Array.from(
+      document.querySelectorAll("[data-character-tabs]"),
+      (list) => ({
+        key: list.dataset.characterTabs,
+        defaultCharacter: list.dataset.defaultCharacter || "",
+        chosenCharacter: list.dataset.chosenCharacter || "",
+      }),
     );
     const scrolls = new Map();
     for (const element of document.querySelectorAll(".views [id]")) {
@@ -450,6 +461,19 @@
     }
 
     for (const id of selectedTabs) window.workspaceSelectTab?.(id);
+    // The server already opened each panel on the character taking its turn. Keep a tab the
+    // player picked by hand only while that default is unchanged; a new turn switches panels.
+    for (const list of document.querySelectorAll("[data-character-tabs]")) {
+      const before = characterTabs.find((state) => state.key === list.dataset.characterTabs);
+      if (!before || !before.chosenCharacter) continue;
+      if ((list.dataset.defaultCharacter || "") !== before.defaultCharacter) continue;
+      const tab = Array.from(list.querySelectorAll('[role="tab"]'), (candidate) => candidate).find(
+        (candidate) => candidate.dataset.character === before.chosenCharacter,
+      );
+      if (!tab || !list.selectTab) continue;
+      list.selectTab(tab, false);
+      list.dataset.chosenCharacter = before.chosenCharacter;
+    }
     for (const [id, top] of scrolls) {
       const element = document.getElementById(id);
       if (element && element !== transcript) element.scrollTop = top;

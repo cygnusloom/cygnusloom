@@ -39,7 +39,11 @@
   {% if view.kind == "level" and view.summary %}
   <section class="advancement-summary" aria-labelledby="summary-title">
     <h2 id="summary-title">Level {{ view.summary.new_level }}</h2>
+    {% if view.summary.milestone %}
+    <p>The GM has called a milestone: {{ view.character }} advances to level {{ view.summary.new_level }}.</p>
+    {% else %}
     <p>{{ view.character }} has {{ view.summary.xp }} experience; level {{ view.summary.new_level }} needs {{ view.summary.threshold }} on the {{ view.summary.rate }} track.</p>
+    {% endif %}
     <ul>
       {% for line in view.summary.lines %}<li>{{ line }}</li>{% endfor %}
     </ul>

@@ -2161,16 +2161,61 @@ def choose_land(character: str, land: str, ctx: ToolContext) -> dict[str, Any]:
 
 
 def award_xp(character: str, amount: int, ctx: ToolContext, cause: str = "") -> dict[str, Any]:
-    """Award experience for a defeated encounter, a completed quest, or a milestone. Levels are
-    taken on the advancement page once the experience reaches the next threshold."""
+    """Award experience for a challenge overcome: a defeated encounter, a completed quest, or
+    any other goal. Levels are taken on the advancement page once the total reaches the next
+    threshold. A campaign that levels by milestone does not count experience; milestone_level
+    is used instead."""
     found = _read_character(character, ctx)
     gained = whole_number(amount, "amount", 1, 1_000_000)
-    result = ctx.world.adjust_counter(character, "xp", gained)
+    rules = next(iter(ctx.world.level_ups.values()), None)
+    if rules is not None and rules.leveling_option:
+        progress = rules.progress(ctx.world.campaign_options(), found.counters, ctx.world.counters)
+        if progress.milestone:
+            raise InvalidInput(
+                "this campaign uses milestone leveling; call milestone_level instead"
+            )
+    reason = cause or "experience awarded"
+    result = ctx.world.adjust_counter(character, "xp", gained, reason)
     return {
         "character": found.name,
         "gained": gained,
         "xp": result["value"],
-        "cause": cause or "experience awarded",
+        "cause": reason,
+    }
+
+
+def milestone_level(character: str, ctx: ToolContext, cause: str = "") -> dict[str, Any]:
+    """Advance a player character at a milestone. The grant fills their experience to the next
+    level's threshold, so the player takes the level and its choices on the advancement page.
+    Refused in an experience-leveling campaign."""
+    rules = next(iter(ctx.world.level_ups.values()), None)
+    if rules is None or not rules.leveling_option:
+        raise InvalidInput("this rule set has no milestone leveling")
+    found = _read_character(character, ctx)
+    if found.kind != PC_KIND or found.hireling:
+        raise InvalidInput(
+            f"{found.name} is not a player character; hirelings follow their employer's level"
+        )
+    if found.out_of_play:
+        raise InvalidInput(f"{found.name} is out of play")
+    progress = rules.progress(ctx.world.campaign_options(), found.counters, ctx.world.counters)
+    if not progress.milestone:
+        raise InvalidInput("this campaign uses experience leveling; award experience with award_xp")
+    if progress.next_xp is None:
+        raise InvalidInput(f"{found.name} is already at the highest level, {progress.max_level}")
+    if progress.xp >= progress.next_xp:
+        raise InvalidInput(
+            f"{found.name} already has enough experience; take the level on the advancement page"
+        )
+    gained = progress.next_xp - progress.xp
+    reason = cause or "a milestone"
+    result = ctx.world.adjust_counter(character, rules.xp_counter, gained, reason)
+    return {
+        "character": found.name,
+        "gained": gained,
+        "xp": result["value"],
+        "next_level": progress.level + 1,
+        "cause": reason,
     }
 
 

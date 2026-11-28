@@ -266,14 +266,16 @@
             </div>
             <div class="tab-panel character-panel" role="tabpanel" id="panel-character" aria-labelledby="tab-character" hidden>
               {% if scene.hireling_sheets %}
-              <div class="tab-list character-tab-list" role="tablist" aria-label="Character sheets">
-                <button type="button" class="tab" role="tab" id="tab-sheet-pc" aria-controls="panel-sheet-pc" aria-selected="true">{{ scene.pc_sheet.name if scene.pc_sheet else "Character" }}</button>
+              {# While a hireling takes its turn, its Character tab opens first. #}
+              <div class="tab-list character-tab-list" role="tablist" aria-label="Character sheets" data-character-tabs="character" data-default-character="{{ scene.acting_hireling }}">
+                <button type="button" class="tab" role="tab" id="tab-sheet-pc" aria-controls="panel-sheet-pc" aria-selected="{{ 'false' if scene.acting_hireling else 'true' }}"{% if scene.acting_hireling %} tabindex="-1"{% endif %} data-character="{{ scene.pc_sheet.name if scene.pc_sheet else 'Character' }}">{{ scene.pc_sheet.name if scene.pc_sheet else "Character" }}</button>
                 {% for hireling in scene.hireling_sheets %}
-                <button type="button" class="tab" role="tab" id="tab-sheet-{{ loop.index }}" aria-controls="panel-sheet-{{ loop.index }}" aria-selected="false" tabindex="-1">{{ hireling.name }}{% if hireling.dead %} <span class="muted">(dead)</span>{% endif %}</button>
+                {% set selected = hireling.name == scene.acting_hireling %}
+                <button type="button" class="tab" role="tab" id="tab-sheet-{{ loop.index }}" aria-controls="panel-sheet-{{ loop.index }}" aria-selected="{{ 'true' if selected else 'false' }}"{% if not selected %} tabindex="-1"{% endif %} data-character="{{ hireling.name }}">{{ hireling.name }}{% if hireling.dead %} <span class="muted">(dead)</span>{% endif %}</button>
                 {% endfor %}
               </div>
               {% endif %}
-              <div class="tab-panel character-sheet-panel" id="panel-sheet-pc"{% if scene.hireling_sheets %} role="tabpanel" aria-labelledby="tab-sheet-pc"{% endif %}>
+              <div class="tab-panel character-sheet-panel" id="panel-sheet-pc"{% if scene.hireling_sheets %} role="tabpanel" aria-labelledby="tab-sheet-pc"{% endif %}{% if scene.acting_hireling %} hidden{% endif %}>
                 {% if scene.pc_sheet %}
                 {% with sheet_view=scene.pc_sheet %}{% include "_character_sheet.html" %}{% endwith %}
                 {{ character_actions(campaign, csrf_token, scene.pc_sheet.name, "play", scene.pc_sheet.name in editable_names, scene.pc_sheet.name in respec_names) }}
@@ -282,7 +284,8 @@
                 {% endif %}
               </div>
               {% for hireling in scene.hireling_sheets %}
-              <div class="tab-panel character-sheet-panel" role="tabpanel" id="panel-sheet-{{ loop.index }}" aria-labelledby="tab-sheet-{{ loop.index }}" hidden>
+              {% set selected = hireling.name == scene.acting_hireling %}
+              <div class="tab-panel character-sheet-panel" role="tabpanel" id="panel-sheet-{{ loop.index }}" aria-labelledby="tab-sheet-{{ loop.index }}"{% if not selected %} hidden{% endif %}>
                 <p class="muted">{% if hireling.employer %}Hired by {{ hireling.employer }}{% endif %}{% if hireling.wage %} · {{ hireling.wage }}{% endif %}{% if hireling.location %} · {{ hireling.location }}{% endif %}{% if hireling.dead %} · dead{% endif %}</p>
                 {% with sheet_view=hireling %}{% include "_character_sheet.html" %}{% endwith %}
                 {{ character_actions(campaign, csrf_token, hireling.name, "play", hireling.name in editable_names, hireling.name in respec_names) }}
@@ -329,14 +332,16 @@
             {% endif %}
             <div class="tab-panel inventory-panel" role="tabpanel" id="panel-inventory" aria-labelledby="tab-inventory" hidden>
               {% if scene.hireling_inventories %}
-              <div class="tab-list inventory-tab-list" role="tablist" aria-label="Inventories">
-                <button type="button" class="tab" role="tab" id="tab-pack-pc" aria-controls="panel-pack-pc" aria-selected="true">{{ scene.inventory.name if scene.inventory else "Character" }}</button>
+              {# While a hireling takes its turn, its Inventory tab opens first. #}
+              <div class="tab-list inventory-tab-list" role="tablist" aria-label="Inventories" data-character-tabs="inventory" data-default-character="{{ scene.acting_hireling }}">
+                <button type="button" class="tab" role="tab" id="tab-pack-pc" aria-controls="panel-pack-pc" aria-selected="{{ 'false' if scene.acting_hireling else 'true' }}"{% if scene.acting_hireling %} tabindex="-1"{% endif %} data-character="{{ scene.inventory.name if scene.inventory else 'Character' }}">{{ scene.inventory.name if scene.inventory else "Character" }}</button>
                 {% for inventory in scene.hireling_inventories %}
-                <button type="button" class="tab" role="tab" id="tab-pack-{{ loop.index }}" aria-controls="panel-pack-{{ loop.index }}" aria-selected="false" tabindex="-1">{{ inventory.name }}{% if inventory.dead %} <span class="muted">(dead)</span>{% endif %}</button>
+                {% set selected = inventory.name == scene.acting_hireling %}
+                <button type="button" class="tab" role="tab" id="tab-pack-{{ loop.index }}" aria-controls="panel-pack-{{ loop.index }}" aria-selected="{{ 'true' if selected else 'false' }}"{% if not selected %} tabindex="-1"{% endif %} data-character="{{ inventory.name }}">{{ inventory.name }}{% if inventory.dead %} <span class="muted">(dead)</span>{% endif %}</button>
                 {% endfor %}
               </div>
               {% endif %}
-              <div class="tab-panel inventory-pack-panel" id="panel-pack-pc"{% if scene.hireling_inventories %} role="tabpanel" aria-labelledby="tab-pack-pc"{% endif %}>
+              <div class="tab-panel inventory-pack-panel" id="panel-pack-pc"{% if scene.hireling_inventories %} role="tabpanel" aria-labelledby="tab-pack-pc"{% endif %}{% if scene.acting_hireling %} hidden{% endif %}>
                 {% if scene.inventory %}
                 {% with inventory=scene.inventory %}{% include "_inventory_pack.html" %}{% endwith %}
                 {% else %}
@@ -344,7 +349,8 @@
                 {% endif %}
               </div>
               {% for inventory in scene.hireling_inventories %}
-              <div class="tab-panel inventory-pack-panel" role="tabpanel" id="panel-pack-{{ loop.index }}" aria-labelledby="tab-pack-{{ loop.index }}" hidden>
+              {% set selected = inventory.name == scene.acting_hireling %}
+              <div class="tab-panel inventory-pack-panel" role="tabpanel" id="panel-pack-{{ loop.index }}" aria-labelledby="tab-pack-{{ loop.index }}"{% if not selected %} hidden{% endif %}>
                 {% include "_inventory_pack.html" %}
               </div>
               {% endfor %}
