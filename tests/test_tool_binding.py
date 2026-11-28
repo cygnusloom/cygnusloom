@@ -29,6 +29,7 @@ KEPT_PYTHON = {
     "create_location",
     "lookup_rule",
     "list_lookups",
+    "refuse_action",
     "speak",
     "ooc",
 }

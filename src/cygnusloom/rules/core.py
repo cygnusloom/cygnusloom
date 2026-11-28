@@ -86,3 +86,8 @@ def ooc(ctx: ToolContext, no_narration: bool = False) -> dict[str, str]:
     else:
         status = "your next reply goes to the player directly, and the story is narrated after it"
     return {"status": status}
+
+
+def refuse_action(action: str, reason: str, ctx: ToolContext) -> dict[str, Any]:
+    """Refuse an action that cannot happen as stated, leaving it entirely undone."""
+    return ctx.world.refuse_action(action, reason, read_only=tuple(ctx.lookup_tools))

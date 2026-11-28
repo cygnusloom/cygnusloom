@@ -25,7 +25,7 @@
     "type": "tool_call",
     "id": "place_participant",
     "requires": ["combat"],
-    "description": "Put a participant on a cell of the encounter map, counted from 0 at the top left: column increases to the right and row increases downward. Moving is limited to the rule set's movement per turn, counted in cells moved in a straight line or diagonal. Obstacles block: a cell with a blocking object cannot be entered or be the destination, so the participant goes around it. Terrain that costs extra movement to enter takes that many moves for each cell entered. That limit applies only to the participant whose turn it is; moving anyone else is free, though they still cannot enter a blocked cell. The first placement is free. Use this to move a participant, not to tell the story of how they got there.",
+    "description": "Put a participant on a cell of the encounter map; never move a target or rearrange the scene to make a player's action possible. Coordinates count from 0 at the top left: column increases to the right and row increases downward. Moving is limited to the rule set's movement per turn, counted in cells moved in a straight line or diagonal. Obstacles block: a cell with a blocking object cannot be entered or be the destination, so the participant goes around it. Terrain that costs extra movement to enter takes that many moves for each cell entered. That limit applies only to the participant whose turn it is; moving anyone else is free, though they still cannot enter a blocked cell. The first placement is free. Use this to move a participant, not to tell the story of how they got there.",
     "parameters": {
       "properties": {
         "column": {

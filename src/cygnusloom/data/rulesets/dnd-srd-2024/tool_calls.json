@@ -260,7 +260,7 @@
     "id": "cast_spell",
     "python_module": "dnd_srd_2024",
     "function": "cast_spell",
-    "description": "Cast a prepared spell, spending a slot of its level or higher. Cantrips cost no slot and need no preparation. Pass slot_level when upcasting. Pass ritual true for a prepared spell with the Ritual tag: it takes 10 minutes and spends no slot. The result gives the spell save DC, spell attack bonus, concentration, and the spell's text for its effect.",
+    "description": "Cast a prepared spell, spending a slot of its level or higher; pass every creature it affects in targets, and for an area the middle point in center, so the engine checks the range and area before anything is spent. A target beyond the spell's range or outside its area refuses the whole cast: nothing is spent, and the player is told before you roll or apply anything. Leave targets out for a spell that affects no creature. Cantrips cost no slot and need no preparation. Pass slot_level when upcasting. Pass ritual true for a prepared spell with the Ritual tag: it takes 10 minutes and spends no slot. The result gives the spell save DC, spell attack bonus, concentration, and the spell's text for its effect.",
     "parameters": {
       "properties": {
         "name": {
@@ -270,6 +270,17 @@
         "spell": {
           "type": "string",
           "description": "The spell's name or id."
+        },
+        "targets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Every creature the spell affects, by name; leave it out when the spell affects no creature. The engine measures each target on the encounter map before the cast spends anything."
+        },
+        "center": {
+          "type": "string",
+          "description": "For an area spell, the middle of the effect: a creature's name, \"caster\", or a cell as \"column,row\". Leave it out to use the caster for a self-range spell or else the first target."
         },
         "slot_level": {
           "type": "integer",
@@ -609,7 +620,7 @@
     "id": "spell_attack",
     "python_module": "dnd_srd_2024",
     "function": "spell_attack",
-    "description": "Ask the player to make a spell attack against a target's Armor Class: d20 plus proficiency bonus and spellcasting ability. Use it for Fire Bolt, Guiding Bolt, Eldritch Blast, and any spell that says spell attack. Apply the spell's damage only after a hit.",
+    "description": "Ask the player to make a spell attack against a target's Armor Class: d20 plus proficiency bonus and spellcasting ability; the engine checks the distance first and refuses a target beyond the spell's range before the roll. Use it for Fire Bolt, Guiding Bolt, Eldritch Blast, and any spell that says spell attack. Apply the spell's damage only after a hit.",
     "parameters": {
       "properties": {
         "prompt": {

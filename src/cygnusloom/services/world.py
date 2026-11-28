@@ -67,7 +67,15 @@ from cygnusloom.content.lookup import AmbiguousId, resolve_id
 from cygnusloom.db.models import Campaign
 from cygnusloom.rules.dice import is_formula, max_total, roll_total, roll_values
 from cygnusloom.services import advancements as advancements_service
-from cygnusloom.services import aid, combat, custom_features, encounters, morale, reactions
+from cygnusloom.services import (
+    aid,
+    combat,
+    custom_features,
+    encounters,
+    morale,
+    reactions,
+    spell_targets,
+)
 from cygnusloom.services import attacks as attack_modifiers
 from cygnusloom.services import checks as checks_service
 from cygnusloom.services import clock as clock_service
@@ -110,6 +118,7 @@ from cygnusloom.services.events import (
     FOES_SIDE,
     PARTY_SIDE,
     PC_KIND,
+    ActionRefused,
     CharacterSaved,
     CheckMade,
     CurrencyChanged,
@@ -270,6 +279,25 @@ def _finish_reaction_save(pending: Mapping[str, Any], total: int) -> dict[str, A
         "passed": final_roll >= score,
         "cause": str(pending.get("cause", "")),
     }
+
+
+# Tools that may run before a refusal: they read the record, queue words, or mark the step,
+# but do not change the world the refused action would have changed.
+_REFUSAL_SAFE_TOOLS = frozenset(
+    {"ooc", "speak", "set_music", "finish_state_step", "load_tool", "roll_dice", "refuse_action"}
+)
+
+
+def _turn_tool_names(messages: Sequence[Mapping[str, Any]]) -> list[str]:
+    """The tool names called so far in the open turn, from its recorded messages."""
+    names: list[str] = []
+    for message in messages:
+        for call in message.get("tool_calls") or []:
+            function = call.get("function") or {}
+            name = function.get("name")
+            if name:
+                names.append(str(name))
+    return names
 
 
 @dataclass(frozen=True)
@@ -2559,6 +2587,11 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin, DocumentToolsMixin):
         """The encounter grid's cell size, which attack reach and range use."""
         return self.grid.cell_feet if self.grid is not None else None
 
+    def cell_feet(self) -> int | None:
+        """The rule set's encounter cell size in feet, or None when its encounters have no
+        grid. Rule-set modules use it to measure spell targets the way attacks are measured."""
+        return self._cell_feet()
+
     def attacks_per_action(self, name: str) -> int:
         """The number of attacks a statblock makes in one action, or 1 for a custom NPC."""
         with session_scope(self.engine) as db:
@@ -2711,6 +2744,58 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin, DocumentToolsMixin):
                 gm_plays_hirelings(db, self.campaign_id),
             )
 
+    def refuse_action(
+        self,
+        action: str,
+        reason: str,
+        alternative: str = "",
+        read_only: Sequence[str] = (),
+    ) -> dict[str, Any]:
+        """Record that the player's action could not happen as stated. A refusal must come before
+        any change in the turn: once another tool has changed the world, the action is already
+        under way, so the refusal is refused instead. `read_only` names the lookup tools that do
+        not count as a change."""
+        action_text = bounded_text(action, "action", 300)
+        reason_text = bounded_text(reason, "reason", 600)
+        alternative_text = (
+            bounded_text(alternative, "alternative", 300) if alternative.strip() else ""
+        )
+        with session_scope(self.engine) as db:
+            state = load_state(db, self.campaign_id)
+            if state.turn is not None:
+                allowed = _REFUSAL_SAFE_TOOLS | set(read_only)
+                changed = sorted(
+                    {name for name in _turn_tool_names(state.turn.messages) if name not in allowed}
+                )
+                if changed:
+                    raise InvalidInput(
+                        "this turn already changed the world with "
+                        + ", ".join(changed)
+                        + "; refuse an action before any change, not after. Finish what you "
+                        "started, or roll the turn back first."
+                    )
+            record(
+                db,
+                self.campaign_id,
+                ActionRefused(
+                    action=action_text,
+                    reason=reason_text,
+                    alternative=alternative_text,
+                ),
+            )
+            db.commit()
+        return {
+            "refused": action_text,
+            "reason": reason_text,
+            "alternative": alternative_text,
+        }
+
+    def turn_refused(self) -> bool:
+        """Whether the open turn recorded a refusal, so no change may be made for it."""
+        with session_scope(self.engine) as db:
+            turn = load_state(db, self.campaign_id).turn
+        return turn is not None and turn.refused
+
     def require_turn(self, character: str, action: str = "act", force: bool = False) -> None:
         """Refuse an action by a character who has no turn in the encounter. An encounter runs
         on turns, so only the character whose turn is running acts; a player-controlled
@@ -2779,6 +2864,9 @@ class WorldTools(PlacesMixin, PeopleMixin, TravelMixin, DocumentToolsMixin):
                 raise InvalidInput("start an encounter before making a spell attack at a creature")
             if target and name_key(target) not in state.characters:
                 raise InvalidInput(f"there is no character named {target!r}")
+            feature = spell_targets.find_spell(self.character, spell)
+            if target and feature is not None:
+                spell_targets.check_targets(state, self.cell_feet(), caster, feature, [target])
             gm_played = encounters.gm_plays(
                 state,
                 caster.name,

@@ -655,6 +655,8 @@ class Turn:
     rounds: int = 0
     queue: list[ToolRequest] = field(default_factory=list)
     narrating: bool = False
+    # The player's action was refused this turn, so no change may be made for it.
+    refused: bool = False
     # The player's message is out of character: an out-of-character step replies next. The story
     # is narrated after that reply only when `ooc_narrate` is set.
     ooc: bool = False
